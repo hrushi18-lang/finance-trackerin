@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { supabase, logQueryPerformance } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from '../components/common/Toast';
@@ -1662,18 +1662,50 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     }
   };
 
-  // Calculate dashboard stats
-  const stats: DashboardStats = {
-    totalIncome: transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0),
-    totalExpenses: transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0),
-    totalSavings: goals.reduce((sum, g) => sum + g.currentAmount, 0),
-    totalLiabilities: liabilities.reduce((sum, l) => sum + l.remainingAmount, 0),
-    monthlyIncome: getMonthlyTrends(1)[0]?.income || 0,
-    monthlyExpenses: getMonthlyTrends(1)[0]?.expenses || 0,
-    budgetUtilization: budgets.length > 0 
-      ? budgets.reduce((sum, b) => sum + (b.spent / b.amount * 100), 0) / budgets.length 
-      : 0,
-  };
+  // Safe stats calculation with proper defaults
+  const stats = useMemo(() => {
+    const safeTransactions = transactions || [];
+    const safeGoals = goals || [];
+    const safeLiabilities = liabilities || [];
+    const safeBudgets = budgets || [];
+    const safeIncomeSources = incomeSources || [];
+
+    const currentMonth = new Date();
+    const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+
+    const monthlyTransactions = safeTransactions.filter(t => 
+      t.date >= monthStart && t.date <= monthEnd
+    );
+
+    const monthlyIncome = monthlyTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + toNumber(t.amount), 0);
+
+    const monthlyExpenses = monthlyTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + toNumber(t.amount), 0);
+
+    return {
+      totalIncome: safeTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + toNumber(t.amount), 0),
+      totalExpenses: safeTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + toNumber(t.amount), 0),
+      monthlyIncome,
+      monthlyExpenses,
+      totalLiabilities: safeLiabilities.reduce((sum, l) => sum + toNumber(l.remainingAmount), 0),
+      totalSavings: safeGoals.reduce((sum, g) => sum + toNumber(g.currentAmount), 0),
+      budgetUtilization: safeBudgets.length > 0 ? safeBudgets.reduce((sum, b) => sum + (toNumber(b.spent) / toNumber(b.amount)) * 100, 0) / safeBudgets.length : 0,
+      totalIncomeSourcesMonthly: safeIncomeSources.reduce((sum, source) => {
+        if (!source.isActive) return sum;
+        let monthlyAmount = toNumber(source.amount);
+        switch (source.frequency) {
+          case 'weekly': monthlyAmount = monthlyAmount * 4.33; break;
+          case 'yearly': monthlyAmount = monthlyAmount / 12; break;
+          default: break;
+        }
+        return sum + monthlyAmount;
+      }, 0),
+    };
+  }, [transactions, goals, liabilities, budgets, incomeSources]);
 
   // Debt repayment strategy calculation
   const calculateDebtRepaymentStrategy = (
