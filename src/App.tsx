@@ -32,6 +32,7 @@ const Profile = React.lazy(() => import('./pages/Profile').then(module => ({ def
 const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
 const Privacy = React.lazy(() => import('./pages/Privacy').then(module => ({ default: module.Privacy })));
 const About = React.lazy(() => import('./pages/About').then(module => ({ default: module.About })));
+const Bills = React.lazy(() => import('./pages/RecurringTransactions').then(module => ({ default: module.RecurringTransactions })));
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -202,10 +203,20 @@ function App() {
                               />
                               
                               <Route 
+                                path="/bills" 
+                                element={
+                                  <ProtectedRoute>
+                                    <Bills />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
                                 path="/profile" 
                                 element={
                                   <ProtectedRoute>
-                                    <Profile />
+                                    <Settings />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
@@ -215,7 +226,7 @@ function App() {
                                 path="/settings" 
                                 element={
                                   <ProtectedRoute>
-                                    <Settings />
+                                    <Profile />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 

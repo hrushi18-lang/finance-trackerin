@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Settings, Bell, Shield, HelpCircle, Info, LogOut, Repeat, DollarSign, Globe, Calculator, RefreshCw, Tag } from 'lucide-react';
+import { User, Settings, Bell, Shield, HelpCircle, Info, LogOut, Repeat, DollarSign, Globe, Calculator, RefreshCw, Tag, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TopNavigation } from '../components/layout/TopNavigation';
@@ -49,12 +49,6 @@ export const Profile: React.FC = () => {
   };
 
   const menuItems = [
-    { 
-      icon: Wallet, 
-      label: 'Financial Accounts', 
-      description: 'Manage all your payment methods and accounts',
-      onClick: () => navigate('/accounts-hub')
-    },
     { 
       icon: Wallet, 
       label: 'Financial Accounts', 

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { TrendingUp, Wallet, CreditCard, Target, Calendar, BarChart3, Eye, EyeOff, ArrowLeftRight, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { TrendingUp, Wallet, CreditCard, Target, Calendar, BarChart3, Eye, EyeOff, ArrowLeftRight, Plus, ChevronLeft, ChevronRight, PieChart, Pie, Cell, ResponsiveContainer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TopNavigation } from '../components/layout/TopNavigation';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { format } from 'date-fns';
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 export const Overview: React.FC = () => {
   const navigate = useNavigate();
@@ -23,6 +24,36 @@ export const Overview: React.FC = () => {
   const [showBalances, setShowBalances] = useState(true);
   const [currentGoalIndex, setCurrentGoalIndex] = useState(0);
   const [currentLiabilityIndex, setCurrentLiabilityIndex] = useState(0);
+
+  // Calculate analytics data
+  const categoryBreakdown = React.useMemo(() => {
+    const expenses = transactions.filter(t => t.type === 'expense');
+    const categoryTotals = expenses.reduce((acc, t) => {
+      acc[t.category] = (acc[t.category] || 0) + t.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(categoryTotals)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([name, value], index) => ({ 
+        name, 
+        value, 
+        color: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'][index] 
+      }));
+  }, [transactions]);
+
+  const accountContribution = React.useMemo(() => {
+    const visibleAccounts = (accounts || []).filter(a => a.isVisible);
+    const totalBalance = visibleAccounts.reduce((sum, a) => sum + a.balance, 0);
+    
+    return visibleAccounts.map((account, index) => ({
+      name: account.name,
+      value: account.balance,
+      percentage: totalBalance > 0 ? (account.balance / totalBalance) * 100 : 0,
+      color: ['#4A5D23', '#7f8f55', '#b4bf95', '#9aa673', '#3d4a1c'][index % 5]
+    }));
+  }, [accounts]);
 
   // Calculate total balance across all visible accounts
   const totalBalance = (accounts || [])
@@ -420,6 +451,91 @@ export const Overview: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Analytics Section */}
+        <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-heading font-semibold text-white">Analytics Overview</h3>
+            <button 
+              onClick={() => navigate('/analytics')}
+              className="text-forest-400 text-sm font-body hover:text-forest-300"
+            >
+              View Details
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Account Contribution */}
+            {accountContribution.length > 0 && (
+              <div>
+                <h4 className="text-sm font-body font-medium text-forest-300 mb-3">Account Contribution</h4>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Pie
+                        data={accountContribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={70}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {accountContribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value) => formatCurrency(value as number)}
+                        contentStyle={{
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          color: '#F9FAFB'
+                        }}
+                      />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-1">
+                  {accountContribution.slice(0, 3).map((account, index) => (
+                    <div key={account.name} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center space-x-2">
+                        <div 
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: account.color }}
+                        />
+                        <span className="text-forest-200 font-body">{account.name}</span>
+                      </div>
+                      <span className="text-forest-400 font-numbers">{account.percentage.toFixed(1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Category Breakdown */}
+            {categoryBreakdown.length > 0 && (
+              <div>
+                <h4 className="text-sm font-body font-medium text-forest-300 mb-3">Expense Categories</h4>
+                <div className="space-y-3">
+                  {categoryBreakdown.map((category, index) => (
+                    <div key={category.name} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div 
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <span className="text-forest-200 font-body text-sm">{category.name}</span>
+                      </div>
+                      <span className="text-forest-400 font-numbers text-sm">{formatCurrency(category.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4">

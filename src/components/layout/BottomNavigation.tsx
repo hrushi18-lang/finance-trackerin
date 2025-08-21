@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Home, BarChart3, Calendar, Target, User } from 'lucide-react';
+import { Home, BarChart3, Target, PieChart, CreditCard, Calendar, Settings } from 'lucide-react';
 
 export const BottomNavigation: React.FC = () => {
   const { t } = useTranslation();
@@ -9,9 +9,11 @@ export const BottomNavigation: React.FC = () => {
   const navItems = [
     { path: '/', icon: Home, label: t('navigation.home') },
     { path: '/overview', icon: BarChart3, label: 'Overview' },
-    { path: '/analytics', icon: Target, label: 'Analytics' },
-    { path: '/calendar', icon: Calendar, label: 'Calendar' },
-    { path: '/profile', icon: User, label: t('navigation.profile') },
+    { path: '/goals', icon: Target, label: 'Goals' },
+    { path: '/budgets', icon: PieChart, label: 'Budgets' },
+    { path: '/liabilities', icon: CreditCard, label: 'Debts' },
+    { path: '/bills', icon: Calendar, label: 'Bills' },
+    { path: '/profile', icon: Settings, label: 'Settings' },
   ];
 
   return (

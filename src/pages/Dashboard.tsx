@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, TrendingUp, Wallet, CreditCard, Plus, Target, Receipt, Search, Bell, History, Repeat, User, Eye, EyeOff, ArrowLeftRight, Calculator, PieChart, Calendar, BarChart3 } from 'lucide-react';
+import { DollarSign, TrendingUp, Wallet, CreditCard, Plus, Target, Receipt, Search, Bell, History, Repeat, User, Eye, EyeOff, ArrowLeftRight, Calculator, PieChart, Calendar, BarChart3, Notification } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '../components/common/Modal';
@@ -176,12 +176,29 @@ export const Dashboard: React.FC = () => {
               </p>
             </div>
             
-            <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center space-x-1 sm:space-x-2">
               <button 
-                onClick={() => setShowSearch(!showSearch)}
+                onClick={() => navigate('/calendar')}
                 className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
+                title="Calendar"
               >
-                <Search size={18} className="text-forest-300 sm:w-5 sm:h-5" />
+                <Calendar size={18} className="text-forest-300 sm:w-5 sm:h-5" />
+              </button>
+              
+              <button 
+                onClick={() => navigate('/add-transaction')}
+                className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
+                title="Add Transaction"
+              >
+                <Plus size={18} className="text-forest-300 sm:w-5 sm:h-5" />
+              </button>
+              
+              <button 
+                onClick={() => setShowProfileMenu(true)}
+                className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
+                title="Profile"
+              >
+                <User size={18} className="text-forest-300 sm:w-5 sm:h-5" />
               </button>
               
               <button 
@@ -195,20 +212,12 @@ export const Dashboard: React.FC = () => {
               <button 
                 onClick={() => setShowNotifications(true)}
                 className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors relative"
+                title="Notifications"
               >
                 <Bell size={18} className="text-forest-300 sm:w-5 sm:h-5" />
                 {isNewUser && (
                   <span className="absolute -top-1 -right-1 h-2 w-2 sm:h-3 sm:w-3 bg-forest-500 rounded-full"></span>
                 )}
-              </button>
-              
-              <button 
-                onClick={() => setShowProfileMenu(true)}
-                className="w-7 h-7 sm:w-8 sm:h-8 bg-forest-600 rounded-full flex items-center justify-center"
-              >
-                <span className="text-xs sm:text-sm font-numbers font-medium text-white">
-                  {user?.name?.charAt(0).toUpperCase() || 'U'}
-                </span>
               </button>
             </div>
           </div>
