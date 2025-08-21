@@ -91,7 +91,7 @@ function App() {
                               <Route 
                                 path="/onboarding" 
                                 element={
-                                  <ProtectedRoute>
+                                  <ProtectedRoute requiresAuth={true}>
                                     <OnboardingFlow 
                                       onComplete={() => {
                                         // Always redirect to dashboard after onboarding
@@ -106,7 +106,7 @@ function App() {
                               <Route 
                                 path="/" 
                                 element={
-                                  <ProtectedRoute>
+                                  <ProtectedRoute requiresAuth={true}>
                                     <Dashboard />
                                     <BottomNavigation />
                                   </ProtectedRoute>

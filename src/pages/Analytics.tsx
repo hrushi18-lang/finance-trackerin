@@ -82,7 +82,9 @@ export const Analytics: React.FC = () => {
 
   // Apply timeline and filters to transactions
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(t => {
+    const safeTransactions = Array.isArray(transactions) ? transactions : [];
+    
+    return safeTransactions.filter(t => {
       // Timeline filter (primary filter)
       if (!isWithinInterval(t.date, { start: timelineRange.start, end: timelineRange.end })) {
         return false;

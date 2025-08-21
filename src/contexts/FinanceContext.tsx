@@ -12,8 +12,8 @@ import {
   UserCategory,
   SplitTransaction,
   DebtRepaymentStrategy
-import { toNumber, validateLiability, validateTransaction } from '../utils/validation';
 } from '../types';
+import { toNumber, validateLiability, validateTransaction } from '../utils/validation';
 
 interface FinanceContextType {
   // Data
