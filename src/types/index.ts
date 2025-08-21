@@ -91,6 +91,7 @@ export interface Budget {
   spent: number;
   period: 'weekly' | 'monthly' | 'yearly';
   userId: string;
+  accountId?: string; // Link budgets to specific accounts
   createdAt: Date;
 }
 
