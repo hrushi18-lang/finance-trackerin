@@ -265,57 +265,49 @@ export const Dashboard: React.FC = () => {
         )}
 
         {/* Financial Accounts Hub */}
-        <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-forest-600/20">
+        <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-forest-600/20 rounded-lg">
-                <Wallet size={20} className="text-forest-400" />
+              <div className="p-3 bg-forest-600/20 rounded-lg">
+                <Wallet size={24} className="text-forest-400" />
               </div>
               <div>
-                <h3 className="text-lg font-heading font-semibold text-white">Financial Accounts</h3>
-                <p className="text-sm text-forest-300 font-body">Manage all your payment methods</p>
+                <h3 className="text-xl font-heading font-bold text-white">Financial Accounts</h3>
+                <p className="text-sm text-forest-200 font-body">Manage all your payment methods</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowBalances(!showBalances)}
-                className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
+                className="p-2 hover:bg-forest-600/20 rounded-xl transition-colors"
                 title={showBalances ? "Hide balances" : "Show balances"}
               >
                 {showBalances ? (
-                  <EyeOff size={18} className="text-forest-400" />
+                  <EyeOff size={20} className="text-forest-400" />
                 ) : (
-                  <Eye size={18} className="text-forest-400" />
+                  <Eye size={20} className="text-forest-400" />
                 )}
               </button>
               <button
                 onClick={() => navigate('/accounts-hub')}
-                className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
+                className="p-2 hover:bg-forest-600/20 rounded-xl transition-colors"
                 title="Manage all accounts"
               >
-                <ArrowLeftRight size={18} className="text-forest-400" />
+                <ArrowLeftRight size={20} className="text-forest-400" />
               </button>
-              <Button
-                onClick={() => setShowAccountModal(true)}
-                size="sm"
-                className="bg-forest-600 hover:bg-forest-700"
-              >
-                <Plus size={16} className="mr-2" />
-                Add Account
-              </Button>
             </div>
           </div>
 
           {/* Total Balance */}
           {showBalances && (accounts || []).length > 0 && (
-            <div className="bg-forest-800/30 rounded-lg p-4 text-center mb-4">
-              <p className="text-sm text-forest-300 mb-1 font-body">Total Balance</p>
-              <p className="text-2xl font-numbers font-bold text-white">
+            <div className="bg-forest-800/30 rounded-xl p-6 text-center mb-6">
+              <p className="text-sm text-forest-300 mb-2 font-body">Total Portfolio Value</p>
+              <p className="text-3xl font-numbers font-bold text-white">
                 <CurrencyIcon currencyCode={currency.code} size={20} className="inline mr-2" />
                 {totalBalance.toLocaleString()}
               </p>
-              <p className="text-xs text-forest-400 font-body">
+              <p className="text-sm text-forest-400 font-body">
                 {(accounts || []).filter(a => a.isVisible).length} visible accounts
               </p>
             </div>
@@ -323,70 +315,70 @@ export const Dashboard: React.FC = () => {
 
           {/* Accounts Grid */}
           {(accounts || []).length === 0 ? (
-            <div className="text-center py-8">
-              <Wallet size={48} className="mx-auto text-forest-600 mb-4" />
-              <h4 className="text-lg font-heading font-semibold text-white mb-2">No accounts added</h4>
-              <p className="text-forest-300 mb-6 font-body">Add your first financial account to start tracking</p>
-              <Button onClick={() => setShowAccountModal(true)}>
-                <Plus size={18} className="mr-2" />
+            <div className="text-center py-12">
+              <div className="w-20 h-20 bg-forest-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Wallet size={40} className="text-forest-400" />
+              </div>
+              <h4 className="text-xl font-heading font-bold text-white mb-3">No accounts added</h4>
+              <p className="text-forest-300 mb-8 font-body max-w-md mx-auto">
+                Add your first financial account to start tracking your money across all payment methods
+              </p>
+              <Button 
+                onClick={() => navigate('/accounts-hub')}
+                className="bg-forest-600 hover:bg-forest-700"
+              >
+                <Plus size={20} className="mr-2" />
                 Add First Account
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {(accounts || []).slice(0, 4).map((account) => (
-                <div key={account.id} className="bg-forest-800/20 rounded-xl p-3 border border-forest-600/20">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-forest-600 rounded-lg flex items-center justify-center">
-                        <Wallet size={16} className="text-white" />
+                <div key={account.id} className="bg-forest-800/20 rounded-xl p-4 border border-forest-600/20 hover:bg-forest-700/20 transition-colors">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-10 h-10 rounded-lg ${getAccountColor(account.type)} flex items-center justify-center`}>
+                        {React.createElement(getAccountIcon(account.type), { size: 20, className: "text-white" })}
                       </div>
                       <div>
-                        <h4 className="font-heading font-medium text-white text-sm">{account.name}</h4>
-                        <p className="text-xs text-forest-400 font-body capitalize">{account.type.replace('_', ' ')}</p>
+                        <h4 className="font-heading font-medium text-white">{account.name}</h4>
+                        <p className="text-xs text-forest-400 font-body">{getAccountTypeName(account.type)}</p>
+                        {account.institution && (
+                          <p className="text-xs text-forest-500 font-body">{account.institution}</p>
+                        )}
+                        {account.platform && (
+                          <p className="text-xs text-forest-500 font-body">{account.platform}</p>
+                        )}
                       </div>
                     </div>
-                    {account.isVisible && showBalances && (
-                      <p className="text-sm font-numbers font-bold text-white">
-                        <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
+                  </div>
+                  
+                  {account.isVisible && showBalances && (
+                    <div className="bg-forest-700/30 rounded-lg p-3">
+                      <p className="text-xs text-forest-400 mb-1 font-body">Balance</p>
+                      <p className="text-lg font-numbers font-bold text-white">
+                        <CurrencyIcon currencyCode={currency.code} size={16} className="inline mr-1" />
                         {account.balance.toLocaleString()}
                       </p>
-                    )}
-                  </div>
+                    </div>
+                  )}
+                  
+                  {!account.isVisible && (
+                    <div className="bg-gray-500/20 rounded-lg p-3 text-center">
+                      <p className="text-xs text-gray-400 font-body">Hidden from dashboard</p>
+                    </div>
+                  )}
                 </div>
               ))}
-            
-            <button 
-              onClick={() => navigate('/overview')}
-              className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
-              title="Overview"
-            >
-              <BarChart3 size={18} className="text-forest-300 sm:w-5 sm:h-5" />
-            </button>
               
               {(accounts || []).length > 4 && (
                 <button
                   onClick={() => navigate('/accounts-hub')}
-                  className="bg-forest-700/20 rounded-xl p-3 border border-forest-600/20 hover:bg-forest-600/20 transition-colors flex items-center justify-center"
+                  className="bg-forest-700/20 rounded-xl p-4 border border-forest-600/20 hover:bg-forest-600/20 transition-colors flex items-center justify-center"
                 >
-                  <span className="text-forest-300 font-body text-sm">View All ({(accounts || []).length})</span>
+                  <span className="text-forest-300 font-body">View All ({(accounts || []).length})</span>
                 </button>
               )}
-            </div>
-          )}
-
-          {/* Quick Account Actions */}
-          {(accounts || []).length >= 2 && (
-            <div className="mt-4 flex space-x-2">
-              <Button
-                onClick={() => setShowTransferModal(true)}
-                size="sm"
-                variant="outline"
-                className="flex-1 border-forest-500/30 text-forest-300 hover:bg-forest-600/10"
-              >
-                <ArrowLeftRight size={14} className="mr-2" />
-                Transfer
-              </Button>
             </div>
           )}
         </div>

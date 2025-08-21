@@ -1,35 +1,53 @@
 import React, { useState } from 'react';
-import { Plus, Eye, EyeOff, CreditCard, Wallet, Building, Smartphone, TrendingUp, Edit3, Trash2, ArrowLeftRight, DollarSign, Calendar, BarChart3 } from 'lucide-react';
+import { Plus, Eye, EyeOff, CreditCard, Wallet, Building, Smartphone, TrendingUp, Edit3, Trash2, ArrowLeftRight, DollarSign, Calendar, BarChart3, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { TopNavigation } from '../components/layout/TopNavigation';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { AccountForm } from '../components/forms/AccountForm';
 import { TransferForm } from '../components/forms/TransferForm';
+import { TransactionForm } from '../components/forms/TransactionForm';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
-import { FinancialAccount } from '../types';
+import { FinancialAccount, Transaction } from '../types';
 
 export const FinancialAccountsHub: React.FC = () => {
-  const { accounts, addAccount, updateAccount, deleteAccount, transferBetweenAccounts, transactions, goals, liabilities, budgets } = useFinance();
+  const { 
+    accounts, 
+    addAccount, 
+    updateAccount, 
+    deleteAccount, 
+    transferBetweenAccounts, 
+    transactions, 
+    goals, 
+    liabilities, 
+    budgets,
+    addTransaction 
+  } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
+  
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showMockTransactionModal, setShowMockTransactionModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<FinancialAccount | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
+  const [selectedAccountForMock, setSelectedAccountForMock] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showBalances, setShowBalances] = useState(true);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleAddAccount = async (data: any) => {
     try {
       setIsSubmitting(true);
+      setError(null);
       await addAccount(data);
       setShowAccountModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding account:', error);
+      setError(error.message || 'Failed to add account');
     } finally {
       setIsSubmitting(false);
     }
@@ -38,13 +56,15 @@ export const FinancialAccountsHub: React.FC = () => {
   const handleEditAccount = async (data: any) => {
     try {
       setIsSubmitting(true);
+      setError(null);
       if (editingAccount) {
         await updateAccount(editingAccount.id, data);
         setEditingAccount(null);
         setShowAccountModal(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating account:', error);
+      setError(error.message || 'Failed to update account');
     } finally {
       setIsSubmitting(false);
     }
@@ -63,8 +83,9 @@ export const FinancialAccountsHub: React.FC = () => {
         setAccountToDelete(null);
         setShowDeleteConfirm(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting account:', error);
+      setError(error.message || 'Failed to delete account');
     } finally {
       setIsSubmitting(false);
     }
@@ -73,10 +94,35 @@ export const FinancialAccountsHub: React.FC = () => {
   const handleTransfer = async (data: any) => {
     try {
       setIsSubmitting(true);
+      setError(null);
       await transferBetweenAccounts(data.fromAccountId, data.toAccountId, data.amount, data.description);
       setShowTransferModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error transferring funds:', error);
+      setError(error.message || 'Failed to transfer funds');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAddMockTransaction = async (data: any) => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      
+      // Add mock transaction that doesn't affect balance
+      await addTransaction({
+        ...data,
+        accountId: selectedAccountForMock,
+        affectsBalance: false,
+        reason: 'Historical transaction - account setup'
+      });
+      
+      setShowMockTransactionModal(false);
+      setSelectedAccountForMock(null);
+    } catch (error: any) {
+      console.error('Error adding mock transaction:', error);
+      setError(error.message || 'Failed to add mock transaction');
     } finally {
       setIsSubmitting(false);
     }
@@ -127,7 +173,7 @@ export const FinancialAccountsHub: React.FC = () => {
 
   const visibleAccounts = (accounts || []).filter(account => account.isVisible);
 
-  // Get transactions for selected account
+  // Get transactions for specific account
   const getAccountTransactions = (accountId: string) => {
     return (transactions || [])
       .filter(t => t.accountId === accountId)
@@ -158,52 +204,62 @@ export const FinancialAccountsHub: React.FC = () => {
   return (
     <div className="min-h-screen text-white pb-20">
       <TopNavigation 
-        title="Financial Accounts Hub" 
+        title="Financial Accounts" 
         showAdd 
         onAdd={() => setShowAccountModal(true)}
       />
       
       <div className="px-4 py-4 sm:py-6 space-y-6">
-        <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">
-          Manage all your payment methods and accounts in one place
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-gray-400 text-sm sm:text-base">
+            Manage all your payment methods and accounts
+          </p>
+          <button
+            onClick={() => setShowBalances(!showBalances)}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            title={showBalances ? "Hide balances" : "Show balances"}
+          >
+            {showBalances ? (
+              <EyeOff size={18} className="text-gray-400" />
+            ) : (
+              <Eye size={18} className="text-gray-400" />
+            )}
+          </button>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4">
+            <div className="flex items-center space-x-2">
+              <AlertCircle size={18} className="text-error-400" />
+              <p className="text-error-400 text-sm">{error}</p>
+            </div>
+          </div>
+        )}
 
         {/* Header with Total Balance */}
-        <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl p-4 border border-blue-500/30">
+        <div className="bg-gradient-to-r from-forest-700/80 to-forest-600/80 backdrop-blur-md rounded-2xl p-6 border border-forest-500/20">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-500/20 rounded-lg">
-                <Wallet size={20} className="text-blue-400" />
+              <div className="p-3 bg-forest-500/20 rounded-lg">
+                <Wallet size={24} className="text-forest-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">Your Financial Portfolio</h3>
-                <p className="text-sm text-blue-200">Complete account management</p>
+                <h3 className="text-xl font-heading font-bold text-white">Your Financial Portfolio</h3>
+                <p className="text-sm text-forest-200 font-body">Complete account management</p>
               </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowBalances(!showBalances)}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                title={showBalances ? "Hide balances" : "Show balances"}
-              >
-                {showBalances ? (
-                  <EyeOff size={18} className="text-gray-400" />
-                ) : (
-                  <Eye size={18} className="text-gray-400" />
-                )}
-              </button>
             </div>
           </div>
 
           {/* Total Balance */}
           {showBalances && (
-            <div className="bg-black/30 rounded-lg p-4 text-center">
-              <p className="text-sm text-gray-400 mb-1">Total Portfolio Value</p>
-              <p className="text-2xl font-bold text-white">
-                <CurrencyIcon currencyCode={currency.code} size={20} className="inline mr-2" />
+            <div className="bg-forest-800/30 rounded-xl p-4 text-center">
+              <p className="text-sm text-forest-300 mb-2 font-body">Total Portfolio Value</p>
+              <p className="text-3xl font-numbers font-bold text-white">
+                <CurrencyIcon currencyCode={currency.code} size={24} className="inline mr-2" />
                 {totalBalance.toLocaleString()}
               </p>
-              <p className="text-xs text-gray-400">{visibleAccounts.length} visible accounts</p>
+              <p className="text-xs text-forest-400 font-body">{visibleAccounts.length} visible accounts</p>
             </div>
           )}
         </div>
@@ -213,7 +269,7 @@ export const FinancialAccountsHub: React.FC = () => {
           <Button
             onClick={() => setShowTransferModal(true)}
             variant="outline"
-            className="border-primary-500/30 text-primary-400 hover:bg-primary-500/10"
+            className="border-forest-500/30 text-forest-300 hover:bg-forest-600/10"
             disabled={(accounts || []).length < 2}
           >
             <ArrowLeftRight size={16} className="mr-2" />
@@ -221,8 +277,7 @@ export const FinancialAccountsHub: React.FC = () => {
           </Button>
           <Button
             onClick={() => setShowAccountModal(true)}
-            variant="outline"
-            className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+            className="bg-forest-600 hover:bg-forest-700"
           >
             <Plus size={16} className="mr-2" />
             New Account
@@ -231,17 +286,24 @@ export const FinancialAccountsHub: React.FC = () => {
 
         {/* Accounts List */}
         {(accounts || []).length === 0 ? (
-          <div className="text-center py-12 bg-black/20 backdrop-blur-md rounded-xl border border-white/10">
-            <Wallet size={48} className="mx-auto text-gray-600 mb-4" />
-            <h3 className="text-lg font-semibold text-white mb-2">No accounts added</h3>
-            <p className="text-gray-400 mb-6">Add your first financial account to start tracking</p>
-            <Button onClick={() => setShowAccountModal(true)}>
-              <Plus size={18} className="mr-2" />
+          <div className="text-center py-16 bg-forest-900/30 backdrop-blur-md rounded-2xl border border-forest-600/20">
+            <div className="w-20 h-20 bg-forest-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Wallet size={40} className="text-forest-400" />
+            </div>
+            <h3 className="text-xl font-heading font-bold text-white mb-3">No accounts added</h3>
+            <p className="text-forest-300 mb-6 font-body max-w-md mx-auto">
+              Add your first financial account to start tracking your money across all payment methods
+            </p>
+            <Button 
+              onClick={() => setShowAccountModal(true)}
+              className="bg-forest-600 hover:bg-forest-700"
+            >
+              <Plus size={20} className="mr-2" />
               Add First Account
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {(accounts || []).map((account) => {
               const AccountIcon = getAccountIcon(account.type);
               const isSelected = selectedAccountId === account.id;
@@ -249,26 +311,26 @@ export const FinancialAccountsHub: React.FC = () => {
               return (
                 <div 
                   key={account.id} 
-                  className={`bg-black/20 backdrop-blur-md rounded-xl p-4 border transition-all duration-200 cursor-pointer ${
+                  className={`bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border transition-all duration-200 cursor-pointer ${
                     isSelected 
-                      ? 'border-primary-500 bg-primary-500/10 shadow-lg' 
-                      : 'border-white/10 hover:border-white/20 hover:bg-black/30'
+                      ? 'border-forest-500 bg-forest-600/10 shadow-xl transform scale-105' 
+                      : 'border-forest-600/20 hover:border-forest-500/40 hover:bg-forest-800/30'
                   }`}
                   onClick={() => setSelectedAccountId(isSelected ? null : account.id)}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-12 h-12 rounded-lg ${getAccountColor(account.type)} flex items-center justify-center`}>
-                        <AccountIcon size={24} className="text-white" />
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center space-x-4">
+                      <div className={`w-14 h-14 rounded-xl ${getAccountColor(account.type)} flex items-center justify-center shadow-lg`}>
+                        <AccountIcon size={28} className="text-white" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-white">{account.name}</h4>
-                        <p className="text-xs text-gray-400">{getAccountTypeName(account.type)}</p>
+                        <h4 className="text-lg font-heading font-bold text-white">{account.name}</h4>
+                        <p className="text-sm text-forest-300 font-body">{getAccountTypeName(account.type)}</p>
                         {account.institution && (
-                          <p className="text-xs text-gray-500">{account.institution}</p>
+                          <p className="text-xs text-forest-400 font-body">{account.institution}</p>
                         )}
                         {account.platform && (
-                          <p className="text-xs text-gray-500">{account.platform}</p>
+                          <p className="text-xs text-forest-400 font-body">{account.platform}</p>
                         )}
                       </div>
                     </div>
@@ -279,13 +341,13 @@ export const FinancialAccountsHub: React.FC = () => {
                           e.stopPropagation();
                           updateAccount(account.id, { isVisible: !account.isVisible });
                         }}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                        className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
                         title={account.isVisible ? "Hide from dashboard" : "Show on dashboard"}
                       >
                         {account.isVisible ? (
-                          <Eye size={14} className="text-primary-400" />
+                          <Eye size={16} className="text-forest-400" />
                         ) : (
-                          <EyeOff size={14} className="text-gray-400" />
+                          <EyeOff size={16} className="text-gray-400" />
                         )}
                       </button>
                       <button
@@ -294,9 +356,9 @@ export const FinancialAccountsHub: React.FC = () => {
                           setEditingAccount(account);
                           setShowAccountModal(true);
                         }}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                        className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
                       >
-                        <Edit3 size={14} className="text-gray-400" />
+                        <Edit3 size={16} className="text-forest-400" />
                       </button>
                       <button
                         onClick={(e) => {
@@ -305,57 +367,74 @@ export const FinancialAccountsHub: React.FC = () => {
                         }}
                         className="p-2 hover:bg-error-500/20 rounded-lg transition-colors"
                       >
-                        <Trash2 size={14} className="text-error-400" />
+                        <Trash2 size={16} className="text-error-400" />
                       </button>
                     </div>
                   </div>
 
                   {/* Balance */}
                   {(account.isVisible || showBalances) && (
-                    <div className="bg-black/30 rounded-lg p-3 mb-3">
-                      <p className="text-xs text-gray-400 mb-1">Current Balance</p>
-                      <p className="text-xl font-bold text-white">
-                        <CurrencyIcon currencyCode={currency.code} size={18} className="inline mr-1" />
+                    <div className="bg-forest-800/30 rounded-xl p-4 mb-4">
+                      <p className="text-xs text-forest-400 mb-2 font-body">Current Balance</p>
+                      <p className="text-2xl font-numbers font-bold text-white">
+                        <CurrencyIcon currencyCode={currency.code} size={20} className="inline mr-2" />
                         {account.balance.toLocaleString()}
                       </p>
                     </div>
                   )}
 
                   {!account.isVisible && (
-                    <div className="bg-gray-500/20 rounded-lg p-3 text-center mb-3">
-                      <p className="text-xs text-gray-400">Hidden from dashboard</p>
+                    <div className="bg-gray-500/20 rounded-xl p-4 text-center mb-4 border border-gray-500/30">
+                      <p className="text-sm text-gray-400 font-body">Hidden from dashboard</p>
                     </div>
                   )}
 
+                  {/* Mock Transaction Button */}
+                  <div className="mb-4">
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedAccountForMock(account.id);
+                        setShowMockTransactionModal(true);
+                      }}
+                      size="sm"
+                      variant="outline"
+                      className="w-full border-forest-500/30 text-forest-300 hover:bg-forest-600/10"
+                    >
+                      <Plus size={14} className="mr-2" />
+                      Add Mock Transaction
+                    </Button>
+                  </div>
+
                   {/* Account-Specific Data when Selected */}
                   {isSelected && (
-                    <div className="mt-4 pt-4 border-t border-white/10 space-y-4">
+                    <div className="pt-4 border-t border-forest-600/20 space-y-4">
                       {/* Recent Transactions */}
                       {selectedAccountTransactions.length > 0 && (
                         <div>
-                          <h5 className="text-sm font-medium text-white mb-3 flex items-center">
-                            <BarChart3 size={16} className="mr-2 text-blue-400" />
+                          <h5 className="text-sm font-heading font-medium text-white mb-3 flex items-center">
+                            <BarChart3 size={16} className="mr-2 text-forest-400" />
                             Recent Transactions
                           </h5>
                           <div className="space-y-2">
                             {selectedAccountTransactions.map((transaction) => (
-                              <div key={transaction.id} className="flex items-center justify-between p-2 bg-black/20 rounded-lg">
-                                <div className="flex items-center space-x-2">
-                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                              <div key={transaction.id} className="flex items-center justify-between p-3 bg-forest-800/20 rounded-lg border border-forest-600/20">
+                                <div className="flex items-center space-x-3">
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                                     transaction.type === 'income' ? 'bg-success-500/20' : 'bg-error-500/20'
                                   }`}>
-                                    <span className={`text-xs ${
+                                    <span className={`text-xs font-bold ${
                                       transaction.type === 'income' ? 'text-success-400' : 'text-error-400'
                                     }`}>
                                       {transaction.type === 'income' ? '+' : '-'}
                                     </span>
                                   </div>
                                   <div>
-                                    <p className="text-xs font-medium text-white">{transaction.description}</p>
-                                    <p className="text-xs text-gray-500">{transaction.category}</p>
+                                    <p className="text-sm font-body font-medium text-white">{transaction.description}</p>
+                                    <p className="text-xs text-forest-400 font-body">{transaction.category}</p>
                                   </div>
                                 </div>
-                                <span className={`text-xs font-medium ${
+                                <span className={`text-sm font-numbers font-medium ${
                                   transaction.type === 'income' ? 'text-success-400' : 'text-error-400'
                                 }`}>
                                   {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
@@ -369,16 +448,16 @@ export const FinancialAccountsHub: React.FC = () => {
                       {/* Linked Goals */}
                       {selectedAccountGoals.length > 0 && (
                         <div>
-                          <h5 className="text-sm font-medium text-white mb-3 flex items-center">
-                            <Target size={16} className="mr-2 text-green-400" />
+                          <h5 className="text-sm font-heading font-medium text-white mb-3 flex items-center">
+                            <Target size={16} className="mr-2 text-forest-400" />
                             Linked Goals ({selectedAccountGoals.length})
                           </h5>
                           <div className="space-y-2">
                             {selectedAccountGoals.map((goal) => (
-                              <div key={goal.id} className="p-2 bg-green-500/10 rounded-lg border border-green-500/20">
+                              <div key={goal.id} className="p-3 bg-forest-600/10 rounded-lg border border-forest-500/20">
                                 <div className="flex justify-between items-center">
-                                  <span className="text-sm text-white">{goal.title}</span>
-                                  <span className="text-xs text-green-400">
+                                  <span className="text-sm font-body text-white">{goal.title}</span>
+                                  <span className="text-xs text-forest-400 font-numbers">
                                     {((goal.currentAmount / goal.targetAmount) * 100).toFixed(1)}%
                                   </span>
                                 </div>
@@ -391,16 +470,16 @@ export const FinancialAccountsHub: React.FC = () => {
                       {/* Linked Liabilities */}
                       {selectedAccountLiabilities.length > 0 && (
                         <div>
-                          <h5 className="text-sm font-medium text-white mb-3 flex items-center">
-                            <CreditCard size={16} className="mr-2 text-red-400" />
+                          <h5 className="text-sm font-heading font-medium text-white mb-3 flex items-center">
+                            <CreditCard size={16} className="mr-2 text-error-400" />
                             Linked Debts ({selectedAccountLiabilities.length})
                           </h5>
                           <div className="space-y-2">
                             {selectedAccountLiabilities.map((liability) => (
-                              <div key={liability.id} className="p-2 bg-red-500/10 rounded-lg border border-red-500/20">
+                              <div key={liability.id} className="p-3 bg-error-500/10 rounded-lg border border-error-500/20">
                                 <div className="flex justify-between items-center">
-                                  <span className="text-sm text-white">{liability.name}</span>
-                                  <span className="text-xs text-red-400">
+                                  <span className="text-sm font-body text-white">{liability.name}</span>
+                                  <span className="text-xs text-error-400 font-numbers">
                                     {formatCurrency(liability.remainingAmount)} remaining
                                   </span>
                                 </div>
@@ -413,16 +492,16 @@ export const FinancialAccountsHub: React.FC = () => {
                       {/* Linked Budgets */}
                       {selectedAccountBudgets.length > 0 && (
                         <div>
-                          <h5 className="text-sm font-medium text-white mb-3 flex items-center">
-                            <DollarSign size={16} className="mr-2 text-yellow-400" />
+                          <h5 className="text-sm font-heading font-medium text-white mb-3 flex items-center">
+                            <DollarSign size={16} className="mr-2 text-warning-400" />
                             Account Budgets ({selectedAccountBudgets.length})
                           </h5>
                           <div className="space-y-2">
                             {selectedAccountBudgets.map((budget) => (
-                              <div key={budget.id} className="p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                              <div key={budget.id} className="p-3 bg-warning-500/10 rounded-lg border border-warning-500/20">
                                 <div className="flex justify-between items-center">
-                                  <span className="text-sm text-white">{budget.category}</span>
-                                  <span className="text-xs text-yellow-400">
+                                  <span className="text-sm font-body text-white">{budget.category}</span>
+                                  <span className="text-xs text-warning-400 font-numbers">
                                     {((budget.spent / budget.amount) * 100).toFixed(1)}% used
                                   </span>
                                 </div>
@@ -441,26 +520,26 @@ export const FinancialAccountsHub: React.FC = () => {
 
         {/* Account Statistics */}
         {(accounts || []).length > 0 && (
-          <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 border border-white/10">
-            <h4 className="font-medium text-white mb-4">Account Statistics</h4>
+          <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
+            <h4 className="font-heading font-medium text-white mb-4">Account Statistics</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <p className="text-xs text-gray-400 mb-1">Total Accounts</p>
-                <p className="text-lg font-bold text-white">{(accounts || []).length}</p>
+                <p className="text-xs text-forest-400 mb-1 font-body">Total Accounts</p>
+                <p className="text-xl font-numbers font-bold text-white">{(accounts || []).length}</p>
               </div>
               <div className="text-center">
-                <p className="text-xs text-gray-400 mb-1">Visible</p>
-                <p className="text-lg font-bold text-primary-400">{visibleAccounts.length}</p>
+                <p className="text-xs text-forest-400 mb-1 font-body">Visible</p>
+                <p className="text-xl font-numbers font-bold text-forest-400">{visibleAccounts.length}</p>
               </div>
               <div className="text-center">
-                <p className="text-xs text-gray-400 mb-1">Credit Cards</p>
-                <p className="text-lg font-bold text-red-400">
+                <p className="text-xs text-forest-400 mb-1 font-body">Credit Cards</p>
+                <p className="text-xl font-numbers font-bold text-red-400">
                   {(accounts || []).filter(a => a.type === 'credit_card').length}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-xs text-gray-400 mb-1">Digital Wallets</p>
-                <p className="text-lg font-bold text-orange-400">
+                <p className="text-xs text-forest-400 mb-1 font-body">Digital Wallets</p>
+                <p className="text-xl font-numbers font-bold text-orange-400">
                   {(accounts || []).filter(a => a.type === 'digital_wallet').length}
                 </p>
               </div>
@@ -469,31 +548,31 @@ export const FinancialAccountsHub: React.FC = () => {
         )}
 
         {/* Account Types Guide */}
-        <div className="bg-blue-500/20 rounded-lg p-4 border border-blue-500/30">
-          <h4 className="font-medium text-blue-400 mb-3">Supported Account Types</h4>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Building size={14} className="text-blue-400" />
-                <span className="text-blue-300">Bank Accounts (SBI, HDFC, ICICI)</span>
+        <div className="bg-forest-600/20 rounded-xl p-6 border border-forest-500/30">
+          <h4 className="font-heading font-medium text-forest-300 mb-4">Supported Account Types</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <Building size={16} className="text-blue-400" />
+                <span className="text-forest-200 font-body">Bank Accounts (SBI, HDFC, ICICI)</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <Smartphone size={14} className="text-orange-400" />
-                <span className="text-blue-300">Digital Wallets (PayTM, PhonePe)</span>
+              <div className="flex items-center space-x-3">
+                <Smartphone size={16} className="text-orange-400" />
+                <span className="text-forest-200 font-body">Digital Wallets (PayTM, PhonePe)</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <CreditCard size={14} className="text-red-400" />
-                <span className="text-blue-300">Credit Cards (HDFC, SBI, Axis)</span>
+              <div className="flex items-center space-x-3">
+                <CreditCard size={16} className="text-red-400" />
+                <span className="text-forest-200 font-body">Credit Cards (HDFC, SBI, Axis)</span>
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Wallet size={14} className="text-gray-400" />
-                <span className="text-blue-300">Cash Wallet</span>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <Wallet size={16} className="text-gray-400" />
+                <span className="text-forest-200 font-body">Cash Wallet</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <TrendingUp size={14} className="text-yellow-400" />
-                <span className="text-blue-300">Investment Accounts</span>
+              <div className="flex items-center space-x-3">
+                <TrendingUp size={16} className="text-yellow-400" />
+                <span className="text-forest-200 font-body">Investment Accounts</span>
               </div>
             </div>
           </div>
@@ -506,6 +585,7 @@ export const FinancialAccountsHub: React.FC = () => {
         onClose={() => {
           setShowAccountModal(false);
           setEditingAccount(null);
+          setError(null);
         }}
         title={editingAccount ? 'Edit Account' : 'Add Financial Account'}
       >
@@ -515,6 +595,7 @@ export const FinancialAccountsHub: React.FC = () => {
           onCancel={() => {
             setShowAccountModal(false);
             setEditingAccount(null);
+            setError(null);
           }}
           isSubmitting={isSubmitting}
         />
@@ -523,15 +604,56 @@ export const FinancialAccountsHub: React.FC = () => {
       {/* Transfer Modal */}
       <Modal
         isOpen={showTransferModal}
-        onClose={() => setShowTransferModal(false)}
+        onClose={() => {
+          setShowTransferModal(false);
+          setError(null);
+        }}
         title="Transfer Between Accounts"
       >
         <TransferForm
           accounts={accounts || []}
           onSubmit={handleTransfer}
-          onCancel={() => setShowTransferModal(false)}
+          onCancel={() => {
+            setShowTransferModal(false);
+            setError(null);
+          }}
           isSubmitting={isSubmitting}
         />
+      </Modal>
+
+      {/* Mock Transaction Modal */}
+      <Modal
+        isOpen={showMockTransactionModal}
+        onClose={() => {
+          setShowMockTransactionModal(false);
+          setSelectedAccountForMock(null);
+          setError(null);
+        }}
+        title="Add Historical Transaction"
+      >
+        <div className="space-y-4">
+          <div className="bg-forest-600/20 rounded-lg p-4 border border-forest-500/30">
+            <div className="flex items-start space-x-3">
+              <Info size={18} className="text-forest-400 mt-0.5" />
+              <div>
+                <p className="text-forest-300 font-body font-medium text-sm">Mock Transaction</p>
+                <p className="text-forest-200 font-body text-xs mt-1">
+                  This transaction won't affect your account balance. Use this to add historical transactions 
+                  from before you started using FinTrack.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <TransactionForm
+            onSubmit={handleAddMockTransaction}
+            onCancel={() => {
+              setShowMockTransactionModal(false);
+              setSelectedAccountForMock(null);
+              setError(null);
+            }}
+          />
+        </div>
       </Modal>
 
       {/* Delete Confirmation Modal */}
@@ -540,21 +662,36 @@ export const FinancialAccountsHub: React.FC = () => {
         onClose={() => {
           setShowDeleteConfirm(false);
           setAccountToDelete(null);
+          setError(null);
         }}
         title="Delete Account"
       >
         <div className="space-y-4">
-          <p className="text-gray-300">
-            Are you sure you want to delete this account? This will also remove all associated transactions.
+          <div className="bg-error-500/20 rounded-lg p-4 border border-error-500/30">
+            <div className="flex items-start space-x-3">
+              <AlertCircle size={18} className="text-error-400 mt-0.5" />
+              <div>
+                <p className="text-error-400 font-body font-medium text-sm">Warning: This action cannot be undone</p>
+                <p className="text-error-300 font-body text-xs mt-1">
+                  Deleting this account will also remove all associated transactions, goals, and budgets.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <p className="text-forest-200 font-body">
+            Are you sure you want to delete this account? This action is permanent and cannot be reversed.
           </p>
-          <div className="flex space-x-3">
+          
+          <div className="flex space-x-3 pt-4">
             <Button
               variant="outline"
               onClick={() => {
                 setShowDeleteConfirm(false);
                 setAccountToDelete(null);
               }}
-              className="flex-1"
+              className="flex-1 border-forest-500/30 text-forest-300"
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
@@ -563,7 +700,7 @@ export const FinancialAccountsHub: React.FC = () => {
               className="flex-1 bg-error-500 hover:bg-error-600"
               loading={isSubmitting}
             >
-              Delete
+              Delete Account
             </Button>
           </div>
         </div>

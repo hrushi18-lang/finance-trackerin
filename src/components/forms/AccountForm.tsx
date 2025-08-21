@@ -52,45 +52,45 @@ export const AccountForm: React.FC<AccountFormProps> = ({
     },
     { 
       value: 'bank_current', 
-      label: 'Bank Current Account', 
+      label: 'Current Account', 
       icon: Building, 
       color: 'green',
-      description: 'Business checking account'
+      description: 'HDFC Current, SBI Current'
     },
     { 
       value: 'bank_student', 
       label: 'Student Account', 
       icon: Building, 
       color: 'purple',
-      description: 'Student banking with benefits'
+      description: 'SBI Student, HDFC Student Plus'
     },
     { 
       value: 'digital_wallet', 
       label: 'Digital Wallet', 
       icon: Smartphone, 
       color: 'orange',
-      description: 'PayTM, PhonePe, GPay, Amazon Pay'
+      description: 'PayTM, PhonePe, Google Pay'
     },
     { 
       value: 'cash', 
       label: 'Cash', 
       icon: Wallet, 
       color: 'gray',
-      description: 'Physical cash wallet'
+      description: 'Cash in hand, petty cash'
     },
     { 
       value: 'credit_card', 
       label: 'Credit Card', 
       icon: CreditCard, 
       color: 'red',
-      description: 'HDFC, SBI, Axis Credit Cards'
+      description: 'HDFC Regalia, SBI SimplyCLICK'
     },
     { 
       value: 'investment', 
       label: 'Investment Account', 
       icon: TrendingUp, 
       color: 'yellow',
-      description: 'SIP, Mutual Funds, Stocks'
+      description: 'Zerodha, Groww, SIP Portfolio'
     }
   ];
 

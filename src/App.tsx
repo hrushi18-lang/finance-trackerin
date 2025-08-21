@@ -22,13 +22,12 @@ const AddTransaction = React.lazy(() => import('./pages/AddTransaction').then(mo
 const TransactionHistory = React.lazy(() => import('./pages/TransactionHistory').then(module => ({ default: module.TransactionHistory })));
 const Analytics = React.lazy(() => import('./pages/Analytics').then(module => ({ default: module.Analytics })));
 const Calendar = React.lazy(() => import('./pages/Calendar').then(module => ({ default: module.Calendar })));
-const FinancialAccountsHub = React.lazy(() => import('./pages/FinancialAccountsHub').then(module => ({ default: module.FinancialAccountsHub })));
 const Goals = React.lazy(() => import('./pages/Goals').then(module => ({ default: module.Goals })));
 const Liabilities = React.lazy(() => import('./pages/Liabilities').then(module => ({ default: module.Liabilities })));
 const Budgets = React.lazy(() => import('./pages/Budgets').then(module => ({ default: module.Budgets })));
 const Overview = React.lazy(() => import('./pages/Overview').then(module => ({ default: module.Overview })));
 const RecurringTransactions = React.lazy(() => import('./pages/RecurringTransactions').then(module => ({ default: module.RecurringTransactions })));
-const FinancialAccountsHub = React.lazy(() => import('./pages/FinancialAccountsHub').then(module => ({ default: module.FinancialAccountsHub })));
+const AccountsHub = React.lazy(() => import('./pages/FinancialAccountsHub').then(module => ({ default: module.FinancialAccountsHub })));
 const Profile = React.lazy(() => import('./pages/Profile').then(module => ({ default: module.Profile })));
 const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
 const Privacy = React.lazy(() => import('./pages/Privacy').then(module => ({ default: module.Privacy })));
@@ -196,17 +195,7 @@ function App() {
                                 path="/accounts-hub" 
                                 element={
                                   <ProtectedRoute>
-                                    <FinancialAccountsHub />
-                                    <BottomNavigation />
-                                  </ProtectedRoute>
-                                } 
-                              />
-                              
-                              <Route 
-                                path="/accounts-hub" 
-                                element={
-                                  <ProtectedRoute>
-                                    <FinancialAccountsHub />
+                                    <AccountsHub />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
