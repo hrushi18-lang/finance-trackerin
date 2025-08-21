@@ -50,6 +50,12 @@ export const Profile: React.FC = () => {
 
   const menuItems = [
     { 
+      icon: Wallet, 
+      label: 'Financial Accounts', 
+      description: 'Manage all your payment methods and accounts',
+      onClick: () => navigate('/accounts-hub')
+    },
+    { 
       icon: Repeat, 
       label: 'Recurring Transactions', 
       description: 'Manage automatic transactions',

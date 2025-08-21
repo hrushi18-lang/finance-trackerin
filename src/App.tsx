@@ -27,6 +27,7 @@ const Liabilities = React.lazy(() => import('./pages/Liabilities').then(module =
 const Budgets = React.lazy(() => import('./pages/Budgets').then(module => ({ default: module.Budgets })));
 const Overview = React.lazy(() => import('./pages/Overview').then(module => ({ default: module.Overview })));
 const RecurringTransactions = React.lazy(() => import('./pages/RecurringTransactions').then(module => ({ default: module.RecurringTransactions })));
+const FinancialAccountsHub = React.lazy(() => import('./pages/FinancialAccountsHub').then(module => ({ default: module.FinancialAccountsHub })));
 const Profile = React.lazy(() => import('./pages/Profile').then(module => ({ default: module.Profile })));
 const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
 const Privacy = React.lazy(() => import('./pages/Privacy').then(module => ({ default: module.Privacy })));
@@ -185,6 +186,16 @@ function App() {
                                 element={
                                   <ProtectedRoute>
                                     <RecurringTransactions />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/accounts-hub" 
+                                element={
+                                  <ProtectedRoute>
+                                    <FinancialAccountsHub />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 

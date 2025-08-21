@@ -45,31 +45,31 @@ export const AccountForm: React.FC<AccountFormProps> = ({
   const accountTypes = [
     { 
       value: 'bank_savings', 
-      label: 'Savings Account', 
+      label: 'Bank Savings Account', 
       icon: Building, 
       color: 'blue',
-      description: 'Regular savings account'
+      description: 'SBI, HDFC, ICICI Savings'
     },
     { 
       value: 'bank_current', 
-      label: 'Current Account', 
+      label: 'Bank Current Account', 
       icon: Building, 
       color: 'green',
-      description: 'Business current account'
+      description: 'Business checking account'
     },
     { 
       value: 'bank_student', 
       label: 'Student Account', 
       icon: Building, 
       color: 'purple',
-      description: 'Student banking account'
+      description: 'Student banking with benefits'
     },
     { 
       value: 'digital_wallet', 
       label: 'Digital Wallet', 
       icon: Smartphone, 
       color: 'orange',
-      description: 'PayTM, PhonePe, GPay, etc.'
+      description: 'PayTM, PhonePe, GPay, Amazon Pay'
     },
     { 
       value: 'cash', 
@@ -83,14 +83,14 @@ export const AccountForm: React.FC<AccountFormProps> = ({
       label: 'Credit Card', 
       icon: CreditCard, 
       color: 'red',
-      description: 'Credit card account'
+      description: 'HDFC, SBI, Axis Credit Cards'
     },
     { 
       value: 'investment', 
       label: 'Investment Account', 
       icon: TrendingUp, 
       color: 'yellow',
-      description: 'SIP, Mutual Funds, etc.'
+      description: 'SIP, Mutual Funds, Stocks'
     }
   ];
 
