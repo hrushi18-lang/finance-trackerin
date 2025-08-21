@@ -2,19 +2,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase, logQueryPerformance } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { Transaction, Goal, Liability, Budget, RecurringTransaction, DashboardStats, UserCategory, DebtRepaymentStrategy, FinancialAccount, IncomeSource, SplitTransaction } from '../types';
-import { toNumber, validateLiability, validateTransaction } from '../utils/validation';
-
-interface FinanceContextType {
-  // Data
-  transactions: Transaction[];
-  goals: Goal[];
-  liabilities: Liability[];
-  budgets: Budget[];
-  recurringTransactions: RecurringTransaction[];
-  userCategories: UserCategory[];
-  stats: DashboardStats;
-  loading: boolean;
-  
   // CRUD Operations
   addTransaction: (transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
@@ -59,19 +46,20 @@ interface FinanceContextType {
   getFinancialForecast: () => Promise<any>;
   refreshInsights: () => Promise<void>;
   insights: any[];
-
+  };
   // Account management
   accounts: FinancialAccount[];
   addAccount: (data: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'currency'>) => Promise<void>;
   updateAccount: (id: string, data: Partial<FinancialAccount>) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
   transferBetweenAccounts: (fromAccountId: string, toAccountId: string, amount: number, description: string) => Promise<void>;
-  
+
   // Income source management
   incomeSources: IncomeSource[];
   addIncomeSource: (data: Omit<IncomeSource, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
   updateIncomeSource: (id: string, data: Partial<IncomeSource>) => Promise<void>;
   deleteIncomeSource: (id: string) => Promise<void>;
+}
   
   // Split transactions
   addSplitTransaction: (mainTransaction: Omit<Transaction, 'id' | 'userId'>, splits: SplitTransaction[]) => Promise<void>;
@@ -1655,52 +1643,6 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
   };
 
   // Split transaction implementation
-  const addSplitTransaction = async (
-    mainTransaction: Omit<Transaction, 'id' | 'userId'>, 
-    splits: SplitTransaction[]
-  ): Promise<void> => {
-    if (!user) throw new Error('User not authenticated');
-    
-    try {
-      console.log('🔄 Adding split transaction:', mainTransaction, splits);
-      const startTime = Date.now();
-      
-      // First, add the main transaction
-      const { data: mainData, error: mainError } = await withTimeout(
-        withRetry(async () => {
-          return supabase
-            .from('transactions')
-            .insert([{
-              user_id: user.id,
-              type: mainTransaction.type,
-              amount: mainTransaction.amount,
-              category: 'Split Transaction',
-              description: mainTransaction.description,
-              date: mainTransaction.date.toISOString().split('T')[0],
-            }])
-            .select()
-            .single();
-        }, 2, 'Add main split transaction'),
-        10000,
-        'Add main split transaction'
-      );
-
-      if (mainError) {
-        console.error('❌ Error adding main split transaction:', mainError);
-        throw new Error(`Failed to add split transaction: ${mainError.message}`);
-      }
-
-      console.log('✅ Main split transaction added:', mainData);
-
-      // Then add each split as a child transaction
-      const splitInserts = splits.map(split => ({
-        user_id: user.id,
-        type: mainTransaction.type,
-        amount: split.amount,
-        category: split.category,
-        description: split.description,
-        date: mainTransaction.date.toISOString().split('T')[0],
-        parent_transaction_id: mainData.id,
       }));
 
       const { data: splitData, error: splitError } = await withTimeout(
