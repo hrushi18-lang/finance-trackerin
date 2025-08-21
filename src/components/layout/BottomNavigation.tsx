@@ -24,13 +24,13 @@ export const BottomNavigation: React.FC = () => {
             className={({ isActive }) =>
               `flex flex-col items-center justify-center p-2 rounded-lg transition-all duration-200 min-w-0 ${
                 isActive
-                  ? 'text-primary-400 bg-primary-500/10'
-                  : 'text-gray-500 hover:text-primary-400 hover:bg-charcoal-700'
+                  ? 'text-forest-400 bg-forest-500/10'
+                  : 'text-gray-500 hover:text-forest-400 hover:bg-charcoal-700'
               }`
             }
           >
             <Icon size={16} className="sm:w-[18px] sm:h-[18px]" />
-            <span className="text-xs mt-1 font-medium truncate">{label}</span>
+            <span className="text-xs mt-1 font-body font-medium truncate">{label}</span>
           </NavLink>
         ))}
       </div>

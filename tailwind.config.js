@@ -143,8 +143,10 @@ export default {
         },
       },
       fontFamily: {
-        'sans': ['Inter', 'system-ui', 'sans-serif'],
-        'display': ['Inter', 'system-ui', 'sans-serif'],
+        'sans': ['Archivo', 'system-ui', 'sans-serif'],
+        'display': ['Archivo Black', 'system-ui', 'sans-serif'],
+        'body': ['Playfair Display', 'serif'],
+        'numbers': ['Archivo', 'monospace'],
       },
       fontSize: {
         'hero': ['3.5rem', { lineHeight: '1.1', fontWeight: '700' }],

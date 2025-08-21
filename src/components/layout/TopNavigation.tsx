@@ -16,7 +16,7 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
     <header className="bg-black/20 backdrop-blur-md border-b border-white/10 px-4 py-4 sticky top-0 z-30">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">{title}</h1>
+          <h1 className="text-2xl font-heading font-bold text-white">{title}</h1>
         </div>
         
         <div className="flex items-center space-x-3">

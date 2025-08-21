@@ -70,9 +70,9 @@ function App() {
                           <Balatro 
                             spinRotation={-1.5}
                             spinSpeed={3.0}
-                            color1="#14b8a6"
-                            color2="#0d9488"
-                            color3="#0f172a"
+                            color1="#4A5D23"
+                            color2="#7f8f55"
+                            color3="#2b3316"
                             contrast={2.5}
                             lighting={0.5}
                             spinAmount={0.3}

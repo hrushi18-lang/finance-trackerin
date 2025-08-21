@@ -337,13 +337,13 @@ export const Dashboard: React.FC = () => {
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <div className="bg-black/20 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-white/10 hover:bg-black/30 transition-colors">
               <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-success-500/20 rounded-lg flex items-center justify-center">
-                  <TrendingUp size={16} className="text-success-400 sm:w-5 sm:h-5" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-forest-500/20 rounded-lg flex items-center justify-center">
+                  <TrendingUp size={16} className="text-forest-400 sm:w-5 sm:h-5" />
                 </div>
-                <span className="text-xs text-gray-400">{t('dashboard.this_month')}</span>
+                <span className="text-xs text-gray-400 font-body">{t('dashboard.this_month')}</span>
               </div>
-              <p className="text-xs sm:text-sm text-gray-400 mb-1">{t('dashboard.income')}</p>
-              <p className="text-base sm:text-xl font-bold text-white">
+              <p className="text-xs sm:text-sm text-gray-400 mb-1 font-body">{t('dashboard.income')}</p>
+              <p className="text-base sm:text-xl font-numbers font-bold text-white">
                 {formatCurrency(stats.monthlyIncome)}
               </p>
             </div>

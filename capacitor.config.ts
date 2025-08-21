@@ -1,9 +1,10 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.finspire.app',
+  appId: 'com.finspire.production',
   appName: 'Finspire',
   webDir: 'dist',
+  bundledWebRuntime: false,
   server: {
     androidScheme: 'https'
   },
@@ -11,19 +12,19 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 3000,
       launchAutoHide: false,
-      backgroundColor: "#0f172a",
+      backgroundColor: "#2b3316",
       androidSplashResourceName: "splash",
       androidScaleType: "CENTER_CROP",
       showSpinner: true,
       androidSpinnerStyle: "large",
       iosSpinnerStyle: "large",
-      spinnerColor: "#14b8a6",
+      spinnerColor: "#4A5D23",
       splashFullScreen: true,
       splashImmersive: true
     },
     StatusBar: {
       style: "DARK",
-      backgroundColor: "#0f172a"
+      backgroundColor: "#2b3316"
     }
   }
 };

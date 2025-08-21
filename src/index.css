@@ -2,6 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Forest Green Theme Variables */
+:root {
+  --forest-primary: #4A5D23;
+  --forest-secondary: #7f8f55;
+  --forest-light: #b4bf95;
+  --forest-dark: #2b3316;
+  --forest-accent: #9aa673;
+}
+
+/* Global Background */
+body {
+  background: linear-gradient(135deg, #2b3316 0%, #4A5D23 50%, #3d4a1c 100%);
+  font-family: 'Playfair Display', serif;
+}
+
+/* Typography Classes */
+.font-heading {
+  font-family: 'Archivo Black', sans-serif;
+}
+
+.font-numbers {
+  font-family: 'Archivo', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-body {
+  font-family: 'Playfair Display', serif;
+}
+
 /* Hide scrollbars globally while maintaining functionality */
 * {
   scrollbar-width: none; /* Firefox */

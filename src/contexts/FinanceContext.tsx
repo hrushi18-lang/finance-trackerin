@@ -64,7 +64,7 @@ interface FinanceContextType {
   refreshInsights: () => Promise<void>;
 
   // Account management
-  accounts: FinancialAccount[];
+  
   addAccount: (data: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'currency'>) => Promise<void>;
   updateAccount: (id: string, data: Partial<FinancialAccount>) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
