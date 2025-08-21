@@ -41,7 +41,6 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-black/80 backdrop-blur-md rounded-2xl border border-white/20 animate-scale-in">
       <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-forest-900/80 backdrop-blur-md rounded-2xl border border-forest-600/20 animate-scale-in">
         <div className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
