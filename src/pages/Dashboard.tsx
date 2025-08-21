@@ -348,6 +348,14 @@ export const Dashboard: React.FC = () => {
                   </div>
                 </div>
               ))}
+            
+            <button 
+              onClick={() => navigate('/overview')}
+              className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
+              title="Overview"
+            >
+              <BarChart3 size={18} className="text-forest-300 sm:w-5 sm:h-5" />
+            </button>
               
               {(accounts || []).length > 4 && (
                 <button

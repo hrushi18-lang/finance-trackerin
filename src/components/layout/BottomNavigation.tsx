@@ -1,16 +1,16 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Home, Target, CreditCard, Calculator, User, Settings } from 'lucide-react';
+import { Home, BarChart3, Calendar, Target, User } from 'lucide-react';
 
 export const BottomNavigation: React.FC = () => {
   const { t } = useTranslation();
 
   const navItems = [
     { path: '/', icon: Home, label: t('navigation.home') },
-    { path: '/goals', icon: Target, label: t('navigation.goals') },
-    { path: '/liabilities', icon: CreditCard, label: t('navigation.debts') },
-    { path: '/budgets', icon: Calculator, label: t('navigation.budget') },
+    { path: '/overview', icon: BarChart3, label: 'Overview' },
+    { path: '/analytics', icon: Target, label: 'Analytics' },
+    { path: '/calendar', icon: Calendar, label: 'Calendar' },
     { path: '/profile', icon: User, label: t('navigation.profile') },
   ];
 

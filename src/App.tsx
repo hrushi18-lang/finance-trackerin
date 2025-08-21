@@ -25,6 +25,7 @@ const Calendar = React.lazy(() => import('./pages/Calendar').then(module => ({ d
 const Goals = React.lazy(() => import('./pages/Goals').then(module => ({ default: module.Goals })));
 const Liabilities = React.lazy(() => import('./pages/Liabilities').then(module => ({ default: module.Liabilities })));
 const Budgets = React.lazy(() => import('./pages/Budgets').then(module => ({ default: module.Budgets })));
+const Overview = React.lazy(() => import('./pages/Overview').then(module => ({ default: module.Overview })));
 const RecurringTransactions = React.lazy(() => import('./pages/RecurringTransactions').then(module => ({ default: module.RecurringTransactions })));
 const Profile = React.lazy(() => import('./pages/Profile').then(module => ({ default: module.Profile })));
 const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
@@ -124,6 +125,16 @@ function App() {
                                 element={
                                   <ProtectedRoute>
                                     <Analytics />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/overview" 
+                                element={
+                                  <ProtectedRoute>
+                                    <Overview />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
