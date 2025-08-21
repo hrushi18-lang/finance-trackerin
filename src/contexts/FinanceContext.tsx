@@ -2,17 +2,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase, logQueryPerformance } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { Transaction, Goal, Liability, Budget, RecurringTransaction, DashboardStats, UserCategory, DebtRepaymentStrategy, FinancialAccount, IncomeSource, SplitTransaction } from '../types';
-import { 
-  Transaction, 
-  Goal, 
-  Liability, 
-  Budget, 
-  RecurringTransaction, 
-  DashboardStats, 
-  UserCategory,
-  SplitTransaction,
-  DebtRepaymentStrategy
-} from '../types';
 import { toNumber, validateLiability, validateTransaction } from '../utils/validation';
 
 interface FinanceContextType {
