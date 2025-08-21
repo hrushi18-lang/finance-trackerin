@@ -6,6 +6,20 @@ export interface User {
   createdAt: Date;
 }
 
+export interface FinancialAccount {
+  id: string;
+  name: string;
+  type: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment';
+  balance: number;
+  institution?: string;
+  platform?: string;
+  isVisible: boolean;
+  currency: string;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Transaction {
   id: string;
   type: 'income' | 'expense';
@@ -14,6 +28,10 @@ export interface Transaction {
   description: string;
   date: Date;
   userId: string;
+  accountId?: string; // Linked to specific account
+  affectsBalance: boolean; // Whether this affects account balance
+  reason?: string; // Required when affectsBalance is false
+  transferToAccountId?: string; // For cross-account transfers
   recurringTransactionId?: string; // Link to parent recurring transaction
   parentTransactionId?: string; // Link to parent transaction (for split transactions)
 }
