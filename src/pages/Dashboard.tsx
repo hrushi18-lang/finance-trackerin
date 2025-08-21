@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DollarSign, TrendingUp, Wallet, CreditCard, Plus, Minus, Target, Receipt, Search, Bell, Calendar, BarChart3, Users, Zap, History, Repeat, RefreshCw, User } from 'lucide-react';
+import { Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '../components/common/Modal';

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Repeat, CreditCard, Calendar, Bell, Zap, AlertTriangle, Clock, Target } from 'lucide-react';
+import { Repeat, CreditCard, Calendar, Bell, Zap, AlertTriangle, Clock, Target, TrendingUp, TrendingDown } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
