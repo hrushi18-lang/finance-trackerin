@@ -132,6 +132,7 @@ export const MultipleIncomeManager: React.FC = () => {
         break;
     }
     return sum + monthlyAmount;
+  }, 0);
 
   const activeSources = safeIncomeSources.filter(s => s.isActive);
   const inactiveSources = safeIncomeSources.filter(s => !s.isActive);
