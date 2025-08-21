@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase, logQueryPerformance } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useToast } from '../components/common/Toast';
-import { useCurrency } from './CurrencyContext';
+import { useCurrency } from './CurrencyConversionContext';
 import { Transaction, Goal, Liability, Budget, RecurringTransaction, DashboardStats, UserCategory, DebtRepaymentStrategy, FinancialAccount, IncomeSource, SplitTransaction } from '../types';
 
 interface FinanceContextType {
