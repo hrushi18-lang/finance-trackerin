@@ -448,6 +448,49 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     }
   };
 
+  // Income Sources Management
+  const addIncomeSource = async (incomeSource: any) => {
+    try {
+      const newSource = {
+        id: `income_${Date.now()}`,
+        ...incomeSource,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setIncomeSources(prev => [...(prev || []), newSource]);
+      console.log('✅ Income source added successfully');
+    } catch (error) {
+      console.error('❌ Error adding income source:', error);
+      throw error;
+    }
+  };
+
+  const updateIncomeSource = async (id: string, updates: any) => {
+    try {
+      setIncomeSources(prev => 
+        (prev || []).map(source => 
+          source.id === id 
+            ? { ...source, ...updates, updatedAt: new Date() }
+            : source
+        )
+      );
+      console.log('✅ Income source updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating income source:', error);
+      throw error;
+    }
+  };
+
+  const deleteIncomeSource = async (id: string) => {
+    try {
+      setIncomeSources(prev => (prev || []).filter(source => source.id !== id));
+      console.log('✅ Income source deleted successfully');
+    } catch (error) {
+      console.error('❌ Error deleting income source:', error);
+      throw error;
+    }
+  };
+
   // Enhanced CRUD operations with comprehensive error handling
   const addTransaction = async (transaction: Omit<Transaction, 'id' | 'userId'>): Promise<void> => {
     if (!user) throw new Error('User not authenticated');
