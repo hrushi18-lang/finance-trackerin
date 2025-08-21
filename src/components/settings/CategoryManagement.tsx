@@ -5,6 +5,7 @@ import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { useFinance } from '../../contexts/FinanceContext';
 import { UserCategory } from '../../types';
+import TrendingUp from "@mui/icons-material/TrendingUp";
 
 interface CategoryFormData {
   name: string;
