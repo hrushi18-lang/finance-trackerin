@@ -289,6 +289,13 @@ export const Dashboard: React.FC = () => {
                   <Eye size={18} className="text-forest-400" />
                 )}
               </button>
+              <button
+                onClick={() => navigate('/accounts-hub')}
+                className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
+                title="Manage all accounts"
+              >
+                <ArrowLeftRight size={18} className="text-forest-400" />
+              </button>
               <Button
                 onClick={() => setShowAccountModal(true)}
                 size="sm"

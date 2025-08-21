@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { OnboardingWelcome } from './OnboardingWelcome';
 import { OnboardingProfile } from './OnboardingProfile';
 import { OnboardingUserClassification } from './OnboardingUserClassification';
+import { OnboardingAccountsSetup } from './OnboardingAccountsSetup';
 import { OnboardingIncomeSetup } from './OnboardingIncomeSetup';
 import { OnboardingFinancialActivities } from './OnboardingFinancialActivities';
 import { OnboardingGoals } from './OnboardingGoals';
