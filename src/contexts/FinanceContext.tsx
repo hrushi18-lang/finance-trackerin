@@ -59,7 +59,7 @@ interface FinanceContextType {
   getFinancialForecast: () => Promise<any>;
   refreshInsights: () => Promise<void>;
   insights: any[];
-}
+
   // Account management
   accounts: FinancialAccount[];
   addAccount: (data: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'currency'>) => Promise<void>;
