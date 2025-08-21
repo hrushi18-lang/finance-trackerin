@@ -3,7 +3,6 @@ import { Wallet, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { LoginForm } from '../components/auth/LoginForm';
 import { RegisterForm } from '../components/auth/RegisterForm';
-import Balatro from '../components/background/Balatro';
 import { useAuth } from '../contexts/AuthContext';
 
 export const Auth: React.FC = () => {
@@ -37,37 +36,25 @@ export const Auth: React.FC = () => {
   }, [authStatus, isLogin, navigate]);
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 z-0">
-        <Balatro 
-          spinRotation={-1.5}
-          spinSpeed={3.0}
-          color1="#4A5D23"
-          color2="#7f8f55"
-          color3="#2b3316"
-          contrast={2.5}
-          lighting={0.5}
-          spinAmount={0.3}
-          isRotate={true}
-        />
-      </div>
+    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-forest-800">
+      {/* Static Forest Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-forest-900 via-forest-800 to-forest-700"></div>
       
       {/* Content */}
       <div className="relative z-10 w-full max-w-md px-4">
         {/* Logo and Title */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-500/20">
+          <div className="w-20 h-20 bg-gradient-to-br from-forest-600 to-forest-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-forest-600/20">
             <Wallet size={40} className="text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">Finspire</h1>
-          <p className="text-gray-300 text-lg">
+          <h1 className="text-4xl font-heading font-bold text-white mb-2">FinTrack</h1>
+          <p className="text-forest-200 text-lg font-body">
             {isLogin ? 'Welcome back!' : 'Create your account'}
           </p>
         </div>
 
         {/* Auth Card */}
-        <div className="bg-black/30 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-white/10 shadow-xl">
+        <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-forest-600/20 shadow-xl">
           {isLogin ? (
             <LoginForm onToggleMode={() => setIsLogin(false)} />
           ) : (
@@ -77,13 +64,13 @@ export const Auth: React.FC = () => {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-sm text-gray-400">
-            &copy; {new Date().getFullYear()} Finspire. All rights reserved.
+          <p className="text-sm text-forest-300 font-body">
+            &copy; {new Date().getFullYear()} FinTrack. All rights reserved.
           </p>
           <div className="flex justify-center space-x-4 mt-2">
-            <a href="#" className="text-xs text-gray-500 hover:text-primary-400">Privacy Policy</a>
-            <a href="#" className="text-xs text-gray-500 hover:text-primary-400">Terms of Service</a>
-            <a href="#" className="text-xs text-gray-500 hover:text-primary-400">Contact</a>
+            <a href="#" className="text-xs text-forest-400 hover:text-forest-300 font-body">Privacy Policy</a>
+            <a href="#" className="text-xs text-forest-400 hover:text-forest-300 font-body">Terms of Service</a>
+            <a href="#" className="text-xs text-forest-400 hover:text-forest-300 font-body">Contact</a>
           </div>
         </div>
       </div>

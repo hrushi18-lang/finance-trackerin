@@ -15,7 +15,7 @@ export const BottomNavigation: React.FC = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-charcoal-800/95 backdrop-blur-md border-t border-charcoal-700 safe-area-pb z-40">
+    <nav className="fixed bottom-0 left-0 right-0 bg-forest-900/95 backdrop-blur-md border-t border-forest-700 safe-area-pb z-40">
       <div className="flex justify-around items-center py-1 sm:py-2">
         {navItems.map(({ path, icon: Icon, label }) => (
           <NavLink
@@ -25,7 +25,7 @@ export const BottomNavigation: React.FC = () => {
               `flex flex-col items-center justify-center p-2 rounded-lg transition-all duration-200 min-w-0 ${
                 isActive
                   ? 'text-forest-400 bg-forest-500/10'
-                  : 'text-gray-500 hover:text-forest-400 hover:bg-charcoal-700'
+                  : 'text-gray-500 hover:text-forest-400 hover:bg-forest-700'
               }`
             }
           >

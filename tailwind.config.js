@@ -4,6 +4,20 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Forest Green Theme
+        forest: {
+          50: '#f6f8f4',
+          100: '#e9f0e3',
+          200: '#d4e2c8',
+          300: '#b4bf95',
+          400: '#9aa673',
+          500: '#7f8f55',
+          600: '#4A5D23',
+          700: '#3d4a1c',
+          800: '#2b3316',
+          900: '#1a1f0e',
+          950: '#0f1208',
+        },
         // Dark theme color system
         dark: {
           50: '#f8fafc',
@@ -32,17 +46,17 @@ export default {
           950: '#0a0a0a',
         },
         primary: {
-          50: '#ecfeff',
-          100: '#cffafe',
-          200: '#a5f3fc',
-          300: '#67e8f9',
-          400: '#22d3ee',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
-          950: '#042f2e',
+          50: '#f6f8f4',
+          100: '#e9f0e3',
+          200: '#d4e2c8',
+          300: '#b4bf95',
+          400: '#9aa673',
+          500: '#7f8f55',
+          600: '#4A5D23',
+          700: '#3d4a1c',
+          800: '#2b3316',
+          900: '#1a1f0e',
+          950: '#0f1208',
         },
         secondary: {
           50: '#ecfdf5',
@@ -138,8 +152,8 @@ export default {
           '100%': { transform: 'translateX(100%)' },
         },
         glow: {
-          '0%': { boxShadow: '0 0 20px rgba(20, 184, 166, 0.3)' },
-          '100%': { boxShadow: '0 0 30px rgba(20, 184, 166, 0.6)' },
+          '0%': { boxShadow: '0 0 20px rgba(74, 93, 35, 0.3)' },
+          '100%': { boxShadow: '0 0 30px rgba(74, 93, 35, 0.6)' },
         },
       },
       fontFamily: {

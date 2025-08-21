@@ -14,7 +14,6 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import { BottomNavigation } from './components/layout/BottomNavigation';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
-import Balatro from './components/background/Balatro';
 
 // Lazy load pages for better performance
 const Auth = React.lazy(() => import('./pages/Auth').then(module => ({ default: module.Auth })));
@@ -64,21 +63,9 @@ function App() {
                 <PersonalizationProvider>
                   <FinanceProvider>
                     <Router>
-                      <div className="min-h-screen bg-gradient-to-br from-dark-900 via-charcoal-900 to-dark-950 relative">
-                        {/* Background */}
-                        <div className="fixed inset-0 z-0">
-                          <Balatro 
-                            spinRotation={-1.5}
-                            spinSpeed={3.0}
-                            color1="#4A5D23"
-                            color2="#7f8f55"
-                            color3="#2b3316"
-                            contrast={2.5}
-                            lighting={0.5}
-                            spinAmount={0.3}
-                            isRotate={true}
-                          />
-                        </div>
+                      <div className="min-h-screen bg-forest-800 relative">
+                        {/* Static Forest Green Background */}
+                        <div className="fixed inset-0 bg-gradient-to-br from-forest-900 via-forest-800 to-forest-700"></div>
 
                         {/* Main Content */}
                         <div className="relative z-10">

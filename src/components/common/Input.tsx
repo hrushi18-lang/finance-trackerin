@@ -13,7 +13,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="space-y-2">
         {label && (
-          <label className="block text-sm font-body font-medium text-gray-300">
+          <label className="block text-sm font-body font-medium text-forest-200">
             {label}
           </label>
         )}
@@ -26,7 +26,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             className={clsx(
-              "block w-full rounded-xl border-white/20 bg-black/20 backdrop-blur-sm text-white shadow-sm focus:border-forest-500 focus:ring-forest-500 transition-colors duration-200 placeholder-gray-500 py-3 font-body",
+              "block w-full rounded-xl border-forest-600/30 bg-forest-900/20 backdrop-blur-sm text-white shadow-sm focus:border-forest-500 focus:ring-forest-500 transition-colors duration-200 placeholder-forest-400 py-3 font-body",
               icon && 'pl-10',
               error && 'border-error-500 focus:border-error-500 focus:ring-error-500',
               className
@@ -35,10 +35,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           />
         </div>
         {error && (
-          <p className="text-sm text-error-400">{error}</p>
+          <p className="text-sm text-error-400 font-body">{error}</p>
         )}
         {helpText && !error && (
-          <p className="text-xs text-gray-400">{helpText}</p>
+          <p className="text-xs text-forest-300 font-body">{helpText}</p>
         )}
       </div>
     );

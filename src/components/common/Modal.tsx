@@ -42,12 +42,13 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
         onClick={onClose}
       />
       <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-black/80 backdrop-blur-md rounded-2xl border border-white/20 animate-scale-in">
+      <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-forest-900/80 backdrop-blur-md rounded-2xl border border-forest-600/20 animate-scale-in">
         <div className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h2 className="text-xl font-semibold text-white">{title}</h2>
+            <h2 className="text-xl font-heading font-semibold text-white">{title}</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+              className="text-forest-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-forest-600/10"
               aria-label="Close modal"
             >
               <X size={24} />

@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.finspire.production',
-  appName: 'Finspire',
+  appId: 'com.fintrack.production',
+  appName: 'FinTrack',
   webDir: 'dist',
   bundledWebRuntime: false,
   server: {
@@ -25,6 +25,9 @@ const config: CapacitorConfig = {
     StatusBar: {
       style: "DARK",
       backgroundColor: "#2b3316"
+    },
+    Preferences: {
+      group: "FinTrackPrefs"
     }
   }
 };
