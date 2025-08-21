@@ -13,9 +13,12 @@ interface FinanceContextType {
   budgets: Budget[];
   recurringTransactions: RecurringTransaction[];
   userCategories: UserCategory[];
+  incomeSources: IncomeSource[];
+  accounts: FinancialAccount[];
   stats: DashboardStats;
   loading: boolean;
-  
+  insights: any[];
+
   // CRUD Operations
   addTransaction: (transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
@@ -59,7 +62,6 @@ interface FinanceContextType {
   importData: (data: string, format: 'json' | 'csv') => Promise<void>;
   getFinancialForecast: () => Promise<any>;
   refreshInsights: () => Promise<void>;
-  insights: any[];
 
   // Account management
   accounts: FinancialAccount[];
@@ -67,15 +69,12 @@ interface FinanceContextType {
   updateAccount: (id: string, data: Partial<FinancialAccount>) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
   transferBetweenAccounts: (fromAccountId: string, toAccountId: string, amount: number, description: string) => Promise<void>;
-  
+
   // Income source management
   incomeSources: IncomeSource[];
   addIncomeSource: (data: Omit<IncomeSource, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
   updateIncomeSource: (id: string, data: Partial<IncomeSource>) => Promise<void>;
   deleteIncomeSource: (id: string) => Promise<void>;
-  
-  // Split transactions
-  addSplitTransaction: (mainTransaction: Omit<Transaction, 'id' | 'userId'>, splits: SplitTransaction[]) => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -1642,6 +1641,105 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     }
   };
 
+  // Split transaction implementation
+  const addSplitTransactionImpl = async (mainTransaction: Omit<Transaction, 'id' | 'userId'>, splits: SplitTransaction[]) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    try {
+      console.log('🔄 Adding split transaction:', mainTransaction, splits);
+      const startTime = Date.now();
+      
+      // Create main transaction first
+      const { data: mainData, error: mainError } = await withTimeout(
+        withRetry(async () => {
+          return supabase
+            .from('transactions')
+            .insert([{
+              user_id: user.id,
+              type: mainTransaction.type,
+              amount: mainTransaction.amount,
+              category: mainTransaction.category,
+              description: mainTransaction.description,
+              date: mainTransaction.date.toISOString().split('T')[0],
+              recurring_transaction_id: mainTransaction.recurringTransactionId || null,
+              parent_transaction_id: null, // This is the parent
+            }])
+            .select()
+            .single();
+        }, 2, 'Add main transaction'),
+        10000,
+        'Add main transaction'
+      );
+
+      if (mainError) {
+        console.error('❌ Error adding main transaction:', mainError);
+        throw new Error(`Failed to add main transaction: ${mainError.message}`);
+      }
+
+      // Create split transactions
+      const splitInserts = splits.map(split => ({
+        user_id: user.id,
+        type: mainTransaction.type,
+        amount: split.amount,
+        category: split.category,
+        description: split.description,
+        date: mainTransaction.date.toISOString().split('T')[0],
+        parent_transaction_id: mainData.id, // Link to main transaction
+        recurring_transaction_id: null,
+      }));
+
+      const { data: splitData, error: splitError } = await withTimeout(
+        withRetry(async () => {
+          return supabase
+            .from('transactions')
+            .insert(splitInserts)
+            .select();
+        }, 2, 'Add split transactions'),
+        10000,
+        'Add split transactions'
+      );
+
+      logQueryPerformance('add-split-transaction', startTime);
+
+      if (splitError) {
+        console.error('❌ Error adding split transactions:', splitError);
+        // Try to clean up the main transaction
+        await supabase.from('transactions').delete().eq('id', mainData.id);
+        throw new Error(`Failed to add split transactions: ${splitError.message}`);
+      }
+
+      console.log('✅ Split transactions added successfully:', splitData);
+
+      // Update local state
+      const newMainTransaction = {
+        ...mainData,
+        date: new Date(mainData.date),
+        createdAt: new Date(mainData.created_at),
+        userId: user.id,
+      };
+
+      const newSplitTransactions = (splitData || []).map(s => ({
+        ...s,
+        date: new Date(s.date),
+        createdAt: new Date(s.created_at),
+        userId: user.id,
+      }));
+
+      setTransactions(prev => [newMainTransaction, ...newSplitTransactions, ...prev]);
+      
+      // Update budgets for each split
+      for (const split of splits) {
+        await updateBudgetSpent(split.category, split.amount);
+      }
+      
+      showToast('Split transaction added successfully', 'success');
+    } catch (error: any) {
+      console.error('❌ Error in addSplitTransaction:', error);
+      showToast(error.message || 'Failed to add split transaction', 'error');
+      throw error;
+    }
+  };
+
   // Utility functions
   const searchTransactions = (query: string, filters?: any): Transaction[] => {
     if (!query && !filters) return transactions;
@@ -2077,7 +2175,7 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     addTransaction,
     updateTransaction,
     deleteTransaction,
-    addSplitTransaction,
+    addSplitTransaction: addSplitTransactionImpl,
     
     addGoal,
     updateGoal,
@@ -2099,6 +2197,11 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     updateUserCategory,
     deleteUserCategory,
     
+    // Smart recurring transactions
+    processSmartRecurringTransactions,
+    getRecurringPredictions,
+    getBillOptimizations,
+    
     // Account management
     addAccount,
     updateAccount,
@@ -2109,11 +2212,6 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     addIncomeSource,
     updateIncomeSource,
     deleteIncomeSource,
-    
-    // Smart recurring transactions
-    processSmartRecurringTransactions,
-    getRecurringPredictions,
-    getBillOptimizations,
     
     // Utility functions
     searchTransactions,
