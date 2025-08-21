@@ -1910,11 +1910,11 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     // Data
     transactions,
     goals,
-    budgets,
     liabilities,
-    accounts,
-    incomeSources,
+    budgets,
+    recurringTransactions,
     userCategories,
+    incomeSources: incomeSources || [],
     stats,
     loading,
     insights,
@@ -1944,6 +1944,173 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     addUserCategory,
     updateUserCategory,
     deleteUserCategory,
+    // Account management functions
+    addAccount: async (accountData: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'currency'>) => {
+      if (!user) throw new Error('User not authenticated');
+      
+      const { data, error } = await supabase
+        .from('accounts')
+        .insert([
+          {
+            ...accountData,
+            user_id: user.id,
+            currency: currency.code
+          }
+        ])
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      const newAccount: FinancialAccount = {
+        id: data.id,
+        name: data.name,
+        type: data.type,
+        balance: Number(data.balance),
+        institution: data.institution,
+        platform: data.platform,
+        isVisible: data.is_visible,
+        currency: data.currency,
+        userId: data.user_id,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      setAccounts(prev => [...prev, newAccount]);
+    },
+    
+    updateAccount: async (accountId: string, updates: Partial<FinancialAccount>) => {
+      const { error } = await supabase
+        .from('accounts')
+        .update({
+          name: updates.name,
+          type: updates.type,
+          balance: updates.balance,
+          institution: updates.institution,
+          platform: updates.platform,
+          is_visible: updates.isVisible,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', accountId);
+        
+      if (error) throw error;
+      
+      setAccounts(prev => 
+        prev.map(account => 
+          account.id === accountId 
+            ? { ...account, ...updates, updatedAt: new Date() }
+            : account
+        )
+      );
+    },
+    
+    deleteAccount: async (accountId: string) => {
+      const { error } = await supabase
+        .from('accounts')
+        .delete()
+        .eq('id', accountId);
+        
+      if (error) throw error;
+      
+      setAccounts(prev => prev.filter(account => account.id !== accountId));
+    },
+    
+    transferBetweenAccounts: async (fromAccountId: string, toAccountId: string, amount: number, description: string) => {
+      if (!user) throw new Error('User not authenticated');
+      
+      // Create transfer transactions
+      const transferData = [
+        {
+          user_id: user.id,
+          type: 'expense',
+          amount: amount,
+          category: 'Transfer',
+          description: `Transfer to ${toAccountId}: ${description}`,
+          date: new Date().toISOString(),
+          account_id: fromAccountId,
+          affects_balance: true,
+          transfer_to_account_id: toAccountId
+        },
+        {
+          user_id: user.id,
+          type: 'income',
+          amount: amount,
+          category: 'Transfer',
+          description: `Transfer from ${fromAccountId}: ${description}`,
+          date: new Date().toISOString(),
+          account_id: toAccountId,
+          affects_balance: true
+        }
+      ];
+      
+      const { error } = await supabase
+        .from('transactions')
+        .insert(transferData);
+        
+      if (error) throw error;
+      
+      // Update account balances
+      await updateAccount(fromAccountId, { 
+        balance: (accounts.find(a => a.id === fromAccountId)?.balance || 0) - amount 
+      });
+      await updateAccount(toAccountId, { 
+        balance: (accounts.find(a => a.id === toAccountId)?.balance || 0) + amount 
+      });
+      
+      // Refresh transactions
+      loadTransactions();
+    },
+    
+    // Income source management functions
+    addIncomeSource: async (sourceData: any) => {
+      if (!user) throw new Error('User not authenticated');
+      
+      const { data, error } = await supabase
+        .from('income_sources')
+        .insert([
+          {
+            ...sourceData,
+            user_id: user.id
+          }
+        ])
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      setIncomeSources(prev => [...prev, data]);
+    },
+    
+    updateIncomeSource: async (sourceId: string, updates: any) => {
+      const { error } = await supabase
+        .from('income_sources')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sourceId);
+        
+      if (error) throw error;
+      
+      setIncomeSources(prev => 
+        prev.map(source => 
+          source.id === sourceId 
+            ? { ...source, ...updates }
+            : source
+        )
+      );
+    },
+    
+    deleteIncomeSource: async (sourceId: string) => {
+      const { error } = await supabase
+        .from('income_sources')
+        .delete()
+        .eq('id', sourceId);
+        
+      if (error) throw error;
+      
+      setIncomeSources(prev => prev.filter(source => source.id !== sourceId));
+    },
     
     // Income Sources
     addIncomeSource,

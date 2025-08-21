@@ -563,6 +563,7 @@ export const AddTransaction: React.FC = () => {
             </Button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

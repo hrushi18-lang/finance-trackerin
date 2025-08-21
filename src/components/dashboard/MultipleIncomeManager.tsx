@@ -119,7 +119,7 @@ export const MultipleIncomeManager: React.FC = () => {
 
   const safeIncomeSources = Array.isArray(incomeSources) ? incomeSources : [];
   
-  const totalMonthlyIncome = safeIncomeSources.reduce((sum, source) => {
+  const totalMonthlyIncome = safeIncomeSources.length > 0 ? safeIncomeSources.reduce((sum, source) => {
     if (!source.isActive) return sum;
     
     let monthlyAmount = source.amount;
@@ -132,7 +132,7 @@ export const MultipleIncomeManager: React.FC = () => {
         break;
     }
     return sum + monthlyAmount;
-  }, 0);
+  }, 0) : 0;</parameter>
 
   const activeSources = safeIncomeSources.filter(s => s.isActive);
   const inactiveSources = safeIncomeSources.filter(s => !s.isActive);
