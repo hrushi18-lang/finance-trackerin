@@ -135,6 +135,7 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
   const [userCategories, setUserCategories] = useState<UserCategory[]>([]);
+  const [incomeSources, setIncomeSources] = useState<any[]>([]);
   const [insights, setInsights] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

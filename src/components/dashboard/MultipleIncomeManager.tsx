@@ -21,7 +21,7 @@ interface IncomeSource {
 }
 
 export const MultipleIncomeManager: React.FC = () => {
-  const { incomeSources, addIncomeSource, updateIncomeSource, deleteIncomeSource } = useFinance();
+  const { incomeSources = [], addIncomeSource, updateIncomeSource, deleteIncomeSource } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
   const [editingSource, setEditingSource] = useState<IncomeSource | null>(null);
@@ -117,7 +117,7 @@ export const MultipleIncomeManager: React.FC = () => {
     }
   };
 
-  const totalMonthlyIncome = incomeSources.reduce((sum, source) => {
+  const totalMonthlyIncome = (incomeSources || []).reduce((sum, source) => {
     if (!source.isActive) return sum;
     
     let monthlyAmount = source.amount;
@@ -132,8 +132,8 @@ export const MultipleIncomeManager: React.FC = () => {
     return sum + monthlyAmount;
   }, 0);
 
-  const activeSources = incomeSources.filter(s => s.isActive);
-  const inactiveSources = incomeSources.filter(s => !s.isActive);
+  const activeSources = (incomeSources || []).filter(s => s.isActive);
+  const inactiveSources = (incomeSources || []).filter(s => !s.isActive);
 
   return (
     <div className="space-y-4">
