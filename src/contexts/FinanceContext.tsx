@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, logQueryPerformance } from '../lib/supabase';
 import { useAuth } from './AuthContext';
-import { useToast } from './ToastContext';
+import { useToast } from '../components/common/Toast';
 import { useCurrency } from './CurrencyContext';
 import { Transaction, Goal, Liability, Budget, RecurringTransaction, DashboardStats, UserCategory, DebtRepaymentStrategy, FinancialAccount, IncomeSource, SplitTransaction } from '../types';
 
