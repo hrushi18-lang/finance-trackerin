@@ -24,8 +24,11 @@ export const BudgetPerformance: React.FC<BudgetPerformanceProps> = ({
 }) => {
   const { formatCurrency } = useInternationalizationContext();
 
-  const totalBudgeted = data.reduce((sum, item) => sum + item.budgeted, 0);
-  const totalSpent = data.reduce((sum, item) => sum + item.spent, 0);
+  // Ensure data is always an array
+  const safeData = Array.isArray(data) ? data : [];
+  
+  const totalBudgeted = safeData.reduce((sum, item) => sum + item.budgeted, 0);
+  const totalSpent = safeData.reduce((sum, item) => sum + item.spent, 0);
   const overallUtilization = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
 
   const getStatusColor = (status: string) => {

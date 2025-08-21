@@ -27,13 +27,16 @@ export const SpendingPatternAnalysis: React.FC<SpendingPatternAnalysisProps> = (
   const { formatCurrency } = useInternationalization();
   const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
   const [viewType, setViewType] = useState<'category' | 'time' | 'frequency'>('category');
+  
+  // Ensure data is always an array
+  const safeData = Array.isArray(data) ? data : [];
 
   // Generate insights based on spending patterns
   const generateInsights = () => {
     const insights = [];
     
     // Find highest spending category
-    const topCategory = data[0];
+    const topCategory = safeData[0];
     if (topCategory && topCategory.percentage > 40) {
       insights.push({
         type: 'warning',
@@ -44,7 +47,7 @@ export const SpendingPatternAnalysis: React.FC<SpendingPatternAnalysisProps> = (
     }
 
     // Find categories with upward trends
-    const trendingUp = data.filter(d => d.trend === 'up');
+    const trendingUp = safeData.filter(d => d.trend === 'up');
     if (trendingUp.length > 0) {
       insights.push({
         type: 'info',
@@ -55,7 +58,7 @@ export const SpendingPatternAnalysis: React.FC<SpendingPatternAnalysisProps> = (
     }
 
     // Find frequent small transactions
-    const frequentSmall = data.filter(d => d.frequency > 10 && d.avgAmount < 50);
+    const frequentSmall = safeData.filter(d => d.frequency > 10 && d.avgAmount < 50);
     if (frequentSmall.length > 0) {
       insights.push({
         type: 'opportunity',

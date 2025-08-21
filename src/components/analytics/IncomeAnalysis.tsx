@@ -24,7 +24,10 @@ export const IncomeAnalysis: React.FC<IncomeAnalysisProps> = ({
 }) => {
   const { formatCurrency } = useInternationalization();
 
-  const totalIncome = data.reduce((sum, source) => sum + source.amount, 0);
+  // Ensure data is always an array
+  const safeData = Array.isArray(data) ? data : [];
+  
+  const totalIncome = safeData.reduce((sum, source) => sum + source.amount, 0);
   const reliableSources = data.filter(s => s.reliability === 'high');
   const reliableIncome = reliableSources.reduce((sum, source) => sum + source.amount, 0);
   const reliabilityPercentage = totalIncome > 0 ? (reliableIncome / totalIncome) * 100 : 0;

@@ -77,7 +77,7 @@ export const Dashboard: React.FC = () => {
   const financialHealthScore = Math.min(Math.max(((netWorth / 10000) * 100) + 500, 0), 1000);
 
   // Show welcome message for new users
-  const isNewUser = transactions.length === 0;
+  const isNewUser = !transactions || transactions.length === 0;
   const dashboardComponents = getDashboardComponents();
   const showTutorial = shouldShowTutorial('dashboard');
 
@@ -369,7 +369,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Recent Activity */}
-        {transactions.length > 0 && (
+        {transactions && transactions.length > 0 && (
           <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base sm:text-lg font-semibold text-white">{t('dashboard.recent_activity')}</h3>

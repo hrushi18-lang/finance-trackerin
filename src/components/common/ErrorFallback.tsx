@@ -1,7 +1,6 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from './Button';
-import { useNavigate } from 'react-router-dom';
 
 interface ErrorFallbackProps {
   error?: Error;
@@ -12,10 +11,13 @@ export const ErrorFallback: React.FC<ErrorFallbackProps> = ({
   error, 
   resetErrorBoundary 
 }) => {
-  const navigate = useNavigate();
+  const handleGoHome = () => {
+    // Use window.location instead of useNavigate to avoid Router context issues
+    window.location.href = '/';
+  };
 
   return (
-    <div className="min-h-screen bg-black/90 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-dark-900 via-charcoal-900 to-dark-950 flex items-center justify-center p-4">
       <div className="bg-black/50 backdrop-blur-md rounded-2xl p-6 border border-white/10 max-w-md w-full">
         <div className="flex flex-col items-center text-center">
           <div className="w-16 h-16 bg-error-500/20 rounded-full flex items-center justify-center mb-4">
@@ -37,7 +39,7 @@ export const ErrorFallback: React.FC<ErrorFallbackProps> = ({
             </Button>
             
             <Button 
-              onClick={() => navigate('/')} 
+              onClick={handleGoHome} 
               variant="outline"
               className="w-full"
             >

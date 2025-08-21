@@ -33,7 +33,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // You can also log the error to an error reporting service
+    // Log the error for debugging
     console.error('Error caught by ErrorBoundary:', error, errorInfo);
     this.setState({
       error,
@@ -49,6 +49,14 @@ class ErrorBoundary extends Component<Props, State> {
     });
   };
 
+  handleReload = (): void => {
+    window.location.reload();
+  };
+
+  handleGoHome = (): void => {
+    window.location.href = '/';
+  };
+
   render(): ReactNode {
     if (this.state.hasError) {
       // Custom fallback UI
@@ -58,7 +66,7 @@ class ErrorBoundary extends Component<Props, State> {
 
       // Default fallback UI
       return (
-        <div className="min-h-screen bg-black/90 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-dark-900 via-charcoal-900 to-dark-950 flex items-center justify-center p-4">
           <div className="bg-black/50 backdrop-blur-md rounded-2xl p-6 border border-white/10 max-w-md w-full">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-error-500/20 rounded-full flex items-center justify-center mb-4">
@@ -72,7 +80,7 @@ class ErrorBoundary extends Component<Props, State> {
               
               <div className="space-y-4 w-full">
                 <Button 
-                  onClick={() => window.location.reload()} 
+                  onClick={this.handleReload} 
                   className="w-full"
                 >
                   <RefreshCw size={16} className="mr-2" />
@@ -80,8 +88,16 @@ class ErrorBoundary extends Component<Props, State> {
                 </Button>
                 
                 <Button 
-                  onClick={this.handleReset} 
+                  onClick={this.handleGoHome} 
                   variant="outline"
+                  className="w-full"
+                >
+                  Back to Home
+                </Button>
+                
+                <Button 
+                  onClick={this.handleReset} 
+                  variant="ghost"
                   className="w-full"
                 >
                   Try Again

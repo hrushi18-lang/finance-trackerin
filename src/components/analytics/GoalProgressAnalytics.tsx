@@ -16,8 +16,11 @@ export const GoalProgressAnalytics: React.FC<GoalProgressAnalyticsProps> = ({
 }) => {
   const { formatCurrency } = useInternationalization();
 
+  // Ensure goals is always an array
+  const safeGoals = Array.isArray(goals) ? goals : [];
+
   // Calculate goal analytics
-  const goalAnalytics = goals.map(goal => {
+  const goalAnalytics = safeGoals.map(goal => {
     const progress = (goal.currentAmount / goal.targetAmount) * 100;
     const daysRemaining = differenceInDays(goal.targetDate, new Date());
     const monthsRemaining = differenceInMonths(goal.targetDate, new Date());
