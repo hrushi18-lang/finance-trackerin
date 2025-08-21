@@ -22,6 +22,7 @@ const AddTransaction = React.lazy(() => import('./pages/AddTransaction').then(mo
 const TransactionHistory = React.lazy(() => import('./pages/TransactionHistory').then(module => ({ default: module.TransactionHistory })));
 const Analytics = React.lazy(() => import('./pages/Analytics').then(module => ({ default: module.Analytics })));
 const Calendar = React.lazy(() => import('./pages/Calendar').then(module => ({ default: module.Calendar })));
+const FinancialAccountsHub = React.lazy(() => import('./pages/FinancialAccountsHub').then(module => ({ default: module.FinancialAccountsHub })));
 const Goals = React.lazy(() => import('./pages/Goals').then(module => ({ default: module.Goals })));
 const Liabilities = React.lazy(() => import('./pages/Liabilities').then(module => ({ default: module.Liabilities })));
 const Budgets = React.lazy(() => import('./pages/Budgets').then(module => ({ default: module.Budgets })));
@@ -186,6 +187,16 @@ function App() {
                                 element={
                                   <ProtectedRoute>
                                     <RecurringTransactions />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/accounts-hub" 
+                                element={
+                                  <ProtectedRoute>
+                                    <FinancialAccountsHub />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 

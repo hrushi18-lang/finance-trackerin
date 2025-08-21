@@ -366,7 +366,7 @@ export const Dashboard: React.FC = () => {
               
               {(accounts || []).length > 4 && (
                 <button
-                  onClick={() => navigate('/profile')}
+                  onClick={() => navigate('/accounts-hub')}
                   className="bg-forest-700/20 rounded-xl p-3 border border-forest-600/20 hover:bg-forest-600/20 transition-colors flex items-center justify-center"
                 >
                   <span className="text-forest-300 font-body text-sm">View All ({(accounts || []).length})</span>

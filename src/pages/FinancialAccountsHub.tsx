@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Eye, EyeOff, CreditCard, Wallet, Building, Smartphone, TrendingUp, Edit3, Trash2, ArrowLeftRight, DollarSign } from 'lucide-react';
+import { Plus, Eye, EyeOff, CreditCard, Wallet, Building, Smartphone, TrendingUp, Edit3, Trash2, ArrowLeftRight, DollarSign, Calendar, BarChart3 } from 'lucide-react';
+import { format } from 'date-fns';
 import { TopNavigation } from '../components/layout/TopNavigation';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
@@ -11,7 +12,7 @@ import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { FinancialAccount } from '../types';
 
 export const FinancialAccountsHub: React.FC = () => {
-  const { accounts, addAccount, updateAccount, deleteAccount, transferBetweenAccounts, transactions } = useFinance();
+  const { accounts, addAccount, updateAccount, deleteAccount, transferBetweenAccounts, transactions, goals, liabilities, budgets } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -133,8 +134,26 @@ export const FinancialAccountsHub: React.FC = () => {
       .slice(0, 5);
   };
 
+  // Get goals linked to account
+  const getAccountGoals = (accountId: string) => {
+    return (goals || []).filter(g => g.accountId === accountId);
+  };
+
+  // Get liabilities linked to account
+  const getAccountLiabilities = (accountId: string) => {
+    return (liabilities || []).filter(l => l.accountId === accountId);
+  };
+
+  // Get budgets linked to account
+  const getAccountBudgets = (accountId: string) => {
+    return (budgets || []).filter(b => b.accountId === accountId);
+  };
+
   const selectedAccount = selectedAccountId ? accounts?.find(a => a.id === selectedAccountId) : null;
   const selectedAccountTransactions = selectedAccountId ? getAccountTransactions(selectedAccountId) : [];
+  const selectedAccountGoals = selectedAccountId ? getAccountGoals(selectedAccountId) : [];
+  const selectedAccountLiabilities = selectedAccountId ? getAccountLiabilities(selectedAccountId) : [];
+  const selectedAccountBudgets = selectedAccountId ? getAccountBudgets(selectedAccountId) : [];
 
   return (
     <div className="min-h-screen text-white pb-20">
@@ -308,36 +327,110 @@ export const FinancialAccountsHub: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Recent Transactions for Selected Account */}
-                  {isSelected && selectedAccountTransactions.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-white/10">
-                      <h5 className="text-sm font-medium text-white mb-3">Recent Transactions</h5>
-                      <div className="space-y-2">
-                        {selectedAccountTransactions.map((transaction) => (
-                          <div key={transaction.id} className="flex items-center justify-between p-2 bg-black/20 rounded-lg">
-                            <div className="flex items-center space-x-2">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                                transaction.type === 'income' ? 'bg-success-500/20' : 'bg-error-500/20'
-                              }`}>
-                                <span className={`text-xs ${
+                  {/* Account-Specific Data when Selected */}
+                  {isSelected && (
+                    <div className="mt-4 pt-4 border-t border-white/10 space-y-4">
+                      {/* Recent Transactions */}
+                      {selectedAccountTransactions.length > 0 && (
+                        <div>
+                          <h5 className="text-sm font-medium text-white mb-3 flex items-center">
+                            <BarChart3 size={16} className="mr-2 text-blue-400" />
+                            Recent Transactions
+                          </h5>
+                          <div className="space-y-2">
+                            {selectedAccountTransactions.map((transaction) => (
+                              <div key={transaction.id} className="flex items-center justify-between p-2 bg-black/20 rounded-lg">
+                                <div className="flex items-center space-x-2">
+                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                                    transaction.type === 'income' ? 'bg-success-500/20' : 'bg-error-500/20'
+                                  }`}>
+                                    <span className={`text-xs ${
+                                      transaction.type === 'income' ? 'text-success-400' : 'text-error-400'
+                                    }`}>
+                                      {transaction.type === 'income' ? '+' : '-'}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-medium text-white">{transaction.description}</p>
+                                    <p className="text-xs text-gray-500">{transaction.category}</p>
+                                  </div>
+                                </div>
+                                <span className={`text-xs font-medium ${
                                   transaction.type === 'income' ? 'text-success-400' : 'text-error-400'
                                 }`}>
-                                  {transaction.type === 'income' ? '+' : '-'}
+                                  {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                                 </span>
                               </div>
-                              <div>
-                                <p className="text-xs font-medium text-white">{transaction.description}</p>
-                                <p className="text-xs text-gray-500">{transaction.category}</p>
-                              </div>
-                            </div>
-                            <span className={`text-xs font-medium ${
-                              transaction.type === 'income' ? 'text-success-400' : 'text-error-400'
-                            }`}>
-                              {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                            </span>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
+
+                      {/* Linked Goals */}
+                      {selectedAccountGoals.length > 0 && (
+                        <div>
+                          <h5 className="text-sm font-medium text-white mb-3 flex items-center">
+                            <Target size={16} className="mr-2 text-green-400" />
+                            Linked Goals ({selectedAccountGoals.length})
+                          </h5>
+                          <div className="space-y-2">
+                            {selectedAccountGoals.map((goal) => (
+                              <div key={goal.id} className="p-2 bg-green-500/10 rounded-lg border border-green-500/20">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-white">{goal.title}</span>
+                                  <span className="text-xs text-green-400">
+                                    {((goal.currentAmount / goal.targetAmount) * 100).toFixed(1)}%
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Linked Liabilities */}
+                      {selectedAccountLiabilities.length > 0 && (
+                        <div>
+                          <h5 className="text-sm font-medium text-white mb-3 flex items-center">
+                            <CreditCard size={16} className="mr-2 text-red-400" />
+                            Linked Debts ({selectedAccountLiabilities.length})
+                          </h5>
+                          <div className="space-y-2">
+                            {selectedAccountLiabilities.map((liability) => (
+                              <div key={liability.id} className="p-2 bg-red-500/10 rounded-lg border border-red-500/20">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-white">{liability.name}</span>
+                                  <span className="text-xs text-red-400">
+                                    {formatCurrency(liability.remainingAmount)} remaining
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Linked Budgets */}
+                      {selectedAccountBudgets.length > 0 && (
+                        <div>
+                          <h5 className="text-sm font-medium text-white mb-3 flex items-center">
+                            <DollarSign size={16} className="mr-2 text-yellow-400" />
+                            Account Budgets ({selectedAccountBudgets.length})
+                          </h5>
+                          <div className="space-y-2">
+                            {selectedAccountBudgets.map((budget) => (
+                              <div key={budget.id} className="p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-white">{budget.category}</span>
+                                  <span className="text-xs text-yellow-400">
+                                    {((budget.spent / budget.amount) * 100).toFixed(1)}% used
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
