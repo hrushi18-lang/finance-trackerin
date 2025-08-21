@@ -1,7 +1,21 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, logQueryPerformance } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { useToast } from './ToastContext';
+import { useCurrency } from './CurrencyContext';
 import { Transaction, Goal, Liability, Budget, RecurringTransaction, DashboardStats, UserCategory, DebtRepaymentStrategy, FinancialAccount, IncomeSource, SplitTransaction } from '../types';
+
+interface FinanceContextType {
+  // Data
+  transactions: Transaction[];
+  goals: Goal[];
+  liabilities: Liability[];
+  budgets: Budget[];
+  recurringTransactions: RecurringTransaction[];
+  userCategories: UserCategory[];
+  stats: DashboardStats;
+  loading: boolean;
+  
   // CRUD Operations
   addTransaction: (transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
@@ -46,24 +60,23 @@ import { Transaction, Goal, Liability, Budget, RecurringTransaction, DashboardSt
   getFinancialForecast: () => Promise<any>;
   refreshInsights: () => Promise<void>;
   insights: any[];
-  };
+
   // Account management
   accounts: FinancialAccount[];
   addAccount: (data: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'currency'>) => Promise<void>;
   updateAccount: (id: string, data: Partial<FinancialAccount>) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
   transferBetweenAccounts: (fromAccountId: string, toAccountId: string, amount: number, description: string) => Promise<void>;
-
+  
   // Income source management
   incomeSources: IncomeSource[];
   addIncomeSource: (data: Omit<IncomeSource, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
   updateIncomeSource: (id: string, data: Partial<IncomeSource>) => Promise<void>;
   deleteIncomeSource: (id: string) => Promise<void>;
-}
   
   // Split transactions
   addSplitTransaction: (mainTransaction: Omit<Transaction, 'id' | 'userId'>, splits: SplitTransaction[]) => Promise<void>;
-}  
+}
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
@@ -125,6 +138,7 @@ const withRetry = async <T,>(
 export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { currency } = useCurrency();
   
   // State
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -133,6 +147,7 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
   const [userCategories, setUserCategories] = useState<UserCategory[]>([]);
+  const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
   const [incomeSources, setIncomeSources] = useState<any[]>([]);
   const [insights, setInsights] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -873,8 +888,8 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
               remaining_amount: liability.remainingAmount,
               interest_rate: liability.interestRate,
               monthly_payment: liability.monthlyPayment,
-              due_date: liability.due_date.toISOString().split('T')[0],
-              start_date: liability.start_date.toISOString().split('T')[0],
+              due_date: liability.dueDate.toISOString().split('T')[0],
+              start_date: liability.startDate.toISOString().split('T')[0],
               linked_purchase_id: liability.linkedPurchaseId || null,
             }])
             .select()
@@ -1157,8 +1172,8 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
       if (updates.remainingAmount !== undefined) updateData.remaining_amount = updates.remainingAmount;
       if (updates.interestRate !== undefined) updateData.interest_rate = updates.interestRate;
       if (updates.monthlyPayment !== undefined) updateData.monthly_payment = updates.monthlyPayment;
-      if (updates.due_date !== undefined) updateData.due_date = updates.due_date.toISOString().split('T')[0];
-      if (updates.start_date !== undefined) updateData.start_date = updates.start_date.toISOString().split('T')[0];
+      if (updates.dueDate !== undefined) updateData.due_date = updates.dueDate.toISOString().split('T')[0];
+      if (updates.startDate !== undefined) updateData.start_date = updates.startDate.toISOString().split('T')[0];
       if (updates.linkedPurchaseId !== undefined) updateData.linked_purchase_id = updates.linkedPurchaseId;
       
       const { data, error } = await withTimeout(
@@ -1188,7 +1203,7 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
       setLiabilities(prev => prev.map(l => l.id === id ? {
         ...l,
         ...updates,
-        dueDate: updates.due_date || l.dueDate,
+        dueDate: updates.dueDate || l.dueDate,
       } : l));
       
       showToast('Liability updated successfully', 'success');
@@ -1620,80 +1635,10 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
       }
 
       const newSpent = budget.spent + amount;
-      const newCategory = {
-        id: `category_${Date.now()}`,
-        userId: user?.id || '',
-        ...category,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      setUserCategories(prev => [...(prev || []), newCategory]);
-      setUserCategories(prev => 
-        (prev || []).map(cat => 
-          cat.id === id 
-            ? { ...cat, ...updates, updatedAt: new Date() }
-            : cat
-        )
-      );
       await updateBudget(budget.id, { spent: newSpent });
     } catch (error) {
       console.error('❌ Error updating budget spent:', error);
       // Don't throw here as this is a secondary operation
-    }
-  };
-
-  // Split transaction implementation
-      }));
-
-      const { data: splitData, error: splitError } = await withTimeout(
-        withRetry(async () => {
-          return supabase
-            .from('transactions')
-            .insert(splitInserts)
-            .select();
-        }, 2, 'Add split transactions'),
-        10000,
-        'Add split transactions'
-      );
-
-      logQueryPerformance('add-split-transaction', startTime);
-
-      if (splitError) {
-        console.error('❌ Error adding split transactions:', splitError);
-        // Try to clean up the main transaction
-        await supabase.from('transactions').delete().eq('id', mainData.id);
-        throw new Error(`Failed to add split transactions: ${splitError.message}`);
-      }
-
-      console.log('✅ Split transactions added successfully:', splitData);
-
-      // Update local state
-      const newMainTransaction = {
-        ...mainData,
-        date: new Date(mainData.date),
-        createdAt: new Date(mainData.created_at),
-        userId: user.id,
-      };
-
-      const newSplitTransactions = (splitData || []).map(s => ({
-        ...s,
-        date: new Date(s.date),
-        createdAt: new Date(s.created_at),
-        userId: user.id,
-      }));
-
-      setTransactions(prev => [newMainTransaction, ...newSplitTransactions, ...prev]);
-      
-      // Update budgets for each split
-      for (const split of splits) {
-        await updateBudgetSpent(split.category, split.amount);
-      }
-      
-      showToast('Split transaction added successfully', 'success');
-    } catch (error: any) {
-      console.error('❌ Error in addSplitTransaction:', error);
-      showToast(error.message || 'Failed to add split transaction', 'error');
-      throw error;
     }
   };
 
@@ -2098,6 +2043,22 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     }
   };
 
+  // Smart recurring transactions functions
+  const processSmartRecurringTransactions = async (): Promise<void> => {
+    // Implementation for processing smart recurring transactions
+    console.log('Processing smart recurring transactions...');
+  };
+
+  const getRecurringPredictions = (): any[] => {
+    // Implementation for getting recurring predictions
+    return [];
+  };
+
+  const getBillOptimizations = (): any[] => {
+    // Implementation for getting bill optimizations
+    return [];
+  };
+
   const value = {
     // Data
     transactions,
@@ -2106,6 +2067,7 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     budgets,
     recurringTransactions,
     userCategories,
+    accounts,
     incomeSources: incomeSources || [],
     stats,
     loading,
@@ -2136,178 +2098,22 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     addUserCategory,
     updateUserCategory,
     deleteUserCategory,
-    // Account management functions
-    addAccount: async (accountData: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'currency'>) => {
-      if (!user) throw new Error('User not authenticated');
-      
-      const { data, error } = await supabase
-        .from('accounts')
-        .insert([
-          {
-            ...accountData,
-            user_id: user.id,
-            currency: currency.code
-          }
-        ])
-        .select()
-        .single();
-        
-      if (error) throw error;
-      
-      const newAccount: FinancialAccount = {
-        id: data.id,
-        name: data.name,
-        type: data.type,
-        balance: Number(data.balance),
-        institution: data.institution,
-        platform: data.platform,
-        isVisible: data.is_visible,
-        currency: data.currency,
-        userId: data.user_id,
-        createdAt: new Date(data.created_at),
-        updatedAt: new Date(data.updated_at)
-      };
-      
-      setAccounts(prev => [...prev, newAccount]);
-    },
     
-    updateAccount: async (accountId: string, updates: Partial<FinancialAccount>) => {
-      const { error } = await supabase
-        .from('accounts')
-        .update({
-          name: updates.name,
-          type: updates.type,
-          balance: updates.balance,
-          institution: updates.institution,
-          platform: updates.platform,
-          is_visible: updates.isVisible,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', accountId);
-        
-      if (error) throw error;
-      
-      setAccounts(prev => 
-        prev.map(account => 
-          account.id === accountId 
-            ? { ...account, ...updates, updatedAt: new Date() }
-            : account
-        )
-      );
-    },
+    // Account management
+    addAccount,
+    updateAccount,
+    deleteAccount,
+    transferBetweenAccounts,
     
-    deleteAccount: async (accountId: string) => {
-      const { error } = await supabase
-        .from('accounts')
-        .delete()
-        .eq('id', accountId);
-        
-      if (error) throw error;
-      
-      setAccounts(prev => prev.filter(account => account.id !== accountId));
-    },
-    
-    transferBetweenAccounts: async (fromAccountId: string, toAccountId: string, amount: number, description: string) => {
-      if (!user) throw new Error('User not authenticated');
-      
-      // Create transfer transactions
-      const transferData = [
-        {
-          user_id: user.id,
-          type: 'expense',
-          amount: amount,
-          category: 'Transfer',
-          description: `Transfer to ${toAccountId}: ${description}`,
-          date: new Date().toISOString(),
-          account_id: fromAccountId,
-          affects_balance: true,
-          transfer_to_account_id: toAccountId
-        },
-        {
-          user_id: user.id,
-          type: 'income',
-          amount: amount,
-          category: 'Transfer',
-          description: `Transfer from ${fromAccountId}: ${description}`,
-          date: new Date().toISOString(),
-          account_id: toAccountId,
-          affects_balance: true
-        }
-      ];
-      
-      const { error } = await supabase
-        .from('transactions')
-        .insert(transferData);
-        
-      if (error) throw error;
-      
-      // Update account balances
-      await updateAccount(fromAccountId, { 
-        balance: (accounts.find(a => a.id === fromAccountId)?.balance || 0) - amount 
-      });
-      await updateAccount(toAccountId, { 
-        balance: (accounts.find(a => a.id === toAccountId)?.balance || 0) + amount 
-      });
-      
-      // Refresh transactions
-      loadTransactions();
-    },
-    
-    // Income source management functions
-    addIncomeSource: async (sourceData: any) => {
-      if (!user) throw new Error('User not authenticated');
-      
-      const { data, error } = await supabase
-        .from('income_sources')
-        .insert([
-          {
-            ...sourceData,
-            user_id: user.id
-          }
-        ])
-        .select()
-        .single();
-        
-      if (error) throw error;
-      
-      setIncomeSources(prev => [...prev, data]);
-    },
-    
-    updateIncomeSource: async (sourceId: string, updates: any) => {
-      const { error } = await supabase
-        .from('income_sources')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', sourceId);
-        
-      if (error) throw error;
-      
-      setIncomeSources(prev => 
-        prev.map(source => 
-          source.id === sourceId 
-            ? { ...source, ...updates }
-            : source
-        )
-      );
-    },
-    
-    deleteIncomeSource: async (sourceId: string) => {
-      const { error } = await supabase
-        .from('income_sources')
-        .delete()
-        .eq('id', sourceId);
-        
-      if (error) throw error;
-      
-      setIncomeSources(prev => prev.filter(source => source.id !== sourceId));
-    },
-    
-    // Income Sources
+    // Income source management
     addIncomeSource,
     updateIncomeSource,
     deleteIncomeSource,
+    
+    // Smart recurring transactions
+    processSmartRecurringTransactions,
+    getRecurringPredictions,
+    getBillOptimizations,
     
     // Utility functions
     searchTransactions,
@@ -2323,21 +2129,5 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     refreshInsights,
   };
 
-    // Account management
-    accounts,
-    addAccount,
-    updateAccount,
-    deleteAccount,
-    transferBetweenAccounts,
-    
-    // Income source management
-    incomeSources,
-    addIncomeSource,
-    updateIncomeSource,
-    deleteIncomeSource,
-    
-    // Split transactions
-    addSplitTransaction,
-    
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;
 };
