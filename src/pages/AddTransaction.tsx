@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus, Minus, FileText, Tag, Calendar, Target, CreditCard, CheckCircle, AlertCircle, Scissors } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, FileText, Tag, Calendar, Target, CreditCard, CheckCircle, AlertCircle, Scissors, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Input } from '../components/common/Input';
@@ -10,6 +10,7 @@ import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { SplitTransaction } from '../types';
+import { AdvancedTransactionForm } from '../components/forms/AdvancedTransactionForm';
 
 interface TransactionFormData {
   type: 'income' | 'expense';
@@ -34,6 +35,7 @@ export const AddTransaction: React.FC = () => {
   const [splits, setSplits] = useState<SplitFormData[]>([{ category: '', amount: 0, description: '' }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [useAdvancedMode, setUseAdvancedMode] = useState(false);
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<TransactionFormData>({
     defaultValues: {
@@ -183,6 +185,10 @@ export const AddTransaction: React.FC = () => {
     ? [1000, 2500, 5000, 10000]
     : [25, 50, 100, 500];
 
+  function formatCurrency(value: number): string {
+    return `${currency.symbol}${value.toLocaleString()}`;
+  }
+
   return (
     <div className="min-h-screen text-white pb-20">
       {/* Header with Navigation */}
@@ -195,12 +201,30 @@ export const AddTransaction: React.FC = () => {
             <ArrowLeft size={20} className="text-gray-400" />
           </button>
           <h1 className="text-lg sm:text-xl font-semibold text-white">Add Transaction</h1>
-          <div className="w-10"></div>
+          <button
+            onClick={() => setUseAdvancedMode(!useAdvancedMode)}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+              useAdvancedMode 
+                ? 'bg-primary-500 text-white' 
+                : 'bg-black/20 text-gray-400 hover:text-white'
+            }`}
+          >
+            {useAdvancedMode ? 'Advanced' : 'Simple'}
+          </button>
         </div>
         <PageNavigation />
       </header>
 
       <div className="px-4 py-6">
+        {useAdvancedMode ? (
+          <AdvancedTransactionForm
+            onSubmit={async (data) => {
+              await addTransaction(data);
+              navigate('/');
+            }}
+            onCancel={() => navigate('/')}
+          />
+        ) : (
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
           {/* Error Message */}
           {error && (
@@ -567,8 +591,4 @@ export const AddTransaction: React.FC = () => {
       </div>
     </div>
   );
-
-  function formatCurrency(value: number): string {
-    return `${currency.symbol}${value.toLocaleString()}`;
-  }
 };
