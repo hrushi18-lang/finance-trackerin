@@ -52,6 +52,11 @@ interface FinanceContextType {
   updateUserCategory: (id: string, updates: Partial<UserCategory>) => Promise<void>;
   deleteUserCategory: (id: string) => Promise<void>;
   
+  // Smart recurring transactions
+  processSmartRecurringTransactions: () => Promise<void>;
+  getRecurringPredictions: () => any[];
+  getBillOptimizations: () => any[];
+  
   // Utility functions
   searchTransactions: (query: string, filters?: any) => Transaction[];
   getMonthlyTrends: (months: number) => any[];

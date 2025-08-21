@@ -14,6 +14,8 @@ import { LiveExchangeRateWidget } from '../components/common/LiveExchangeRateWid
 import { NotificationsPanel } from '../components/common/NotificationsPanel';
 import { ProfileMenu } from '../components/common/ProfileMenu';
 import { MultipleIncomeManager } from '../components/dashboard/MultipleIncomeManager';
+import { SmartRecurringManager } from '../components/recurring/SmartRecurringManager';
+import { DynamicCategoryManager } from '../components/categories/DynamicCategoryManager';
 import { useFinance } from '../contexts/FinanceContext';
 import { useAuth } from '../contexts/AuthContext';
 import { usePersonalization } from '../contexts/PersonalizationContext';
@@ -36,6 +38,8 @@ export const Dashboard: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showForecast, setShowForecast] = useState(false);
+  const [showSmartRecurring, setShowSmartRecurring] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   const handleAddGoal = async (goal: any) => {
     try {
@@ -293,6 +297,34 @@ export const Dashboard: React.FC = () => {
 
         {/* AI Financial Forecast */}
         {showForecast && <FinancialForecast />}
+
+        {/* Smart Recurring Transactions */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-white">Smart Financial Management</h3>
+            <div className="flex space-x-2">
+              <Button
+                onClick={() => setShowSmartRecurring(!showSmartRecurring)}
+                size="sm"
+                variant="outline"
+                className="border-primary-500/30 text-primary-400 hover:bg-primary-500/10"
+              >
+                Recurring Transactions
+              </Button>
+              <Button
+                onClick={() => setShowCategoryManager(!showCategoryManager)}
+                size="sm"
+                variant="outline"
+                className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+              >
+                Category Manager
+              </Button>
+            </div>
+          </div>
+          
+          {showSmartRecurring && <SmartRecurringManager />}
+          {showCategoryManager && <DynamicCategoryManager />}
+        </div>
 
         {/* Multiple Income Sources */}
         <MultipleIncomeManager />
