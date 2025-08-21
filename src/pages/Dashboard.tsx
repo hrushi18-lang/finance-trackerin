@@ -329,7 +329,6 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Multiple Income Sources */}
-        {!showAccountsHub && <MultipleIncomeManager />}</parameter>
 
         {/* Quick Stats Cards */}
         <div className="space-y-3 sm:space-y-4">
