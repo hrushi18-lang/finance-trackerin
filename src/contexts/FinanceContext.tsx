@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, logQueryPerformance } from '../lib/supabase';
 import { useAuth } from './AuthContext';
-import { useToast } from '../components/common/Toast';
+import { Transaction, Goal, Liability, Budget, RecurringTransaction, DashboardStats, UserCategory, DebtRepaymentStrategy, FinancialAccount, IncomeSource, SplitTransaction } from '../types';
 import { 
   Transaction, 
   Goal, 
@@ -71,6 +71,22 @@ interface FinanceContextType {
   refreshInsights: () => Promise<void>;
   insights: any[];
 }
+  // Account management
+  accounts: FinancialAccount[];
+  addAccount: (data: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'currency'>) => Promise<void>;
+  updateAccount: (id: string, data: Partial<FinancialAccount>) => Promise<void>;
+  deleteAccount: (id: string) => Promise<void>;
+  transferBetweenAccounts: (fromAccountId: string, toAccountId: string, amount: number, description: string) => Promise<void>;
+  
+  // Income source management
+  incomeSources: IncomeSource[];
+  addIncomeSource: (data: Omit<IncomeSource, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
+  updateIncomeSource: (id: string, data: Partial<IncomeSource>) => Promise<void>;
+  deleteIncomeSource: (id: string) => Promise<void>;
+  
+  // Split transactions
+  addSplitTransaction: (mainTransaction: Omit<Transaction, 'id' | 'userId'>, splits: SplitTransaction[]) => Promise<void>;
+  
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
@@ -144,6 +160,210 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
   const [insights, setInsights] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Define all the missing functions that are returned in the context value
+  
+  // Income Source Management
+  const addIncomeSource = async (data: Omit<IncomeSource, 'id' | 'userId' | 'createdAt'>) => {
+    try {
+      const newSource = {
+        id: Date.now().toString(),
+        userId: user?.id || '',
+        createdAt: new Date(),
+        ...data
+      };
+      setIncomeSources(prev => [...prev, newSource]);
+      
+      // Save to localStorage
+      if (user) {
+        const updated = [...incomeSources, newSource];
+        localStorage.setItem(`finspire_income_sources_${user.id}`, JSON.stringify(updated));
+      }
+    } catch (error) {
+      console.error('Error adding income source:', error);
+      throw error;
+    }
+  };
+
+  const updateIncomeSource = async (id: string, data: Partial<IncomeSource>) => {
+    try {
+      setIncomeSources(prev => prev.map(source => 
+        source.id === id ? { ...source, ...data } : source
+      ));
+      
+      // Save to localStorage
+      if (user) {
+        const updated = incomeSources.map(source => 
+          source.id === id ? { ...source, ...data } : source
+        );
+        localStorage.setItem(`finspire_income_sources_${user.id}`, JSON.stringify(updated));
+      }
+    } catch (error) {
+      console.error('Error updating income source:', error);
+      throw error;
+    }
+  };
+
+  const deleteIncomeSource = async (id: string) => {
+    try {
+      setIncomeSources(prev => prev.filter(source => source.id !== id));
+      
+      // Save to localStorage
+      if (user) {
+        const updated = incomeSources.filter(source => source.id !== id);
+        localStorage.setItem(`finspire_income_sources_${user.id}`, JSON.stringify(updated));
+      }
+    } catch (error) {
+      console.error('Error deleting income source:', error);
+      throw error;
+    }
+  };
+
+  // Account Management
+  const addAccount = async (data: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'currency'>) => {
+    try {
+      const newAccount = {
+        id: Date.now().toString(),
+        userId: user?.id || '',
+        currency: currency.code,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...data
+      };
+      setAccounts(prev => [...prev, newAccount]);
+      
+      // Save to localStorage
+      if (user) {
+        const updated = [...accounts, newAccount];
+        localStorage.setItem(`finspire_accounts_${user.id}`, JSON.stringify(updated));
+      }
+    } catch (error) {
+      console.error('Error adding account:', error);
+      throw error;
+    }
+  };
+
+  const updateAccount = async (id: string, data: Partial<FinancialAccount>) => {
+    try {
+      setAccounts(prev => prev.map(account => 
+        account.id === id ? { ...account, ...data, updatedAt: new Date() } : account
+      ));
+      
+      // Save to localStorage
+      if (user) {
+        const updated = accounts.map(account => 
+          account.id === id ? { ...account, ...data, updatedAt: new Date() } : account
+        );
+        localStorage.setItem(`finspire_accounts_${user.id}`, JSON.stringify(updated));
+      }
+    } catch (error) {
+      console.error('Error updating account:', error);
+      throw error;
+    }
+  };
+
+  const deleteAccount = async (id: string) => {
+    try {
+      setAccounts(prev => prev.filter(account => account.id !== id));
+      
+      // Save to localStorage
+      if (user) {
+        const updated = accounts.filter(account => account.id !== id);
+        localStorage.setItem(`finspire_accounts_${user.id}`, JSON.stringify(updated));
+      }
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
+    }
+  };
+
+  const transferBetweenAccounts = async (fromAccountId: string, toAccountId: string, amount: number, description: string) => {
+    try {
+      // Update account balances
+      setAccounts(prev => prev.map(account => {
+        if (account.id === fromAccountId) {
+          return { ...account, balance: account.balance - amount, updatedAt: new Date() };
+        }
+        if (account.id === toAccountId) {
+          return { ...account, balance: account.balance + amount, updatedAt: new Date() };
+        }
+        return account;
+      }));
+      
+      // Create transfer transactions
+      const fromAccount = accounts.find(a => a.id === fromAccountId);
+      const toAccount = accounts.find(a => a.id === toAccountId);
+      
+      if (fromAccount && toAccount) {
+        // Expense from source account
+        await addTransaction({
+          type: 'expense',
+          amount,
+          category: 'Transfer',
+          description: `Transfer to ${toAccount.name}: ${description}`,
+          date: new Date(),
+          accountId: fromAccountId,
+          affectsBalance: true,
+          transferToAccountId: toAccountId
+        });
+        
+        // Income to destination account
+        await addTransaction({
+          type: 'income',
+          amount,
+          category: 'Transfer',
+          description: `Transfer from ${fromAccount.name}: ${description}`,
+          date: new Date(),
+          accountId: toAccountId,
+          affectsBalance: true,
+          parentTransactionId: transactions[0]?.id // Link to previous transaction
+        });
+      }
+      
+      // Save to localStorage
+      if (user) {
+        const updated = accounts.map(account => {
+          if (account.id === fromAccountId) {
+            return { ...account, balance: account.balance - amount, updatedAt: new Date() };
+          }
+          if (account.id === toAccountId) {
+            return { ...account, balance: account.balance + amount, updatedAt: new Date() };
+          }
+          return account;
+        });
+        localStorage.setItem(`finspire_accounts_${user.id}`, JSON.stringify(updated));
+      }
+    } catch (error) {
+      console.error('Error transferring between accounts:', error);
+      throw error;
+    }
+  };
+
+  // Split Transaction Management
+  const addSplitTransaction = async (mainTransaction: Omit<Transaction, 'id' | 'userId'>, splits: SplitTransaction[]) => {
+    try {
+      // Create main transaction
+      const mainTxn = await addTransaction(mainTransaction);
+      
+      // Create split transactions linked to main transaction
+      for (const split of splits) {
+        await addTransaction({
+          type: mainTransaction.type,
+          amount: split.amount,
+          category: split.category,
+          description: split.description,
+          date: mainTransaction.date,
+          accountId: mainTransaction.accountId,
+          affectsBalance: false, // Splits don't affect balance as main transaction already does
+          reason: `Split from: ${mainTransaction.description}`,
+          parentTransactionId: transactions[0]?.id // Link to main transaction
+        });
+      }
+    } catch (error) {
+      console.error('Error adding split transaction:', error);
+      throw error;
+    }
+  };
+
   // Load all data when user changes
   useEffect(() => {
     if (user) {
@@ -160,6 +380,47 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
       setLoading(false);
     }
   }, [user]);
+
+  // Load accounts and income sources when user changes
+  useEffect(() => {
+    if (user) {
+      loadAccountsData();
+      loadIncomeSourcesData();
+    }
+  }, [user]);
+
+  const loadAccountsData = async () => {
+    try {
+      const saved = localStorage.getItem(`finspire_accounts_${user?.id}`);
+      if (saved) {
+        const parsedAccounts = JSON.parse(saved).map((account: any) => ({
+          ...account,
+          createdAt: new Date(account.createdAt),
+          updatedAt: new Date(account.updatedAt)
+        }));
+        setAccounts(parsedAccounts);
+      }
+    } catch (error) {
+      console.error('Error loading accounts:', error);
+    }
+  };
+
+  const loadIncomeSourcesData = async () => {
+    try {
+      const saved = localStorage.getItem(`finspire_income_sources_${user?.id}`);
+      if (saved) {
+        const parsedSources = JSON.parse(saved).map((source: any) => ({
+          ...source,
+          createdAt: new Date(source.createdAt),
+          lastReceived: source.lastReceived ? new Date(source.lastReceived) : undefined,
+          nextExpected: source.nextExpected ? new Date(source.nextExpected) : undefined
+        }));
+        setIncomeSources(parsedSources);
+      }
+    } catch (error) {
+      console.error('Error loading income sources:', error);
+    }
+  };
 
   const loadAllData = async () => {
     if (!user) return;
@@ -2131,5 +2392,21 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     refreshInsights,
   };
 
+    // Account management
+    accounts,
+    addAccount,
+    updateAccount,
+    deleteAccount,
+    transferBetweenAccounts,
+    
+    // Income source management
+    incomeSources,
+    addIncomeSource,
+    updateIncomeSource,
+    deleteIncomeSource,
+    
+    // Split transactions
+    addSplitTransaction,
+    
   return <FinanceContext.Provider value={value}>{children}</FinanceContext.Provider>;
 };

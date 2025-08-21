@@ -4,8 +4,6 @@ export interface User {
   name: string;
   avatar?: string;
   createdAt: Date;
-}
-
 export interface FinancialAccount {
   id: string;
   name: string;
@@ -124,6 +122,20 @@ export interface UserCategory {
   userId: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface IncomeSource {
+  id: string;
+  name: string;
+  type: 'salary' | 'freelance' | 'business' | 'investment' | 'rental' | 'other';
+  amount: number;
+  frequency: 'weekly' | 'monthly' | 'yearly';
+  isActive: boolean;
+  lastReceived?: Date;
+  nextExpected?: Date;
+  reliability: 'high' | 'medium' | 'low';
+  userId: string;
+  createdAt: Date;
 }
 
 export interface SplitTransaction {

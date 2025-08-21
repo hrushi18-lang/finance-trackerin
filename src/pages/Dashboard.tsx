@@ -41,6 +41,7 @@ export const Dashboard: React.FC = () => {
   const [showForecast, setShowForecast] = useState(false);
   const [showSmartRecurring, setShowSmartRecurring] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [showAccountsHub, setShowAccountsHub] = useState(false);
 
   const handleAddGoal = async (goal: any) => {
     try {

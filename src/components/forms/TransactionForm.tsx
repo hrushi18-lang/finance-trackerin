@@ -55,6 +55,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const category = watch('category');
   const description = watch('description');
   
+  // Filter goals and liabilities that can receive payments
+  const availableGoals = goals.filter(g => (Number(g.currentAmount) || 0) < (Number(g.targetAmount) || 0));
+  const availableLiabilities = liabilities.filter(l => (Number(l.remainingAmount) || 0) > 0);
+  
   // Get available categories based on type (with fallback to default categories)
   const defaultCategories = {
     income: ['Salary', 'Freelance', 'Investment', 'Business', 'Other'],
