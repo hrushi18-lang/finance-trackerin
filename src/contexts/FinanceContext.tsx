@@ -75,7 +75,7 @@ interface FinanceContextType {
   
   // Split transactions
   addSplitTransaction: (mainTransaction: Omit<Transaction, 'id' | 'userId'>, splits: SplitTransaction[]) => Promise<void>;
-  
+}  
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
