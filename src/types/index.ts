@@ -4,6 +4,7 @@ export interface User {
   name: string;
   avatar?: string;
   createdAt: Date;
+}
 export interface FinancialAccount {
   id: string;
   name: string;
