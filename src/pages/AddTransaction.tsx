@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus, Minus, FileText, Tag, Calendar, Target, CreditCard, CheckCircle, AlertCircle, Scissors, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, FileText, Tag, Calendar, Target, CreditCard, CheckCircle, AlertCircle, Scissors, Trash2, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Input } from '../components/common/Input';
@@ -18,6 +18,7 @@ interface TransactionFormData {
   description: string;
   date: string;
   category: string;
+  accountId: string;
 }
 
 interface SplitFormData {
@@ -29,7 +30,7 @@ interface SplitFormData {
 export const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
   const { currency } = useInternationalization();
-  const { addTransaction, addSplitTransaction, userCategories } = useFinance();
+  const { addTransaction, addSplitTransaction, userCategories, accounts } = useFinance();
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
   const [isSplitTransaction, setIsSplitTransaction] = useState(false);
   const [splits, setSplits] = useState<SplitFormData[]>([{ category: '', amount: 0, description: '' }]);
@@ -120,6 +121,8 @@ export const AddTransaction: React.FC = () => {
             (userCategories.find(c => c.type === 'income')?.name || 'Other') : 
             (userCategories.find(c => c.type === 'expense')?.name || 'Other')),
           date: new Date(data.date),
+          accountId: data.accountId,
+          affectsBalance: true
         });
       }
 
@@ -383,6 +386,38 @@ export const AddTransaction: React.FC = () => {
                 </Button>
               ))}
             </div>
+          </div>
+
+          {/* Payment Method Selection */}
+          <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+            <label className="block text-sm font-medium text-gray-300 mb-4 flex items-center">
+              <Wallet size={16} className="mr-2 text-blue-400" />
+              Payment Method
+            </label>
+            <select
+              {...register('accountId', { required: 'Payment method is required' })}
+              className="block w-full rounded-xl border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
+            >
+              <option value="" className="bg-black/90">Select payment method</option>
+              {(accounts || []).map((account) => (
+                <option key={account.id} value={account.id} className="bg-black/90">
+                  {account.name} - {formatCurrency(account.balance)}
+                </option>
+              ))}
+            </select>
+            {errors.accountId && (
+              <p className="text-sm text-error-400 mt-1">{errors.accountId.message}</p>
+            )}
+            {(accounts || []).length === 0 && (
+              <p className="text-xs text-warning-400 mt-2">
+                No payment methods found. <button 
+                  onClick={() => navigate('/profile')} 
+                  className="text-primary-400 underline"
+                >
+                  Add one from Profile
+                </button>
+              </p>
+            )}
           </div>
 
           {/* Amount Input */}

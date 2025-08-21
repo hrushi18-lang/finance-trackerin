@@ -11,11 +11,12 @@ import { Button } from '../components/common/Button';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
+  accountId?: string;
 import { Goal } from '../types';
 
 export const Goals: React.FC = () => {
   const queryClient = useQueryClient();
-  const { goals, addGoal, updateGoal, deleteGoal, addTransaction } = useFinance();
+  const { goals, addGoal, updateGoal, deleteGoal, addTransaction, accounts } = useFinance();
   const { currency, formatCurrency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -310,6 +311,11 @@ export const Goals: React.FC = () => {
                       <div>
                         <h3 className="font-semibold text-white text-sm sm:text-base">{goal.title}</h3>
                         <p className="text-xs sm:text-sm text-gray-400">{goal.category}</p>
+                        {goal.accountId && (
+                          <p className="text-xs text-forest-400">
+                            Account: {accounts?.find(a => a.id === goal.accountId)?.name || 'Unknown'}
+                          </p>
+                        )}
                       </div>
                     </div>
                     

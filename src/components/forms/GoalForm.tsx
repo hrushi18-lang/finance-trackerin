@@ -8,6 +8,7 @@ import { Goal } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { AlertCircle } from 'lucide-react';
+import { useFinance } from '../../contexts/FinanceContext';
 
 interface GoalFormData {
   title: string;
@@ -16,6 +17,7 @@ interface GoalFormData {
   currentAmount: number;
   targetDate: string;
   category: string;
+  accountId?: string;
 }
 
 interface GoalFormProps {
@@ -32,6 +34,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
   initialData
 }) => {
   const { currency } = useInternationalization();
+  const { accounts } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -42,7 +45,8 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       description: initialData?.description || '',
       targetAmount: initialData?.targetAmount || undefined,
       targetDate: initialData?.targetDate || '',
-      category: initialData?.category || ''
+      category: initialData?.category || '',
+      accountId: initialData?.accountId || ''
     },
   });
 
@@ -173,6 +177,26 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         {errors.category && (
           <p className="text-sm text-error-400 mt-1">{errors.category.message}</p>
         )}
+      </div>
+
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Link to Account (Optional)
+        </label>
+        <select
+          {...register('accountId')}
+          className="block w-full rounded-xl border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
+        >
+          <option value="" className="bg-black/90">No specific account</option>
+          {(accounts || []).map((account) => (
+            <option key={account.id} value={account.id} className="bg-black/90">
+              {account.name} - {formatCurrency(account.balance)}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-400 mt-1">
+          Link this goal to a specific payment method for better tracking
+        </p>
       </div>
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">

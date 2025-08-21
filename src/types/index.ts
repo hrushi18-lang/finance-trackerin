@@ -67,6 +67,7 @@ export interface Goal {
   category: string;
   userId: string;
   createdAt: Date;
+  accountId?: string;
 }
 
 export interface Liability {
@@ -82,6 +83,7 @@ export interface Liability {
   createdAt: Date;
   start_date: Date;
   linkedPurchaseId?: string;
+  accountId?: string;
 }
 
 export interface Budget {
