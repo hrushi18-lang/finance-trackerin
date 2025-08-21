@@ -60,8 +60,7 @@ export const TransactionHistory: React.FC = () => {
         case 'category':
           comparison = a.category.localeCompare(b.category);
           break;
-    const safeTransactions = Array.isArray(transactions) ? transactions : [];
-    return safeTransactions.filter(transaction => {
+      }
       
       return sortOrder === 'asc' ? comparison : -comparison;
     });
