@@ -186,8 +186,8 @@ export const Dashboard: React.FC = () => {
                   Welcome to your personalized Finspire! 🎉
                 </h3>
                 <p className="text-primary-100 text-sm mb-4">
-                  Based on your profile as a {settings.userTypes.join(' and ')}, we've customized your dashboard 
-                  to focus on {settings.primaryFocus.slice(0, 2).join(' and ')}. 
+                  Based on your profile as a {(settings.userTypes || []).join(' and ')}, we've customized your dashboard 
+                  to focus on {(settings.primaryFocus || []).slice(0, 2).join(' and ')}. 
                   {showTutorial && ' Take a quick tour to get started!'}
                 </p>
                 <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
