@@ -188,10 +188,6 @@ export const AddTransaction: React.FC = () => {
     ? [1000, 2500, 5000, 10000]
     : [25, 50, 100, 500];
 
-  function formatCurrency(value: number): string {
-    return `${currency.symbol}${value.toLocaleString()}`;
-  }
-
   return (
     <div className="min-h-screen text-white pb-20">
       {/* Header with Navigation */}

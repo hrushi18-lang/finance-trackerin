@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, TrendingUp, Wallet, CreditCard, Plus, Target, Receipt, Search, Bell, History, Repeat, User, Eye, EyeOff, ArrowLeftRight, Calculator, PieChart, Calendar, BarChart3, Radiation as Notification } from 'lucide-react';
+import { DollarSign, TrendingUp, Wallet, CreditCard, Plus, Target, Receipt, Search, Bell, History, Repeat, User, Eye, EyeOff, ArrowLeftRight, Calculator, PieChart, Calendar, BarChart3, Building, Smartphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '../components/common/Modal';
@@ -133,6 +133,46 @@ export const Dashboard: React.FC = () => {
   const totalBalance = (accounts || [])
     .filter(account => account.isVisible)
     .reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
+
+  // Helper functions for account display
+  const getAccountIcon = (type: string) => {
+    const icons = {
+      bank_savings: Building,
+      bank_current: Building,
+      bank_student: Building,
+      digital_wallet: Smartphone,
+      cash: Wallet,
+      credit_card: CreditCard,
+      investment: TrendingUp
+    };
+    return icons[type as keyof typeof icons] || Wallet;
+  };
+
+  const getAccountColor = (type: string) => {
+    const colors = {
+      bank_savings: 'bg-blue-500',
+      bank_current: 'bg-green-500',
+      bank_student: 'bg-purple-500',
+      digital_wallet: 'bg-orange-500',
+      cash: 'bg-gray-500',
+      credit_card: 'bg-red-500',
+      investment: 'bg-yellow-500'
+    };
+    return colors[type as keyof typeof colors] || 'bg-gray-500';
+  };
+
+  const getAccountTypeName = (type: string) => {
+    const names = {
+      bank_savings: 'Savings Account',
+      bank_current: 'Current Account',
+      bank_student: 'Student Account',
+      digital_wallet: 'Digital Wallet',
+      cash: 'Cash',
+      credit_card: 'Credit Card',
+      investment: 'Investment Account'
+    };
+    return names[type as keyof typeof names] || 'Account';
+  };
 
   // Get upcoming bills (next 7 days)
   const upcomingBills = (recurringTransactions || [])

@@ -11,7 +11,6 @@ import { Button } from '../components/common/Button';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
-  accountId?: string;
 import { Goal } from '../types';
 
 export const Goals: React.FC = () => {
