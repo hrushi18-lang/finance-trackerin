@@ -122,11 +122,13 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
             <span className="text-red-400">🔒</span>
             <span>Secure & Private</span>
           </div>
+        </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">
           Meet Your <span className="text-primary-400 bg-gradient-to-r from-primary-400 to-blue-400 bg-clip-text text-transparent">Financial Coach</span>
         </h1>
         <p className="text-xl sm:text-2xl font-medium text-primary-300 mb-4">
           FinTrack - Build Money Discipline Through Manual Tracking
+        </p>
         <h3 className="font-semibold text-white mb-2">🚀 Your Financial Coach Awaits</h3>
         <p className="text-base sm:text-lg text-gray-300 max-w-lg mx-auto leading-relaxed">
           Unlike apps that just show you numbers, FinTrack makes you <strong className="text-white">actively engage</strong> with every transaction. 
