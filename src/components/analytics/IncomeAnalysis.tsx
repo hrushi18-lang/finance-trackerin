@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, DollarSign, Calendar, Briefcase, Target } from 'lucide-react';
+import { TrendingUp, DollarSign, Calendar, Briefcase, Target, CheckCircle, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 
