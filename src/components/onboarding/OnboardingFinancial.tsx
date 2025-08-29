@@ -120,7 +120,7 @@ export const OnboardingFinancial: React.FC<OnboardingFinancialProps> = ({
           />
           <p className="text-sm text-gray-400 mt-2">
             💡 <strong>Include everything:</strong> Cash in wallet + Bank savings + Any investments. 
-            Don't worry about being exact - we'll help you organize this into separate accounts next!
+            Don't worry about being exact - we\'ll help you organize this into separate accounts next!
           </p>
           <p className="text-sm text-gray-400 mt-2">
             This is your current account balance - we'll only record this once as your starting point.
