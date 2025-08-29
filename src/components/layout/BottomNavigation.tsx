@@ -13,7 +13,7 @@ export const BottomNavigation: React.FC = () => {
     { path: '/budgets', icon: PieChart, label: 'Budgets' },
     { path: '/liabilities', icon: CreditCard, label: 'Debts' },
     { path: '/bills', icon: Calendar, label: 'Bills' },
-    { path: '/profile', icon: Settings, label: 'Profile' }
+    { path: '/profile', icon: Settings, label: 'Settings' }
   ];
 
   return (

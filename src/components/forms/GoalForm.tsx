@@ -204,7 +204,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
           <option value="" className="bg-black/90">No specific account</option>
           {(accounts || []).map((account) => (
             <option key={account.id} value={account.id} className="bg-black/90">
-              {account.name} - {currency.symbol}{account.balance.toLocaleString()}
+              {account.name} - {formatCurrency(account.balance)}
             </option>
           ))}
         </select>
