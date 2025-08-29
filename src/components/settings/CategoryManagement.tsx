@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Tag, Plus, Edit3, Trash2, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { Tag, Plus, Edit3, Trash2, AlertCircle, CheckCircle, Info, TrendingUp, TrendingDown } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
@@ -121,7 +121,9 @@ export const CategoryManagement: React.FC = () => {
 
   const iconOptions = [
     '💰', '🏠', '🍔', '🚗', '🎬', '🛍️', '💊', '📚', 
-    '✈️', '🎯', '💳', '📱', '⚡', '🎵', '🏋️', '🎨'
+    '✈️', '🎯', '💳', '📱', '⚡', '🎵', '🏋️', '🎨',
+    '📈', '🍛', '🐶', '😸', '👨‍⚖️', '🛌', '💰', '🎁',
+    '🍻', '🛫', '⛽', '🏝️', '🧻'
   ];
 
   return (
