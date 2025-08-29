@@ -82,8 +82,9 @@ export const Overview: React.FC = () => {
       case 'investment':
         return TrendingUp;
       case 'cash':
-      case 'digital_wallet':
         return Wallet;
+      case 'digital_wallet':
+        return Smartphone;
       default:
         return Wallet;
     }

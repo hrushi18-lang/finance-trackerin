@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { CreditCard, Calendar, Percent, TrendingDown, Plus, Edit3, Trash2, BarChart3, Calculator, Info, AlertTriangle, ShoppingCart, CheckCircle, Building, Car, Home, GraduationCap, Wallet, Target, Clock, DollarSign } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { TopNavigation } from '../components/layout/TopNavigation';
-import { Modal } from '../common/Modal';
+import { Modal } from '../components/common/Modal';
 import { EnhancedLiabilityForm } from '../components/forms/EnhancedLiabilityForm';
 import { PaymentForm } from '../components/forms/PaymentForm';
 import { Button } from '../components/common/Button';

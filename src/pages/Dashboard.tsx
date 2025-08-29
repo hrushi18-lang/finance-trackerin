@@ -243,9 +243,8 @@ export const Dashboard: React.FC = () => {
               
               <button 
                 onClick={() => setShowNotifications(true)}
-                className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
-                title="Notifications"
                 className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors relative"
+                title="Notifications"
               >
                 <Bell size={18} className="text-forest-300 sm:w-5 sm:h-5" />
                 {isNewUser && (
@@ -254,8 +253,9 @@ export const Dashboard: React.FC = () => {
               </button>
               
               <button 
-                title={t('history')}
-                title="Notifications"
+                onClick={() => navigate('/transaction-history')}
+                className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
+                title="Transaction History"
               >
                 <History size={18} className="text-forest-300 sm:w-5 sm:h-5" />
               </button>
