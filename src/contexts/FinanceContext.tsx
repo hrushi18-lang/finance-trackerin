@@ -1405,7 +1405,7 @@ export const FinanceProvider: React.FC<FinanceProviderProps> = ({ children }) =>
     getFinancialForecast,
     refreshInsights,
     exportData,
-    importData
+    importData,
     addEnhancedLiability,
     updateEnhancedLiability,
     deleteEnhancedLiability,
