@@ -543,15 +543,15 @@ export const Overview: React.FC = () => {
             onClick={() => navigate('/add-transaction')}
             className="bg-forest-600 hover:bg-forest-700 text-white p-4 rounded-xl transition-colors flex items-center justify-center space-x-2"
           >
-            <Plus size={20} />
-            <span className="font-body font-medium">Add Transaction</span>
+            <span className="text-xl">💸</span>
+            <span className="font-body font-medium">Track Money</span>
           </button>
           <button
-            onClick={() => navigate('/analytics')}
+            onClick={() => navigate('/goals')}
             className="bg-forest-700 hover:bg-forest-600 text-white p-4 rounded-xl transition-colors flex items-center justify-center space-x-2"
           >
-            <BarChart3 size={20} />
-            <span className="font-body font-medium">View Analytics</span>
+            <span className="text-xl">🎯</span>
+            <span className="font-body font-medium">Set Goals</span>
           </button>
         </div>
       </div>

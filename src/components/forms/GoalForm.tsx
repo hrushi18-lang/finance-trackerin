@@ -79,12 +79,12 @@ export const GoalForm: React.FC<GoalFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+          <span className="text-blue-400 mt-0.5">🎯</span>
       {/* Error Message */}
-      {error && (
+            <p className="text-blue-400 font-medium">Goal Setting Tip</p>
         <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4">
-          <div className="flex items-center space-x-2">
-            <AlertCircle size={18} className="text-error-400" />
+              Set realistic goals that motivate you! Start small and celebrate every milestone. 
+              Manual tracking helps you stay connected to your progress.
             <p className="text-error-400 text-sm">{error}</p>
           </div>
         </div>

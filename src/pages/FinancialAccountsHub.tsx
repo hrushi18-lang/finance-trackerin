@@ -204,7 +204,7 @@ export const FinancialAccountsHub: React.FC = () => {
   return (
     <div className="min-h-screen text-white pb-20">
       <TopNavigation 
-        title="Financial Accounts" 
+        title="💳 Your Money Accounts" 
         showAdd 
         onAdd={() => setShowAccountModal(true)}
       />
@@ -212,7 +212,7 @@ export const FinancialAccountsHub: React.FC = () => {
       <div className="px-4 py-4 sm:py-6 space-y-6">
         <div className="flex items-center justify-between">
           <p className="text-gray-400 text-sm sm:text-base">
-            Manage all your payment methods and accounts
+            🏦 Manage all your payment methods like a pro
           </p>
           <button
             onClick={() => setShowBalances(!showBalances)}
@@ -241,12 +241,10 @@ export const FinancialAccountsHub: React.FC = () => {
         <div className="bg-gradient-to-r from-forest-700/80 to-forest-600/80 backdrop-blur-md rounded-2xl p-6 border border-forest-500/20">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <div className="p-3 bg-forest-500/20 rounded-lg">
-                <Wallet size={24} className="text-forest-400" />
-              </div>
+              <span className="text-3xl">💰</span>
               <div>
-                <h3 className="text-xl font-heading font-bold text-white">Your Financial Portfolio</h3>
-                <p className="text-sm text-forest-200 font-body">Complete account management</p>
+                <h3 className="text-xl font-heading font-bold text-white">Your Money Dashboard</h3>
+                <p className="text-sm text-forest-200 font-body">Track every rupee across all accounts</p>
               </div>
             </div>
           </div>
@@ -254,12 +252,12 @@ export const FinancialAccountsHub: React.FC = () => {
           {/* Total Balance */}
           {showBalances && (
             <div className="bg-forest-800/30 rounded-xl p-4 text-center">
-              <p className="text-sm text-forest-300 mb-2 font-body">Total Portfolio Value</p>
+              <p className="text-sm text-forest-300 mb-2 font-body">Total Money Available</p>
               <p className="text-3xl font-numbers font-bold text-white">
                 <CurrencyIcon currencyCode={currency.code} size={24} className="inline mr-2" />
                 {totalBalance.toLocaleString()}
               </p>
-              <p className="text-xs text-forest-400 font-body">{visibleAccounts.length} visible accounts</p>
+              <p className="text-xs text-forest-400 font-body">{visibleAccounts.length} active accounts</p>
             </div>
           )}
         </div>
@@ -273,32 +271,30 @@ export const FinancialAccountsHub: React.FC = () => {
             disabled={(accounts || []).length < 2}
           >
             <ArrowLeftRight size={16} className="mr-2" />
-            Transfer Funds
+            Move Money
           </Button>
           <Button
             onClick={() => setShowAccountModal(true)}
             className="bg-forest-600 hover:bg-forest-700"
           >
             <Plus size={16} className="mr-2" />
-            New Account
+            Add Account
           </Button>
         </div>
 
         {/* Accounts List */}
         {(accounts || []).length === 0 ? (
           <div className="text-center py-16 bg-forest-900/30 backdrop-blur-md rounded-2xl border border-forest-600/20">
-            <div className="w-20 h-20 bg-forest-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Wallet size={40} className="text-forest-400" />
-            </div>
-            <h3 className="text-xl font-heading font-bold text-white mb-3">No accounts added</h3>
+            <span className="text-6xl mb-6 block">🏦</span>
+            <h3 className="text-xl font-heading font-bold text-white mb-3">Set up your first account!</h3>
             <p className="text-forest-300 mb-6 font-body max-w-md mx-auto">
-              Add your first financial account to start tracking your money across all payment methods
+              Add your cash wallet, bank account, or digital wallet to start tracking your money like a pro
             </p>
             <Button 
               onClick={() => setShowAccountModal(true)}
               className="bg-forest-600 hover:bg-forest-700"
             >
-              <Plus size={20} className="mr-2" />
+              <span className="mr-2">🚀</span>
               Add First Account
             </Button>
           </div>
@@ -402,7 +398,7 @@ export const FinancialAccountsHub: React.FC = () => {
                       className="w-full border-forest-500/30 text-forest-300 hover:bg-forest-600/10"
                     >
                       <Plus size={14} className="mr-2" />
-                      Add Mock Transaction
+                      Add Past Transaction
                     </Button>
                   </div>
 
@@ -414,7 +410,7 @@ export const FinancialAccountsHub: React.FC = () => {
                         <div>
                           <h5 className="text-sm font-heading font-medium text-white mb-3 flex items-center">
                             <BarChart3 size={16} className="mr-2 text-forest-400" />
-                            Recent Transactions
+                            Recent Activity
                           </h5>
                           <div className="space-y-2">
                             {selectedAccountTransactions.map((transaction) => (
@@ -450,7 +446,7 @@ export const FinancialAccountsHub: React.FC = () => {
                         <div>
                           <h5 className="text-sm font-heading font-medium text-white mb-3 flex items-center">
                             <Target size={16} className="mr-2 text-forest-400" />
-                            Linked Goals ({selectedAccountGoals.length})
+                            Goals for This Account ({selectedAccountGoals.length})
                           </h5>
                           <div className="space-y-2">
                             {selectedAccountGoals.map((goal) => (
@@ -472,7 +468,7 @@ export const FinancialAccountsHub: React.FC = () => {
                         <div>
                           <h5 className="text-sm font-heading font-medium text-white mb-3 flex items-center">
                             <CreditCard size={16} className="mr-2 text-error-400" />
-                            Linked Debts ({selectedAccountLiabilities.length})
+                            Debts on This Account ({selectedAccountLiabilities.length})
                           </h5>
                           <div className="space-y-2">
                             {selectedAccountLiabilities.map((liability) => (
@@ -480,7 +476,7 @@ export const FinancialAccountsHub: React.FC = () => {
                                 <div className="flex justify-between items-center">
                                   <span className="text-sm font-body text-white">{liability.name}</span>
                                   <span className="text-xs text-error-400 font-numbers">
-                                    {formatCurrency(liability.remainingAmount)} remaining
+                                    {formatCurrency(liability.remainingAmount)} left
                                   </span>
                                 </div>
                               </div>
@@ -494,7 +490,7 @@ export const FinancialAccountsHub: React.FC = () => {
                         <div>
                           <h5 className="text-sm font-heading font-medium text-white mb-3 flex items-center">
                             <DollarSign size={16} className="mr-2 text-warning-400" />
-                            Account Budgets ({selectedAccountBudgets.length})
+                            Budgets for This Account ({selectedAccountBudgets.length})
                           </h5>
                           <div className="space-y-2">
                             {selectedAccountBudgets.map((budget) => (
@@ -518,38 +514,9 @@ export const FinancialAccountsHub: React.FC = () => {
           </div>
         )}
 
-        {/* Account Statistics */}
-        {(accounts || []).length > 0 && (
-          <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-            <h4 className="font-heading font-medium text-white mb-4">Account Statistics</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <p className="text-xs text-forest-400 mb-1 font-body">Total Accounts</p>
-                <p className="text-xl font-numbers font-bold text-white">{(accounts || []).length}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-forest-400 mb-1 font-body">Visible</p>
-                <p className="text-xl font-numbers font-bold text-forest-400">{visibleAccounts.length}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-forest-400 mb-1 font-body">Credit Cards</p>
-                <p className="text-xl font-numbers font-bold text-red-400">
-                  {(accounts || []).filter(a => a.type === 'credit_card').length}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-forest-400 mb-1 font-body">Digital Wallets</p>
-                <p className="text-xl font-numbers font-bold text-orange-400">
-                  {(accounts || []).filter(a => a.type === 'digital_wallet').length}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Account Types Guide */}
+        {/* Student Guide */}
         <div className="bg-forest-600/20 rounded-xl p-6 border border-forest-500/30">
-          <h4 className="font-heading font-medium text-forest-300 mb-4">Supported Account Types</h4>
+          <h4 className="font-heading font-medium text-forest-300 mb-4">🎓 Student Account Guide</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
@@ -562,19 +529,27 @@ export const FinancialAccountsHub: React.FC = () => {
               </div>
               <div className="flex items-center space-x-3">
                 <CreditCard size={16} className="text-red-400" />
-                <span className="text-forest-200 font-body">Credit Cards (HDFC, SBI, Axis)</span>
+                <span className="text-forest-200 font-body">Credit Cards (Student Cards)</span>
               </div>
             </div>
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <Wallet size={16} className="text-gray-400" />
-                <span className="text-forest-200 font-body">Cash Wallet</span>
+                <span className="text-forest-200 font-body">Cash Wallet (Pocket Money)</span>
               </div>
               <div className="flex items-center space-x-3">
                 <TrendingUp size={16} className="text-yellow-400" />
-                <span className="text-forest-200 font-body">Investment Accounts</span>
+                <span className="text-forest-200 font-body">Investment (SIP, Stocks)</span>
               </div>
             </div>
+          </div>
+          
+          {/* Student Tip */}
+          <div className="mt-4 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
+            <p className="text-blue-300 text-sm">
+              💡 <strong>Pro Tip:</strong> Start with just 2-3 accounts (Cash + Bank + Digital Wallet). 
+              You can always add more as your financial life grows!
+            </p>
           </div>
         </div>
       </div>
@@ -587,7 +562,7 @@ export const FinancialAccountsHub: React.FC = () => {
           setEditingAccount(null);
           setError(null);
         }}
-        title={editingAccount ? 'Edit Account' : 'Add Financial Account'}
+        title={editingAccount ? 'Edit Account' : '🏦 Add New Account'}
       >
         <AccountForm
           initialData={editingAccount}
@@ -608,7 +583,7 @@ export const FinancialAccountsHub: React.FC = () => {
           setShowTransferModal(false);
           setError(null);
         }}
-        title="Transfer Between Accounts"
+        title="💸 Move Money Between Accounts"
       >
         <TransferForm
           accounts={accounts || []}
@@ -629,17 +604,17 @@ export const FinancialAccountsHub: React.FC = () => {
           setSelectedAccountForMock(null);
           setError(null);
         }}
-        title="Add Historical Transaction"
+        title="📝 Add Past Transaction"
       >
         <div className="space-y-4">
           <div className="bg-forest-600/20 rounded-lg p-4 border border-forest-500/30">
             <div className="flex items-start space-x-3">
               <Info size={18} className="text-forest-400 mt-0.5" />
               <div>
-                <p className="text-forest-300 font-body font-medium text-sm">Mock Transaction</p>
+                <p className="text-forest-300 font-body font-medium text-sm">Historical Transaction</p>
                 <p className="text-forest-200 font-body text-xs mt-1">
-                  This transaction won't affect your account balance. Use this to add historical transactions 
-                  from before you started using FinTrack.
+                  This won't change your current balance - it's just for tracking past expenses 
+                  to help you understand your spending patterns better.
                 </p>
               </div>
             </div>
@@ -671,16 +646,16 @@ export const FinancialAccountsHub: React.FC = () => {
             <div className="flex items-start space-x-3">
               <AlertCircle size={18} className="text-error-400 mt-0.5" />
               <div>
-                <p className="text-error-400 font-body font-medium text-sm">Warning: This action cannot be undone</p>
+                <p className="text-error-400 font-body font-medium text-sm">⚠️ This can't be undone!</p>
                 <p className="text-error-300 font-body text-xs mt-1">
-                  Deleting this account will also remove all associated transactions, goals, and budgets.
+                  Deleting this account will remove all transactions, goals, and budgets linked to it.
                 </p>
               </div>
             </div>
           </div>
           
           <p className="text-forest-200 font-body">
-            Are you sure you want to delete this account? This action is permanent and cannot be reversed.
+            Are you sure you want to delete this account? All your financial data for this account will be lost forever.
           </p>
           
           <div className="flex space-x-3 pt-4">

@@ -28,6 +28,14 @@ export const Goals: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const goalCategories = ['Emergency', 'Travel', 'Education', 'Home', 'Investment', 'Other'];
+  
+  // Student-focused goal categories
+  const studentGoalCategories = [
+    'Emergency Fund', 'New Laptop/Phone', 'Course/Certification', 'Travel', 
+    'First Car', 'Study Abroad', 'Internship Fund', 'Other'
+  ];
+
   // Find emergency fund goal
   const emergencyFund = goals.find(g => g.category.toLowerCase() === 'emergency');
   const emergencyFundBalance = emergencyFund ? (Number(emergencyFund.currentAmount) || 0) : 0;

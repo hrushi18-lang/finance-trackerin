@@ -177,12 +177,12 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
       {/* Info Box */}
       <div className="bg-blue-500/20 rounded-lg p-4 border border-blue-500/30">
         <div className="flex items-center text-blue-400 mb-2">
-          <Calculator size={16} className="mr-2" />
-          <span className="font-medium">Budget Tracking</span>
+          <span className="mr-2">🎯</span>
+          <span className="font-medium">Smart Budgeting</span>
         </div>
         <p className="text-sm text-blue-300">
-          Your spending will be automatically tracked based on expense transactions in this category.
-          The budget will reset at the beginning of each {selectedPeriod} period.
+          Every time you manually track an expense in this category, we'll update your budget automatically. 
+          This helps you see exactly how much you have left to spend!
         </p>
       </div>
 

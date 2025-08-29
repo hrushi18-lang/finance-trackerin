@@ -567,14 +567,14 @@ export const Liabilities: React.FC = () => {
         {liabilities.filter(l => toNumber(l.remainingAmount) > 0).length > 0 && (
           <div className="mt-6 bg-blue-500/20 rounded-lg p-4 border border-blue-500/30">
             <div className="flex items-start space-x-3">
-              <Info size={18} className="text-blue-400 mt-0.5" />
+              <span className="text-blue-400 mt-0.5">🎓</span>
               <div>
-                <h4 className="font-medium text-blue-400 mb-1">Debt Management Tips</h4>
+                <h4 className="font-medium text-blue-400 mb-1">💡 Student Debt Tips</h4>
                 <ul className="text-sm text-blue-300 space-y-1 list-disc list-inside">
-                  <li>Focus on high-interest debt first (Avalanche method)</li>
-                  <li>Or pay off smallest balances first for quick wins (Snowball method)</li>
-                  <li>Consider making extra payments when possible</li>
-                  <li>Set up automatic payments to avoid late fees</li>
+                  <li>Pay more than the minimum when you can</li>
+                  <li>Focus on high-interest debt first to save money</li>
+                  <li>Set reminders to never miss payments</li>
+                  <li>Celebrate every payment - you're building financial freedom!</li>
                 </ul>
               </div>
             </div>

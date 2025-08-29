@@ -123,13 +123,15 @@ export const Budgets: React.FC = () => {
         {budgets.length === 0 ? (
           <div className="text-center py-12 sm:py-16">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Calculator size={24} className="text-primary-400 sm:w-8 sm:h-8" />
+              <span className="text-2xl sm:text-3xl">💰</span>
             </div>
-            <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">No budgets set</h3>
-            <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">Create your first budget to start tracking spending</p>
+            <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Ready to budget like a pro?</h3>
+            <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">
+              Set spending limits for different categories and watch your money habits improve!
+            </p>
             <Button onClick={() => setShowModal(true)}>
-              <Plus size={18} className="mr-2 sm:w-5 sm:h-5" />
-              Create Budget
+              <span className="mr-2">🎯</span>
+              Create First Budget
             </Button>
           </div>
         ) : (

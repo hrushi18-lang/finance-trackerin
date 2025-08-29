@@ -69,9 +69,9 @@ export const FinancialInsights: React.FC<FinancialInsightsProps> = ({ maxInsight
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-primary-500/20 rounded-lg">
-              <Lightbulb size={18} className="text-primary-400" />
+              <span className="text-xl">🤖</span>
             </div>
-            <h3 className="text-lg font-semibold text-white">AI Financial Insights</h3>
+            <h3 className="text-lg font-semibold text-white">Your Financial Coach</h3>
           </div>
           <Button
             onClick={handleAiGenerate}
@@ -80,15 +80,15 @@ export const FinancialInsights: React.FC<FinancialInsightsProps> = ({ maxInsight
             className="border-white/20 text-white hover:bg-white/10"
             loading={isAiGenerating}
           >
-            <Sparkles size={14} className="mr-2 text-yellow-400" />
-            Generate Insights
+            <span className="mr-2">✨</span>
+            Get Coaching Tips
           </Button>
         </div>
         
         <div className="text-center py-8">
-          <Lightbulb size={48} className="mx-auto text-gray-600 mb-4" />
-          <p className="text-gray-400">No insights available yet</p>
-          <p className="text-sm text-gray-500 mt-2">Add more financial data to get personalized insights</p>
+          <span className="text-6xl mb-4 block">🎓</span>
+          <p className="text-gray-400">Your financial coach is ready!</p>
+          <p className="text-sm text-gray-500 mt-2">Start tracking transactions to get personalized money tips</p>
         </div>
       </div>
     );
@@ -99,9 +99,9 @@ export const FinancialInsights: React.FC<FinancialInsightsProps> = ({ maxInsight
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-primary-500/20 rounded-lg">
-            <Lightbulb size={18} className="text-primary-400" />
+            <span className="text-xl">🤖</span>
           </div>
-          <h3 className="text-lg font-semibold text-white">AI Financial Insights</h3>
+          <h3 className="text-lg font-semibold text-white">Your Financial Coach</h3>
         </div>
         <div className="flex space-x-2">
           <Button
@@ -111,8 +111,8 @@ export const FinancialInsights: React.FC<FinancialInsightsProps> = ({ maxInsight
             className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
             loading={isAiGenerating}
           >
-            <Sparkles size={14} className="mr-2" />
-            AI Analyze
+            <span className="mr-2">🧠</span>
+            Get Tips
           </Button>
           <Button
             onClick={handleRefresh}
@@ -121,7 +121,7 @@ export const FinancialInsights: React.FC<FinancialInsightsProps> = ({ maxInsight
             className="border-white/20 text-white hover:bg-white/10"
             loading={isRefreshing}
           >
-            <RefreshCw size={14} className="mr-2" />
+            <span className="mr-2">🔄</span>
             Refresh
           </Button>
         </div>
@@ -157,8 +157,8 @@ export const FinancialInsights: React.FC<FinancialInsightsProps> = ({ maxInsight
       
       <div className="mt-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
         <div className="flex items-center text-blue-400 text-xs">
-          <Sparkles size={14} className="mr-2" />
-          <span>Powered by AI - Insights are based on your financial data and updated regularly</span>
+          <span className="mr-2">🤖</span>
+          <span>Your personal financial coach - Tips based on your spending habits and goals</span>
         </div>
       </div>
     </div>

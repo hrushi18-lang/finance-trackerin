@@ -40,14 +40,22 @@ export const OnboardingUserClassification: React.FC<OnboardingUserClassification
       label: 'Student', 
       icon: GraduationCap, 
       color: 'blue',
-      description: 'Managing education expenses and pocket money',
+      description: 'Learning to manage pocket money and education expenses',
       features: ['budgeting', 'savings_goals', 'expense_tracking']
+    },
+    { 
+      id: 'young_adult', 
+      label: 'Young Adult', 
+      icon: Briefcase, 
+      color: 'green',
+      description: 'Starting career and building financial independence',
+      features: ['salary_tracking', 'goal_setting', 'bill_management']
     },
     { 
       id: 'employee', 
       label: 'Employee', 
-      icon: Briefcase, 
-      color: 'green',
+      icon: Building, 
+      color: 'purple',
       description: 'Regular salary and career-focused planning',
       features: ['salary_tracking', 'retirement_planning', 'tax_optimization']
     },

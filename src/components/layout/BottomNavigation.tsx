@@ -7,13 +7,13 @@ export const BottomNavigation: React.FC = () => {
   const { t } = useTranslation();
 
   const navItems = [
-    { path: '/', icon: Home, label: t('navigation.home') },
+    { path: '/', icon: Home, label: 'Home' },
     { path: '/overview', icon: BarChart3, label: 'Overview' },
     { path: '/goals', icon: Target, label: 'Goals' },
     { path: '/budgets', icon: PieChart, label: 'Budgets' },
     { path: '/liabilities', icon: CreditCard, label: 'Debts' },
     { path: '/bills', icon: Calendar, label: 'Bills' },
-    { path: '/profile', icon: Settings, label: 'Settings' },
+    { path: '/profile', icon: Settings, label: 'Settings' }
   ];
 
   return (

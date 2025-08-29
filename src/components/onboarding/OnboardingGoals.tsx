@@ -40,13 +40,13 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
 
   const goalOptions = [
     { id: 'emergency', label: 'Emergency Fund', icon: PiggyBank, color: 'red' },
-    { id: 'house', label: 'Buy a House', icon: Home, color: 'green' },
+    { id: 'laptop', label: 'New Laptop/Phone', icon: Briefcase, color: 'blue' },
+    { id: 'education', label: 'Course/Certification', icon: GraduationCap, color: 'purple' },
     { id: 'travel', label: 'Travel & Vacation', icon: Plane, color: 'blue' },
-    { id: 'education', label: 'Education', icon: GraduationCap, color: 'purple' },
-    { id: 'wedding', label: 'Wedding', icon: Heart, color: 'pink' },
     { id: 'car', label: 'Buy a Car', icon: Car, color: 'gray' },
-    { id: 'business', label: 'Start a Business', icon: Briefcase, color: 'orange' },
-    { id: 'retirement', label: 'Retirement', icon: Target, color: 'indigo' },
+    { id: 'house', label: 'First Home', icon: Home, color: 'green' },
+    { id: 'business', label: 'Start a Business', icon: Building, color: 'orange' },
+    { id: 'other', label: 'Other Goal', icon: Target, color: 'indigo' }
   ];
 
   const timeOptions = [

@@ -32,7 +32,7 @@ const Profile = React.lazy(() => import('./pages/Profile').then(module => ({ def
 const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
 const Privacy = React.lazy(() => import('./pages/Privacy').then(module => ({ default: module.Privacy })));
 const About = React.lazy(() => import('./pages/About').then(module => ({ default: module.About })));
-const Bills = React.lazy(() => import('./pages/RecurringTransactions').then(module => ({ default: module.RecurringTransactions })));
+const Bills = React.lazy(() => import('./pages/Bills').then(module => ({ default: module.Bills })));
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({

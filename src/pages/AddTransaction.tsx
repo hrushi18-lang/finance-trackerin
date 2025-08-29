@@ -392,13 +392,13 @@ export const AddTransaction: React.FC = () => {
           <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
             <label className="block text-sm font-medium text-gray-300 mb-4 flex items-center">
               <Wallet size={16} className="mr-2 text-blue-400" />
-              Payment Method
+              Payment Method (Required)
             </label>
             <select
               {...register('accountId', { required: 'Payment method is required' })}
               className="block w-full rounded-xl border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
             >
-              <option value="" className="bg-black/90">Select payment method</option>
+              <option value="" className="bg-black/90">Choose how you paid/received money</option>
               {(accounts || []).map((account) => (
                 <option key={account.id} value={account.id} className="bg-black/90">
                   {account.name} - {formatCurrency(account.balance)}
@@ -409,15 +409,22 @@ export const AddTransaction: React.FC = () => {
               <p className="text-sm text-error-400 mt-1">{errors.accountId.message}</p>
             )}
             {(accounts || []).length === 0 && (
-              <p className="text-xs text-warning-400 mt-2">
-                No payment methods found. <button 
+              <p className="text-xs text-yellow-400 mt-2">
+                💡 No accounts found. <button 
                   onClick={() => navigate('/profile')} 
                   className="text-primary-400 underline"
                 >
-                  Add one from Profile
+                  Set up your first account
                 </button>
               </p>
             )}
+            
+            {/* Student Tip */}
+            <div className="mt-3 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
+              <p className="text-blue-300 text-xs">
+                💡 <strong>Why this matters:</strong> Tracking which account you use helps you understand your spending patterns and manage your money better!
+              </p>
+            </div>
           </div>
 
           {/* Amount Input */}

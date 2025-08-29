@@ -242,30 +242,30 @@ export const Dashboard: React.FC = () => {
           <div className="bg-gradient-to-r from-forest-700/80 to-forest-600/80 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-forest-500/20">
             <div className="flex items-start space-x-4">
               <div className="w-12 h-12 bg-forest-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <Wallet size={24} className="text-forest-400" />
+                <span className="text-2xl">🎓</span>
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-heading font-semibold text-white mb-2">
-                  Welcome to your personalized FinTrack! 🌱
+                  Welcome to your Financial Coach! 🎯
                 </h3>
                 <p className="text-forest-100 text-sm mb-4 font-body">
-                  Your comprehensive financial management system is ready. Start by adding your accounts, 
-                  setting up recurring transactions, and tracking your financial goals.
+                  Ready to build better money habits? Start by setting up your accounts (cash, savings, cards), 
+                  then manually track every transaction to become more aware of your spending patterns.
                 </p>
                 <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                   <button
                     onClick={() => setShowAccountModal(true)}
                     className="bg-white text-forest-600 py-2 px-4 rounded-lg font-medium hover:bg-forest-50 transition-colors text-sm flex items-center justify-center"
                   >
-                    <Plus size={16} className="mr-2" />
-                    Add Account
+                    <span className="mr-2">🏦</span>
+                    Set Up Accounts
                   </button>
                   <button
                     onClick={() => navigate('/add-transaction')}
                     className="bg-forest-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-forest-700 transition-colors text-sm flex items-center justify-center"
                   >
-                    <Plus size={16} className="mr-2" />
-                    Add Transaction
+                    <span className="mr-2">💸</span>
+                    Track First Expense
                   </button>
                 </div>
               </div>
@@ -438,15 +438,15 @@ export const Dashboard: React.FC = () => {
                 onClick={() => navigate('/add-transaction')}
                 className="flex-1 bg-white text-forest-600 py-2.5 sm:py-3 px-4 rounded-xl font-heading font-semibold hover:bg-forest-50 transition-colors text-sm sm:text-base flex items-center justify-center"
               >
-                <Plus size={16} className="mr-2" />
-                {t('quick_add')}
+                <span className="mr-2">💸</span>
+                Track Money
               </button>
               <button 
                 onClick={() => navigate('/transaction-history')}
                 className="flex-1 border border-forest-400/30 text-white py-2.5 sm:py-3 px-4 rounded-xl font-heading font-semibold hover:bg-forest-600/10 transition-colors text-sm sm:text-base flex items-center justify-center"
               >
-                <History size={16} className="mr-2" />
-                {t('history')}
+                <span className="mr-2">📊</span>
+                View History
               </button>
             </div>
           </div>
@@ -549,38 +549,38 @@ export const Dashboard: React.FC = () => {
 
         {/* Quick Actions */}
         <div className="space-y-3 sm:space-y-4">
-          <h3 className="text-base sm:text-lg font-heading font-semibold text-white">{t('dashboard.quick_actions')}</h3>
+          <h3 className="text-base sm:text-lg font-heading font-semibold text-white">🚀 Quick Actions</h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <button
               onClick={() => navigate('/add-transaction')}
               className="flex flex-col items-center p-4 rounded-xl border-2 border-dashed border-forest-500/30 hover:border-forest-500/50 hover:bg-forest-600/5 transition-all duration-200 hover:scale-105"
             >
-              <Plus size={20} className="text-forest-400 mb-2" />
-              <span className="text-xs font-body font-medium text-forest-300 text-center">Add Transaction</span>
+              <span className="text-2xl mb-2">💸</span>
+              <span className="text-xs font-body font-medium text-forest-300 text-center">Track Money</span>
             </button>
             
             <button
               onClick={() => navigate('/analytics')}
               className="flex flex-col items-center p-4 rounded-xl border-2 border-dashed border-success-500/30 hover:border-success-500/50 hover:bg-success-500/5 transition-all duration-200 hover:scale-105"
             >
-              <BarChart3 size={20} className="text-success-400 mb-2" />
-              <span className="text-xs font-body font-medium text-forest-300 text-center">View Analytics</span>
+              <span className="text-2xl mb-2">📊</span>
+              <span className="text-xs font-body font-medium text-forest-300 text-center">See Insights</span>
             </button>
             
             <button
               onClick={() => setShowGoalModal(true)}
               className="flex flex-col items-center p-4 rounded-xl border-2 border-dashed border-warning-500/30 hover:border-warning-500/50 hover:bg-warning-500/5 transition-all duration-200 hover:scale-105"
             >
-              <Target size={20} className="text-warning-400 mb-2" />
+              <span className="text-2xl mb-2">🎯</span>
               <span className="text-xs font-body font-medium text-forest-300 text-center">Set Goal</span>
             </button>
             
             <button
-              onClick={() => setShowRecurringModal(true)}
+              onClick={() => navigate('/bills')}
               className="flex flex-col items-center p-4 rounded-xl border-2 border-dashed border-forest-500/30 hover:border-forest-500/50 hover:bg-forest-500/5 transition-all duration-200 hover:scale-105"
             >
-              <Repeat size={20} className="text-forest-400 mb-2" />
-              <span className="text-xs font-body font-medium text-forest-300 text-center">Recurring</span>
+              <span className="text-2xl mb-2">📅</span>
+              <span className="text-xs font-body font-medium text-forest-300 text-center">Track Bills</span>
             </button>
           </div>
         </div>
