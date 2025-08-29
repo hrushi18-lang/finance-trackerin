@@ -29,7 +29,7 @@ interface SplitFormData {
 
 export const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
-  const { currency } = useInternationalization();
+  const { currency, formatCurrency } = useInternationalization();
   const { addTransaction, addSplitTransaction, userCategories, accounts } = useFinance();
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
   const [isSplitTransaction, setIsSplitTransaction] = useState(false);
