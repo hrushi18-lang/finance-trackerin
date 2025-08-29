@@ -29,7 +29,7 @@ interface SplitFormData {
 
 export const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
-  const { currency } = useInternationalization();
+  const { currency, formatCurrency } = useInternationalization();
   const { addTransaction, addSplitTransaction, userCategories, accounts } = useFinance();
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
   const [isSplitTransaction, setIsSplitTransaction] = useState(false);
@@ -187,10 +187,6 @@ export const AddTransaction: React.FC = () => {
   const quickAmounts = type === 'income' 
     ? [1000, 2500, 5000, 10000]
     : [25, 50, 100, 500];
-
-  function formatCurrency(value: number): string {
-    return `${currency.symbol}${value.toLocaleString()}`;
-  }
 
   return (
     <div className="min-h-screen text-white pb-20">

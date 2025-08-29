@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, Wallet, CreditCard, Target, Calendar, BarChart3, Eye, EyeOff, ArrowLeftRight, Plus, ChevronLeft, ChevronRight, PieChart, Pi as Pie, Bell as Cell, Container as ResponsiveContainer } from 'lucide-react';
+import { TrendingUp, Wallet, CreditCard, Target, Calendar, BarChart3, Eye, EyeOff, ArrowLeftRight, Plus, ChevronLeft, ChevronRight, PieChart, Building, Smartphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TopNavigation } from '../components/layout/TopNavigation';
 import { useFinance } from '../contexts/FinanceContext';
@@ -71,10 +71,20 @@ export const Overview: React.FC = () => {
 
   const getAccountIcon = (type: string) => {
     switch (type) {
+      case 'bank_savings':
+      case 'bank_current':
+      case 'bank_student':
+        return Building;
+      case 'digital_wallet':
+        return Smartphone;
       case 'credit_card':
         return CreditCard;
-      case 'digital_wallet':
+      case 'investment':
+        return TrendingUp;
+      case 'cash':
         return Wallet;
+      case 'digital_wallet':
+        return Smartphone;
       default:
         return Wallet;
     }

@@ -557,9 +557,3 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     </div>
   );
 };
-
-// Filter goals that are not yet complete
-const availableGoals = goals => goals.filter(g => (Number(g.currentAmount) || 0) < (Number(g.targetAmount) || 0));
-
-// Filter liabilities that still have a balance
-const availableLiabilities = liabilities => liabilities.filter(l => (Number(l.remainingAmount) || 0) > 0);

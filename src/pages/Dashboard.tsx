@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, TrendingUp, Wallet, CreditCard, Plus, Target, Receipt, Search, Bell, History, Repeat, User, Eye, EyeOff, ArrowLeftRight, Calculator, PieChart, Calendar, BarChart3, Radiation as Notification } from 'lucide-react';
+import { DollarSign, TrendingUp, Wallet, CreditCard, Plus, Target, Receipt, Search, Bell, History, Repeat, User, Eye, EyeOff, ArrowLeftRight, Calculator, PieChart, Calendar, BarChart3, Building, Smartphone, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '../components/common/Modal';
@@ -134,6 +134,46 @@ export const Dashboard: React.FC = () => {
     .filter(account => account.isVisible)
     .reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
 
+  // Helper functions for account display
+  const getAccountIcon = (type: string) => {
+    const icons = {
+      bank_savings: Building,
+      bank_current: Building,
+      bank_student: Building,
+      digital_wallet: Smartphone,
+      cash: Wallet,
+      credit_card: CreditCard,
+      investment: TrendingUp
+    };
+    return icons[type as keyof typeof icons] || Wallet;
+  };
+
+  const getAccountColor = (type: string) => {
+    const colors = {
+      bank_savings: 'bg-blue-500',
+      bank_current: 'bg-green-500',
+      bank_student: 'bg-purple-500',
+      digital_wallet: 'bg-orange-500',
+      cash: 'bg-gray-500',
+      credit_card: 'bg-red-500',
+      investment: 'bg-yellow-500'
+    };
+    return colors[type as keyof typeof colors] || 'bg-gray-500';
+  };
+
+  const getAccountTypeName = (type: string) => {
+    const names = {
+      bank_savings: 'Savings Account',
+      bank_current: 'Current Account',
+      bank_student: 'Student Account',
+      digital_wallet: 'Digital Wallet',
+      cash: 'Cash',
+      credit_card: 'Credit Card',
+      investment: 'Investment Account'
+    };
+    return names[type as keyof typeof names] || 'Account';
+  };
+
   // Get upcoming bills (next 7 days)
   const upcomingBills = (recurringTransactions || [])
     .filter(rt => rt.isActive && rt.type === 'expense')
@@ -194,19 +234,11 @@ export const Dashboard: React.FC = () => {
               </button>
               
               <button 
-                onClick={() => setShowProfileMenu(true)}
+                onClick={() => navigate('/settings')}
                 className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
-                title="Profile"
+                title="Settings"
               >
-                <User size={18} className="text-forest-300 sm:w-5 sm:h-5" />
-              </button>
-              
-              <button 
-                onClick={() => navigate('/transaction-history')}
-                className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
-                title={t('history')}
-              >
-                <History size={18} className="text-forest-300 sm:w-5 sm:h-5" />
+                <Settings size={18} className="text-forest-300 sm:w-5 sm:h-5" />
               </button>
               
               <button 
@@ -218,6 +250,14 @@ export const Dashboard: React.FC = () => {
                 {isNewUser && (
                   <span className="absolute -top-1 -right-1 h-2 w-2 sm:h-3 sm:w-3 bg-forest-500 rounded-full"></span>
                 )}
+              </button>
+              
+              <button 
+                onClick={() => navigate('/transaction-history')}
+                className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
+                title="Transaction History"
+              >
+                <History size={18} className="text-forest-300 sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>
@@ -272,125 +312,6 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Financial Accounts Hub */}
-        <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-forest-600/20 rounded-lg">
-                <Wallet size={24} className="text-forest-400" />
-              </div>
-              <div>
-                <h3 className="text-xl font-heading font-bold text-white">Financial Accounts</h3>
-                <p className="text-sm text-forest-200 font-body">Manage all your payment methods</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowBalances(!showBalances)}
-                className="p-2 hover:bg-forest-600/20 rounded-xl transition-colors"
-                title={showBalances ? "Hide balances" : "Show balances"}
-              >
-                {showBalances ? (
-                  <EyeOff size={20} className="text-forest-400" />
-                ) : (
-                  <Eye size={20} className="text-forest-400" />
-                )}
-              </button>
-              <button
-                onClick={() => navigate('/accounts-hub')}
-                className="p-2 hover:bg-forest-600/20 rounded-xl transition-colors"
-                title="Manage all accounts"
-              >
-                <ArrowLeftRight size={20} className="text-forest-400" />
-              </button>
-            </div>
-          </div>
-
-          {/* Total Balance */}
-          {showBalances && (accounts || []).length > 0 && (
-            <div className="bg-forest-800/30 rounded-xl p-6 text-center mb-6">
-              <p className="text-sm text-forest-300 mb-2 font-body">Total Portfolio Value</p>
-              <p className="text-3xl font-numbers font-bold text-white">
-                <CurrencyIcon currencyCode={currency.code} size={20} className="inline mr-2" />
-                {totalBalance.toLocaleString()}
-              </p>
-              <p className="text-sm text-forest-400 font-body">
-                {(accounts || []).filter(a => a.isVisible).length} visible accounts
-              </p>
-            </div>
-          )}
-
-          {/* Accounts Grid */}
-          {(accounts || []).length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-20 h-20 bg-forest-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Wallet size={40} className="text-forest-400" />
-              </div>
-              <h4 className="text-xl font-heading font-bold text-white mb-3">No accounts added</h4>
-              <p className="text-forest-300 mb-8 font-body max-w-md mx-auto">
-                Add your first financial account to start tracking your money across all payment methods
-              </p>
-              <Button 
-                onClick={() => navigate('/accounts-hub')}
-                className="bg-forest-600 hover:bg-forest-700"
-              >
-                <Plus size={20} className="mr-2" />
-                Add First Account
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {(accounts || []).slice(0, 4).map((account) => (
-                <div key={account.id} className="bg-forest-800/20 rounded-xl p-4 border border-forest-600/20 hover:bg-forest-700/20 transition-colors">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-10 h-10 rounded-lg ${getAccountColor(account.type)} flex items-center justify-center`}>
-                        {React.createElement(getAccountIcon(account.type), { size: 20, className: "text-white" })}
-                      </div>
-                      <div>
-                        <h4 className="font-heading font-medium text-white">{account.name}</h4>
-                        <p className="text-xs text-forest-400 font-body">{getAccountTypeName(account.type)}</p>
-                        {account.institution && (
-                          <p className="text-xs text-forest-500 font-body">{account.institution}</p>
-                        )}
-                        {account.platform && (
-                          <p className="text-xs text-forest-500 font-body">{account.platform}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {account.isVisible && showBalances && (
-                    <div className="bg-forest-700/30 rounded-lg p-3">
-                      <p className="text-xs text-forest-400 mb-1 font-body">Balance</p>
-                      <p className="text-lg font-numbers font-bold text-white">
-                        <CurrencyIcon currencyCode={currency.code} size={16} className="inline mr-1" />
-                        {account.balance.toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {!account.isVisible && (
-                    <div className="bg-gray-500/20 rounded-lg p-3 text-center">
-                      <p className="text-xs text-gray-400 font-body">Hidden from dashboard</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              {(accounts || []).length > 4 && (
-                <button
-                  onClick={() => navigate('/accounts-hub')}
-                  className="bg-forest-700/20 rounded-xl p-4 border border-forest-600/20 hover:bg-forest-600/20 transition-colors flex items-center justify-center"
-                >
-                  <span className="text-forest-300 font-body">View All ({(accounts || []).length})</span>
-                </button>
-              )}
-            </div>
-          )}
-        </div>
 
         {/* Hero Financial Health Card */}
         <div className="bg-gradient-to-br from-forest-700/80 to-forest-600/80 backdrop-blur-md rounded-2xl p-4 sm:p-6 relative overflow-hidden border border-forest-500/20">
