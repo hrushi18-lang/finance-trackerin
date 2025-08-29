@@ -216,7 +216,7 @@ function App() {
                                 path="/profile" 
                                 element={
                                   <ProtectedRoute>
-                                    <Settings />
+                                    <Profile />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
@@ -226,7 +226,7 @@ function App() {
                                 path="/settings" 
                                 element={
                                   <ProtectedRoute>
-                                    <Profile />
+                                    <Settings />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 

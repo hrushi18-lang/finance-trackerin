@@ -75,8 +75,24 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
         <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
           <Settings size={32} className="text-purple-400" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">Customize your experience</h2>
-        <p className="text-gray-400">Set your preferences for the best experience</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Activate your financial coach</h2>
+        <p className="text-gray-400">Set up smart reminders to keep you on track</p>
+      </div>
+
+      {/* Coach Benefits */}
+      <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-xl p-4 border border-purple-500/30">
+        <div className="flex items-start space-x-3">
+          <span className="text-2xl">🤖</span>
+          <div>
+            <h3 className="font-semibold text-white mb-2">Your Personal Financial Coach</h3>
+            <div className="text-sm text-gray-300 space-y-1">
+              <p>• <strong className="text-purple-400">Bill Reminders:</strong> Never miss rent, phone bills, or EMI payments</p>
+              <p>• <strong className="text-blue-400">Budget Alerts:</strong> Get warned before you overspend in any category</p>
+              <p>• <strong className="text-green-400">Goal Nudges:</strong> Gentle reminders to save for your dreams</p>
+              <p>• <strong className="text-yellow-400">Smart Tips:</strong> Personalized advice based on your spending patterns</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -115,14 +131,14 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
         {/* Notifications */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-3">
-            <Bell size={18} className="inline mr-2" />
-            Notification Preferences
+            <Bell size={18} className="inline mr-2 text-yellow-400" />
+            Smart Coaching Alerts (Highly Recommended!)
           </label>
           <div className="space-y-3 bg-black/20 rounded-lg p-4 border border-white/10">
             <label className="flex items-center justify-between cursor-pointer">
               <div>
-                <p className="font-medium text-white">Budget Alerts</p>
-                <p className="text-sm text-gray-400">Get notified when approaching budget limits</p>
+                <p className="font-medium text-white">💰 Budget Alerts</p>
+                <p className="text-sm text-gray-400">Your coach warns you before overspending</p>
               </div>
               <input
                 type="checkbox"
@@ -133,8 +149,8 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
             
             <label className="flex items-center justify-between cursor-pointer">
               <div>
-                <p className="font-medium text-white">Goal Reminders</p>
-                <p className="text-sm text-gray-400">Periodic reminders about your financial goals</p>
+                <p className="font-medium text-white">🎯 Goal Reminders</p>
+                <p className="text-sm text-gray-400">Stay motivated with progress updates</p>
               </div>
               <input
                 type="checkbox"
@@ -145,8 +161,8 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
             
             <label className="flex items-center justify-between cursor-pointer">
               <div>
-                <p className="font-medium text-white">Bill Reminders</p>
-                <p className="text-sm text-gray-400">Never miss a payment deadline</p>
+                <p className="font-medium text-white">📅 Bill Reminders</p>
+                <p className="text-sm text-gray-400">Never miss rent, phone bills, or EMI payments</p>
               </div>
               <input
                 type="checkbox"
@@ -157,8 +173,8 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
             
             <label className="flex items-center justify-between cursor-pointer">
               <div>
-                <p className="font-medium text-white">Weekly Reports</p>
-                <p className="text-sm text-gray-400">Summary of your financial activity</p>
+                <p className="font-medium text-white">📊 Weekly Money Reports</p>
+                <p className="text-sm text-gray-400">See how you're doing and get coaching tips</p>
               </div>
               <input
                 type="checkbox"
@@ -166,6 +182,17 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
                 className="rounded border-gray-600 text-primary-500 focus:ring-primary-500 bg-black/20"
               />
             </label>
+          </div>
+        </div>
+        
+        {/* Notification Benefits */}
+        <div className="bg-yellow-500/20 rounded-lg p-4 border border-yellow-500/30">
+          <div className="flex items-start space-x-2">
+            <span className="text-yellow-400 mt-0.5">💡</span>
+            <p className="text-yellow-300 text-sm">
+              <strong>Pro Tip:</strong> Students who use reminders are 3x more likely to stick to their budgets and reach their goals. 
+              Your coach will send gentle nudges, not annoying spam!
+            </p>
           </div>
         </div>
 
