@@ -63,18 +63,53 @@ export const OnboardingFinancial: React.FC<OnboardingFinancialProps> = ({
         <div className="w-16 h-16 bg-primary-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
           <Wallet size={32} className="text-primary-400" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">Let's set up your finances</h2>
-        <p className="text-gray-400">Tell us about your current financial situation</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Set up your money accounts</h2>
+        <p className="text-gray-400">Your coach needs to know your starting point to help you grow</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Account Setup Guide */}
+        <div className="bg-blue-500/20 rounded-xl p-4 border border-blue-500/30">
+          <h3 className="font-semibold text-blue-400 mb-3">💡 Why We Ask About Your Accounts</h3>
+          <div className="space-y-2 text-sm text-blue-300">
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-400 mt-0.5">💰</span>
+              <div>
+                <p className="font-medium">Cash Wallet:</p>
+                <p className="text-xs text-blue-200">Track pocket money and daily expenses</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-400 mt-0.5">🏦</span>
+              <div>
+                <p className="font-medium">Bank Account:</p>
+                <p className="text-xs text-blue-200">Your main savings and income account</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-400 mt-0.5">🚨</span>
+              <div>
+                <p className="font-medium">Emergency Fund:</p>
+                <p className="text-xs text-blue-200">Safety net for unexpected expenses</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-400 mt-0.5">💳</span>
+              <div>
+                <p className="font-medium">Credit/Debt:</p>
+                <p className="text-xs text-blue-200">Track what you owe and payment progress</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Initial Balance */}
         <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
           <Input
-            label="Starting Account Balance"
+            label="Current Total Money (All Accounts Combined)"
             type="number"
             step="0.01"
-            placeholder="e.g., 5000"
+            placeholder="e.g., 15000"
             icon={<CurrencyIcon currencyCode={selectedCurrency} className="text-success-400" />}
             {...register('initialBalance', {
               required: 'Starting balance is required',
@@ -84,6 +119,10 @@ export const OnboardingFinancial: React.FC<OnboardingFinancialProps> = ({
             className="bg-black/20 border-white/20 text-white"
           />
           <p className="text-sm text-gray-400 mt-2">
+            💡 <strong>Include everything:</strong> Cash in wallet + Bank savings + Any investments. 
+            Don't worry about being exact - we'll help you organize this into separate accounts next!
+          </p>
+          <p className="text-sm text-gray-400 mt-2">
             This is your current account balance - we'll only record this once as your starting point.
           </p>
         </div>
@@ -91,10 +130,10 @@ export const OnboardingFinancial: React.FC<OnboardingFinancialProps> = ({
         {/* Monthly Income */}
         <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
           <Input
-            label="Monthly Income"
+            label="Monthly Income (Salary + Allowance + Any Other)"
             type="number"
             step="0.01"
-            placeholder="e.g., 3000"
+            placeholder="e.g., 25000"
             icon={<Briefcase size={18} className="text-blue-400" />}
             {...register('monthlyIncome', {
               required: 'Monthly income is required',
@@ -104,7 +143,8 @@ export const OnboardingFinancial: React.FC<OnboardingFinancialProps> = ({
             className="bg-black/20 border-white/20 text-white"
           />
           <p className="text-sm text-gray-400 mt-2">
-            Your regular monthly income helps us calculate budgets and savings goals.
+            💰 <strong>Include all sources:</strong> Job salary, family allowance, freelance work, part-time income. 
+            Your coach uses this to suggest realistic budgets and savings targets.
           </p>
         </div>
 
@@ -194,9 +234,11 @@ export const OnboardingFinancial: React.FC<OnboardingFinancialProps> = ({
           <div className="flex items-start space-x-2">
             <CreditCard size={16} className="text-blue-400 mt-0.5" />
             <div className="text-sm">
-              <p className="text-blue-400 font-medium">Why we ask</p>
+              <p className="text-blue-400 font-medium">🎯 Your Coach's Strategy</p>
               <p className="text-blue-300">
-                This information helps us personalize your financial dashboard and provide more accurate insights. All your data is securely stored and never shared.
+                By knowing your starting point and income, your financial coach can create personalized budgets, 
+                suggest realistic savings goals, and give you tips that actually work for your situation. 
+                All data is encrypted and never shared.
               </p>
             </div>
           </div>

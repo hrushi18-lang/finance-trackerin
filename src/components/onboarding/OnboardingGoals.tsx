@@ -39,14 +39,14 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
   const riskTolerance = watch('riskTolerance');
 
   const goalOptions = [
-    { id: 'emergency', label: 'Emergency Fund', icon: PiggyBank, color: 'red' },
+    { id: 'emergency', label: 'Emergency Fund (3 months expenses)', icon: PiggyBank, color: 'red' },
     { id: 'laptop', label: 'New Laptop/Phone', icon: Briefcase, color: 'blue' },
-    { id: 'education', label: 'Course/Certification', icon: GraduationCap, color: 'purple' },
-    { id: 'travel', label: 'Travel & Vacation', icon: Plane, color: 'blue' },
-    { id: 'car', label: 'Buy a Car', icon: Car, color: 'gray' },
-    { id: 'house', label: 'First Home', icon: Home, color: 'green' },
-    { id: 'business', label: 'Start a Business', icon: Building, color: 'orange' },
-    { id: 'other', label: 'Other Goal', icon: Target, color: 'indigo' }
+    { id: 'education', label: 'Course/Certification/Skills', icon: GraduationCap, color: 'purple' },
+    { id: 'travel', label: 'Study Abroad/Travel', icon: Plane, color: 'blue' },
+    { id: 'car', label: 'First Car/Bike', icon: Car, color: 'gray' },
+    { id: 'internship', label: 'Internship Fund', icon: Briefcase, color: 'green' },
+    { id: 'business', label: 'Start a Side Business', icon: Building, color: 'orange' },
+    { id: 'other', label: 'Other Personal Goal', icon: Target, color: 'indigo' }
   ];
 
   const timeOptions = [
@@ -110,15 +110,30 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
         <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
           <Target size={32} className="text-green-400" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">What are your financial goals?</h2>
-        <p className="text-gray-400">Select all that apply - we'll help you achieve them</p>
+        <h2 className="text-2xl font-bold text-white mb-2">What do you want to save for?</h2>
+        <p className="text-gray-400">Your coach will help you reach these goals step by step</p>
+      </div>
+
+      {/* Student-Focused Introduction */}
+      <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-xl p-4 border border-green-500/30">
+        <div className="flex items-start space-x-3">
+          <span className="text-2xl">🎓</span>
+          <div>
+            <h3 className="font-semibold text-white mb-2">Why Set Goals Early?</h3>
+            <div className="text-sm text-gray-300 space-y-1">
+              <p>• <strong className="text-green-400">Builds discipline:</strong> Having clear targets makes it easier to say no to impulse purchases</p>
+              <p>• <strong className="text-blue-400">Creates motivation:</strong> Seeing progress towards your laptop or trip keeps you focused</p>
+              <p>• <strong className="text-purple-400">Develops planning:</strong> You learn to break big dreams into achievable monthly savings</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Goal Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-3">
-            Primary Financial Goals (Select multiple)
+            What do you want to achieve? (Select all that excite you!)
           </label>
           <div className="grid grid-cols-2 gap-3">
             {goalOptions.map((goal) => {
@@ -149,10 +164,10 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
 
         {/* Emergency Fund */}
         <Input
-          label="Emergency Fund Target"
+          label="Emergency Fund Goal (Recommended: 3 months of expenses)"
           type="number"
           step="0.01"
-          placeholder="e.g., 10000"
+          placeholder="e.g., 30000"
           icon={<CurrencyIcon currencyCode={currency.code} className="text-gray-400" />}
           {...register('emergencyFund', {
             required: 'Emergency fund amount is required',
@@ -161,6 +176,20 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
           error={errors.emergencyFund?.message}
           className="bg-black/20 border-white/20 text-white"
         />
+        
+        {/* Emergency Fund Explanation */}
+        <div className="bg-red-500/20 rounded-lg p-4 border border-red-500/30">
+          <div className="flex items-start space-x-2">
+            <span className="text-red-400 mt-0.5">🚨</span>
+            <div>
+              <p className="text-red-400 font-medium text-sm">Why Emergency Fund Matters</p>
+              <p className="text-red-300 text-sm mt-1">
+                Life happens - phone breaks, medical bills, family emergencies. An emergency fund means you won't need to 
+                borrow money or stress about unexpected costs. Start with ₹10,000 and build from there!
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Time Horizon */}
         <div>

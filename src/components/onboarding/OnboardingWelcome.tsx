@@ -83,27 +83,27 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
       {/* Key Features Preview */}
       <div className="grid grid-cols-2 gap-3">
         <div className="p-4 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl border border-green-500/30 hover:scale-105 transition-transform">
-          <span className="text-2xl mb-3 block">💰</span>
-          <h3 className="font-semibold text-white mb-1">Manual Tracking</h3>
-          <p className="text-xs text-gray-300">Build financial discipline</p>
+          <span className="text-2xl mb-3 block">🧠</span>
+          <h3 className="font-semibold text-white mb-1">Build Money Habits</h3>
+          <p className="text-xs text-gray-300">Manual tracking = better awareness</p>
         </div>
         
         <div className="p-4 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl border border-blue-500/30 hover:scale-105 transition-transform">
-          <span className="text-2xl mb-3 block">🎯</span>
-          <h3 className="font-semibold text-white mb-1">Student Goals</h3>
-          <p className="text-xs text-gray-300">Save for what matters</p>
+          <span className="text-2xl mb-3 block">🎓</span>
+          <h3 className="font-semibold text-white mb-1">Student-Focused</h3>
+          <p className="text-xs text-gray-300">Goals that matter to you</p>
         </div>
         
         <div className="p-4 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-xl border border-purple-500/30 hover:scale-105 transition-transform">
-          <span className="text-2xl mb-3 block">📊</span>
-          <h3 className="font-semibold text-white mb-1">Bill Reminders</h3>
-          <p className="text-xs text-gray-300">Never miss payments</p>
+          <span className="text-2xl mb-3 block">🔔</span>
+          <h3 className="font-semibold text-white mb-1">Smart Coaching</h3>
+          <p className="text-xs text-gray-300">Personalized money tips</p>
         </div>
         
         <div className="p-4 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-xl border border-orange-500/30 hover:scale-105 transition-transform">
-          <span className="text-2xl mb-3 block">🏦</span>
-          <h3 className="font-semibold text-white mb-1">Multiple Accounts</h3>
-          <p className="text-xs text-gray-300">Cash, savings, cards</p>
+          <span className="text-2xl mb-3 block">💪</span>
+          <h3 className="font-semibold text-white mb-1">Real Discipline</h3>
+          <p className="text-xs text-gray-300">No autopilot spending</p>
         </div>
       </div>
 
@@ -111,31 +111,32 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
       <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl p-4 border border-blue-500/20">
         <div className="flex items-center justify-center space-x-4 sm:space-x-6 text-xs sm:text-sm text-gray-300">
           <div className="flex items-center space-x-2">
-            <span className="text-green-400">🔒</span>
+            <span className="text-green-400">🎯</span>
+            <span>Manual = Mindful</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-blue-400">🧠</span>
+            <span>Builds Awareness</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-red-400">🔒</span>
             <span>Secure & Private</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-blue-400">🎓</span>
-            <span>Student-Focused</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-red-400">💪</span>
-            <span>Build Discipline</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Setup Promise */}
-      <div className="bg-primary-500/20 rounded-xl p-4 border border-primary-500/30">
-        <h3 className="font-semibold text-white mb-2">🚀 Quick 2-Minute Setup</h3>
-        <p className="text-sm text-primary-200">
-          Tell us about your financial goals and we'll create a personalized dashboard that helps you build better money habits through active tracking and smart reminders.
+        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">
+          Meet Your <span className="text-primary-400 bg-gradient-to-r from-primary-400 to-blue-400 bg-clip-text text-transparent">Financial Coach</span>
+        </h1>
+        <p className="text-xl sm:text-2xl font-medium text-primary-300 mb-4">
+          FinTrack - Build Money Discipline Through Manual Tracking
+        <h3 className="font-semibold text-white mb-2">🚀 Your Financial Coach Awaits</h3>
+        <p className="text-base sm:text-lg text-gray-300 max-w-lg mx-auto leading-relaxed">
+          Unlike apps that just show you numbers, FinTrack makes you <strong className="text-white">actively engage</strong> with every transaction. 
+          In just 2 minutes, we'll set up your personal financial coaching system. Every transaction you manually track makes you more aware of your spending patterns and builds lasting money discipline.
         </p>
       </div>
 
       <Button onClick={onNext} className="w-full py-4 text-lg bg-gradient-to-r from-primary-500 to-blue-500 hover:from-primary-600 hover:to-blue-600 shadow-xl">
-        <span className="text-xl mr-2">🎯</span>
-        Start Building Financial Discipline
+        <span className="text-xl mr-2">🎓</span>
+        Start My Financial Journey
       </Button>
       
       <p className="text-xs text-gray-500">
