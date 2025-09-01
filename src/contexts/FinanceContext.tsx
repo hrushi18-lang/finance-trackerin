@@ -737,6 +737,48 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setTransactions(prev => [newTransaction, ...prev]);
+
+    // Update budget if this is an expense transaction
+    if (newTransaction.type === 'expense') {
+      try {
+        // Find the budget for this category
+        const { data: budgetData, error: budgetError } = await supabase
+          .from('budgets')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('category', newTransaction.category)
+          .maybeSingle();
+
+        if (budgetError) {
+          console.error('Error fetching budget for update:', budgetError);
+        } else if (budgetData) {
+          // Update the budget's spent amount
+          const newSpentAmount = Number(budgetData.spent || 0) + newTransaction.amount;
+          
+          const { error: updateError } = await supabase
+            .from('budgets')
+            .update({ spent: newSpentAmount })
+            .eq('id', budgetData.id);
+
+          if (updateError) {
+            console.error('Error updating budget spent amount:', updateError);
+          } else {
+            // Update local budget state
+            setBudgets(prev => prev.map(budget => 
+              budget.id === budgetData.id 
+                ? { ...budget, spent: newSpentAmount }
+                : budget
+            ));
+          }
+        }
+      } catch (budgetUpdateError) {
+        console.error('Error in budget update process:', budgetUpdateError);
+        // Don't throw error here to avoid breaking transaction creation
+      }
+    }
+
+    // Reload accounts to reflect balance changes (handled by database triggers)
+    await loadAccounts();
   };
 
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
