@@ -459,3 +459,16 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
     </form>
   );
 };
+export const LiabilityForm: React.FC<LiabilityFormProps> = ({
+  onSubmit,
+  onCancel,
+  initialData
+}) => {
+  return (
+    <EnhancedLiabilityForm
+      onSubmit={onSubmit}
+      onCancel={onCancel}
+      initialData={initialData}
+    />
+  );
+};
