@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PieChart, Plus, Trash2 } from 'lucide-react';
-import { Button } from '../common/Button';
+import { Button } from '../common/Button'; // Already exists
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 
 interface BudgetData {
@@ -19,7 +19,7 @@ interface OnboardingBudgetsProps {
 export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({ 
   onNext, 
   onPrev, 
-  initialData,
+  initialData, // Already exists
   canGoBack = true
 }) => {
   const { currency } = useInternationalization();
@@ -34,7 +34,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
   const categories = ['Food', 'Transport', 'Entertainment', 'Shopping', 'Bills', 'Healthcare', 'Other'];
 
   const addBudget = () => {
-    if (newBudget.category && newBudget.amount > 0) {
+    if (newBudget.category && newBudget.amount > 0) { // Already exists
       setBudgets([...budgets, { ...newBudget }]);
       setNewBudget({ category: '', amount: 0, period: 'monthly' });
       setShowAddForm(false);
@@ -42,7 +42,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
   };
 
   const removeBudget = (index: number) => {
-    setBudgets(prev => prev.filter((_, i) => i !== index));
+    setBudgets(prev => prev.filter((_, i) => i !== index)); // Already exists
   };
 
   const handleContinue = () => {
@@ -54,7 +54,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
       {/* Header */}
       <div className="text-center">
         <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <PieChart size={32} className="text-green-400" />
+          <PieChart size={32} className="text-green-400" /> // Already exists
         </div>
         <h2 className="text-2xl font-bold text-white mb-2">Set Up Budgets</h2>
         <p className="text-gray-400">Set monthly caps per category or overall</p>
@@ -62,7 +62,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
 
       {/* Budgets List */}
       <div className="space-y-3">
-        {budgets.map((budget, index) => (
+        {budgets.map((budget, index) => ( // Already exists
           <div key={index} className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/10">
             <div>
               <p className="font-medium text-white">{budget.category}</p>
@@ -70,7 +70,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
             </div>
             <div className="flex items-center space-x-3">
               <span className="font-semibold text-white">{currency.symbol}{budget.amount}</span>
-              <button
+              <button // Already exists
                 onClick={() => removeBudget(index)}
                 className="p-1 hover:bg-error-500/20 rounded transition-colors"
               >
@@ -82,7 +82,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
       </div>
 
       {/* Add Budget Form */}
-      {!showAddForm ? (
+      {!showAddForm ? ( // Already exists
         <button
           onClick={() => setShowAddForm(true)}
           className="w-full py-4 border-2 border-dashed border-white/20 rounded-xl text-gray-300 hover:border-white/30 hover:text-white transition-all flex items-center justify-center space-x-2"
@@ -91,7 +91,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
           <span>Add Budget</span>
         </button>
       ) : (
-        <div className="bg-black/20 rounded-xl p-4 border border-white/10 space-y-4">
+        <div className="bg-black/20 rounded-xl p-4 border border-white/10 space-y-4"> // Already exists
           <select
             value={newBudget.category}
             onChange={(e) => setNewBudget(prev => ({ ...prev, category: e.target.value }))}
@@ -102,7 +102,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
               <option key={category} value={category}>{category}</option>
             ))}
           </select>
-          
+
           <div className="grid grid-cols-2 gap-3">
             <input
               type="number"
@@ -110,7 +110,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
               value={newBudget.amount || ''}
               onChange={(e) => setNewBudget(prev => ({ ...prev, amount: Number(e.target.value) }))}
               className="w-full px-4 py-3 bg-black/20 border border-white/20 rounded-lg text-white placeholder-gray-400"
-            />
+            /> // Already exists
             
             <select
               value={newBudget.period}
@@ -120,7 +120,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
               <option value="yearly">Yearly</option>
-            </select>
+            </select> // Already exists
           </div>
           
           <div className="flex space-x-3">
@@ -128,7 +128,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
               onClick={() => setShowAddForm(false)}
               variant="outline"
               size="sm"
-              className="flex-1"
+              className="flex-1" // Already exists
             >
               Cancel
             </Button>
@@ -136,7 +136,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
               onClick={addBudget}
               size="sm"
               className="flex-1"
-              disabled={!newBudget.category || newBudget.amount <= 0}
+              disabled={!newBudget.category || newBudget.amount <= 0} // Already exists
             >
               Add Budget
             </Button>
@@ -145,7 +145,7 @@ export const OnboardingBudgets: React.FC<OnboardingBudgetsProps> = ({
       )}
 
       {/* Navigation */}
-      <div className="flex space-x-3 pt-4">
+      <div className="flex space-x-3 pt-4"> // Already exists
         {canGoBack && (
           <Button type="button" variant="outline" onClick={onPrev} className="flex-1">
             Back

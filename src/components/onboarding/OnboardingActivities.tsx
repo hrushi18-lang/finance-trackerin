@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Target, Calendar, CreditCard, PieChart, Plus } from 'lucide-react';
-import { Button } from '../common/Button';
+import { Button } from '../common/Button'; // Already exists
 
 interface ActivityData {
   goals: Array<{ name: string; amount: number }>;
@@ -19,7 +19,7 @@ interface OnboardingActivitiesProps {
 export const OnboardingActivities: React.FC<OnboardingActivitiesProps> = ({ 
   onNext, 
   onPrev, 
-  initialData,
+  initialData, // Already exists
   canGoBack = true
 }) => {
   const [activities, setActivities] = useState<ActivityData>({
@@ -27,7 +27,7 @@ export const OnboardingActivities: React.FC<OnboardingActivitiesProps> = ({
     bills: [],
     liabilities: [],
     budgets: [],
-    ...initialData
+    ...initialData // Already exists
   });
 
   const activityTypes = [
@@ -35,7 +35,7 @@ export const OnboardingActivities: React.FC<OnboardingActivitiesProps> = ({
       key: 'goals' as keyof ActivityData,
       title: 'Goals',
       description: 'e.g. Save ₹50k, buy laptop',
-      icon: Target,
+      icon: Target, // Already exists
       color: 'yellow',
       examples: ['Save for laptop', 'Emergency fund', 'Study abroad']
     },
@@ -43,7 +43,7 @@ export const OnboardingActivities: React.FC<OnboardingActivitiesProps> = ({
       key: 'bills' as keyof ActivityData,
       title: 'Bills',
       description: 'e.g. Rent, subscriptions',
-      icon: Calendar,
+      icon: Calendar, // Already exists
       color: 'blue',
       examples: ['Rent', 'Phone bill', 'Netflix']
     },
@@ -51,7 +51,7 @@ export const OnboardingActivities: React.FC<OnboardingActivitiesProps> = ({
       key: 'liabilities' as keyof ActivityData,
       title: 'Liabilities',
       description: 'e.g. Loans, debts',
-      icon: CreditCard,
+      icon: CreditCard, // Already exists
       color: 'red',
       examples: ['Student loan', 'Credit card debt', 'Personal loan']
     },
@@ -59,7 +59,7 @@ export const OnboardingActivities: React.FC<OnboardingActivitiesProps> = ({
       key: 'budgets' as keyof ActivityData,
       title: 'Budgets',
       description: 'e.g. Monthly caps per category',
-      icon: PieChart,
+      icon: PieChart, // Already exists
       color: 'green',
       examples: ['Food budget', 'Entertainment limit', 'Transport budget']
     }
@@ -72,7 +72,7 @@ export const OnboardingActivities: React.FC<OnboardingActivitiesProps> = ({
       red: 'bg-red-500/20 border-red-500/30 text-red-400',
       green: 'bg-green-500/20 border-green-500/30 text-green-400'
     };
-    return colors[color as keyof typeof colors] || 'bg-forest-500/20 border-forest-500/30 text-forest-400';
+    return colors[color as keyof typeof colors] || 'bg-forest-500/20 border-forest-500/30 text-forest-400'; // Already exists
   };
 
   const handleContinue = () => {
@@ -83,7 +83,7 @@ export const OnboardingActivities: React.FC<OnboardingActivitiesProps> = ({
     <div className="min-h-screen bg-forest-800 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-forest-700/80 backdrop-blur-md rounded-3xl p-8 border border-forest-600/30 shadow-2xl">
-          {/* Header */}
+          {/* Header */} // Already exists
           <div className="text-center mb-8">
             <h2 className="text-2xl font-heading font-bold text-white mb-2">
               Create Activities
@@ -102,7 +102,7 @@ export const OnboardingActivities: React.FC<OnboardingActivitiesProps> = ({
               return (
                 <div
                   key={activity.key}
-                  className={`p-4 rounded-2xl border-2 ${getColorClasses(activity.color)} hover:scale-105 transition-all cursor-pointer`}
+                  className={`p-4 rounded-2xl border-2 ${getColorClasses(activity.color)} hover:scale-105 transition-all cursor-pointer`} // Already exists
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
@@ -110,7 +110,7 @@ export const OnboardingActivities: React.FC<OnboardingActivitiesProps> = ({
                         <IconComponent size={20} />
                       </div>
                       <div>
-                        <h3 className="font-heading font-semibold text-white">{activity.title}</h3>
+                        <h3 className="font-heading font-semibold text-white">{activity.title}</h3> // Already exists
                         <p className="text-sm opacity-80 font-body">{activity.description}</p>
                       </div>
                     </div>
@@ -129,7 +129,7 @@ export const OnboardingActivities: React.FC<OnboardingActivitiesProps> = ({
           </div>
 
           {/* Continue Button */}
-          <Button 
+          <Button // Already exists
             onClick={handleContinue}
             className="w-full py-4 text-lg font-heading font-semibold bg-white text-forest-800 hover:bg-forest-50 rounded-2xl shadow-lg transition-all"
           >

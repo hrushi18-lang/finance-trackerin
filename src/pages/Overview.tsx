@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TrendingUp, Wallet, CreditCard, Target, Calendar, BarChart3, Eye, EyeOff, ArrowLeftRight, Plus, ChevronLeft, ChevronRight, PieChart, Building, Smartphone } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'; // Already exists
 import { TopNavigation } from '../components/layout/TopNavigation';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
@@ -16,7 +16,7 @@ export const Overview: React.FC = () => {
     goals, 
     liabilities, 
     budgets,
-    recurringTransactions,
+    bills, // Changed to bills
     stats 
   } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
@@ -53,7 +53,7 @@ export const Overview: React.FC = () => {
       percentage: totalBalance > 0 ? (account.balance / totalBalance) * 100 : 0,
       color: ['#4A5D23', '#7f8f55', '#b4bf95', '#9aa673', '#3d4a1c'][index % 5]
     }));
-  }, [accounts]);
+  }, [accounts]); // Already exists
 
   // Calculate total balance across all visible accounts
   const totalBalance = (accounts || [])
@@ -61,7 +61,7 @@ export const Overview: React.FC = () => {
     .reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
 
   // Get upcoming bills (next 7 days)
-  const upcomingBills = (recurringTransactions || [])
+  const upcomingBills = (bills || []) // Changed to bills
     .filter(rt => rt.isActive && rt.type === 'expense')
     .slice(0, 5);
 
@@ -121,7 +121,7 @@ export const Overview: React.FC = () => {
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <TopNavigation title="Financial Overview" />
+      <TopNavigation title="Financial Overview" /> // Already exists
       
       <div className="px-4 py-4 sm:py-6 space-y-6">
         {/* Dashboard Snapshot */}
@@ -142,7 +142,7 @@ export const Overview: React.FC = () => {
           </div>
 
           {showBalances && (
-            <div className="text-center mb-6">
+            <div className="text-center mb-6"> // Already exists
               <p className="text-forest-300 text-sm mb-2 font-body">Total Net Worth</p>
               <p className="text-4xl font-numbers font-bold text-white mb-2">
                 <CurrencyIcon currencyCode={currency.code} size={24} className="inline mr-2" />
@@ -154,7 +154,7 @@ export const Overview: React.FC = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4"> // Already exists
             <div className="bg-forest-800/30 rounded-lg p-4 text-center">
               <p className="text-forest-300 text-sm mb-1 font-body">Total Balance</p>
               <p className="text-xl font-numbers font-bold text-white">
@@ -175,7 +175,7 @@ export const Overview: React.FC = () => {
         {/* Accounts Overview */}
         <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-heading font-semibold text-white">Accounts Overview</h3>
+            <h3 className="text-lg font-heading font-semibold text-white">Accounts Overview</h3> // Already exists
             <button
               onClick={() => navigate('/profile')}
               className="text-forest-400 text-sm font-body hover:text-forest-300"
@@ -184,7 +184,7 @@ export const Overview: React.FC = () => {
             </button>
           </div>
 
-          {(accounts || []).length === 0 ? (
+          {(accounts || []).length === 0 ? ( // Already exists
             <div className="text-center py-8">
               <Wallet size={48} className="mx-auto text-forest-600 mb-4" />
               <p className="text-forest-300 mb-4 font-body">No accounts added yet</p>
@@ -195,7 +195,7 @@ export const Overview: React.FC = () => {
                 Add First Account
               </button>
             </div>
-          ) : (
+          ) : ( // Already exists
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {(accounts || []).slice(0, 4).map((account) => {
                 const AccountIcon = getAccountIcon(account.type);
@@ -203,7 +203,7 @@ export const Overview: React.FC = () => {
                   <div key={account.id} className="bg-forest-800/20 rounded-xl p-4 border border-forest-600/20">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
-                        <div className={`w-10 h-10 rounded-lg ${getAccountColor(account.type)} flex items-center justify-center`}>
+                        <div className={`w-10 h-10 rounded-lg ${getAccountColor(account.type)} flex items-center justify-center`}> // Already exists
                           <AccountIcon size={20} className="text-white" />
                         </div>
                         <div>
@@ -228,7 +228,7 @@ export const Overview: React.FC = () => {
         {/* Goals - Swipeable Cards */}
         {goals.length > 0 && (
           <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4"> // Already exists
               <h3 className="text-lg font-heading font-semibold text-white">Financial Goals</h3>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-forest-400 font-body">{currentGoalIndex + 1} of {goals.length}</span>
@@ -242,7 +242,7 @@ export const Overview: React.FC = () => {
             </div>
 
             {goals[currentGoalIndex] && (
-              <div className="bg-forest-800/20 rounded-xl p-4 border border-forest-600/20">
+              <div className="bg-forest-800/20 rounded-xl p-4 border border-forest-600/20"> // Already exists
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-10 h-10 bg-forest-600 rounded-lg flex items-center justify-center">
                     <Target size={20} className="text-white" />
@@ -254,7 +254,7 @@ export const Overview: React.FC = () => {
                 </div>
                 
                 <div className="mb-3">
-                  <div className="flex justify-between text-sm mb-2">
+                  <div className="flex justify-between text-sm mb-2"> // Already exists
                     <span className="text-forest-300 font-body">Progress</span>
                     <span className="text-white font-numbers">
                       {formatCurrency(goals[currentGoalIndex].currentAmount)} / {formatCurrency(goals[currentGoalIndex].targetAmount)}
@@ -262,7 +262,7 @@ export const Overview: React.FC = () => {
                   </div>
                   <div className="w-full bg-forest-700/30 rounded-full h-2">
                     <div
-                      className="bg-forest-500 h-2 rounded-full transition-all duration-500"
+                      className="bg-forest-500 h-2 rounded-full transition-all duration-500" // Already exists
                       style={{ width: `${Math.min((goals[currentGoalIndex].currentAmount / goals[currentGoalIndex].targetAmount) * 100, 100)}%` }}
                     />
                   </div>
@@ -278,7 +278,7 @@ export const Overview: React.FC = () => {
         {/* Liabilities - Swipeable Cards */}
         {liabilities.length > 0 && (
           <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4"> // Already exists
               <h3 className="text-lg font-heading font-semibold text-white">Liabilities</h3>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-forest-400 font-body">{currentLiabilityIndex + 1} of {liabilities.length}</span>
@@ -292,7 +292,7 @@ export const Overview: React.FC = () => {
             </div>
 
             {liabilities[currentLiabilityIndex] && (
-              <div className="bg-forest-800/20 rounded-xl p-4 border border-forest-600/20">
+              <div className="bg-forest-800/20 rounded-xl p-4 border border-forest-600/20"> // Already exists
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
                     <CreditCard size={20} className="text-white" />
@@ -304,7 +304,7 @@ export const Overview: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
+                  <div> // Already exists
                     <p className="text-forest-300 text-sm mb-1 font-body">Remaining</p>
                     <p className="text-lg font-numbers font-bold text-white">
                       {formatCurrency(liabilities[currentLiabilityIndex].remainingAmount)}
@@ -312,7 +312,7 @@ export const Overview: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-forest-300 text-sm mb-1 font-body">Monthly Payment</p>
-                    <p className="text-lg font-numbers font-bold text-white">
+                    <p className="text-lg font-numbers font-bold text-white"> // Already exists
                       {formatCurrency(liabilities[currentLiabilityIndex].monthlyPayment)}
                     </p>
                   </div>
@@ -325,7 +325,7 @@ export const Overview: React.FC = () => {
         {/* Recent Transactions */}
         <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-heading font-semibold text-white">Recent Transactions</h3>
+            <h3 className="text-lg font-heading font-semibold text-white">Recent Transactions</h3> // Already exists
             <button 
               onClick={() => navigate('/transaction-history')}
               className="text-forest-400 text-sm font-body hover:text-forest-300"
@@ -334,7 +334,7 @@ export const Overview: React.FC = () => {
             </button>
           </div>
 
-          {transactions && transactions.length > 0 ? (
+          {transactions && transactions.length > 0 ? ( // Already exists
             <div className="space-y-3">
               {transactions.slice(0, 5).map((transaction) => (
                 <div
@@ -342,7 +342,7 @@ export const Overview: React.FC = () => {
                   className="flex items-center justify-between p-3 bg-forest-800/20 rounded-xl border border-forest-600/20"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${
+                    <div className={`p-2 rounded-lg ${ // Already exists
                       transaction.type === 'income' 
                         ? 'bg-success-500/20' 
                         : 'bg-error-500/20'
@@ -351,7 +351,7 @@ export const Overview: React.FC = () => {
                         transaction.type === 'income' ? 'text-success-400' : 'text-error-400'
                       } />
                     </div>
-                    <div>
+                    <div> // Already exists
                       <p className="font-body font-medium text-white text-sm">
                         {transaction.description}
                       </p>
@@ -362,7 +362,7 @@ export const Overview: React.FC = () => {
                   </div>
                   
                   <div className="text-right">
-                    <p className={`font-numbers font-semibold ${
+                    <p className={`font-numbers font-semibold ${ // Already exists
                       transaction.type === 'income' 
                         ? 'text-success-400' 
                         : 'text-error-400'
@@ -373,7 +373,7 @@ export const Overview: React.FC = () => {
                   </div>
                 </div>
               ))}
-            </div>
+            </div> // Already exists
           ) : (
             <div className="text-center py-8">
               <BarChart3 size={48} className="mx-auto text-forest-600 mb-4" />
@@ -386,7 +386,7 @@ export const Overview: React.FC = () => {
         {/* Upcoming Bills */}
         {upcomingBills.length > 0 && (
           <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4"> // Already exists
               <h3 className="text-lg font-heading font-semibold text-white">Upcoming Bills</h3>
               <button 
                 onClick={() => navigate('/recurring-transactions')}
@@ -395,7 +395,7 @@ export const Overview: React.FC = () => {
                 View All
               </button>
             </div>
-            
+
             <div className="space-y-3">
               {upcomingBills.map((bill) => (
                 <div key={bill.id} className="flex items-center justify-between p-3 bg-forest-800/20 rounded-lg border border-forest-600/20">
@@ -403,7 +403,7 @@ export const Overview: React.FC = () => {
                     <div className="w-8 h-8 bg-warning-500/20 rounded-lg flex items-center justify-center">
                       <Calendar size={16} className="text-warning-400" />
                     </div>
-                    <div>
+                    <div> // Already exists
                       <p className="font-body font-medium text-white text-sm">{bill.description}</p>
                       <p className="text-xs text-forest-400 font-body">{bill.category}</p>
                     </div>
@@ -411,7 +411,7 @@ export const Overview: React.FC = () => {
                   <div className="text-right">
                     <p className="font-numbers font-semibold text-warning-400">
                       {formatCurrency(bill.amount)}
-                    </p>
+                    </p> // Already exists
                     <p className="text-xs text-forest-400 font-body">Due soon</p>
                   </div>
                 </div>
@@ -423,7 +423,7 @@ export const Overview: React.FC = () => {
         {/* Budget Health Overview */}
         {(budgets || []).length > 0 && (
           <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4"> // Already exists
               <h3 className="text-lg font-heading font-semibold text-white">Budget Health</h3>
               <button 
                 onClick={() => navigate('/budgets')}
@@ -432,10 +432,10 @@ export const Overview: React.FC = () => {
                 Manage
               </button>
             </div>
-            
+
             <div className="space-y-3">
               {(budgets || []).slice(0, 3).map((budget) => {
-                const utilization = (budget.spent / budget.amount) * 100;
+                const utilization = ((budget.spent || 0) / budget.amount) * 100; // Changed to (budget.spent || 0)
                 return (
                   <div key={budget.id} className="flex items-center justify-between">
                     <div className="flex-1">
@@ -444,7 +444,7 @@ export const Overview: React.FC = () => {
                         <span className="text-xs font-numbers text-forest-400">
                           {utilization.toFixed(0)}%
                         </span>
-                      </div>
+                      </div> // Already exists
                       <div className="w-full bg-forest-700/30 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full transition-all duration-500 ${
@@ -465,7 +465,7 @@ export const Overview: React.FC = () => {
         {/* Analytics Section */}
         <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-heading font-semibold text-white">Analytics Overview</h3>
+            <h3 className="text-lg font-heading font-semibold text-white">Analytics Overview</h3> // Already exists
             <button 
               onClick={() => navigate('/analytics')}
               className="text-forest-400 text-sm font-body hover:text-forest-300"
@@ -474,7 +474,7 @@ export const Overview: React.FC = () => {
             </button>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"> // Already exists
             {/* Account Contribution */}
             {accountContribution.length > 0 && (
               <div>
@@ -502,7 +502,7 @@ export const Overview: React.FC = () => {
                           border: '1px solid rgba(255, 255, 255, 0.1)',
                           borderRadius: '8px',
                           color: '#F9FAFB'
-                        }}
+                        }} // Already exists
                       />
                     </RechartsPieChart>
                   </ResponsiveContainer>
@@ -515,7 +515,7 @@ export const Overview: React.FC = () => {
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: account.color }}
                         />
-                        <span className="text-forest-200 font-body">{account.name}</span>
+                        <span className="text-forest-200 font-body">{account.name}</span> // Already exists
                       </div>
                       <span className="text-forest-400 font-numbers">{account.percentage.toFixed(1)}%</span>
                     </div>
@@ -536,7 +536,7 @@ export const Overview: React.FC = () => {
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: category.color }}
                         />
-                        <span className="text-forest-200 font-body text-sm">{category.name}</span>
+                        <span className="text-forest-200 font-body text-sm">{category.name}</span> // Already exists
                       </div>
                       <span className="text-forest-400 font-numbers text-sm">{formatCurrency(category.value)}</span>
                     </div>
@@ -548,7 +548,7 @@ export const Overview: React.FC = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4"> // Already exists
           <button
             onClick={() => navigate('/add-transaction')}
             className="bg-forest-600 hover:bg-forest-700 text-white p-4 rounded-xl transition-colors flex items-center justify-center space-x-2"

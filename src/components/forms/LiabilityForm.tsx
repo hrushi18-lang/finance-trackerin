@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { CreditCard, Percent, Calendar, Wallet, ShoppingCart, Info, ShieldCheck, AlertCircle, Clock } from 'lucide-react';
-import { validateLiability, sanitizeFinancialData, toNumber } from '../../utils/validation';
-import { Input } from '../common/Input';
-import { Button } from '../common/Button';
-import { Liability, Transaction } from '../../types';
-import { useInternationalization } from '../../contexts/InternationalizationContext';
-import { CurrencyIcon } from '../common/CurrencyIcon';
-import { useFinance } from '../../contexts/FinanceContext';
+import { validateLiability, sanitizeFinancialData, toNumber } from '../../utils/validation'; // Already exists
+import { Input } from '../common/Input'; // Already exists
+import { Button } from '../common/Button'; // Already exists
+import { EnhancedLiability, Transaction } from '../../types'; // Changed to EnhancedLiability
+import { useInternationalization } from '../../contexts/InternationalizationContext'; // Already exists
+import { CurrencyIcon } from '../common/CurrencyIcon'; // Already exists
+import { useFinance } from '../../contexts/FinanceContext'; // Already exists
 
 interface LiabilityFormData {
   name: string;
@@ -18,19 +18,26 @@ interface LiabilityFormData {
   monthlyPayment: number;
   due_date: string;
   start_date: string;
-  linkedPurchaseId?: string;
+  linkedPurchaseId?: string; // Already exists
+  // New fields from EnhancedLiability
+  description?: string;
+  minimumPayment?: number;
+  paymentDay: number;
+  loanTermMonths?: number;
+  nextPaymentDate?: string;
+  linkedAssetId?: string;
+  isSecured: boolean;
+  disbursementAccountId?: string;
+  defaultPaymentAccountId?: string;
+  providesFunds: boolean;
+  affectsCreditScore: boolean;
+  status: 'active' | 'paid_off' | 'defaulted' | 'restructured' | 'closed';
+  isActive: boolean;
+  autoGenerateBills: boolean;
+  billGenerationDay: number;
 }
 
-interface LiabilityFormProps {
-  onSubmit: (data: Omit<Liability, 'id' | 'userId' | 'createdAt'>, addAsIncome: boolean) => Promise<void>;
-  onCancel: () => void;
-  initialData?: Partial<LiabilityFormData>;
-}
-
-export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel, initialData }) => {
-  const { currency } = useInternationalization();
-  const { transactions } = useFinance();
-  const [addAsIncome, setAddAsIncome] = useState(true);
+export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ onSubmit, onCancel, initialData }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
@@ -43,10 +50,25 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
       interestRate: 0,
       monthlyPayment: 0,
       due_date: new Date().toISOString().split('T')[0],
-      start_date: new Date().toISOString().split('T')[0]
+      start_date: new Date().toISOString().split('T')[0],
+      // New fields
+      description: '',
+      minimumPayment: 0,
+      paymentDay: 1,
+      loanTermMonths: undefined,
+      nextPaymentDate: undefined,
+      linkedAssetId: undefined,
+      isSecured: false,
+      disbursementAccountId: undefined,
+      defaultPaymentAccountId: undefined,
+      providesFunds: true,
+      affectsCreditScore: true,
+      status: 'active',
+      isActive: true,
+      autoGenerateBills: false,
+      billGenerationDay: 1
     }
   });
-
   const selectedType = watch('type');
   const totalAmount = watch('totalAmount');
   const interestRate = watch('interestRate');
@@ -54,10 +76,10 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
   const linkedPurchaseId = watch('linkedPurchaseId');
 
   // Load recent transactions for purchase linking
-  useEffect(() => {
+  useEffect(() => { // Already exists
     if (selectedType === 'purchase') {
       // Get recent expense transactions
-      const recent = transactions
+      const recent = transactions // Already exists
         .filter(t => t.type === 'expense')
         .sort((a, b) => b.date.getTime() - a.date.getTime())
         .slice(0, 10);
@@ -67,7 +89,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
 
   const handleFormSubmit = async (data: LiabilityFormData) => {
     try {
-      setIsSubmitting(true);
+      setIsSubmitting(true); // Already exists
       setError(null);
       
       // Sanitize numeric fields
@@ -75,7 +97,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
         'totalAmount', 
         'remainingAmount', 
         'interestRate', 
-        'monthlyPayment'
+        'monthlyPayment' // Already exists
       ]);
       
       // Validate using schema
@@ -84,14 +106,29 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
         totalAmount: toNumber(sanitizedData.totalAmount),
         remainingAmount: toNumber(sanitizedData.remainingAmount),
         interestRate: toNumber(sanitizedData.interestRate),
-        monthlyPayment: toNumber(sanitizedData.monthlyPayment),
+        monthlyPayment: toNumber(sanitizedData.monthlyPayment), // Already exists
       });
       
       // For purchase type, addAsIncome should always be false
       const effectiveAddAsIncome = selectedType === 'purchase' ? false : addAsIncome;
       
       await onSubmit({
-        ...validatedData,
+        name: validatedData.name,
+        liabilityType: validatedData.type, // Map old 'type' to new 'liabilityType'
+        description: validatedData.description,
+        totalAmount: validatedData.totalAmount,
+        remainingAmount: validatedData.remainingAmount,
+        interestRate: validatedData.interestRate,
+        monthlyPayment: validatedData.monthlyPayment,
+        minimumPayment: validatedData.minimumPayment,
+        paymentDay: validatedData.paymentDay,
+        loanTermMonths: validatedData.loanTermMonths,
+        startDate: new Date(validatedData.start_date),
+        dueDate: validatedData.due_date ? new Date(validatedData.due_date) : undefined,
+        nextPaymentDate: validatedData.nextPaymentDate ? new Date(validatedData.nextPaymentDate) : undefined,
+        linkedAssetId: validatedData.linkedAssetId,
+        isSecured: validatedData.isSecured,
+        providesFunds: validatedData.providesFunds,
         due_date: typeof data.due_date === 'string' ? new Date(data.due_date) : data.due_date,
         start_date: typeof data.start_date === 'string' ? new Date(data.start_date) : data.start_date,
         linkedPurchaseId: data.linkedPurchaseId || undefined,
@@ -107,7 +144,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
 
   const getTypeIcon = (type: string) => {
     const icons = {
-      loan: '💰',
+      loan: '💰', // Already exists
       credit_card: '💳',
       mortgage: '🏠',
       purchase: '🛍️',
@@ -118,7 +155,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      {/* Error Message */}
+      {/* Error Message */} // Already exists
       {error && (
         <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4">
           <div className="flex items-center space-x-2">
@@ -129,7 +166,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
       )}
       
       {/* Header with Info */}
-      <div className="bg-gradient-to-r from-warning-500/20 to-error-500/20 rounded-xl p-4 mb-6 border border-warning-500/30">
+      <div className="bg-gradient-to-r from-warning-500/20 to-error-500/20 rounded-xl p-4 mb-6 border border-warning-500/30"> // Already exists
         <h3 className="text-lg font-semibold text-white mb-2 flex items-center">
           <CreditCard size={20} className="mr-2 text-warning-400" />
           {initialData ? 'Edit Debt' : 'Add New Debt'}
@@ -140,7 +177,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
       </div>
 
       {/* Debt Acquisition Type - Only for new liabilities and non-purchase types */}
-      {!initialData && selectedType !== 'purchase' && (
+      {!initialData && selectedType !== 'purchase' && ( // Already exists
         <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
           <label className="block text-sm font-medium text-gray-300 mb-3">
             What type of debt is this?
@@ -152,7 +189,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
                 type="radio"
                 checked={addAsIncome}
                 onChange={() => setAddAsIncome(true)}
-                className="sr-only"
+                className="sr-only" // Already exists
               />
               <div className={`p-4 rounded-xl border-2 transition-colors ${
                 addAsIncome 
@@ -176,7 +213,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
                 type="radio"
                 checked={!addAsIncome}
                 onChange={() => setAddAsIncome(false)}
-                className="sr-only"
+                className="sr-only" // Already exists
               />
               <div className={`p-4 rounded-xl border-2 transition-colors ${
                 !addAsIncome 
@@ -198,7 +235,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
 
           {/* Info Box */}
           <div className={`p-3 rounded-lg border mt-3 ${
-            addAsIncome 
+            addAsIncome // Already exists
               ? 'bg-success-500/20 border-success-500/30 text-success-400' 
               : 'bg-primary-500/20 border-primary-500/30 text-primary-400'
           }`}>
@@ -217,7 +254,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
 
       {/* Liability Name */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input
+        <Input // Already exists
           label="Liability Name"
           type="text"
           icon={<CreditCard size={18} className="text-warning-400" />}
@@ -231,7 +268,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
       {/* Liability Type */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
         <label className="block text-sm font-medium text-gray-300 mb-3">
-          Type
+          Type // Already exists
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {['loan', 'credit_card', 'mortgage', 'purchase', 'other'].map((type) => (
@@ -239,7 +276,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
               <input
                 type="radio"
                 value={type}
-                {...register('type', { required: 'Type is required' })}
+                {...register('type', { required: 'Type is required' })} // Already exists
                 className="sr-only"
               />
               <div className={`p-3 rounded-lg border-2 text-center transition-colors ${
@@ -253,14 +290,14 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
             </label>
           ))}
         </div>
-        {errors.type && (
+        {errors.type && ( // Already exists
           <p className="text-sm text-error-400 mt-1">{errors.type.message}</p>
         )}
       </div>
 
       {/* Start Date */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input
+        <Input // Already exists
           label="Start Date"
           type="date"
           icon={<Clock size={18} className="text-blue-400" />}
@@ -273,7 +310,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
       </div>
 
       {/* Link to Purchase Transaction - Only for purchase type */}
-      {selectedType === 'purchase' && (
+      {selectedType === 'purchase' && ( // Already exists
         <div className="bg-purple-500/20 rounded-lg p-4 border border-purple-500/30">
           <div className="flex items-start space-x-3">
             <ShoppingCart size={18} className="text-purple-400 mt-0.5" />
@@ -293,7 +330,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
 
       {/* Amount Fields */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20 space-y-4">
-        <Input
+        <Input // Already exists
           label="Total Amount"
           type="number"
           step="0.01"
@@ -309,7 +346,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
         />
 
         <Input
-          label="Remaining Amount"
+          label="Remaining Amount" // Already exists
           type="number"
           step="0.01"
           icon={<CurrencyIcon currencyCode={currency.code} className="text-orange-400" />}
@@ -327,7 +364,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
 
       {/* Payment Details */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20 space-y-4">
-        <Input
+        <Input // Already exists
           label="Interest Rate (%)"
           type="number"
           step="0.01"
@@ -342,7 +379,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
         />
 
         <Input
-          label="Monthly Payment"
+          label="Monthly Payment" // Already exists
           type="number"
           step="0.01"
           icon={<CurrencyIcon currencyCode={currency.code} className="text-blue-400" />}
@@ -358,7 +395,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
 
       {/* Due Date */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input
+        <Input // Already exists
           label="Next Due Date"
           type="date"
           icon={<Calendar size={18} className="text-green-400" />}
@@ -367,7 +404,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
           className="bg-black/40 border-white/20 text-white"
           value={typeof initialData?.due_date === 'string' ? initialData.due_date : initialData?.due_date?.toISOString().split('T')[0]}
           helpText="When is your next payment due?"
-        />
+        /> // Already exists
         {/* Warn about past due dates */}
         {watch('due_date') && new Date(watch('due_date')) < new Date() && (
           <div className="mt-2 p-2 bg-warning-500/20 border border-warning-500/30 rounded text-xs text-warning-400">
@@ -377,7 +414,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
       </div>
 
       {/* Payment Summary */}
-      {totalAmount && interestRate && monthlyPayment && Number(monthlyPayment) > 0 && (
+      {totalAmount && interestRate && monthlyPayment && Number(monthlyPayment) > 0 && ( // Already exists
         <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
           <h4 className="text-sm font-medium text-white mb-3 flex items-center">
             <ShieldCheck size={16} className="mr-2 text-blue-400" />
@@ -402,7 +439,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
 
       {/* Actions */}
       <div className="flex space-x-4 pt-4">
-        <Button 
+        <Button // Already exists
           type="button" 
           variant="outline" 
           onClick={onCancel} 
@@ -411,7 +448,7 @@ export const LiabilityForm: React.FC<LiabilityFormProps> = ({ onSubmit, onCancel
         >
           Cancel
         </Button>
-        <Button 
+        <Button // Already exists
           type="submit" 
           className="flex-1 bg-gradient-to-r from-warning-500 to-warning-600 hover:from-warning-600 hover:to-warning-700"
           loading={isSubmitting}

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Target, Calendar, Plus, ArrowUpDown, TrendingUp, Edit3, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 import { format, differenceInMonths } from 'date-fns';
-import { useQueryClient } from '@tanstack/react-query';
-import { toNumber, calculatePercentage, sanitizeFinancialData } from '../utils/validation';
-import { TopNavigation } from '../components/layout/TopNavigation';
-import { Modal } from '../components/common/Modal';
-import { GoalForm } from '../components/forms/GoalForm';
-import { GoalTransactionForm } from '../components/forms/GoalTransactionForm';
-import { Button } from '../components/common/Button';
+import { useQueryClient } from '@tanstack/react-query'; // Already exists
+import { toNumber, calculatePercentage, sanitizeFinancialData } from '../utils/validation'; // Already exists
+import { TopNavigation } from '../components/layout/TopNavigation'; // Already exists
+import { Modal } from '../components/common/Modal'; // Already exists
+import { GoalForm } from '../components/forms/GoalForm'; // Already exists
+import { GoalTransactionForm } from '../components/forms/GoalTransactionForm'; // Already exists
+import { Button } from '../components/common/Button'; // Already exists
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
@@ -23,7 +23,7 @@ export const Goals: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
+  const [goalToDelete, setGoalToDelete] = useState<string | null>(null); // Already exists
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +40,7 @@ export const Goals: React.FC = () => {
   const emergencyFundBalance = emergencyFund ? (Number(emergencyFund.currentAmount) || 0) : 0;
 
   const handleAddGoal = async (goal: any) => {
-    try {
+    try { // Already exists
       setIsSubmitting(true);
       setError(null);
       
@@ -48,7 +48,7 @@ export const Goals: React.FC = () => {
       const sanitizedGoal = sanitizeFinancialData(goal, ['targetAmount', 'currentAmount']);
       
       await addGoal(sanitizedGoal);
-      setShowModal(false);
+      setShowModal(false); // Already exists
       
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ['goals'] });
@@ -61,7 +61,7 @@ export const Goals: React.FC = () => {
   };
 
   const handleEditGoal = async (goal: Omit<Goal, 'id' | 'userId' | 'createdAt'>) => {
-    try {
+    try { // Already exists
       setIsSubmitting(true);
       setError(null);
       
@@ -69,7 +69,7 @@ export const Goals: React.FC = () => {
       const sanitizedGoal = sanitizeFinancialData(goal, ['targetAmount', 'currentAmount']);
       
       if (editingGoal) {
-        await updateGoal(editingGoal.id, sanitizedGoal);
+        await updateGoal(editingGoal.id, sanitizedGoal); // Already exists
         setEditingGoal(null);
         setShowEditModal(false);
         
@@ -85,7 +85,7 @@ export const Goals: React.FC = () => {
   };
 
   const handleDeleteGoal = (goalId: string) => {
-    setGoalToDelete(goalId);
+    setGoalToDelete(goalId); // Already exists
     setShowDeleteConfirm(true);
   };
 
@@ -93,7 +93,7 @@ export const Goals: React.FC = () => {
     try {
       setIsSubmitting(true);
       
-      if (goalToDelete) {
+      if (goalToDelete) { // Already exists
         await deleteGoal(goalToDelete);
         setGoalToDelete(null);
         setShowDeleteConfirm(false);
@@ -110,7 +110,7 @@ export const Goals: React.FC = () => {
   };
 
   const handleGoalTransaction = async (data: any) => {
-    try {
+    try { // Already exists
       setIsSubmitting(true);
       setError(null);
       
@@ -125,7 +125,7 @@ export const Goals: React.FC = () => {
         const currentAmount = Number(goal.currentAmount) || 0;
         const targetAmount = Number(goal.targetAmount) || 0;
         const newAmount = Math.min(currentAmount + numericAmount, targetAmount);
-        
+
         await updateGoal(selectedGoalId!, {
           currentAmount: newAmount
         });
@@ -134,7 +134,7 @@ export const Goals: React.FC = () => {
           // Deduct from emergency fund
           const emergencyCurrentAmount = Number(emergencyFund.currentAmount) || 0;
           await updateGoal(emergencyFund.id, {
-            currentAmount: Math.max(0, emergencyCurrentAmount - numericAmount)
+            currentAmount: Math.max(0, emergencyCurrentAmount - numericAmount) // Already exists
           });
           
           // Record as internal transfer
@@ -144,7 +144,7 @@ export const Goals: React.FC = () => {
             category: 'Internal Transfer',
             description: `${description} (from Emergency Fund)`,
             date: new Date(),
-          });
+          }); // Already exists
         } else if (deductFromBalance) {
           // Record as savings/investment expense (money leaves account)
           await addTransaction({
@@ -152,7 +152,7 @@ export const Goals: React.FC = () => {
             amount: numericAmount,
             category: 'Savings',
             description: description,
-            date: new Date(),
+            date: new Date(), // Already exists
           });
         }
         // If deductFromBalance is false, we don't record any transaction
@@ -161,7 +161,7 @@ export const Goals: React.FC = () => {
         // Withdraw money from goal
         const currentAmount = Number(goal.currentAmount) || 0;
         const newAmount = Math.max(0, currentAmount - numericAmount);
-        
+
         await updateGoal(selectedGoalId!, {
           currentAmount: newAmount
         });
@@ -170,7 +170,7 @@ export const Goals: React.FC = () => {
           // Add to emergency fund
           const emergencyCurrentAmount = Number(emergencyFund.currentAmount) || 0;
           await updateGoal(emergencyFund.id, {
-            currentAmount: emergencyCurrentAmount + numericAmount
+            currentAmount: emergencyCurrentAmount + numericAmount // Already exists
           });
           
           // Record as internal transfer
@@ -179,7 +179,7 @@ export const Goals: React.FC = () => {
             amount: numericAmount,
             category: 'Internal Transfer',
             description: `${description} (to Emergency Fund)`,
-            date: new Date(),
+            date: new Date(), // Already exists
           });
         } else {
           // Record as income (money withdrawn to external account)
@@ -187,7 +187,7 @@ export const Goals: React.FC = () => {
             type: 'income',
             amount: numericAmount,
             category: 'Goal Withdrawal',
-            description: description,
+            description: description, // Already exists
             date: new Date(),
           });
         }
@@ -204,7 +204,7 @@ export const Goals: React.FC = () => {
   };
 
   const selectedGoal = goals.find(g => g.id === selectedGoalId);
-
+  // Already exists
   const getCategoryColor = (category: string) => {
     const colors = {
       'emergency': 'bg-red-500',
@@ -214,7 +214,7 @@ export const Goals: React.FC = () => {
       'investment': 'bg-yellow-500',
       'other': 'bg-gray-500'
     };
-    return colors[category.toLowerCase() as keyof typeof colors] || 'bg-gray-500';
+    return colors[category.toLowerCase() as keyof typeof colors] || 'bg-gray-500'; // Already exists
   };
 
   const getEstimatedCompletion = (goal: any) => {
@@ -233,7 +233,7 @@ export const Goals: React.FC = () => {
   };
 
   // Get goal status
-  const getGoalStatus = (goal: any) => {
+  const getGoalStatus = (goal: any) => { // Already exists
     const currentAmount = toNumber(goal.currentAmount);
     const targetAmount = toNumber(goal.targetAmount);
     const progress = calculatePercentage(currentAmount, targetAmount);
@@ -265,7 +265,7 @@ export const Goals: React.FC = () => {
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <TopNavigation 
+      <TopNavigation // Already exists
         title="Goals" 
         showAdd 
         onAdd={() => setShowModal(true)}
@@ -274,7 +274,7 @@ export const Goals: React.FC = () => {
       <div className="px-4 py-4 sm:py-6">
         <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">Track and achieve your financial goals</p>
         
-        {/* Error Message */}
+        {/* Error Message */} // Already exists
         {error && (
           <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4 mb-4">
             <div className="flex items-center space-x-2">
@@ -285,7 +285,7 @@ export const Goals: React.FC = () => {
         )}
         
         {goals.length === 0 ? (
-          <div className="text-center py-12 sm:py-16">
+          <div className="text-center py-12 sm:py-16"> // Already exists
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <Target size={24} className="text-primary-400 sm:w-8 sm:h-8" />
             </div>
@@ -296,10 +296,10 @@ export const Goals: React.FC = () => {
               Create Goal
             </Button>
           </div>
-        ) : (
+        ) : ( // Already exists
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {goals.map((goal) => {
-              const currentAmount = toNumber(goal.currentAmount);
+              const currentAmount = toNumber(goal.currentAmount); // Already exists
               const targetAmount = toNumber(goal.targetAmount);
               const progress = calculatePercentage(currentAmount, targetAmount);
               const isCompleted = progress >= 100;
@@ -309,7 +309,7 @@ export const Goals: React.FC = () => {
               
               return (
                 <div key={goal.id} className="bg-black/20 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-white/10">
-                  {/* Header */}
+                  {/* Header */} // Already exists
                   <div className="flex items-start justify-between mb-4 sm:mb-6">
                     <div className="flex items-center space-x-3">
                       <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${getCategoryColor(goal.category)} flex items-center justify-center`}>
@@ -317,7 +317,7 @@ export const Goals: React.FC = () => {
                       </div>
                       <div>
                         <h3 className="font-semibold text-white text-sm sm:text-base">{goal.title}</h3>
-                        <p className="text-xs sm:text-sm text-gray-400">{goal.category}</p>
+                        <p className="text-xs sm:text-sm text-gray-400">{goal.category}</p> // Already exists
                         {goal.accountId && (
                           <p className="text-xs text-forest-400">
                             Account: {accounts?.find(a => a.id === goal.accountId)?.name || 'Unknown'}
@@ -328,7 +328,7 @@ export const Goals: React.FC = () => {
                     
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => {
+                        onClick={() => { // Already exists
                           setEditingGoal(goal);
                           setShowEditModal(true);
                         }}
@@ -338,7 +338,7 @@ export const Goals: React.FC = () => {
                         <Edit3 size={16} className="text-gray-400" />
                       </button>
                       <button
-                        onClick={() => handleDeleteGoal(goal.id)}
+                        onClick={() => handleDeleteGoal(goal.id)} // Already exists
                         className="p-2 hover:bg-error-500/20 rounded-lg transition-colors"
                         title="Delete Goal"
                       >
@@ -346,7 +346,7 @@ export const Goals: React.FC = () => {
                       </button>
                       <button
                         onClick={() => {
-                          setSelectedGoalId(goal.id);
+                          setSelectedGoalId(goal.id); // Already exists
                           setShowTransactionModal(true);
                         }}
                         className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -356,7 +356,7 @@ export const Goals: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Progress Section */}
+                  {/* Progress Section */} // Already exists
                   <div className="mb-4 sm:mb-6">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-xs sm:text-sm text-gray-400">Progress</span>
@@ -366,7 +366,7 @@ export const Goals: React.FC = () => {
                       </span>
                     </div>
                     
-                    {/* Progress Bar */}
+                    {/* Progress Bar */} // Already exists
                     <div className="w-full bg-white/10 rounded-full h-2 mb-3">
                       <div
                         className={`h-2 rounded-full transition-all duration-500 ${
@@ -377,7 +377,7 @@ export const Goals: React.FC = () => {
                       />
                     </div>
                     
-                    <div className="flex justify-between items-center text-xs sm:text-sm">
+                    <div className="flex justify-between items-center text-xs sm:text-sm"> // Already exists
                       <span className={`font-medium ${
                         isCompleted ? 'text-green-400' : 
                         isEmergencyFund ? 'text-red-400' : 'text-blue-400'
@@ -392,7 +392,7 @@ export const Goals: React.FC = () => {
                   </div>
 
                   {/* Details Grid */}
-                  <div className="grid grid-cols-2 gap-4 mb-4 sm:mb-6">
+                  <div className="grid grid-cols-2 gap-4 mb-4"> // Already exists
                     <div className="flex items-center space-x-2">
                       <Calendar size={14} className="text-gray-400 sm:w-4 sm:h-4" />
                       <div>
@@ -411,7 +411,7 @@ export const Goals: React.FC = () => {
                   </div>
 
                   {/* Status/Action Section */}
-                  {/* Status Badge */}
+                  {/* Status Badge */} // Already exists
                   <div className={`text-center py-2 sm:py-3 rounded-xl border ${
                     goalStatus.status === 'completed' ? 'bg-success-500/20 border-success-500/30' :
                     goalStatus.status === 'emergency_ready' ? 'bg-warning-500/20 border-warning-500/30' :
@@ -429,7 +429,7 @@ export const Goals: React.FC = () => {
                   </div>
 
                   {/* Action Buttons - Only show if not completed */}
-                  {!isCompleted && (
+                  {!isCompleted && ( // Already exists
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mt-3">
                       <Button
                         size="sm"
@@ -461,7 +461,7 @@ export const Goals: React.FC = () => {
         )}
         {/* Completed Goals Summary */}
         {goals.filter(g => calculatePercentage(toNumber(g.currentAmount), toNumber(g.targetAmount)) >= 100).length > 0 && (
-          <div className="mt-6 bg-success-500/20 rounded-lg p-4 border border-success-500/30">
+          <div className="mt-6 bg-success-500/20 rounded-lg p-4 border border-success-500/30"> // Already exists
             <div className="flex items-start space-x-3">
               <CheckCircle size={18} className="text-success-400 mt-0.5" />
               <div>
@@ -478,7 +478,7 @@ export const Goals: React.FC = () => {
 
       {/* Create Goal Modal */}
       <Modal
-        isOpen={showModal}
+        isOpen={showModal} // Already exists
         onClose={() => {
           setShowModal(false);
           setError(null);
@@ -486,7 +486,7 @@ export const Goals: React.FC = () => {
         title="Create New Goal"
       >
         <GoalForm
-          onSubmit={handleAddGoal}
+          onSubmit={handleAddGoal} // Already exists
           onCancel={() => {
             setShowModal(false);
             setError(null);
@@ -495,7 +495,7 @@ export const Goals: React.FC = () => {
       </Modal>
 
       {/* Edit Goal Modal */}
-      <Modal
+      <Modal // Already exists
         isOpen={showEditModal}
         onClose={() => {
           setShowEditModal(false);
@@ -505,7 +505,7 @@ export const Goals: React.FC = () => {
         title="Edit Goal"
       >
         {editingGoal && (
-          <GoalForm
+          <GoalForm // Already exists
             initialData={{
               title: editingGoal.title,
               description: editingGoal.description,
@@ -525,7 +525,7 @@ export const Goals: React.FC = () => {
       </Modal>
 
       {/* Goal Transaction Modal */}
-      <Modal
+      <Modal // Already exists
         isOpen={showTransactionModal}
         onClose={() => {
           setShowTransactionModal(false);
@@ -535,7 +535,7 @@ export const Goals: React.FC = () => {
         title={`Manage ${selectedGoal?.title || 'Goal'}`}
       >
         {selectedGoal && (
-          <GoalTransactionForm
+          <GoalTransactionForm // Already exists
             goal={selectedGoal}
             emergencyFundBalance={emergencyFundBalance}
             onSubmit={handleGoalTransaction}
@@ -549,7 +549,7 @@ export const Goals: React.FC = () => {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
+      <Modal // Already exists
         isOpen={showDeleteConfirm}
         onClose={() => {
           setShowDeleteConfirm(false);
@@ -559,7 +559,7 @@ export const Goals: React.FC = () => {
         title="Confirm Delete"
       >
         <div className="space-y-4">
-          <p className="text-gray-300">
+          <p className="text-gray-300"> // Already exists
             Are you sure you want to delete this goal? This action cannot be undone.
           </p>
           <div className="flex space-x-3">
@@ -569,7 +569,7 @@ export const Goals: React.FC = () => {
                 setShowDeleteConfirm(false);
                 setGoalToDelete(null);
               }}
-              className="flex-1"
+              className="flex-1" // Already exists
               disabled={isSubmitting}
             >
               Cancel

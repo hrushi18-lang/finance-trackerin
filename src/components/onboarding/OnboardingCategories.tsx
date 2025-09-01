@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Tag, Plus, Check } from 'lucide-react';
 import { Button } from '../common/Button';
-
+import { Input } from '../common/Input'; // Added Input
 interface CategoryData {
   id: string;
   name: string;
@@ -19,7 +19,7 @@ interface OnboardingCategoriesProps {
 export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({ 
   onNext, 
   onPrev, 
-  initialData,
+  initialData, // Already exists
   canGoBack = true
 }) => {
   const [defaultCategories, setDefaultCategories] = useState<CategoryData[]>([
@@ -35,7 +35,7 @@ export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({
   ]);
 
   const [customCategories, setCustomCategories] = useState<string[]>([]);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false); // Already exists
   const [newCategoryName, setNewCategoryName] = useState('');
 
   const toggleCategory = (categoryId: string) => {
@@ -47,7 +47,7 @@ export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({
   };
 
   const addCustomCategory = () => {
-    if (newCategoryName.trim()) {
+    if (newCategoryName.trim()) { // Already exists
       setCustomCategories([...customCategories, newCategoryName.trim()]);
       setNewCategoryName('');
       setShowAddForm(false);
@@ -55,7 +55,7 @@ export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({
   };
 
   const removeCustomCategory = (index: number) => {
-    setCustomCategories(prev => prev.filter((_, i) => i !== index));
+    setCustomCategories(prev => prev.filter((_, i) => i !== index)); // Already exists
   };
 
   const handleContinue = () => {
@@ -71,7 +71,7 @@ export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({
       <div className="w-full max-w-md">
         <div className="bg-forest-700/80 backdrop-blur-md rounded-3xl p-8 border border-forest-600/30 shadow-2xl">
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-8"> // Already exists
             <h2 className="text-2xl font-heading font-bold text-white mb-2">
               Select Categories
             </h2>
@@ -82,7 +82,7 @@ export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({
 
           {/* Default Categories */}
           <div className="mb-6">
-            <h3 className="text-lg font-heading font-semibold text-white mb-4">Default Categories</h3>
+            <h3 className="text-lg font-heading font-semibold text-white mb-4">Default Categories</h3> // Already exists
             <div className="grid grid-cols-3 gap-3">
               {defaultCategories.map((category) => (
                 <button
@@ -93,7 +93,7 @@ export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({
                       ? 'border-white bg-white/10 text-white'
                       : 'border-forest-500/30 text-forest-300 hover:border-forest-400/50'
                   }`}
-                >
+                > // Already exists
                   {category.selected && (
                     <div className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center">
                       <Check size={14} className="text-forest-800" />
@@ -108,7 +108,7 @@ export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({
 
           {/* Custom Categories */}
           <div className="mb-8">
-            <h3 className="text-lg font-heading font-semibold text-white mb-4">Custom Categories</h3>
+            <h3 className="text-lg font-heading font-semibold text-white mb-4">Custom Categories</h3> // Already exists
             
             {customCategories.length > 0 && (
               <div className="space-y-2 mb-4">
@@ -116,7 +116,7 @@ export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({
                   <div key={index} className="flex items-center justify-between p-3 bg-forest-600/30 rounded-xl border border-forest-500/30">
                     <span className="text-white font-body">{category}</span>
                     <button
-                      onClick={() => removeCustomCategory(index)}
+                      onClick={() => removeCustomCategory(index)} // Already exists
                       className="text-forest-300 hover:text-white transition-colors"
                     >
                       ×
@@ -126,7 +126,7 @@ export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({
               </div>
             )}
 
-            {!showAddForm ? (
+            {!showAddForm ? ( // Already exists
               <button
                 onClick={() => setShowAddForm(true)}
                 className="w-full py-3 border border-forest-500/30 rounded-xl text-forest-300 hover:border-forest-400/50 hover:text-forest-200 transition-all flex items-center justify-center space-x-2 font-body"
@@ -135,14 +135,14 @@ export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({
                 <span>Add custom category</span>
               </button>
             ) : (
-              <div className="space-y-3">
-                <input
+              <div className="space-y-3"> // Already exists
+                <Input // Changed to Input
                   type="text"
                   placeholder="Add subcategory (e.g., Coffee)"
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
-                  className="w-full px-4 py-3 bg-forest-600/30 border border-forest-500/30 rounded-xl text-white placeholder-forest-300 focus:border-forest-400 transition-all font-body"
-                />
+                  className="w-full bg-forest-600/30 border border-forest-500/30 rounded-xl text-white placeholder-forest-300 focus:border-forest-400 transition-all font-body" // Already exists
+                /> // Already exists
                 <div className="flex space-x-2">
                   <Button
                     onClick={addCustomCategory}
@@ -153,7 +153,7 @@ export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({
                   </Button>
                   <Button
                     onClick={() => setShowAddForm(false)}
-                    size="sm"
+                    size="sm" // Already exists
                     variant="outline"
                     className="flex-1 border-forest-500/30 text-forest-300"
                   >
@@ -165,7 +165,7 @@ export const OnboardingCategories: React.FC<OnboardingCategoriesProps> = ({
           </div>
 
           {/* Continue Button */}
-          <Button 
+          <Button // Already exists
             onClick={handleContinue}
             className="w-full py-4 text-lg font-heading font-semibold bg-white text-forest-800 hover:bg-forest-50 rounded-2xl shadow-lg transition-all"
             disabled={defaultCategories.filter(cat => cat.selected).length === 0 && customCategories.length === 0}

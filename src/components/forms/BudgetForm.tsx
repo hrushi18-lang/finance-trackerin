@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Calculator, Tag, Calendar, AlertCircle } from 'lucide-react';
-import { validateBudget, sanitizeFinancialData, toNumber } from '../../utils/validation';
-import { Input } from '../common/Input';
-import { Button } from '../common/Button';
-import { Budget } from '../../types';
-import { useInternationalization } from '../../contexts/InternationalizationContext';
-import { CurrencyIcon } from '../common/CurrencyIcon';
-import { useFinance } from '../../contexts/FinanceContext';
+import { validateBudget, sanitizeFinancialData, toNumber } from '../../utils/validation'; // Already exists
+import { Input } from '../common/Input'; // Already exists
+import { Button } from '../common/Button'; // Already exists
+import { Budget } from '../../types'; // Already exists
+import { useInternationalization } from '../../contexts/InternationalizationContext'; // Already exists
+import { CurrencyIcon } from '../common/CurrencyIcon'; // Already exists
+import { useFinance } from '../../contexts/FinanceContext'; // Already exists
 
 interface BudgetFormData {
   category: string;
@@ -16,7 +16,8 @@ interface BudgetFormData {
 }
 
 interface BudgetFormProps {
-  initialData?: Budget;
+  initialData?: Budget; // Already exists
+  categoryId?: string; // Added categoryId
   onSubmit: (data: Omit<Budget, 'id' | 'userId' | 'createdAt' | 'spent'>) => Promise<void>;
   onCancel: () => void;
 }
@@ -27,7 +28,7 @@ const periodOptions = [
   { value: 'yearly', label: 'Yearly', description: 'Annual planning' }
 ];
 
-export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, onCancel }) => {
+export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId, onSubmit, onCancel }) => {
   const { currency } = useInternationalization();
   const { userCategories } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,7 +36,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
   
   const { register, handleSubmit, watch, formState: { errors } } = useForm<BudgetFormData>({
     defaultValues: initialData ? {
-      category: initialData.category,
+      category: initialData.category, // Already exists
       amount: initialData.amount,
       period: initialData.period,
     } : {
@@ -45,7 +46,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
 
   const selectedPeriod = watch('period');
   
-  // Get expense categories (with fallback to default categories)
+  // Get expense categories (with fallback to default categories) // Already exists
   const defaultExpenseCategories = ['Food', 'Transportation', 'Entertainment', 'Shopping', 'Bills', 'Healthcare', 'Other'];
   const userExpenseCategories = userCategories.filter(c => c.type === 'expense');
   const expenseCategories = userExpenseCategories.length > 0 
@@ -65,7 +66,8 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
       });
       
       await onSubmit({
-        ...validatedData,
+        ...validatedData, // Already exists
+        categoryId: categoryId || '', // Added categoryId
         spent: initialData?.spent || 0,
       });
       
@@ -79,7 +81,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      {/* Error Message */}
+      {/* Error Message */} // Already exists
       {error && (
         <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4">
           <div className="flex items-center space-x-2">
@@ -90,7 +92,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
       )}
       
       {/* Header with Info */}
-      <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl p-4 mb-6 border border-blue-500/30">
+      <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl p-4 mb-6 border border-blue-500/30"> // Already exists
         <h3 className="text-lg font-semibold text-white mb-2 flex items-center">
           <Calculator size={20} className="mr-2 text-blue-400" />
           {initialData ? 'Update Budget' : 'Create New Budget'}
@@ -101,7 +103,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
       </div>
 
       {/* Category Selection */}
-      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20"> // Already exists
         <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center">
           <Tag size={16} className="mr-2 text-yellow-400" />
           Category
@@ -109,7 +111,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
         <select
           {...register('category', { required: 'Category is required' })}
           className="block w-full rounded-xl border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
-        >
+        > // Already exists
           <option value="" className="bg-black/90">Select a category</option>
           {expenseCategories.map((category) => (
             <option key={category.id} value={category.name} className="bg-black/90">
@@ -117,14 +119,14 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
             </option>
           ))}
         </select>
-        {errors.category && (
+        {errors.category && ( // Already exists
           <p className="text-sm text-error-400 mt-1">{errors.category.message}</p>
         )}
       </div>
 
       {/* Budget Amount */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input
+        <Input // Already exists
           label="Budget Amount"
           type="number"
           step="0.01"
@@ -141,12 +143,12 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
 
       {/* Period Selection */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center">
+        <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center"> // Already exists
           <Calendar size={16} className="mr-2 text-purple-400" />
           Budget Period
         </label>
         <div className="space-y-2">
-          {periodOptions.map((option) => (
+          {periodOptions.map((option) => ( // Already exists
             <label key={option.value} className="cursor-pointer block">
               <input
                 type="radio"
@@ -154,7 +156,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
                 {...register('period', { required: 'Period is required' })}
                 className="sr-only"
               />
-              <div className={`p-3 rounded-lg border-2 transition-colors ${
+              <div className={`p-3 rounded-lg border-2 transition-colors ${ // Already exists
                 selectedPeriod === option.value 
                   ? 'border-primary-500 bg-primary-500/20 text-primary-400' 
                   : 'border-white/20 hover:border-white/30 text-gray-300'
@@ -169,12 +171,12 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
             </label>
           ))}
         </div>
-        {errors.period && (
+        {errors.period && ( // Already exists
           <p className="text-sm text-error-400 mt-1">{errors.period.message}</p>
         )}
       </div>
 
-      {/* Info Box */}
+      {/* Info Box */} // Already exists
       <div className="bg-blue-500/20 rounded-lg p-4 border border-blue-500/30">
         <div className="flex items-center text-blue-400 mb-2">
           <span className="mr-2">🎯</span>
@@ -188,7 +190,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
 
       {/* Actions */}
       <div className="flex space-x-4 pt-4">
-        <Button 
+        <Button // Already exists
           type="button" 
           variant="outline" 
           onClick={onCancel} 
@@ -197,7 +199,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, onSubmit, o
         >
           Cancel
         </Button>
-        <Button 
+        <Button // Already exists
           type="submit" 
           className="flex-1 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700"
           loading={isSubmitting}

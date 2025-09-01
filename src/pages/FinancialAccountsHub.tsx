@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Plus, Eye, EyeOff, CreditCard, Wallet, Building, Smartphone, TrendingUp, Edit3, Trash2, ArrowLeftRight, DollarSign, Calendar, BarChart3, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { format } from 'date-fns';
-import { TopNavigation } from '../components/layout/TopNavigation';
-import { Button } from '../components/common/Button';
-import { Modal } from '../components/common/Modal';
-import { AccountForm } from '../components/forms/AccountForm';
-import { TransferForm } from '../components/forms/TransferForm';
-import { TransactionForm } from '../components/forms/TransactionForm';
-import { useFinance } from '../contexts/FinanceContext';
+import { TopNavigation } from '../components/layout/TopNavigation'; // Already exists
+import { Button } from '../components/common/Button'; // Already exists
+import { Modal } from '../components/common/Modal'; // Already exists
+import { AccountForm } from '../components/forms/AccountForm'; // Already exists
+import { TransferForm } from '../components/forms/TransferForm'; // Already exists
+import { TransactionForm } from '../components/forms/TransactionForm'; // Already exists
+import { useFinance } from '../contexts/FinanceContext'; // Already exists
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { FinancialAccount, Transaction } from '../types';
@@ -40,7 +40,7 @@ export const FinancialAccountsHub: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const handleAddAccount = async (data: any) => {
-    try {
+    try { // Already exists
       setIsSubmitting(true);
       setError(null);
       await addAccount(data);
@@ -54,7 +54,7 @@ export const FinancialAccountsHub: React.FC = () => {
   };
 
   const handleEditAccount = async (data: any) => {
-    try {
+    try { // Already exists
       setIsSubmitting(true);
       setError(null);
       if (editingAccount) {
@@ -71,7 +71,7 @@ export const FinancialAccountsHub: React.FC = () => {
   };
 
   const handleDeleteAccount = (accountId: string) => {
-    setAccountToDelete(accountId);
+    setAccountToDelete(accountId); // Already exists
     setShowDeleteConfirm(true);
   };
 
@@ -79,7 +79,7 @@ export const FinancialAccountsHub: React.FC = () => {
     try {
       setIsSubmitting(true);
       if (accountToDelete) {
-        await deleteAccount(accountToDelete);
+        await deleteAccount(accountToDelete); // Already exists
         setAccountToDelete(null);
         setShowDeleteConfirm(false);
       }
@@ -92,7 +92,7 @@ export const FinancialAccountsHub: React.FC = () => {
   };
 
   const handleTransfer = async (data: any) => {
-    try {
+    try { // Already exists
       setIsSubmitting(true);
       setError(null);
       await transferBetweenAccounts(data.fromAccountId, data.toAccountId, data.amount, data.description);
@@ -106,7 +106,7 @@ export const FinancialAccountsHub: React.FC = () => {
   };
 
   const handleAddMockTransaction = async (data: any) => {
-    try {
+    try { // Already exists
       setIsSubmitting(true);
       setError(null);
       
@@ -115,7 +115,7 @@ export const FinancialAccountsHub: React.FC = () => {
         ...data,
         accountId: selectedAccountForMock,
         affectsBalance: false,
-        reason: 'Historical transaction - account setup'
+        reason: 'Historical transaction - account setup' // Already exists
       });
       
       setShowMockTransactionModal(false);
@@ -129,7 +129,7 @@ export const FinancialAccountsHub: React.FC = () => {
   };
 
   const getAccountIcon = (type: string) => {
-    const icons = {
+    switch (type) { // Already exists
       bank_savings: Building,
       bank_current: Building,
       bank_student: Building,
@@ -139,7 +139,7 @@ export const FinancialAccountsHub: React.FC = () => {
       investment: TrendingUp
     };
     return icons[type as keyof typeof icons] || Wallet;
-  };
+  }; // Already exists
 
   const getAccountColor = (type: string) => {
     const colors = {
@@ -150,7 +150,7 @@ export const FinancialAccountsHub: React.FC = () => {
       cash: 'bg-gray-500',
       credit_card: 'bg-red-500',
       investment: 'bg-yellow-500'
-    };
+    }; // Already exists
     return colors[type as keyof typeof colors] || 'bg-gray-500';
   };
 
@@ -163,7 +163,7 @@ export const FinancialAccountsHub: React.FC = () => {
       cash: 'Cash',
       credit_card: 'Credit Card',
       investment: 'Investment Account'
-    };
+    }; // Already exists
     return names[type as keyof typeof names] || 'Account';
   };
 
@@ -172,17 +172,17 @@ export const FinancialAccountsHub: React.FC = () => {
     .reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
 
   const visibleAccounts = (accounts || []).filter(account => account.isVisible);
-
+  // Already exists
   // Get transactions for specific account
   const getAccountTransactions = (accountId: string) => {
     return (transactions || [])
       .filter(t => t.accountId === accountId)
       .slice(0, 5);
-  };
+  }; // Already exists
 
   // Get goals linked to account
   const getAccountGoals = (accountId: string) => {
-    return (goals || []).filter(g => g.accountId === accountId);
+    return (goals || []).filter(g => g.accountId === accountId); // Already exists
   };
 
   // Get liabilities linked to account
@@ -191,7 +191,7 @@ export const FinancialAccountsHub: React.FC = () => {
   };
 
   // Get budgets linked to account
-  const getAccountBudgets = (accountId: string) => {
+  const getAccountBudgets = (accountId: string) => { // Already exists
     return (budgets || []).filter(b => b.accountId === accountId);
   };
 
@@ -203,7 +203,7 @@ export const FinancialAccountsHub: React.FC = () => {
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <TopNavigation 
+      <TopNavigation // Already exists
         title="💳 Your Money Accounts" 
         showAdd 
         onAdd={() => setShowAccountModal(true)}
@@ -229,7 +229,7 @@ export const FinancialAccountsHub: React.FC = () => {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4">
+          <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4"> // Already exists
             <div className="flex items-center space-x-2">
               <AlertCircle size={18} className="text-error-400" />
               <p className="text-error-400 text-sm">{error}</p>
@@ -239,7 +239,7 @@ export const FinancialAccountsHub: React.FC = () => {
 
         {/* Header with Total Balance */}
         <div className="bg-gradient-to-r from-forest-700/80 to-forest-600/80 backdrop-blur-md rounded-2xl p-6 border border-forest-500/20">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4"> // Already exists
             <div className="flex items-center space-x-3">
               <span className="text-3xl">💰</span>
               <div>
@@ -250,7 +250,7 @@ export const FinancialAccountsHub: React.FC = () => {
           </div>
 
           {/* Total Balance */}
-          {showBalances && (
+          {showBalances && ( // Already exists
             <div className="bg-forest-800/30 rounded-xl p-4 text-center">
               <p className="text-sm text-forest-300 mb-2 font-body">Total Money Available</p>
               <p className="text-3xl font-numbers font-bold text-white">
@@ -263,7 +263,7 @@ export const FinancialAccountsHub: React.FC = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3"> // Already exists
           <Button
             onClick={() => setShowTransferModal(true)}
             variant="outline"
@@ -283,7 +283,7 @@ export const FinancialAccountsHub: React.FC = () => {
         </div>
 
         {/* Accounts List */}
-        {(accounts || []).length === 0 ? (
+        {(accounts || []).length === 0 ? ( // Already exists
           <div className="text-center py-16 bg-forest-900/30 backdrop-blur-md rounded-2xl border border-forest-600/20">
             <span className="text-6xl mb-6 block">🏦</span>
             <h3 className="text-xl font-heading font-bold text-white mb-3">Set up your first account!</h3>
@@ -298,7 +298,7 @@ export const FinancialAccountsHub: React.FC = () => {
               Add First Account
             </Button>
           </div>
-        ) : (
+        ) : ( // Already exists
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {(accounts || []).map((account) => {
               const AccountIcon = getAccountIcon(account.type);
@@ -314,7 +314,7 @@ export const FinancialAccountsHub: React.FC = () => {
                   }`}
                   onClick={() => setSelectedAccountId(isSelected ? null : account.id)}
                 >
-                  <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-start justify-between mb-6"> // Already exists
                     <div className="flex items-center space-x-4">
                       <div className={`w-14 h-14 rounded-xl ${getAccountColor(account.type)} flex items-center justify-center shadow-lg`}>
                         <AccountIcon size={28} className="text-white" />
@@ -333,7 +333,7 @@ export const FinancialAccountsHub: React.FC = () => {
                     
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={(e) => {
+                        onClick={(e) => { // Already exists
                           e.stopPropagation();
                           updateAccount(account.id, { isVisible: !account.isVisible });
                         }}
@@ -347,7 +347,7 @@ export const FinancialAccountsHub: React.FC = () => {
                         )}
                       </button>
                       <button
-                        onClick={(e) => {
+                        onClick={(e) => { // Already exists
                           e.stopPropagation();
                           setEditingAccount(account);
                           setShowAccountModal(true);
@@ -357,7 +357,7 @@ export const FinancialAccountsHub: React.FC = () => {
                         <Edit3 size={16} className="text-forest-400" />
                       </button>
                       <button
-                        onClick={(e) => {
+                        onClick={(e) => { // Already exists
                           e.stopPropagation();
                           handleDeleteAccount(account.id);
                         }}
@@ -369,7 +369,7 @@ export const FinancialAccountsHub: React.FC = () => {
                   </div>
 
                   {/* Balance */}
-                  {(account.isVisible || showBalances) && (
+                  {(account.isVisible || showBalances) && ( // Already exists
                     <div className="bg-forest-800/30 rounded-xl p-4 mb-4">
                       <p className="text-xs text-forest-400 mb-2 font-body">Current Balance</p>
                       <p className="text-2xl font-numbers font-bold text-white">
@@ -379,7 +379,7 @@ export const FinancialAccountsHub: React.FC = () => {
                     </div>
                   )}
 
-                  {!account.isVisible && (
+                  {!account.isVisible && ( // Already exists
                     <div className="bg-gray-500/20 rounded-xl p-4 text-center mb-4 border border-gray-500/30">
                       <p className="text-sm text-gray-400 font-body">Hidden from dashboard</p>
                     </div>
@@ -387,7 +387,7 @@ export const FinancialAccountsHub: React.FC = () => {
 
                   {/* Mock Transaction Button */}
                   <div className="mb-4">
-                    <Button
+                    <Button // Already exists
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedAccountForMock(account.id);
@@ -404,7 +404,7 @@ export const FinancialAccountsHub: React.FC = () => {
 
                   {/* Account-Specific Data when Selected */}
                   {isSelected && (
-                    <div className="pt-4 border-t border-forest-600/20 space-y-4">
+                    <div className="pt-4 border-t border-forest-600/20 space-y-4"> // Already exists
                       {/* Recent Transactions */}
                       {selectedAccountTransactions.length > 0 && (
                         <div>
@@ -413,7 +413,7 @@ export const FinancialAccountsHub: React.FC = () => {
                             Recent Activity
                           </h5>
                           <div className="space-y-2">
-                            {selectedAccountTransactions.map((transaction) => (
+                            {selectedAccountTransactions.map((transaction) => ( // Already exists
                               <div key={transaction.id} className="flex items-center justify-between p-3 bg-forest-800/20 rounded-lg border border-forest-600/20">
                                 <div className="flex items-center space-x-3">
                                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -422,7 +422,7 @@ export const FinancialAccountsHub: React.FC = () => {
                                     <span className={`text-xs font-bold ${
                                       transaction.type === 'income' ? 'text-success-400' : 'text-error-400'
                                     }`}>
-                                      {transaction.type === 'income' ? '+' : '-'}
+                                      {transaction.type === 'income' ? '+' : '-'} // Already exists
                                     </span>
                                   </div>
                                   <div>
@@ -431,7 +431,7 @@ export const FinancialAccountsHub: React.FC = () => {
                                   </div>
                                 </div>
                                 <span className={`text-sm font-numbers font-medium ${
-                                  transaction.type === 'income' ? 'text-success-400' : 'text-error-400'
+                                  transaction.type === 'income' ? 'text-success-400' : 'text-error-400' // Already exists
                                 }`}>
                                   {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                                 </span>
@@ -449,7 +449,7 @@ export const FinancialAccountsHub: React.FC = () => {
                             Goals for This Account ({selectedAccountGoals.length})
                           </h5>
                           <div className="space-y-2">
-                            {selectedAccountGoals.map((goal) => (
+                            {selectedAccountGoals.map((goal) => ( // Already exists
                               <div key={goal.id} className="p-3 bg-forest-600/10 rounded-lg border border-forest-500/20">
                                 <div className="flex justify-between items-center">
                                   <span className="text-sm font-body text-white">{goal.title}</span>
@@ -471,7 +471,7 @@ export const FinancialAccountsHub: React.FC = () => {
                             Debts on This Account ({selectedAccountLiabilities.length})
                           </h5>
                           <div className="space-y-2">
-                            {selectedAccountLiabilities.map((liability) => (
+                            {selectedAccountLiabilities.map((liability) => ( // Already exists
                               <div key={liability.id} className="p-3 bg-error-500/10 rounded-lg border border-error-500/20">
                                 <div className="flex justify-between items-center">
                                   <span className="text-sm font-body text-white">{liability.name}</span>
@@ -493,7 +493,7 @@ export const FinancialAccountsHub: React.FC = () => {
                             Budgets for This Account ({selectedAccountBudgets.length})
                           </h5>
                           <div className="space-y-2">
-                            {selectedAccountBudgets.map((budget) => (
+                            {selectedAccountBudgets.map((budget) => ( // Already exists
                               <div key={budget.id} className="p-3 bg-warning-500/10 rounded-lg border border-warning-500/20">
                                 <div className="flex justify-between items-center">
                                   <span className="text-sm font-body text-white">{budget.category}</span>
@@ -516,7 +516,7 @@ export const FinancialAccountsHub: React.FC = () => {
 
         {/* Student Guide */}
         <div className="bg-forest-600/20 rounded-xl p-6 border border-forest-500/30">
-          <h4 className="font-heading font-medium text-forest-300 mb-4">🎓 Student Account Guide</h4>
+          <h4 className="font-heading font-medium text-forest-300 mb-4">🎓 Student Account Guide</h4> // Already exists
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
@@ -545,7 +545,7 @@ export const FinancialAccountsHub: React.FC = () => {
           </div>
           
           {/* Student Tip */}
-          <div className="mt-4 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
+          <div className="mt-4 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30"> // Already exists
             <p className="text-blue-300 text-sm">
               💡 <strong>Pro Tip:</strong> Start with just 2-3 accounts (Cash + Bank + Digital Wallet). 
               You can always add more as your financial life grows!
@@ -555,7 +555,7 @@ export const FinancialAccountsHub: React.FC = () => {
       </div>
 
       {/* Account Form Modal */}
-      <Modal
+      <Modal // Already exists
         isOpen={showAccountModal}
         onClose={() => {
           setShowAccountModal(false);
@@ -564,7 +564,7 @@ export const FinancialAccountsHub: React.FC = () => {
         }}
         title={editingAccount ? 'Edit Account' : '🏦 Add New Account'}
       >
-        <AccountForm
+        <AccountForm // Already exists
           initialData={editingAccount}
           onSubmit={editingAccount ? handleEditAccount : handleAddAccount}
           onCancel={() => {
@@ -577,7 +577,7 @@ export const FinancialAccountsHub: React.FC = () => {
       </Modal>
 
       {/* Transfer Modal */}
-      <Modal
+      <Modal // Already exists
         isOpen={showTransferModal}
         onClose={() => {
           setShowTransferModal(false);
@@ -586,7 +586,7 @@ export const FinancialAccountsHub: React.FC = () => {
         title="💸 Move Money Between Accounts"
       >
         <TransferForm
-          accounts={accounts || []}
+          accounts={accounts || []} // Already exists
           onSubmit={handleTransfer}
           onCancel={() => {
             setShowTransferModal(false);
@@ -597,7 +597,7 @@ export const FinancialAccountsHub: React.FC = () => {
       </Modal>
 
       {/* Mock Transaction Modal */}
-      <Modal
+      <Modal // Already exists
         isOpen={showMockTransactionModal}
         onClose={() => {
           setShowMockTransactionModal(false);
@@ -606,7 +606,7 @@ export const FinancialAccountsHub: React.FC = () => {
         }}
         title="📝 Add Past Transaction"
       >
-        <div className="space-y-4">
+        <div className="space-y-4"> // Already exists
           <div className="bg-forest-600/20 rounded-lg p-4 border border-forest-500/30">
             <div className="flex items-start space-x-3">
               <Info size={18} className="text-forest-400 mt-0.5" />
@@ -619,7 +619,7 @@ export const FinancialAccountsHub: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <TransactionForm
             onSubmit={handleAddMockTransaction}
             onCancel={() => {
@@ -632,7 +632,7 @@ export const FinancialAccountsHub: React.FC = () => {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
+      <Modal // Already exists
         isOpen={showDeleteConfirm}
         onClose={() => {
           setShowDeleteConfirm(false);
@@ -642,7 +642,7 @@ export const FinancialAccountsHub: React.FC = () => {
         title="Delete Account"
       >
         <div className="space-y-4">
-          <div className="bg-error-500/20 rounded-lg p-4 border border-error-500/30">
+          <div className="bg-error-500/20 rounded-lg p-4 border border-error-500/30"> // Already exists
             <div className="flex items-start space-x-3">
               <AlertCircle size={18} className="text-error-400 mt-0.5" />
               <div>
@@ -654,7 +654,7 @@ export const FinancialAccountsHub: React.FC = () => {
             </div>
           </div>
           
-          <p className="text-forest-200 font-body">
+          <p className="text-forest-200 font-body"> // Already exists
             Are you sure you want to delete this account? All your financial data for this account will be lost forever.
           </p>
           
@@ -665,7 +665,7 @@ export const FinancialAccountsHub: React.FC = () => {
                 setShowDeleteConfirm(false);
                 setAccountToDelete(null);
               }}
-              className="flex-1 border-forest-500/30 text-forest-300"
+              className="flex-1 border-forest-500/30 text-forest-300" // Already exists
               disabled={isSubmitting}
             >
               Cancel

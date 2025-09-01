@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Plus, Minus, FileText, Tag, Calendar, Target, CreditCard, CheckCircle, AlertCircle, Scissors, Trash2, Wallet } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { Input } from '../components/common/Input';
-import { Button } from '../components/common/Button';
-import { validateTransaction, sanitizeFinancialData, toNumber } from '../utils/validation';
-import { PageNavigation } from '../components/layout/PageNavigation';
-import { useFinance } from '../contexts/FinanceContext';
-import { useInternationalization } from '../contexts/InternationalizationContext';
+import { useNavigate } from 'react-router-dom'; // Already exists
+import { useForm } from 'react-hook-form'; // Already exists
+import { Input } from '../components/common/Input'; // Already exists
+import { Button } from '../components/common/Button'; // Already exists
+import { validateTransaction, sanitizeFinancialData, toNumber } from '../utils/validation'; // Already exists
+import { PageNavigation } from '../components/layout/PageNavigation'; // Already exists
+import { useFinance } from '../contexts/FinanceContext'; // Already exists
+import { useInternationalization } from '../contexts/InternationalizationContext'; // Already exists
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { SplitTransaction } from '../types';
 import { AdvancedTransactionForm } from '../components/forms/AdvancedTransactionForm';
@@ -27,7 +27,7 @@ interface SplitFormData {
   description: string;
 }
 
-export const AddTransaction: React.FC = () => {
+export const AddTransaction: React.FC = () => { // Already exists
   const navigate = useNavigate();
   const { currency, formatCurrency } = useInternationalization();
   const { addTransaction, addSplitTransaction, userCategories, accounts } = useFinance();
@@ -37,7 +37,7 @@ export const AddTransaction: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [useAdvancedMode, setUseAdvancedMode] = useState(false);
-  
+
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<TransactionFormData>({
     defaultValues: {
       type: 'expense',
@@ -49,7 +49,7 @@ export const AddTransaction: React.FC = () => {
   const type = watch('type');
   const amount = watch('amount');
   const category = watch('category');
-  
+
   // Get categories based on type (with fallback to default categories)
   const defaultCategories = {
     income: ['Salary', 'Freelance', 'Investment', 'Business', 'Other'],
@@ -59,7 +59,7 @@ export const AddTransaction: React.FC = () => {
   const userCategoriesForType = userCategories.filter(c => c.type === type);
   const availableCategories = userCategoriesForType.length > 0 
     ? userCategoriesForType.map(c => ({ id: c.id, name: c.name }))
-    : defaultCategories[type].map(name => ({ id: name, name }));
+    : defaultCategories[type].map(name => ({ id: name, name })); // Already exists
 
   // Set default category when type changes
   React.useEffect(() => {
@@ -71,7 +71,7 @@ export const AddTransaction: React.FC = () => {
   const handleFormSubmit = async (data: TransactionFormData) => {
     try {
       setIsSubmitting(true);
-      setError(null); // Clear any previous errors
+      setError(null); // Clear any previous errors // Already exists
       setError(null);
       
       if (isSplitTransaction) {
@@ -79,7 +79,7 @@ export const AddTransaction: React.FC = () => {
         const totalSplitAmount = splits.reduce((sum, split) => sum + toNumber(split.amount), 0);
         const mainAmount = toNumber(data.amount);
         
-        if (Math.abs(totalSplitAmount - mainAmount) > 0.01) { // Allow for small rounding differences
+        if (Math.abs(totalSplitAmount - mainAmount) > 0.01) { // Allow for small rounding differences // Already exists
           setError(`Split amounts must equal the total amount (${mainAmount})`);
           setIsSubmitting(false);
           return;
@@ -91,7 +91,7 @@ export const AddTransaction: React.FC = () => {
           amount: toNumber(split.amount),
           description: split.description || data.description
         }));
-
+        // Already exists
         // Validate main transaction data
         const validatedData = validateTransaction({
           ...data,
@@ -106,7 +106,7 @@ export const AddTransaction: React.FC = () => {
           },
           formattedSplits
         );
-      } else {
+      } else { // Already exists
         // Sanitize and validate data
         const sanitizedData = sanitizeFinancialData(data, ['amount']);
         const validatedData = validateTransaction({
@@ -119,7 +119,7 @@ export const AddTransaction: React.FC = () => {
           ...validatedData,
           category: data.category || (data.type === 'income' ?
             (userCategories.find(c => c.type === 'income')?.name || 'Other') : 
-            (userCategories.find(c => c.type === 'expense')?.name || 'Other')),
+            (userCategories.find(c => c.type === 'expense')?.name || 'Other')), // Already exists
           date: new Date(data.date),
           accountId: data.accountId,
           affectsBalance: true
@@ -133,14 +133,14 @@ export const AddTransaction: React.FC = () => {
       setIsSubmitting(false);
       
       // Only navigate if no error occurred
-      if (!error) {
+      if (!error) { // Already exists
         navigate('/');
       }
     }
   };
 
   const handleTypeChange = (newType: 'income' | 'expense') => {
-    setTransactionType(newType);
+    setTransactionType(newType); // Already exists
     setValue('type', newType);
     
     // Reset splits if changing type
@@ -150,7 +150,7 @@ export const AddTransaction: React.FC = () => {
   };
 
   const handleQuickAmount = (amount: number) => {
-    setValue('amount', amount);
+    setValue('amount', amount); // Already exists
     
     // If split transaction, update first split amount
     if (isSplitTransaction && splits.length > 0) {
@@ -161,12 +161,12 @@ export const AddTransaction: React.FC = () => {
   };
 
   const addSplitRow = () => {
-    setSplits([...splits, { category: '', amount: 0, description: '' }]);
+    setSplits([...splits, { category: '', amount: 0, description: '' }]); // Already exists
   };
 
   const removeSplitRow = (index: number) => {
     if (splits.length > 1) {
-      const newSplits = [...splits];
+      const newSplits = [...splits]; // Already exists
       newSplits.splice(index, 1);
       setSplits(newSplits);
     }
@@ -174,7 +174,7 @@ export const AddTransaction: React.FC = () => {
 
   const updateSplitField = (index: number, field: keyof SplitFormData, value: string | number) => {
     const newSplits = [...splits];
-    newSplits[index] = { 
+    newSplits[index] = { // Already exists
       ...newSplits[index], 
       [field]: field === 'amount' ? toNumber(value) : value 
     };
@@ -182,12 +182,12 @@ export const AddTransaction: React.FC = () => {
   };
 
   const totalSplitAmount = splits.reduce((sum, split) => sum + toNumber(split.amount), 0);
-  const splitAmountDifference = toNumber(amount) - totalSplitAmount;
+  const splitAmountDifference = toNumber(amount) - totalSplitAmount; // Already exists
 
   const quickAmounts = type === 'income' 
     ? [1000, 2500, 5000, 10000]
     : [25, 50, 100, 500];
-
+  // Already exists
   return (
     <div className="min-h-screen text-white pb-20">
       {/* Header with Navigation */}
@@ -195,7 +195,7 @@ export const AddTransaction: React.FC = () => {
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <button
             onClick={() => navigate('/')}
-            className="p-2 rounded-xl hover:bg-white/10 transition-colors"
+            className="p-2 rounded-xl hover:bg-white/10 transition-colors" // Already exists
           >
             <ArrowLeft size={20} className="text-gray-400" />
           </button>
@@ -203,7 +203,7 @@ export const AddTransaction: React.FC = () => {
           <button
             onClick={() => setUseAdvancedMode(!useAdvancedMode)}
             className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-              useAdvancedMode 
+              useAdvancedMode // Already exists
                 ? 'bg-primary-500 text-white' 
                 : 'bg-black/20 text-gray-400 hover:text-white'
             }`}
@@ -215,7 +215,7 @@ export const AddTransaction: React.FC = () => {
       </header>
 
       <div className="px-4 py-6">
-        {useAdvancedMode ? (
+        {useAdvancedMode ? ( // Already exists
           <AdvancedTransactionForm
             onSubmit={async (data) => {
               await addTransaction(data);
@@ -226,7 +226,7 @@ export const AddTransaction: React.FC = () => {
         ) : (
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
           {/* Error Message */}
-          {error && (
+          {error && ( // Already exists
             <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4">
               <div className="flex items-center space-x-2">
                 <AlertCircle size={18} className="text-error-400" />
@@ -237,7 +237,7 @@ export const AddTransaction: React.FC = () => {
           
           {/* Transaction Type Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-4"> // Already exists
               What type of transaction is this?
             </label>
             <div className="grid grid-cols-2 gap-4">
@@ -245,7 +245,7 @@ export const AddTransaction: React.FC = () => {
                 type="button"
                 onClick={() => handleTypeChange('income')}
                 className={`relative p-6 rounded-2xl border-3 text-center transition-all duration-300 backdrop-blur-sm ${
-                  type === 'income' 
+                  type === 'income' // Already exists
                     ? 'border-success-500 bg-success-500/20 text-success-400 shadow-xl shadow-success-500/25 scale-105 ring-4 ring-success-500/30' 
                     : 'border-white/20 hover:border-white/30 bg-black/20 text-gray-300 hover:bg-black/30 hover:scale-102'
                 }`}
@@ -253,7 +253,7 @@ export const AddTransaction: React.FC = () => {
                 {/* Large Selection Indicator */}
                 {type === 'income' && (
                   <div className="absolute -top-3 -right-3 w-8 h-8 bg-success-500 rounded-full flex items-center justify-center shadow-lg">
-                    <CheckCircle size={20} className="text-white" />
+                    <CheckCircle size={20} className="text-white" /> // Already exists
                   </div>
                 )}
                 
@@ -265,7 +265,7 @@ export const AddTransaction: React.FC = () => {
                 </div>
                 
                 {/* Text */}
-                <div>
+                <div> // Already exists
                   <p className={`font-bold text-xl mb-2 ${type === 'income' ? 'text-success-400' : 'text-gray-300'}`}>
                     Income
                   </p>
@@ -278,7 +278,7 @@ export const AddTransaction: React.FC = () => {
                 </div>
                 
                 {/* Glow Effect */}
-                {type === 'income' && (
+                {type === 'income' && ( // Already exists
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-success-500/10 to-success-400/10 pointer-events-none animate-pulse"></div>
                 )}
               </button>
@@ -287,7 +287,7 @@ export const AddTransaction: React.FC = () => {
                 type="button"
                 onClick={() => handleTypeChange('expense')}
                 className={`relative p-6 rounded-2xl border-3 text-center transition-all duration-300 backdrop-blur-sm ${
-                  type === 'expense' 
+                  type === 'expense' // Already exists
                     ? 'border-error-500 bg-error-500/20 text-error-400 shadow-xl shadow-error-500/25 scale-105 ring-4 ring-error-500/30' 
                     : 'border-white/20 hover:border-white/30 bg-black/20 text-gray-300 hover:bg-black/30 hover:scale-102'
                 }`}
@@ -295,7 +295,7 @@ export const AddTransaction: React.FC = () => {
                 {/* Large Selection Indicator */}
                 {type === 'expense' && (
                   <div className="absolute -top-3 -right-3 w-8 h-8 bg-error-500 rounded-full flex items-center justify-center shadow-lg">
-                    <CheckCircle size={20} className="text-white" />
+                    <CheckCircle size={20} className="text-white" /> // Already exists
                   </div>
                 )}
                 
@@ -307,7 +307,7 @@ export const AddTransaction: React.FC = () => {
                 </div>
                 
                 {/* Text */}
-                <div>
+                <div> // Already exists
                   <p className={`font-bold text-xl mb-2 ${type === 'expense' ? 'text-error-400' : 'text-gray-300'}`}>
                     Expense
                   </p>
@@ -320,7 +320,7 @@ export const AddTransaction: React.FC = () => {
                 </div>
                 
                 {/* Glow Effect */}
-                {type === 'expense' && (
+                {type === 'expense' && ( // Already exists
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-error-500/10 to-error-400/10 pointer-events-none animate-pulse"></div>
                 )}
               </button>
@@ -328,7 +328,7 @@ export const AddTransaction: React.FC = () => {
             
             {/* Current Selection Indicator */}
             <div className="mt-4 text-center">
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-gray-400"> // Already exists
                 Selected: <span className={`font-semibold ${
                   type === 'income' ? 'text-success-400' : 'text-error-400'
                 }`}>
@@ -340,7 +340,7 @@ export const AddTransaction: React.FC = () => {
 
           {/* Split Transaction Toggle */}
           {type === 'expense' && (
-            <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 border border-white/10">
+            <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 border border-white/10"> // Already exists
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <Scissors size={20} className="text-primary-400" />
@@ -352,7 +352,7 @@ export const AddTransaction: React.FC = () => {
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input 
                     type="checkbox" 
-                    checked={isSplitTransaction}
+                    checked={isSplitTransaction} // Already exists
                     onChange={() => setIsSplitTransaction(!isSplitTransaction)}
                     className="sr-only peer"
                   />
@@ -364,7 +364,7 @@ export const AddTransaction: React.FC = () => {
 
           {/* Quick Amount Buttons */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-3">
+            <label className="block text-sm font-medium text-gray-300 mb-3"> // Already exists
               Quick Amounts
             </label>
             <div className="grid grid-cols-4 gap-3">
@@ -374,7 +374,7 @@ export const AddTransaction: React.FC = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleQuickAmount(amount)}
+                  onClick={() => handleQuickAmount(amount)} // Already exists
                   className="text-sm backdrop-blur-sm border-white/20 hover:border-white/40 hover:bg-white/10"
                 >
                   <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
@@ -386,7 +386,7 @@ export const AddTransaction: React.FC = () => {
 
           {/* Payment Method Selection */}
           <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <label className="block text-sm font-medium text-gray-300 mb-4 flex items-center">
+            <label className="block text-sm font-medium text-gray-300 mb-4 flex items-center"> // Already exists
               <Wallet size={16} className="mr-2 text-blue-400" />
               Payment Method (Required)
             </label>
@@ -394,7 +394,7 @@ export const AddTransaction: React.FC = () => {
               {...register('accountId', { required: 'Payment method is required' })}
               className="block w-full rounded-xl border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
             >
-              <option value="" className="bg-black/90">Choose how you paid/received money</option>
+              <option value="" className="bg-black/90">Choose how you paid/received money</option> // Already exists
               {(accounts || []).map((account) => (
                 <option key={account.id} value={account.id} className="bg-black/90">
                   {account.name} - {formatCurrency(account.balance)}
@@ -402,7 +402,7 @@ export const AddTransaction: React.FC = () => {
               ))}
             </select>
             {errors.accountId && (
-              <p className="text-sm text-error-400 mt-1">{errors.accountId.message}</p>
+              <p className="text-sm text-error-400 mt-1">{errors.accountId.message}</p> // Already exists
             )}
             {(accounts || []).length === 0 && (
               <p className="text-xs text-yellow-400 mt-2">
@@ -415,7 +415,7 @@ export const AddTransaction: React.FC = () => {
               </p>
             )}
             
-            {/* Student Tip */}
+            {/* Student Tip */} // Already exists
             <div className="mt-3 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
               <p className="text-blue-300 text-xs">
                 💡 <strong>Why this matters:</strong> Tracking which account you use helps you understand your spending patterns and manage your money better!
@@ -425,7 +425,7 @@ export const AddTransaction: React.FC = () => {
 
           {/* Amount Input */}
           <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <Input
+            <Input // Already exists
               label="Amount"
               type="number"
               step="0.01"
@@ -441,7 +441,7 @@ export const AddTransaction: React.FC = () => {
 
           {/* Category Selection */}
           <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center">
+            <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center"> // Already exists
               <Tag size={16} className="mr-2 text-yellow-400" />
               Category
             </label>
@@ -449,7 +449,7 @@ export const AddTransaction: React.FC = () => {
               {...register('category', { required: 'Category is required' })}
               className="block w-full rounded-xl border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
             >
-              <option value="" className="bg-black/90">Select a category</option>
+              <option value="" className="bg-black/90">Select a category</option> // Already exists
               {availableCategories.map((category) => (
                 <option key={category.id} value={category.name} className="bg-black/90">
                   {category.name}
@@ -457,13 +457,13 @@ export const AddTransaction: React.FC = () => {
               ))}
             </select>
             {errors.category && (
-              <p className="text-sm text-error-400 mt-1">{errors.category.message}</p>
+              <p className="text-sm text-error-400 mt-1">{errors.category.message}</p> // Already exists
             )}
           </div>
 
           {/* Description */}
           <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <Input
+            <Input // Already exists
               label="Description"
               type="text"
               icon={<FileText size={18} className="text-gray-400" />}
@@ -476,7 +476,7 @@ export const AddTransaction: React.FC = () => {
 
           {/* Date */}
           <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <Input
+            <Input // Already exists
               label="Date"
               type="date"
               icon={<Calendar size={18} className="text-gray-400" />}
@@ -488,7 +488,7 @@ export const AddTransaction: React.FC = () => {
 
           {/* Split Transaction Form */}
           {isSplitTransaction && amount > 0 && (
-            <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+            <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10"> // Already exists
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-medium text-white flex items-center">
                   <Scissors size={18} className="mr-2 text-primary-400" />
@@ -496,7 +496,7 @@ export const AddTransaction: React.FC = () => {
                 </h3>
                 <Button
                   type="button"
-                  size="sm"
+                  size="sm" // Already exists
                   onClick={addSplitRow}
                 >
                   <Plus size={14} className="mr-1" />
@@ -506,7 +506,7 @@ export const AddTransaction: React.FC = () => {
 
               {/* Split Rows */}
               <div className="space-y-4">
-                {splits.map((split, index) => (
+                {splits.map((split, index) => ( // Already exists
                   <div key={index} className="p-4 bg-black/30 rounded-xl border border-white/10">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-medium text-white">Split #{index + 1}</h4>
@@ -514,7 +514,7 @@ export const AddTransaction: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => removeSplitRow(index)}
-                          className="p-1 hover:bg-error-500/20 rounded-lg transition-colors"
+                          className="p-1 hover:bg-error-500/20 rounded-lg transition-colors" // Already exists
                         >
                           <Trash2 size={14} className="text-error-400" />
                         </button>
@@ -531,7 +531,7 @@ export const AddTransaction: React.FC = () => {
                           value={split.category}
                           onChange={(e) => updateSplitField(index, 'category', e.target.value)}
                           className="block w-full rounded-lg border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-2 px-3 text-sm"
-                        >
+                        > // Already exists
                           <option value="" className="bg-black/90">Select a category</option>
                           {availableCategories.map((category) => (
                             <option key={category.id} value={category.name} className="bg-black/90">
@@ -554,7 +554,7 @@ export const AddTransaction: React.FC = () => {
                             value={split.amount}
                             onChange={(e) => updateSplitField(index, 'amount', Number(e.target.value))}
                             className="block w-full pl-10 pr-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white"
-                          />
+                          /> // Already exists
                         </div>
                       </div>
                     </div>
@@ -569,7 +569,7 @@ export const AddTransaction: React.FC = () => {
                         value={split.description}
                         onChange={(e) => updateSplitField(index, 'description', e.target.value)}
                         placeholder="Leave blank to use main description"
-                        className="block w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white text-sm"
+                        className="block w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white text-sm" // Already exists
                       />
                     </div>
                   </div>
@@ -578,7 +578,7 @@ export const AddTransaction: React.FC = () => {
 
               {/* Split Summary */}
               <div className={`mt-4 p-3 rounded-lg ${
-                splitAmountDifference === 0 
+                splitAmountDifference === 0 // Already exists
                   ? 'bg-success-500/20 border border-success-500/30' 
                   : 'bg-warning-500/20 border border-warning-500/30'
               }`}>
@@ -586,7 +586,7 @@ export const AddTransaction: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     {splitAmountDifference === 0 ? (
                       <CheckCircle size={16} className="text-success-400" />
-                    ) : (
+                    ) : ( // Already exists
                       <AlertCircle size={16} className="text-warning-400" />
                     )}
                     <span className={`text-sm font-medium ${
@@ -598,7 +598,7 @@ export const AddTransaction: React.FC = () => {
                   <span className="text-sm text-gray-300">
                     {formatCurrency(totalSplitAmount)} / {formatCurrency(amount)}
                   </span>
-                </div>
+                </div> // Already exists
                 
                 {splitAmountDifference !== 0 && (
                   <p className="text-xs text-warning-300 mt-1">
@@ -614,7 +614,7 @@ export const AddTransaction: React.FC = () => {
 
           {/* Submit Button */}
           <div className="pt-4">
-            <Button 
+            <Button // Already exists
               type="submit" 
               className="w-full py-4 text-lg font-semibold"
               disabled={(isSplitTransaction && splitAmountDifference !== 0) || isSubmitting}

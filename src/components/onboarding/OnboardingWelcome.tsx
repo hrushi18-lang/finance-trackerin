@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrendingUp, DollarSign, Target, PieChart, Calendar, Shield, Globe, Sparkles, Users, Heart } from 'lucide-react';
-import { Button } from '../common/Button';
+import { Button } from '../common/Button'; // Already exists
 import { useTranslation } from 'react-i18next';
 
 interface OnboardingWelcomeProps {
@@ -18,7 +18,7 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
   ];
 
   return (
-    <div className="text-center space-y-6 relative">
+    <div className="text-center space-y-6 relative"> // Already exists
       {/* Language Selector */}
       <div className="flex justify-center space-x-2 mb-6">
         {languages.map((lang) => (
@@ -26,7 +26,7 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
             key={lang.code}
             onClick={() => i18n.changeLanguage(lang.code)}
             className={`px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
-              i18n.language === lang.code
+              i18n.language === lang.code // Already exists
                 ? 'bg-primary-500 text-white shadow-lg'
                 : 'bg-black/20 text-gray-300 hover:bg-white/10'
             }`}
@@ -39,7 +39,7 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
 
       {/* Hero Section */}
       <div className="space-y-6">
-        <div className="relative">
+        <div className="relative"> // Already exists
           <div className="w-24 h-24 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center mx-auto shadow-lg animate-pulse">
             <TrendingUp size={48} className="text-white" />
           </div>
@@ -48,7 +48,7 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
           </div>
         </div>
         
-        <div>
+        <div> // Already exists
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">
             Meet Your <span className="text-primary-400 bg-gradient-to-r from-primary-400 to-blue-400 bg-clip-text text-transparent">Financial Coach</span>
           </h1>
@@ -60,7 +60,7 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
             In just 2 minutes, we'll set up your personal financial coaching system. Every transaction you manually track makes you more aware of your spending patterns and builds lasting money discipline.
           </p>
         </div>
-        
+
         {/* Global Visual Cues */}
         <div className="flex justify-center items-center space-x-4 text-2xl opacity-60">
           <span>💰</span>
@@ -71,7 +71,7 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
           <span>$</span>
         </div>
         
-        {/* Diverse User Representation */}
+        {/* Diverse User Representation */} // Already exists
         <div className="flex justify-center items-center space-x-2 text-3xl">
           <span>👨‍💼</span>
           <span>👩‍🎓</span>
@@ -81,7 +81,7 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
         </div>
       </div>
 
-      {/* Key Features Preview */}
+      {/* Key Features Preview */} // Already exists
       <div className="grid grid-cols-2 gap-3">
         <div className="p-4 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl border border-green-500/30 hover:scale-105 transition-transform">
           <span className="text-2xl mb-3 block">🧠</span>
@@ -108,7 +108,7 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
         </div>
       </div>
 
-      {/* Trust Indicators */}
+      {/* Trust Indicators */} // Already exists
       <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl p-4 border border-blue-500/20">
         <div className="flex items-center justify-center space-x-4 sm:space-x-6 text-xs sm:text-sm text-gray-300">
           <div className="flex items-center space-x-2">
@@ -126,7 +126,7 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
         </div>
       </div>
 
-      <Button onClick={onNext} className="w-full py-4 text-lg bg-gradient-to-r from-primary-500 to-blue-500 hover:from-primary-600 hover:to-blue-600 shadow-xl">
+      <Button onClick={onNext} className="w-full py-4 text-lg bg-gradient-to-r from-primary-500 to-blue-500 hover:from-primary-600 hover:to-blue-600 shadow-xl"> // Already exists
         <span className="text-xl mr-2">🎓</span>
         Start My Financial Journey
       </Button>

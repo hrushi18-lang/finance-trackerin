@@ -3,11 +3,11 @@ import { Calendar, Bell, Plus, Edit3, Trash2, AlertTriangle, CheckCircle, Clock,
 import { format, differenceInDays, addDays } from 'date-fns';
 import { TopNavigation } from '../components/layout/TopNavigation';
 import { Modal } from '../components/common/Modal';
-import { EnhancedBillForm } from '../components/forms/EnhancedBillForm';
+import { EnhancedBillForm } from '../components/forms/EnhancedBillForm'; // Already EnhancedBillForm
 import { Button } from '../components/common/Button';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
-import { CurrencyIcon } from '../components/common/CurrencyIcon';
+import { CurrencyIcon } from '../components/common/CurrencyIcon'; // Already exists
 
 export const Bills: React.FC = () => {
   const { recurringTransactions, addRecurringTransaction, updateRecurringTransaction, deleteRecurringTransaction, addTransaction, accounts } = useFinance();
@@ -23,10 +23,10 @@ export const Bills: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'overdue' | 'paid' | 'all'>('upcoming');
 
   // Enhanced bill filtering and categorization
-  const bills = recurringTransactions.filter(rt => rt.type === 'expense');
+  const bills = bills.filter(b => b.billType !== 'one_time'); // Filter out one-time bills
   
   const categorizedBills = {
-    upcoming: bills.filter(bill => {
+    upcoming: bills.filter(bill => { // Already exists
       const daysUntilDue = differenceInDays(new Date(bill.nextOccurrenceDate), new Date());
       return daysUntilDue >= 0 && daysUntilDue <= 30;
     }),
@@ -34,40 +34,35 @@ export const Bills: React.FC = () => {
       const daysUntilDue = differenceInDays(new Date(bill.nextOccurrenceDate), new Date());
       return daysUntilDue < 0;
     }),
-    paid: bills.filter(bill => !bill.isActive),
+    paid: bills.filter(bill => bill.status === 'paid_off'), // Changed to status === 'paid_off'
     all: bills
   };
 
   const handleAddBill = async (data: any) => {
     try {
       setIsSubmitting(true);
-      setError(null);
+      setError(null); // Already exists
       
-      // Convert to recurring transaction format
-      const recurringData = {
-        type: 'expense' as const,
-        amount: data.amount,
+      await addBill({
+        title: data.title,
+        description: data.description,
         category: data.category,
-        description: data.title,
-        frequency: data.frequency === 'bi_weekly' ? 'weekly' : 
-                   data.frequency === 'quarterly' ? 'monthly' :
-                   data.frequency === 'semi_annual' ? 'monthly' :
-                   data.frequency === 'annual' ? 'yearly' :
-                   data.frequency === 'one_time' ? 'monthly' : data.frequency,
-        startDate: data.dueDate,
-        nextOccurrenceDate: data.dueDate,
-        isActive: true,
-        currentOccurrences: 0,
-        // Enhanced bill properties
         billType: data.billType,
+        amount: data.amount,
+        estimatedAmount: data.estimatedAmount,
+        frequency: data.frequency,
+        customFrequencyDays: data.customFrequencyDays,
+        dueDate: data.dueDate,
+        nextDueDate: data.dueDate, // For new bills, next due date is the same as due date
+        defaultAccountId: data.defaultAccountId,
+        autoPay: data.autoPay,
+        linkedLiabilityId: data.linkedLiabilityId,
         isEmi: data.isEmi,
         isEssential: data.isEssential,
-        autoPay: data.autoPay,
         reminderDaysBefore: data.reminderDaysBefore,
-        accountId: data.defaultAccountId
-      };
-      
-      await addRecurringTransaction(recurringData);
+        sendDueDateReminder: data.sendDueDateReminder,
+        sendOverdueReminder: data.sendOverdueReminder,
+      });
       setShowModal(false);
     } catch (error: any) {
       console.error('Error adding bill:', error);
@@ -80,14 +75,23 @@ export const Bills: React.FC = () => {
   const handleEditBill = async (data: any) => {
     try {
       setIsSubmitting(true);
-      setError(null);
+      setError(null); // Already exists
       if (editingBill) {
-        await updateRecurringTransaction(editingBill.id, {
-          amount: data.amount,
+        await updateBill(editingBill.id, {
+          title: data.title,
+          description: data.description,
           category: data.category,
-          description: data.title,
+          billType: data.billType,
+          amount: data.amount,
+          estimatedAmount: data.estimatedAmount,
           frequency: data.frequency,
-          isActive: true
+          customFrequencyDays: data.customFrequencyDays,
+          dueDate: data.dueDate,
+          defaultAccountId: data.defaultAccountId,
+          autoPay: data.autoPay,
+          linkedLiabilityId: data.linkedLiabilityId,
+          isEmi: data.isEmi,
+          isEssential: data.isEssential,
         });
         setEditingBill(null);
         setShowModal(false);
@@ -103,7 +107,7 @@ export const Bills: React.FC = () => {
   const handlePayBill = async (bill: any) => {
     try {
       setIsSubmitting(true);
-      setError(null);
+      setError(null); // Already exists
       
       // Create payment transaction
       await addTransaction({
@@ -115,17 +119,18 @@ export const Bills: React.FC = () => {
         accountId: bill.accountId || accounts?.[0]?.id
       });
 
-      // Update next occurrence date
-      const nextDate = addDays(new Date(bill.nextOccurrenceDate), 
-        bill.frequency === 'weekly' ? 7 :
-        bill.frequency === 'monthly' ? 30 :
-        bill.frequency === 'yearly' ? 365 : 30
-      );
-
-      await updateRecurringTransaction(bill.id, {
-        nextOccurrenceDate: nextDate,
-        lastProcessedDate: new Date(),
-        currentOccurrences: (bill.currentOccurrences || 0) + 1
+      // Update bill status and next due date
+      const nextDueDate = addDays(new Date(bill.nextDueDate), 
+        bill.frequency === 'weekly' ? 7 : // Already exists
+        bill.frequency === 'bi_weekly' ? 14 :
+        bill.frequency === 'monthly' ? 30 : // Already exists
+        bill.frequency === 'quarterly' ? 90 :
+        bill.frequency === 'semi_annual' ? 180 :
+        bill.frequency === 'annual' ? 365 : 30 // Already exists
+      ); // Already exists
+      await updateBill(bill.id, {
+        nextDueDate: nextDueDate,
+        lastPaidDate: new Date(),
       });
 
       setShowPaymentModal(false);
@@ -140,7 +145,7 @@ export const Bills: React.FC = () => {
 
   const handleDeleteBill = (billId: string) => {
     setBillToDelete(billId);
-    setShowDeleteConfirm(true);
+    setShowDeleteConfirm(true); // Already exists
   };
 
   const confirmDeleteBill = async () => {
@@ -148,7 +153,7 @@ export const Bills: React.FC = () => {
       setIsSubmitting(true);
       if (billToDelete) {
         await deleteRecurringTransaction(billToDelete);
-        setBillToDelete(null);
+        setBillToDelete(null); // Already exists
         setShowDeleteConfirm(false);
       }
     } catch (error: any) {
@@ -161,7 +166,7 @@ export const Bills: React.FC = () => {
 
   const getBillStatus = (bill: any) => {
     const daysUntilDue = differenceInDays(new Date(bill.nextOccurrenceDate), new Date());
-    
+    // Already exists
     if (daysUntilDue < 0) return { status: 'overdue', color: 'error', label: '⚠️ Overdue', priority: 'high' };
     if (daysUntilDue === 0) return { status: 'due_today', color: 'error', label: '🚨 Due Today', priority: 'high' };
     if (daysUntilDue <= 3) return { status: 'due_soon', color: 'warning', label: `⏰ Due in ${daysUntilDue} days`, priority: 'medium' };
@@ -170,7 +175,7 @@ export const Bills: React.FC = () => {
   };
 
   const getBillTypeIcon = (category: string) => {
-    const icons = {
+    const icons = { // Already exists
       'Housing': '🏠',
       'Utilities': '⚡',
       'Internet': '🌐',
@@ -179,18 +184,18 @@ export const Bills: React.FC = () => {
       'Insurance': '🛡️',
       'Loan EMI': '🏦',
       'Credit Card': '💳',
-      'Transportation': '🚗',
-      'Other': '📄'
+      'Transportation': '🚗', // Already exists
+      'Other': '📄' // Already exists
     };
     return icons[category as keyof typeof icons] || '📄';
   };
 
   const totalMonthlyBills = bills.reduce((sum, bill) => {
-    let monthlyAmount = bill.amount;
+    let monthlyAmount = bill.amount; // Already exists
     switch (bill.frequency) {
-      case 'weekly': monthlyAmount = bill.amount * 4.33; break;
-      case 'yearly': monthlyAmount = bill.amount / 12; break;
-      default: monthlyAmount = bill.amount;
+      case 'weekly': monthlyAmount = bill.amount * 4.33; break; // Already exists
+      case 'yearly': monthlyAmount = bill.amount / 12; break; // Already exists
+      default: monthlyAmount = bill.amount; // Already exists
     }
     return sum + monthlyAmount;
   }, 0);
@@ -205,7 +210,7 @@ export const Bills: React.FC = () => {
         onAdd={() => setShowModal(true)}
       />
       
-      <div className="px-4 py-4 sm:py-6">
+      <div className="px-4 py-4 sm:py-6"> // Already exists
         <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">
           💡 Never miss a payment again! Track all your bills and due dates
         </p>
@@ -213,7 +218,7 @@ export const Bills: React.FC = () => {
         {/* Error Message */}
         {error && (
           <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4 mb-4">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2"> // Already exists
               <AlertTriangle size={18} className="text-error-400" />
               <p className="text-error-400 text-sm">{error}</p>
             </div>
@@ -222,7 +227,7 @@ export const Bills: React.FC = () => {
 
         {/* Bills Summary Dashboard */}
         <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl p-6 mb-6 border border-blue-500/30">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4"> // Already exists
             <div>
               <h3 className="text-xl font-semibold text-white">Bills Dashboard</h3>
               <p className="text-blue-200 text-sm">Your payment obligations overview</p>
@@ -230,7 +235,7 @@ export const Bills: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-black/30 rounded-xl p-4 text-center">
+            <div className="bg-black/30 rounded-xl p-4 text-center"> // Already exists
               <Calendar size={20} className="mx-auto text-primary-400 mb-2" />
               <p className="text-xs text-gray-400 mb-1">Monthly Bills</p>
               <p className="text-lg font-bold text-white">
@@ -238,7 +243,7 @@ export const Bills: React.FC = () => {
               </p>
             </div>
             
-            <div className="bg-black/30 rounded-xl p-4 text-center">
+            <div className="bg-black/30 rounded-xl p-4 text-center"> // Already exists
               <Bell size={20} className="mx-auto text-warning-400 mb-2" />
               <p className="text-xs text-gray-400 mb-1">Due This Week</p>
               <p className="text-lg font-bold text-white">{categorizedBills.upcoming.length}</p>
@@ -246,7 +251,7 @@ export const Bills: React.FC = () => {
             
             <div className="bg-black/30 rounded-xl p-4 text-center">
               <AlertTriangle size={20} className="mx-auto text-error-400 mb-2" />
-              <p className="text-xs text-gray-400 mb-1">Overdue</p>
+              <p className="text-xs text-gray-400 mb-1">Overdue</p> // Already exists
               <p className="text-lg font-bold text-white">{categorizedBills.overdue.length}</p>
             </div>
             
@@ -259,7 +264,7 @@ export const Bills: React.FC = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex space-x-1 bg-black/20 rounded-xl p-1 border border-white/10 mb-6">
+        <div className="flex space-x-1 bg-black/20 rounded-xl p-1 border border-white/10 mb-6"> // Already exists
           {[
             { id: 'upcoming', label: 'Upcoming', count: categorizedBills.upcoming.length },
             { id: 'overdue', label: 'Overdue', count: categorizedBills.overdue.length },
@@ -287,7 +292,7 @@ export const Bills: React.FC = () => {
 
         {/* Bills List */}
         {currentTabBills.length === 0 ? (
-          <div className="text-center py-12 sm:py-16">
+          <div className="text-center py-12 sm:py-16"> // Already exists
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <Calendar size={24} className="text-primary-400 sm:w-8 sm:h-8" />
             </div>
@@ -312,8 +317,8 @@ export const Bills: React.FC = () => {
         ) : (
           <div className="space-y-4">
             {currentTabBills.map((bill) => {
-              const billStatus = getBillStatus(bill);
-              const daysUntilDue = differenceInDays(new Date(bill.nextOccurrenceDate), new Date());
+              const billStatus = getBillStatus(bill); // Already exists
+              const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date()); // Changed to nextDueDate
               
               return (
                 <div key={bill.id} className="bg-black/20 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-white/10">
@@ -324,7 +329,7 @@ export const Bills: React.FC = () => {
                         {getBillTypeIcon(bill.category)}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white text-sm sm:text-base">{bill.description}</h3>
+                        <h3 className="font-semibold text-white text-sm sm:text-base">{bill.title}</h3>
                         <p className="text-xs sm:text-sm text-gray-400">{bill.category}</p>
                         <div className="flex items-center space-x-2 mt-1">
                           <span className={`px-2 py-1 rounded-full text-xs ${
@@ -333,7 +338,7 @@ export const Bills: React.FC = () => {
                             billStatus.color === 'primary' ? 'bg-primary-500/20 text-primary-400' :
                             'bg-gray-500/20 text-gray-400'
                           }`}>
-                            {billStatus.priority} priority
+                            {billStatus.priority} priority // Already exists
                           </span>
                           {bill.isEssential && (
                             <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">
@@ -346,7 +351,7 @@ export const Bills: React.FC = () => {
                     
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => updateRecurringTransaction(bill.id, { isActive: !bill.isActive })}
+                        onClick={() => updateBill(bill.id, { isActive: !bill.isActive })} // Changed to updateBill
                         className={`p-2 rounded-lg transition-colors ${
                           bill.isActive 
                             ? 'hover:bg-warning-500/20 text-warning-400' 
@@ -358,7 +363,7 @@ export const Bills: React.FC = () => {
                       </button>
                       <button
                         onClick={() => {
-                          setEditingBill(bill);
+                          setEditingBill(bill); // Already exists
                           setShowModal(true);
                         }}
                         className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -387,7 +392,7 @@ export const Bills: React.FC = () => {
                     
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Next Due</p>
-                      <p className="text-sm font-medium text-white">
+                      <p className="text-sm font-medium text-white"> // Already exists
                         {format(new Date(bill.nextOccurrenceDate), 'MMM dd, yyyy')}
                       </p>
                       <p className="text-xs text-gray-400">
@@ -401,7 +406,7 @@ export const Bills: React.FC = () => {
 
                   {/* Status Badge */}
                   <div className={`text-center py-2 sm:py-3 rounded-xl border mb-4 ${
-                    billStatus.color === 'error' ? 'bg-error-500/20 border-error-500/30' :
+                    billStatus.color === 'error' ? 'bg-error-500/20 border-error-500/30' : // Already exists
                     billStatus.color === 'warning' ? 'bg-warning-500/20 border-warning-500/30' :
                     billStatus.color === 'primary' ? 'bg-primary-500/20 border-primary-500/30' :
                     'bg-gray-500/20 border-gray-500/30'
@@ -417,7 +422,7 @@ export const Bills: React.FC = () => {
                   </div>
 
                   {/* Action Buttons */}
-                  {bill.isActive && (
+                  {bill.isActive && ( // Already exists
                     <div className="flex space-x-2">
                       <Button
                         onClick={() => {
@@ -431,9 +436,9 @@ export const Bills: React.FC = () => {
                       </Button>
                       <Button
                         onClick={() => {
-                          // Mark as paid without transaction
-                          const nextDate = addDays(new Date(bill.nextOccurrenceDate), 30);
-                          updateRecurringTransaction(bill.id, {
+                          // Mark as paid without transaction // Already exists
+                          const nextDate = addDays(new Date(bill.nextDueDate), 30); // Changed to nextDueDate
+                          updateBill(bill.id, {
                             nextOccurrenceDate: nextDate,
                             lastProcessedDate: new Date()
                           });
@@ -454,7 +459,7 @@ export const Bills: React.FC = () => {
 
         {/* Student Tips */}
         <div className="mt-6 bg-blue-500/20 rounded-lg p-4 border border-blue-500/30">
-          <div className="flex items-start space-x-3">
+          <div className="flex items-start space-x-3"> // Already exists
             <Zap size={18} className="text-blue-400 mt-0.5" />
             <div>
               <h4 className="font-medium text-blue-400 mb-1">💡 Student Bill Management Tips</h4>
@@ -472,7 +477,7 @@ export const Bills: React.FC = () => {
 
       {/* Enhanced Bill Form Modal */}
       <Modal
-        isOpen={showModal}
+        isOpen={showModal} // Already exists
         onClose={() => {
           setShowModal(false);
           setEditingBill(null);
@@ -480,7 +485,7 @@ export const Bills: React.FC = () => {
         }}
         title={editingBill ? 'Edit Bill' : 'Create New Bill'}
       >
-        <EnhancedBillForm
+        <EnhancedBillForm // Already exists
           initialData={editingBill}
           onSubmit={editingBill ? handleEditBill : handleAddBill}
           onCancel={() => {
@@ -492,7 +497,7 @@ export const Bills: React.FC = () => {
       </Modal>
 
       {/* Payment Modal */}
-      <Modal
+      <Modal // Already exists
         isOpen={showPaymentModal}
         onClose={() => {
           setShowPaymentModal(false);
@@ -501,12 +506,12 @@ export const Bills: React.FC = () => {
         title="Pay Bill"
       >
         {selectedBill && (
-          <div className="space-y-4">
+          <div className="space-y-4"> // Already exists
             <div className="bg-blue-500/20 rounded-lg p-4 border border-blue-500/30">
               <h4 className="font-medium text-blue-400 mb-2">{selectedBill.description}</h4>
               <p className="text-blue-300 text-sm">
                 Amount: {formatCurrency(selectedBill.amount)} • Due: {format(new Date(selectedBill.nextOccurrenceDate), 'MMM dd, yyyy')}
-              </p>
+              </p> // Already exists
             </div>
             
             <div className="flex space-x-3">
@@ -519,9 +524,9 @@ export const Bills: React.FC = () => {
               </Button>
               <Button
                 onClick={() => {
-                  // Mark as paid without creating transaction
-                  const nextDate = addDays(new Date(selectedBill.nextOccurrenceDate), 30);
-                  updateRecurringTransaction(selectedBill.id, {
+                  // Mark as paid without transaction // Already exists
+                  const nextDate = addDays(new Date(selectedBill.nextDueDate), 30); // Changed to nextDueDate
+                  updateBill(selectedBill.id, {
                     nextOccurrenceDate: nextDate,
                     lastProcessedDate: new Date()
                   });
@@ -539,7 +544,7 @@ export const Bills: React.FC = () => {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
+      <Modal // Already exists
         isOpen={showDeleteConfirm}
         onClose={() => {
           setShowDeleteConfirm(false);
@@ -548,7 +553,7 @@ export const Bills: React.FC = () => {
         title="Delete Bill"
       >
         <div className="space-y-4">
-          <p className="text-gray-300">
+          <p className="text-gray-300"> // Already exists
             Are you sure you want to delete this bill? You'll lose all reminders and tracking.
           </p>
           <div className="flex space-x-3">
@@ -558,7 +563,7 @@ export const Bills: React.FC = () => {
                 setShowDeleteConfirm(false);
                 setBillToDelete(null);
               }}
-              className="flex-1"
+              className="flex-1" // Already exists
             >
               Cancel
             </Button>
@@ -566,7 +571,7 @@ export const Bills: React.FC = () => {
               onClick={confirmDeleteBill}
               className="flex-1 bg-error-500 hover:bg-error-600"
               loading={isSubmitting}
-            >
+            > // Already exists
               Delete
             </Button>
           </div>

@@ -68,7 +68,7 @@ export const Liabilities: React.FC = () => {
   const handleMakePayment = async (paymentData: { amount: number; description: string; createTransaction: boolean }) => {
     const liability = liabilities.find(l => l.id === selectedLiability);
     if (!liability) return;
-
+    
     try {
       setIsSubmitting(true);
       setError(null);
@@ -87,12 +87,22 @@ export const Liabilities: React.FC = () => {
           category: 'Debt Payment',
           description: paymentData.description || `Payment for ${liability.name}`,
           date: new Date(),
-          accountId: liability.accountId // Use default payment account
+          accountId: liability.defaultPaymentAccountId // Use default payment account
         });
       }
-
+      
       // Update liability remaining amount
-      await updateLiability(selectedLiability!, {
+      await updateLiability(liability.id, {
+        // Update specific fields
+        totalAmount: liability.totaltotalAmount,
+        remainingAmount: Math.max(0, currentRemaining - actualPayment),
+        interestRate: liability.interestRate,
+        monthlyPayment: liability.monthlyPayment,
+        paymentDay: liability.paymentDay,
+        startDate: liability.startDate,
+        dueDate: liability.dueDate,
+        nextPaymentDate: liability.nextPaymentDate,
+        status: Math.max(0, currentRemaining - actualPayment) === 0 ? 'paid_off' : liability.status,
         remainingAmount: Math.max(0, currentRemaining - actualPayment)
       });
       
@@ -180,7 +190,7 @@ export const Liabilities: React.FC = () => {
       return { status: 'paid_off', color: 'success', label: '✅ Paid Off' };
     }
     
-    const daysUntilDue = differenceInDays(new Date(liability.due_date), new Date());
+    const daysUntilDue = differenceInDays(new Date(liability.nextPaymentDate), new Date());
     
     if (daysUntilDue < 0) {
       return { status: 'overdue', color: 'error', label: '⚠️ Overdue' };
@@ -198,7 +208,7 @@ export const Liabilities: React.FC = () => {
   };
 
   const totalDebt = liabilities.reduce((sum, l) => sum + (Number(l.remainingAmount) || 0), 0);
-  const totalMonthlyPayments = liabilities.reduce((sum, l) => sum + (Number(l.monthlyPayment) || 0), 0);
+  const totalMonthlyPayments = liabilities.reduce((sum, l) => sum + (Number(l.monthlyPayment || l.minimumPayment) || 0), 0);
   const activeLiabilities = liabilities.filter(l => (Number(l.remainingAmount) || 0) > 0);
 
   return (
@@ -320,7 +330,7 @@ export const Liabilities: React.FC = () => {
                 {liabilities.map((liability) => {
                   const totalAmount = Number(liability.totalAmount) || 0;
                   const remainingAmount = Number(liability.remainingAmount) || 0;
-                  const monthlyPayment = Number(liability.monthlyPayment) || 0;
+                  const monthlyPayment = Number(liability.monthlyPayment || liability.minimumPayment) || 0;
                   const interestRate = Number(liability.interestRate) || 0;
                   
                   const payoffProgress = totalAmount > 0 ? ((totalAmount - remainingAmount) / totalAmount) * 100 : 0;
@@ -403,7 +413,7 @@ export const Liabilities: React.FC = () => {
                         <div>
                           <p className="text-xs text-gray-400">Due Date</p>
                           <p className="text-sm font-medium text-white">
-                            {format(liability.due_date, 'MMM dd')}
+                            {format(liability.nextPaymentDate || liability.dueDate, 'MMM dd')}
                           </p>
                         </div>
                       </div>
@@ -509,7 +519,7 @@ export const Liabilities: React.FC = () => {
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-white">
-                            {formatCurrency(Number(liability.monthlyPayment) || 0)}
+                            {formatCurrency(Number(liability.monthlyPayment || liability.minimumPayment) || 0)}
                           </p>
                           <p className="text-xs text-gray-400">
                             {format(liability.due_date, 'MMM dd')}
@@ -577,7 +587,18 @@ export const Liabilities: React.FC = () => {
       >
         {editingLiability && (
           <EnhancedLiabilityForm
-            initialData={editingLiability}
+            initialData={{
+              ...editingLiability,
+              // Ensure date fields are strings for form
+              startDate: editingLiability.startDate.toISOString().split('T')[0],
+              dueDate: editingLiability.dueDate?.toISOString().split('T')[0],
+              nextPaymentDate: editingLiability.nextPaymentDate?.toISOString().split('T')[0],
+              // Map liabilityType back to type for form compatibility if needed
+              type: editingLiability.liabilityType,
+              // Ensure numeric fields are numbers
+              totalAmount: Number(editingLiability.totalAmount),
+              remainingAmount: Number(editingLiability.remainingAmount),
+            }}
             onSubmit={async (data) => {
               await updateLiability(editingLiability.id, data);
               setShowEditModal(false);

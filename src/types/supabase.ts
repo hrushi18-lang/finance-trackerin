@@ -12,11 +12,12 @@ export interface Database {
       profiles: {
         Row: {
           id: string
-          email: string
-          name: string
           avatar_url: string | null
           created_at: string
-          updated_at: string
+          email: string | null
+          avatar_url: string | null
+          name: string | null
+          updated_at: string | null
         }
         Insert: {
           id: string
@@ -24,10 +25,10 @@ export interface Database {
           name: string
           avatar_url?: string | null
           created_at?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          id?: string
+          avatar_url?: string | null
           email?: string
           name?: string
           avatar_url?: string | null
@@ -38,10 +39,18 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          type: 'income' | 'expense'
+          account_id: string
+          affects_balance: boolean
           amount: number
+          attachments: Json | null
           category: string
+          created_at: string
+          date: string
           description: string
+          exchange_rate: number
+          is_refund: boolean
+          is_split: boolean
+          notes: string | null
           date: string
           created_at: string
           updated_at: string
@@ -49,11 +58,21 @@ export interface Database {
         }
         Insert: {
           id?: string
-          user_id: string
-          type: 'income' | 'expense'
+          account_id: string
+          affects_balance?: boolean
           amount: number
+          attachments?: Json | null
           category: string
+          created_at?: string
+          date: string
           description: string
+          exchange_rate?: number
+          is_refund?: boolean
+          is_split?: boolean
+          notes?: string | null
+          original_amount?: number | null
+          original_currency?: string | null
+          original_transaction_id?: string | null
           date: string
           created_at?: string
           updated_at?: string
@@ -61,10 +80,20 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string
-          type?: 'income' | 'expense'
+          account_id?: string
+          affects_balance?: boolean
           amount?: number
+          attachments?: Json | null
           category?: string
+          created_at?: string
+          date?: string
+          description?: string
+          exchange_rate?: number
+          is_refund?: boolean
+          is_split?: boolean
+          notes?: string | null
+          original_amount?: number | null
+          original_currency?: string | null
           description?: string
           date?: string
           updated_at?: string
@@ -75,10 +104,10 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          title: string
-          description: string
-          target_amount: number
-          current_amount: number
+          category: string
+          created_at: string
+          current_amount: number | null
+          description: string | null
           target_date: string
           category: string
           created_at: string
@@ -87,10 +116,10 @@ export interface Database {
         Insert: {
           id?: string
           user_id: string
-          title: string
-          description: string
-          target_amount: number
-          current_amount?: number
+          category: string
+          created_at?: string
+          current_amount?: number | null
+          description?: string | null
           target_date: string
           category: string
           created_at?: string
@@ -98,11 +127,10 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string
-          title?: string
-          description?: string
-          target_amount?: number
-          current_amount?: number
+          category?: string
+          created_at?: string
+          current_amount?: number | null
+          description?: string | null
           target_date?: string
           category?: string
           updated_at?: string
@@ -112,10 +140,10 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          name: string
-          type: 'loan' | 'credit_card' | 'mortgage' | 'other'
-          total_amount: number
-          remaining_amount: number
+          created_at: string
+          due_date: string
+          interest_rate: number
+          monthly_payment: number
           interest_rate: number
           monthly_payment: number
           due_date: string
@@ -125,10 +153,10 @@ export interface Database {
         Insert: {
           id?: string
           user_id: string
-          name: string
-          type: 'loan' | 'credit_card' | 'mortgage' | 'other'
-          total_amount: number
-          remaining_amount: number
+          created_at?: string
+          due_date: string
+          interest_rate: number
+          monthly_payment: number
           interest_rate: number
           monthly_payment: number
           due_date: string
@@ -137,11 +165,10 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_id?: string
-          name?: string
-          type?: 'loan' | 'credit_card' | 'mortgage' | 'other'
-          total_amount?: number
-          remaining_amount?: number
+          created_at?: string
+          due_date?: string
+          interest_rate?: number
+          monthly_payment?: number
           interest_rate?: number
           monthly_payment?: number
           due_date?: string
@@ -152,9 +179,9 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          category: string
           amount: number
-          spent: number
+          category: string
+          created_at: string
           period: 'weekly' | 'monthly' | 'yearly'
           created_at: string
           updated_at: string
@@ -164,9 +191,9 @@ export interface Database {
           user_id: string
           category: string
           amount: number
-          spent?: number
-          period: 'weekly' | 'monthly' | 'yearly'
           created_at?: string
+          period: 'weekly' | 'monthly' | 'yearly'
+          spent?: number | null
           updated_at?: string
         }
         Update: {
@@ -174,8 +201,9 @@ export interface Database {
           user_id?: string
           category?: string
           amount?: number
-          spent?: number
+          created_at?: string
           period?: 'weekly' | 'monthly' | 'yearly'
+          spent?: number | null
           updated_at?: string
         }
       }
@@ -188,10 +216,18 @@ export interface Database {
           category: string
           description: string
           frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'
+          account_id: string | null
+          auto_create: boolean
+          auto_pay: boolean
+          auto_process: boolean
+          bill_type: string | null
           start_date: string
           end_date: string | null
+          is_bill: boolean
+          last_reminder_sent: string | null
           next_occurrence_date: string
           last_processed_date: string | null
+          notification_days: number
           is_active: boolean
           day_of_week: number | null
           day_of_month: number | null
@@ -199,10 +235,14 @@ export interface Database {
           max_occurrences: number | null
           current_occurrences: number
           created_at: string
+          priority: string
+          reminder_days: number
+          smart_reminders: boolean
+          status: string | null
           updated_at: string
         }
         Insert: {
-          id?: string
+          account_id?: string | null
           user_id: string
           type: 'income' | 'expense'
           amount: number
@@ -210,10 +250,18 @@ export interface Database {
           description: string
           frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'
           start_date: string
+          auto_create?: boolean
+          auto_pay?: boolean
+          auto_process?: boolean
+          bill_type?: string | null
           end_date?: string | null
+          is_bill?: boolean
+          last_reminder_sent?: string | null
           next_occurrence_date: string
           last_processed_date?: string | null
           is_active?: boolean
+          notification_days?: number
+          priority?: string
           day_of_week?: number | null
           day_of_month?: number | null
           month_of_year?: number | null
@@ -221,9 +269,13 @@ export interface Database {
           current_occurrences?: number
           created_at?: string
           updated_at?: string
+          reminder_days?: number
+          smart_reminders?: boolean
+          status?: string | null
         }
         Update: {
           id?: string
+          account_id?: string | null
           user_id?: string
           type?: 'income' | 'expense'
           amount?: number
@@ -232,16 +284,27 @@ export interface Database {
           frequency?: 'daily' | 'weekly' | 'monthly' | 'yearly'
           start_date?: string
           end_date?: string | null
+          auto_create?: boolean
+          auto_pay?: boolean
+          auto_process?: boolean
+          bill_type?: string | null
+          is_bill?: boolean
+          last_reminder_sent?: string | null
           next_occurrence_date?: string
           last_processed_date?: string | null
           is_active?: boolean
+          notification_days?: number
           day_of_week?: number | null
+          priority?: string
           day_of_month?: number | null
           month_of_year?: number | null
           max_occurrences?: number | null
           current_occurrences?: number
+          created_at?: string
           updated_at?: string
         }
+        reminder_days?: number
+        smart_reminders?: boolean
       }
     }
     Functions: {

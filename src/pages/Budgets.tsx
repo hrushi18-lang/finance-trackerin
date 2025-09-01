@@ -37,7 +37,7 @@ export const Budgets: React.FC = () => {
     try {
       setIsSubmitting(true);
       setError(null);
-      
+
       if (editingBudget) {
         await updateBudget(editingBudget, budget);
         setEditingBudget(null);
@@ -94,7 +94,7 @@ export const Budgets: React.FC = () => {
   };
 
   const totalBudgeted = budgets.reduce((sum, b) => sum + b.amount, 0);
-  const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
+  const totalSpent = budgets.reduce((sum, b) => sum + (b.spent || 0), 0);
   const overallUtilization = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
 
   const budgetToEdit = editingBudget ? budgets.find(b => b.id === editingBudget) : null;
@@ -177,7 +177,7 @@ export const Budgets: React.FC = () => {
                 const utilization = (budget.spent / budget.amount) * 100;
                 const { status, color } = getBudgetStatus(budget);
                 const remaining = budget.amount - budget.spent;
-                
+
                 return (
                   <div key={budget.id} className="bg-black/20 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-white/10">
                     {/* Header */}

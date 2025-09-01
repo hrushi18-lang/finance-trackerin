@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CreditCard, Plus, Trash2 } from 'lucide-react';
-import { Button } from '../common/Button';
+import { Button } from '../common/Button'; // Already exists
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 
 interface LiabilityData {
@@ -19,7 +19,7 @@ interface OnboardingLiabilitiesProps {
 export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({ 
   onNext, 
   onPrev, 
-  initialData,
+  initialData, // Already exists
   canGoBack = true
 }) => {
   const { currency } = useInternationalization();
@@ -32,7 +32,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
   });
 
   const addLiability = () => {
-    if (newLiability.name.trim() && newLiability.amount > 0) {
+    if (newLiability.name.trim() && newLiability.amount > 0) { // Already exists
       setLiabilities([...liabilities, { ...newLiability }]);
       setNewLiability({ name: '', amount: 0, type: 'loan' });
       setShowAddForm(false);
@@ -40,7 +40,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
   };
 
   const removeLiability = (index: number) => {
-    setLiabilities(prev => prev.filter((_, i) => i !== index));
+    setLiabilities(prev => prev.filter((_, i) => i !== index)); // Already exists
   };
 
   const handleContinue = () => {
@@ -52,7 +52,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
       {/* Header */}
       <div className="text-center">
         <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <CreditCard size={32} className="text-red-400" />
+          <CreditCard size={32} className="text-red-400" /> // Already exists
         </div>
         <h2 className="text-2xl font-bold text-white mb-2">Add Liabilities</h2>
         <p className="text-gray-400">Track your loans, debts, and dues</p>
@@ -60,7 +60,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
 
       {/* Liabilities List */}
       <div className="space-y-3">
-        {liabilities.map((liability, index) => (
+        {liabilities.map((liability, index) => ( // Already exists
           <div key={index} className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/10">
             <div>
               <p className="font-medium text-white">{liability.name}</p>
@@ -68,7 +68,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
             </div>
             <div className="flex items-center space-x-3">
               <span className="font-semibold text-white">{currency.symbol}{liability.amount}</span>
-              <button
+              <button // Already exists
                 onClick={() => removeLiability(index)}
                 className="p-1 hover:bg-error-500/20 rounded transition-colors"
               >
@@ -80,7 +80,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
       </div>
 
       {/* Add Liability Form */}
-      {!showAddForm ? (
+      {!showAddForm ? ( // Already exists
         <button
           onClick={() => setShowAddForm(true)}
           className="w-full py-4 border-2 border-dashed border-white/20 rounded-xl text-gray-300 hover:border-white/30 hover:text-white transition-all flex items-center justify-center space-x-2"
@@ -89,7 +89,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
           <span>Add Liability</span>
         </button>
       ) : (
-        <div className="bg-black/20 rounded-xl p-4 border border-white/10 space-y-4">
+        <div className="bg-black/20 rounded-xl p-4 border border-white/10 space-y-4"> // Already exists
           <input
             type="text"
             placeholder="Liability name (e.g., Student Loan, Credit Card)"
@@ -97,7 +97,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
             onChange={(e) => setNewLiability(prev => ({ ...prev, name: e.target.value }))}
             className="w-full px-4 py-3 bg-black/20 border border-white/20 rounded-lg text-white placeholder-gray-400"
           />
-          
+
           <div className="grid grid-cols-2 gap-3">
             <input
               type="number"
@@ -105,7 +105,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
               value={newLiability.amount || ''}
               onChange={(e) => setNewLiability(prev => ({ ...prev, amount: Number(e.target.value) }))}
               className="w-full px-4 py-3 bg-black/20 border border-white/20 rounded-lg text-white placeholder-gray-400"
-            />
+            /> // Already exists
             
             <select
               value={newLiability.type}
@@ -115,7 +115,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
               <option value="loan">Loan</option>
               <option value="credit_card">Credit Card</option>
               <option value="other">Other</option>
-            </select>
+            </select> // Already exists
           </div>
           
           <div className="flex space-x-3">
@@ -123,7 +123,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
               onClick={() => setShowAddForm(false)}
               variant="outline"
               size="sm"
-              className="flex-1"
+              className="flex-1" // Already exists
             >
               Cancel
             </Button>
@@ -131,7 +131,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
               onClick={addLiability}
               size="sm"
               className="flex-1"
-              disabled={!newLiability.name.trim() || newLiability.amount <= 0}
+              disabled={!newLiability.name.trim() || newLiability.amount <= 0} // Already exists
             >
               Add Liability
             </Button>
@@ -140,7 +140,7 @@ export const OnboardingLiabilities: React.FC<OnboardingLiabilitiesProps> = ({
       )}
 
       {/* Navigation */}
-      <div className="flex space-x-3 pt-4">
+      <div className="flex space-x-3 pt-4"> // Already exists
         {canGoBack && (
           <Button type="button" variant="outline" onClick={onPrev} className="flex-1">
             Back

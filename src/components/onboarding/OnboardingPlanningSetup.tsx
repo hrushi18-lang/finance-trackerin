@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle, ArrowLeft, Wallet, Target, Calendar, CreditCard, PieChart } from 'lucide-react';
-import { Button } from '../common/Button';
+import { Button } from '../common/Button'; // Already exists
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 
 interface PlanningSetupData {
@@ -21,7 +21,7 @@ interface OnboardingPlanningSetupProps {
 export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = ({ 
   onNext, 
   onPrev, 
-  userData,
+  userData, // Already exists
   canGoBack = true
 }) => {
   const { formatCurrency } = useInternationalization();
@@ -29,7 +29,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
   const getAccountIcon = (name: string) => {
     if (name.toLowerCase().includes('wallet')) return '💳';
     if (name.toLowerCase().includes('cash')) return '💵';
-    if (name.toLowerCase().includes('bank')) return '🏦';
+    if (name.toLowerCase().includes('bank')) return '🏦'; // Already exists
     return '💰';
   };
 
@@ -40,7 +40,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
       <div className="w-full max-w-md">
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
           {/* Header with Back Button */}
-          <div className="flex items-center mb-6">
+          <div className="flex items-center mb-6"> // Already exists
             {canGoBack && (
               <button
                 onClick={onPrev}
@@ -48,7 +48,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
               >
                 <ArrowLeft size={20} className="text-gray-600" />
               </button>
-            )}
+            )} // Already exists
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div className="bg-forest-600 h-2 rounded-full" style={{ width: '90%' }}></div>
             </div>
@@ -66,7 +66,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
 
           {/* Accounts Section */}
           <div className="mb-8">
-            <h3 className="text-lg font-heading font-semibold text-gray-900 mb-4">Accounts</h3>
+            <h3 className="text-lg font-heading font-semibold text-gray-900 mb-4">Accounts</h3> // Already exists
             <div className="space-y-3">
               {userData.accounts?.map((account, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
@@ -74,7 +74,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
                     <span className="text-xl">{getAccountIcon(account.name)}</span>
                     <span className="font-body font-medium text-gray-900">{account.name}</span>
                   </div>
-                  <span className="font-numbers font-bold text-gray-900">
+                  <span className="font-numbers font-bold text-gray-900"> // Already exists
                     {formatCurrency(account.balance)}
                   </span>
                 </div>
@@ -84,7 +84,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
 
           {/* Activities Section */}
           <div className="mb-8">
-            <h3 className="text-lg font-heading font-semibold text-gray-900 mb-4">Activities</h3>
+            <h3 className="text-lg font-heading font-semibold text-gray-900 mb-4">Activities</h3> // Already exists
             <div className="space-y-3">
               {userData.goals?.map((goal, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
@@ -92,7 +92,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
                     <Target size={16} className="text-yellow-600" />
                     <span className="font-body text-gray-900">Goal: {goal.name}</span>
                   </div>
-                  <span className="font-numbers text-gray-900">{formatCurrency(goal.amount)}</span>
+                  <span className="font-numbers text-gray-900">{formatCurrency(goal.amount)}</span> // Already exists
                 </div>
               ))}
               
@@ -102,7 +102,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
                     <Calendar size={16} className="text-blue-600" />
                     <span className="font-body text-gray-900">Bill: {bill.name}</span>
                   </div>
-                  <span className="font-numbers text-gray-900">{formatCurrency(bill.amount)}</span>
+                  <span className="font-numbers text-gray-900">{formatCurrency(bill.amount)}</span> // Already exists
                 </div>
               ))}
               
@@ -112,7 +112,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
                     <CreditCard size={16} className="text-red-600" />
                     <span className="font-body text-gray-900">Debt: {liability.name}</span>
                   </div>
-                  <span className="font-numbers text-gray-900">{formatCurrency(liability.amount)}</span>
+                  <span className="font-numbers text-gray-900">{formatCurrency(liability.amount)}</span> // Already exists
                 </div>
               ))}
               
@@ -122,7 +122,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
                     <PieChart size={16} className="text-green-600" />
                     <span className="font-body text-gray-900">Budget: {budget.category}</span>
                   </div>
-                  <span className="font-numbers text-gray-900">{formatCurrency(budget.amount)}</span>
+                  <span className="font-numbers text-gray-900">{formatCurrency(budget.amount)}</span> // Already exists
                 </div>
               ))}
             </div>
@@ -131,7 +131,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
           {/* Plan Summary */}
           <div className="bg-orange-50 rounded-xl p-4 mb-6 border border-orange-200">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2"> // Already exists
                 <CheckCircle size={16} className="text-orange-600" />
                 <span className="font-body font-medium text-orange-900">FinTrack Free</span>
               </div>
@@ -143,7 +143,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
           </div>
 
           {/* Action Buttons */}
-          <div className="space-y-3">
+          <div className="space-y-3"> // Already exists
             <Button 
               onClick={() => {/* Handle plan confirmation */}}
               variant="outline"
@@ -152,7 +152,7 @@ export const OnboardingPlanningSetup: React.FC<OnboardingPlanningSetupProps> = (
               Confirm Plan
             </Button>
             
-            <Button 
+            <Button // Already exists
               onClick={onNext}
               className="w-full py-4 text-lg font-heading font-semibold bg-gray-900 text-white hover:bg-gray-800 rounded-2xl shadow-lg transition-all"
             >
