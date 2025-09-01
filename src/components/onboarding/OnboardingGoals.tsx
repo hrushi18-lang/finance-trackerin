@@ -39,14 +39,13 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
   const riskTolerance = watch('riskTolerance');
 
   const goalOptions = [
-    { id: 'emergency', label: 'Emergency Fund (3 months expenses)', icon: PiggyBank, color: 'red' },
+    { id: 'emergency', label: 'Emergency Fund', icon: PiggyBank, color: 'red' },
     { id: 'laptop', label: 'New Laptop/Phone', icon: Briefcase, color: 'blue' },
-    { id: 'education', label: 'Course/Certification/Skills', icon: GraduationCap, color: 'purple' },
-    { id: 'travel', label: 'Study Abroad/Travel', icon: Plane, color: 'blue' },
+    { id: 'education', label: 'Course/Certification', icon: GraduationCap, color: 'purple' },
+    { id: 'travel', label: 'Study Abroad', icon: Plane, color: 'blue' },
     { id: 'car', label: 'First Car/Bike', icon: Car, color: 'gray' },
     { id: 'internship', label: 'Internship Fund', icon: Briefcase, color: 'green' },
-    { id: 'business', label: 'Start a Side Business', icon: Building, color: 'orange' },
-    { id: 'other', label: 'Other Personal Goal', icon: Target, color: 'indigo' }
+    { id: 'other', label: 'Other Goal', icon: Target, color: 'indigo' }
   ];
 
   const timeOptions = [
@@ -182,10 +181,9 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
           <div className="flex items-start space-x-2">
             <span className="text-red-400 mt-0.5">🚨</span>
             <div>
-              <p className="text-red-400 font-medium text-sm">Why Emergency Fund Matters</p>
+              <p className="text-red-400 font-medium text-sm">💡 Why Emergency Fund Matters</p>
               <p className="text-red-300 text-sm mt-1">
-                Life happens - phone breaks, medical bills, family emergencies. An emergency fund means you won't need to 
-                borrow money or stress about unexpected costs. Start with ₹10,000 and build from there!
+                Life happens - phone breaks, medical bills, family emergencies. An emergency fund means you won't need to borrow money or stress about unexpected costs. Start with {currency.symbol}1,000 and build from there!
               </p>
             </div>
           </div>

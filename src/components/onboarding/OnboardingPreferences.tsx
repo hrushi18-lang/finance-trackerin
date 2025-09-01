@@ -75,7 +75,7 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
         <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
           <Settings size={32} className="text-purple-400" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">Activate your financial coach</h2>
+        <h2 className="text-2xl font-bold text-white mb-2">🤖 Activate Your Financial Coach</h2>
         <p className="text-gray-400">Set up smart reminders to keep you on track</p>
       </div>
 
@@ -84,7 +84,7 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
         <div className="flex items-start space-x-3">
           <span className="text-2xl">🤖</span>
           <div>
-            <h3 className="font-semibold text-white mb-2">Your Personal Financial Coach</h3>
+            <h3 className="font-semibold text-white mb-2">🎯 Your Personal Financial Coach</h3>
             <div className="text-sm text-gray-300 space-y-1">
               <p>• <strong className="text-purple-400">Bill Reminders:</strong> Never miss rent, phone bills, or EMI payments</p>
               <p>• <strong className="text-blue-400">Budget Alerts:</strong> Get warned before you overspend in any category</p>
@@ -190,7 +190,7 @@ export const OnboardingPreferences: React.FC<OnboardingPreferencesProps> = ({
           <div className="flex items-start space-x-2">
             <span className="text-yellow-400 mt-0.5">💡</span>
             <p className="text-yellow-300 text-sm">
-              <strong>Pro Tip:</strong> Students who use reminders are 3x more likely to stick to their budgets and reach their goals. 
+              <strong>🎓 Student Success Tip:</strong> Students who use reminders are 3x more likely to stick to their budgets and reach their goals. 
               Your coach will send gentle nudges, not annoying spam!
             </p>
           </div>

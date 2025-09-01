@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { OnboardingWelcome } from './OnboardingWelcome';
-import { OnboardingProfile } from './OnboardingProfile';
-import { OnboardingUserClassification } from './OnboardingUserClassification';
+import { OnboardingUserDetails } from './OnboardingUserDetails';
 import { OnboardingAccountsSetup } from './OnboardingAccountsSetup';
-import { OnboardingIncomeSetup } from './OnboardingIncomeSetup';
-import { OnboardingFinancialActivities } from './OnboardingFinancialActivities';
+import { OnboardingCategories } from './OnboardingCategories';
 import { OnboardingGoals } from './OnboardingGoals';
+import { OnboardingActivities } from './OnboardingActivities';
+import { OnboardingBills } from './OnboardingBills';
+import { OnboardingLiabilities } from './OnboardingLiabilities';
+import { OnboardingBudgets } from './OnboardingBudgets';
 import { OnboardingPreferences } from './OnboardingPreferences';
-import { OnboardingFinancial } from './OnboardingFinancial';
+import { OnboardingPlanningSetup } from './OnboardingPlanningSetup';
 import { OnboardingComplete } from './OnboardingComplete';
 import { useAuth } from '../../contexts/AuthContext';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
@@ -19,38 +21,21 @@ interface OnboardingData {
   // Profile data
   name?: string;
   age?: number;
-  occupation?: string;
+  profession?: string;
   country?: string;
-  monthlyIncome?: number;
-  experience?: 'beginner' | 'intermediate' | 'advanced';
-  
-  // User classification
-  userTypes?: string[];
-  primaryFocus?: string[];
-  
-  // Income setup
-  incomeSources?: Array<{
-    type: string;
-    amount: number;
-    frequency: 'weekly' | 'monthly' | 'yearly' | 'irregular';
-    description: string;
-  }>;
-  totalMonthlyIncome?: number;
-  incomeStability?: 'stable' | 'variable' | 'irregular';
-  
-  // Financial activities
-  hasInvestments?: boolean;
-  hasDebts?: boolean;
-  hasMultipleIncomes?: boolean;
-  hasMultipleAccounts?: boolean;
-  usesCreditCards?: boolean;
-  hasEmergencyFund?: boolean;
-  tracksExpenses?: boolean;
-  usesBudgets?: boolean;
-  
-  // Financial data
-  initialBalance?: number;
   currency?: string;
+  monthlyIncome?: number;
+  
+  // Account data
+  accounts?: Array<{
+    name: string;
+    type: string;
+    balance: number;
+  }>;
+  
+  // Categories
+  selectedCategories?: string[];
+  customCategories?: string[];
   
   // Goals data
   primaryGoals?: string[];
@@ -58,8 +43,13 @@ interface OnboardingData {
   timeHorizon?: '1year' | '2-5years' | '5-10years' | '10+years';
   riskTolerance?: 'conservative' | 'moderate' | 'aggressive';
   
+  // Activities
+  goals?: Array<{ name: string; amount: number }>;
+  bills?: Array<{ name: string; amount: number; frequency: string }>;
+  liabilities?: Array<{ name: string; amount: number; type: string }>;
+  budgets?: Array<{ category: string; amount: number; period: string }>;
+  
   // Preferences data
-  currency?: string;
   budgetPeriod?: 'weekly' | 'monthly' | 'yearly';
   notifications?: {
     budgetAlerts: boolean;
@@ -97,13 +87,16 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
 
   const steps = [
     { title: "Welcome", component: OnboardingWelcome },
-    { title: "Classification", component: OnboardingUserClassification },
-    { title: "Financial", component: OnboardingFinancial },
-    { title: "Profile", component: OnboardingProfile },
-    { title: "Income", component: OnboardingIncomeSetup },
-    { title: "Activities", component: OnboardingFinancialActivities },
+    { title: "User Details", component: OnboardingUserDetails },
+    { title: "Accounts", component: OnboardingAccountsSetup },
+    { title: "Categories", component: OnboardingCategories },
     { title: "Goals", component: OnboardingGoals },
+    { title: "Activities", component: OnboardingActivities },
+    { title: "Bills", component: OnboardingBills },
+    { title: "Liabilities", component: OnboardingLiabilities },
+    { title: "Budgets", component: OnboardingBudgets },
     { title: "Preferences", component: OnboardingPreferences },
+    { title: "Planning", component: OnboardingPlanningSetup },
     { title: "Complete", component: OnboardingComplete },
   ];
 

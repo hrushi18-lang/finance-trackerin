@@ -50,13 +50,14 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
         
         <div>
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">
-            Welcome to <span className="text-primary-400 bg-gradient-to-r from-primary-400 to-blue-400 bg-clip-text text-transparent">FinTrack</span>
+            Meet Your <span className="text-primary-400 bg-gradient-to-r from-primary-400 to-blue-400 bg-clip-text text-transparent">Financial Coach</span>
           </h1>
-          <p className="text-xl sm:text-2xl font-medium text-primary-300 mb-2">
-            Your Personal Finance Coach
+          <p className="text-xl sm:text-2xl font-medium text-primary-300 mb-4">
+            FinTrack - Build Money Discipline Through Manual Tracking
           </p>
-          <p className="text-base sm:text-lg text-gray-300 max-w-md mx-auto">
-            Built for students and young adults who want to take control of their money through active participation and smart tracking.
+          <p className="text-base sm:text-lg text-gray-300 max-w-lg mx-auto leading-relaxed">
+            Unlike apps that just show you numbers, FinTrack makes you <strong className="text-white">actively engage</strong> with every transaction. 
+            In just 2 minutes, we'll set up your personal financial coaching system. Every transaction you manually track makes you more aware of your spending patterns and builds lasting money discipline.
           </p>
         </div>
         
@@ -123,17 +124,6 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
             <span>Secure & Private</span>
           </div>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">
-          Meet Your <span className="text-primary-400 bg-gradient-to-r from-primary-400 to-blue-400 bg-clip-text text-transparent">Financial Coach</span>
-        </h1>
-        <p className="text-xl sm:text-2xl font-medium text-primary-300 mb-4">
-          FinTrack - Build Money Discipline Through Manual Tracking
-        </p>
-        <h3 className="font-semibold text-white mb-2">🚀 Your Financial Coach Awaits</h3>
-        <p className="text-base sm:text-lg text-gray-300 max-w-lg mx-auto leading-relaxed">
-          Unlike apps that just show you numbers, FinTrack makes you <strong className="text-white">actively engage</strong> with every transaction. 
-          In just 2 minutes, we'll set up your personal financial coaching system. Every transaction you manually track makes you more aware of your spending patterns and builds lasting money discipline.
-        </p>
       </div>
 
       <Button onClick={onNext} className="w-full py-4 text-lg bg-gradient-to-r from-primary-500 to-blue-500 hover:from-primary-600 hover:to-blue-600 shadow-xl">
