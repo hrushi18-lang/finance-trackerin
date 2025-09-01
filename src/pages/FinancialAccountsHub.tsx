@@ -180,7 +180,7 @@ export const FinancialAccountsHub: React.FC = () => {
     return (transactions || [])
       .filter(t => t.accountId === accountId)
       .slice(0, 5);
-  }; // Already exists
+  };
 
   // Get goals linked to account
   const getAccountGoals = (accountId: string) => {
