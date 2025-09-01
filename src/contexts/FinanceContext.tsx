@@ -1,685 +1,1387 @@
-import React, { useState } from 'react';
-import { Plus, Eye, EyeOff, CreditCard, Wallet, Building, Smartphone, TrendingUp, Edit3, Trash2, ArrowLeftRight, DollarSign, Calendar, BarChart3, AlertCircle, CheckCircle, Info } from 'lucide-react';
-import { format } from 'date-fns';
-import { TopNavigation } from '../components/layout/TopNavigation'; // Already exists
-import { Button } from '../components/common/Button'; // Already exists
-import { Modal } from '../components/common/Modal'; // Already exists
-import { AccountForm } from '../components/forms/AccountForm'; // Already exists
-import { TransferForm } from '../components/forms/TransferForm'; // Already exists
-import { TransactionForm } from '../components/forms/TransactionForm'; // Already exists
-import { useFinance } from '../contexts/FinanceContext'; // Already exists
-import { useInternationalization } from '../contexts/InternationalizationContext';
-import { CurrencyIcon } from '../components/common/CurrencyIcon';
-import { FinancialAccount, Transaction } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
+import { 
+  FinancialAccount, 
+  Transaction, 
+  Goal, 
+  EnhancedLiability, 
+  Budget, 
+  Bill,
+  RecurringTransaction,
+  IncomeSource,
+  AccountTransfer,
+  UserCategory,
+  BillReminder,
+  DebtPayment,
+  TransactionSplit,
+  FinancialInsight
+} from '../types';
 
-export const FinancialAccountsHub: React.FC = () => {
-  const { 
-    accounts, 
-    addAccount, 
-    updateAccount, 
-    deleteAccount, 
-    transferBetweenAccounts, 
-    transactions, 
-    goals, 
-    liabilities, 
-    budgets,
-    addTransaction 
-  } = useFinance();
-  const { formatCurrency, currency } = useInternationalization();
+interface FinanceContextType {
+  // Data
+  accounts: FinancialAccount[];
+  transactions: Transaction[];
+  goals: Goal[];
+  liabilities: EnhancedLiability[];
+  budgets: Budget[];
+  bills: Bill[];
+  recurringTransactions: RecurringTransaction[];
+  incomeSource: IncomeSource[];
+  accountTransfers: AccountTransfer[];
+  userCategories: UserCategory[];
+  billReminders: BillReminder[];
+  debtPayments: DebtPayment[];
+  transactionSplits: TransactionSplit[];
+  financialInsights: FinancialInsight[];
   
-  const [showAccountModal, setShowAccountModal] = useState(false);
-  const [showTransferModal, setShowTransferModal] = useState(false);
-  const [showMockTransactionModal, setShowMockTransactionModal] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<FinancialAccount | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
-  const [selectedAccountForMock, setSelectedAccountForMock] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showBalances, setShowBalances] = useState(true);
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Loading states
+  loading: boolean;
+  
+  // CRUD operations
+  addAccount: (account: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateAccount: (id: string, updates: Partial<FinancialAccount>) => Promise<void>;
+  deleteAccount: (id: string) => Promise<void>;
+  
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  
+  addGoal: (goal: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
+  
+  addLiability: (liability: Omit<EnhancedLiability, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateLiability: (id: string, updates: Partial<EnhancedLiability>) => Promise<void>;
+  deleteLiability: (id: string) => Promise<void>;
+  
+  addBudget: (budget: Omit<Budget, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateBudget: (id: string, updates: Partial<Budget>) => Promise<void>;
+  deleteBudget: (id: string) => Promise<void>;
+  
+  addBill: (bill: Omit<Bill, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateBill: (id: string, updates: Partial<Bill>) => Promise<void>;
+  deleteBill: (id: string) => Promise<void>;
+  
+  addRecurringTransaction: (rt: Omit<RecurringTransaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateRecurringTransaction: (id: string, updates: Partial<RecurringTransaction>) => Promise<void>;
+  deleteRecurringTransaction: (id: string) => Promise<void>;
+  
+  transferBetweenAccounts: (fromAccountId: string, toAccountId: string, amount: number, description: string) => Promise<void>;
+  
+  // Statistics
+  stats: {
+    totalIncome: number;
+    totalExpenses: number;
+    totalLiabilities: number;
+    totalSavings: number;
+    monthlyIncome: number;
+    monthlyExpenses: number;
+  };
+}
 
-  const handleAddAccount = async (data: any) => {
-    try { // Already exists
-      setIsSubmitting(true);
-      setError(null);
-      await addAccount(data);
-      setShowAccountModal(false);
-    } catch (error: any) {
-      console.error('Error adding account:', error);
-      setError(error.message || 'Failed to add account');
-    } finally {
-      setIsSubmitting(false);
+const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
+
+export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [liabilities, setLiabilities] = useState<EnhancedLiability[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
+  const [incomeSource, setIncomeSource] = useState<IncomeSource[]>([]);
+  const [accountTransfers, setAccountTransfers] = useState<AccountTransfer[]>([]);
+  const [userCategories, setUserCategories] = useState<UserCategory[]>([]);
+  const [billReminders, setBillReminders] = useState<BillReminder[]>([]);
+  const [debtPayments, setDebtPayments] = useState<DebtPayment[]>([]);
+  const [transactionSplits, setTransactionSplits] = useState<TransactionSplit[]>([]);
+  const [financialInsights, setFinancialInsights] = useState<FinancialInsight[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load all data when user changes
+  useEffect(() => {
+    if (user) {
+      loadAllData();
+    } else {
+      // Clear data when user logs out
+      setAccounts([]);
+      setTransactions([]);
+      setGoals([]);
+      setLiabilities([]);
+      setBudgets([]);
+      setBills([]);
+      setRecurringTransactions([]);
+      setIncomeSource([]);
+      setAccountTransfers([]);
+      setUserCategories([]);
+      setBillReminders([]);
+      setDebtPayments([]);
+      setTransactionSplits([]);
+      setFinancialInsights([]);
+      setLoading(false);
     }
-  };
+  }, [user]);
 
-  const handleEditAccount = async (data: any) => {
-    try { // Already exists
-      setIsSubmitting(true);
-      setError(null);
-      if (editingAccount) {
-        await updateAccount(editingAccount.id, data);
-        setEditingAccount(null);
-        setShowAccountModal(false);
-      }
-    } catch (error: any) {
-      console.error('Error updating account:', error);
-      setError(error.message || 'Failed to update account');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteAccount = (accountId: string) => {
-    setAccountToDelete(accountId); // Already exists
-    setShowDeleteConfirm(true);
-  };
-
-  const confirmDeleteAccount = async () => {
+  const loadAllData = async () => {
+    if (!user) return;
+    
+    setLoading(true);
     try {
-      setIsSubmitting(true);
-      if (accountToDelete) {
-        await deleteAccount(accountToDelete); // Already exists
-        setAccountToDelete(null);
-        setShowDeleteConfirm(false);
-      }
-    } catch (error: any) {
-      console.error('Error deleting account:', error);
-      setError(error.message || 'Failed to delete account');
+      await Promise.all([
+        loadAccounts(),
+        loadTransactions(),
+        loadGoals(),
+        loadLiabilities(),
+        loadBudgets(),
+        loadBills(),
+        loadRecurringTransactions(),
+        loadIncomeSource(),
+        loadAccountTransfers(),
+        loadUserCategories(),
+        loadBillReminders(),
+        loadDebtPayments(),
+        loadTransactionSplits(),
+        loadFinancialInsights()
+      ]);
+    } catch (error) {
+      console.error('Error loading data:', error);
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const handleTransfer = async (data: any) => {
-    try { // Already exists
-      setIsSubmitting(true);
-      setError(null);
-      await transferBetweenAccounts(data.fromAccountId, data.toAccountId, data.amount, data.description);
-      setShowTransferModal(false);
-    } catch (error: any) {
-      console.error('Error transferring funds:', error);
-      setError(error.message || 'Failed to transfer funds');
-    } finally {
-      setIsSubmitting(false);
+  const loadAccounts = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('financial_accounts')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading accounts:', error);
+      return;
     }
+
+    const mappedAccounts: FinancialAccount[] = (data || []).map(account => ({
+      id: account.id,
+      userId: account.user_id,
+      name: account.name,
+      type: account.type,
+      balance: Number(account.balance),
+      institution: account.institution,
+      platform: account.platform,
+      accountNumber: account.account_number,
+      isVisible: account.is_visible,
+      currency: account.currency,
+      createdAt: new Date(account.created_at),
+      updatedAt: new Date(account.updated_at)
+    }));
+
+    setAccounts(mappedAccounts);
   };
 
-  const handleAddMockTransaction = async (data: any) => {
-    try { // Already exists
-      setIsSubmitting(true);
-      setError(null);
-      
-      // Add mock transaction that doesn't affect balance
-      await addTransaction({
-        ...data,
-        accountId: selectedAccountForMock,
-        affectsBalance: false,
-        reason: 'Historical transaction - account setup' // Already exists
-      });
-      
-      setShowMockTransactionModal(false);
-      setSelectedAccountForMock(null);
-    } catch (error: any) {
-      console.error('Error adding mock transaction:', error);
-      setError(error.message || 'Failed to add mock transaction');
-    } finally {
-      setIsSubmitting(false);
+  const loadTransactions = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error loading transactions:', error);
+      return;
     }
+
+    const mappedTransactions: Transaction[] = (data || []).map(transaction => ({
+      id: transaction.id,
+      userId: transaction.user_id,
+      type: transaction.type,
+      amount: Number(transaction.amount),
+      category: transaction.category,
+      description: transaction.description,
+      date: new Date(transaction.date),
+      accountId: transaction.account_id,
+      affectsBalance: transaction.affects_balance,
+      reason: transaction.reason,
+      transferToAccountId: transaction.transfer_to_account_id,
+      status: transaction.status,
+      createdAt: new Date(transaction.created_at),
+      updatedAt: new Date(transaction.updated_at)
+    }));
+
+    setTransactions(mappedTransactions);
   };
 
-  const getAccountIcon = (type: string) => {
-    const icons = {
-      bank_savings: Building,
-      bank_current: Building,
-      bank_student: Building,
-      digital_wallet: Smartphone,
-      cash: Wallet,
-      credit_card: CreditCard,
-      investment: TrendingUp
+  const loadGoals = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading goals:', error);
+      return;
+    }
+
+    const mappedGoals: Goal[] = (data || []).map(goal => ({
+      id: goal.id,
+      userId: goal.user_id,
+      title: goal.title,
+      description: goal.description,
+      targetAmount: Number(goal.target_amount),
+      currentAmount: Number(goal.current_amount || 0),
+      targetDate: new Date(goal.target_date),
+      category: goal.category,
+      createdAt: new Date(goal.created_at),
+      updatedAt: new Date(goal.updated_at)
+    }));
+
+    setGoals(mappedGoals);
+  };
+
+  const loadLiabilities = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('enhanced_liabilities')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading liabilities:', error);
+      return;
+    }
+
+    const mappedLiabilities: EnhancedLiability[] = (data || []).map(liability => ({
+      id: liability.id,
+      userId: liability.user_id,
+      name: liability.name,
+      liabilityType: liability.liability_type,
+      description: liability.description,
+      totalAmount: Number(liability.total_amount),
+      remainingAmount: Number(liability.remaining_amount),
+      interestRate: Number(liability.interest_rate || 0),
+      monthlyPayment: Number(liability.monthly_payment || 0),
+      minimumPayment: Number(liability.minimum_payment || 0),
+      paymentDay: liability.payment_day,
+      loanTermMonths: liability.loan_term_months,
+      remainingTermMonths: liability.remaining_term_months,
+      startDate: new Date(liability.start_date),
+      dueDate: liability.due_date ? new Date(liability.due_date) : undefined,
+      nextPaymentDate: liability.next_payment_date ? new Date(liability.next_payment_date) : undefined,
+      linkedAssetId: liability.linked_asset_id,
+      isSecured: liability.is_secured,
+      disbursementAccountId: liability.disbursement_account_id,
+      defaultPaymentAccountId: liability.default_payment_account_id,
+      providesFunds: liability.provides_funds,
+      affectsCreditScore: liability.affects_credit_score,
+      status: liability.status,
+      isActive: liability.is_active,
+      autoGenerateBills: liability.auto_generate_bills,
+      billGenerationDay: liability.bill_generation_day,
+      createdAt: new Date(liability.created_at),
+      updatedAt: new Date(liability.updated_at)
+    }));
+
+    setLiabilities(mappedLiabilities);
+  };
+
+  const loadBudgets = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('budgets')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading budgets:', error);
+      return;
+    }
+
+    const mappedBudgets: Budget[] = (data || []).map(budget => ({
+      id: budget.id,
+      userId: budget.user_id,
+      category: budget.category,
+      amount: Number(budget.amount),
+      spent: Number(budget.spent || 0),
+      period: budget.period,
+      createdAt: new Date(budget.created_at),
+      updatedAt: new Date(budget.updated_at)
+    }));
+
+    setBudgets(mappedBudgets);
+  };
+
+  const loadBills = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('bills')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading bills:', error);
+      return;
+    }
+
+    const mappedBills: Bill[] = (data || []).map(bill => ({
+      id: bill.id,
+      userId: bill.user_id,
+      title: bill.title,
+      description: bill.description,
+      category: bill.category,
+      billType: bill.bill_type,
+      amount: Number(bill.amount),
+      estimatedAmount: Number(bill.estimated_amount || 0),
+      frequency: bill.frequency,
+      customFrequencyDays: bill.custom_frequency_days,
+      dueDate: new Date(bill.due_date),
+      nextDueDate: new Date(bill.next_due_date),
+      lastPaidDate: bill.last_paid_date ? new Date(bill.last_paid_date) : undefined,
+      defaultAccountId: bill.default_account_id,
+      autoPay: bill.auto_pay,
+      linkedLiabilityId: bill.linked_liability_id,
+      isEmi: bill.is_emi,
+      isActive: bill.is_active,
+      isEssential: bill.is_essential,
+      reminderDaysBefore: bill.reminder_days_before,
+      sendDueDateReminder: bill.send_due_date_reminder,
+      sendOverdueReminder: bill.send_overdue_reminder,
+      createdAt: new Date(bill.created_at),
+      updatedAt: new Date(bill.updated_at)
+    }));
+
+    setBills(mappedBills);
+  };
+
+  const loadRecurringTransactions = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('recurring_transactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading recurring transactions:', error);
+      return;
+    }
+
+    const mappedRecurringTransactions: RecurringTransaction[] = (data || []).map(rt => ({
+      id: rt.id,
+      userId: rt.user_id,
+      type: rt.type,
+      amount: Number(rt.amount),
+      category: rt.category,
+      description: rt.description,
+      frequency: rt.frequency,
+      startDate: new Date(rt.start_date),
+      endDate: rt.end_date ? new Date(rt.end_date) : undefined,
+      nextOccurrenceDate: new Date(rt.next_occurrence_date),
+      lastProcessedDate: rt.last_processed_date ? new Date(rt.last_processed_date) : undefined,
+      isActive: rt.is_active,
+      dayOfWeek: rt.day_of_week,
+      dayOfMonth: rt.day_of_month,
+      monthOfYear: rt.month_of_year,
+      maxOccurrences: rt.max_occurrences,
+      currentOccurrences: rt.current_occurrences,
+      createdAt: new Date(rt.created_at),
+      updatedAt: new Date(rt.updated_at)
+    }));
+
+    setRecurringTransactions(mappedRecurringTransactions);
+  };
+
+  const loadIncomeSource = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('income_sources')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading income sources:', error);
+      return;
+    }
+
+    const mappedIncomeSources: IncomeSource[] = (data || []).map(source => ({
+      id: source.id,
+      userId: source.user_id,
+      name: source.name,
+      type: source.type,
+      amount: Number(source.amount),
+      frequency: source.frequency,
+      isActive: source.is_active,
+      lastReceived: source.last_received ? new Date(source.last_received) : undefined,
+      nextExpected: source.next_expected ? new Date(source.next_expected) : undefined,
+      reliability: source.reliability,
+      createdAt: new Date(source.created_at),
+      updatedAt: new Date(source.updated_at)
+    }));
+
+    setIncomeSource(mappedIncomeSources);
+  };
+
+  const loadAccountTransfers = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('enhanced_account_transfers')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading account transfers:', error);
+      return;
+    }
+
+    const mappedTransfers: AccountTransfer[] = (data || []).map(transfer => ({
+      id: transfer.id,
+      userId: transfer.user_id,
+      fromAccountId: transfer.from_account_id,
+      toAccountId: transfer.to_account_id,
+      amount: Number(transfer.amount),
+      description: transfer.description,
+      transferDate: new Date(transfer.transfer_date),
+      fromTransactionId: transfer.from_transaction_id,
+      toTransactionId: transfer.to_transaction_id,
+      createdAt: new Date(transfer.created_at)
+    }));
+
+    setAccountTransfers(mappedTransfers);
+  };
+
+  const loadUserCategories = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('category_hierarchy')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('Error loading user categories:', error);
+      return;
+    }
+
+    const mappedCategories: UserCategory[] = (data || []).map(category => ({
+      id: category.id,
+      userId: category.user_id,
+      name: category.name,
+      type: category.type,
+      icon: category.icon,
+      color: category.color,
+      parentId: category.parent_id,
+      description: category.description,
+      sortOrder: category.sort_order,
+      createdAt: new Date(category.created_at),
+      updatedAt: new Date(category.updated_at)
+    }));
+
+    setUserCategories(mappedCategories);
+  };
+
+  const loadBillReminders = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('bill_reminders')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('due_date', { ascending: true });
+
+    if (error) {
+      console.error('Error loading bill reminders:', error);
+      return;
+    }
+
+    const mappedReminders: BillReminder[] = (data || []).map(reminder => ({
+      id: reminder.id,
+      userId: reminder.user_id,
+      recurringTransactionId: reminder.recurring_transaction_id,
+      dueDate: new Date(reminder.due_date),
+      amount: Number(reminder.amount),
+      status: reminder.status,
+      reminderDays: reminder.reminder_days,
+      paymentMethod: reminder.payment_method,
+      priority: reminder.priority,
+      createdAt: new Date(reminder.created_at),
+      updatedAt: new Date(reminder.updated_at)
+    }));
+
+    setBillReminders(mappedReminders);
+  };
+
+  const loadDebtPayments = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('liability_payments')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('payment_date', { ascending: false });
+
+    if (error) {
+      console.error('Error loading debt payments:', error);
+      return;
+    }
+
+    const mappedPayments: DebtPayment[] = (data || []).map(payment => ({
+      id: payment.id,
+      userId: payment.user_id,
+      liabilityId: payment.liability_id,
+      paymentAmount: Number(payment.amount),
+      principalAmount: Number(payment.principal_amount),
+      interestAmount: Number(payment.interest_amount),
+      paymentDate: new Date(payment.payment_date),
+      paymentMethod: payment.payment_method,
+      transactionId: payment.transaction_id,
+      createdAt: new Date(payment.created_at)
+    }));
+
+    setDebtPayments(mappedPayments);
+  };
+
+  const loadTransactionSplits = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('transaction_splits')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading transaction splits:', error);
+      return;
+    }
+
+    const mappedSplits: TransactionSplit[] = (data || []).map(split => ({
+      id: split.id,
+      userId: split.user_id,
+      parentTransactionId: split.parent_transaction_id,
+      category: split.category,
+      amount: Number(split.amount),
+      description: split.description,
+      createdAt: new Date(split.created_at)
+    }));
+
+    setTransactionSplits(mappedSplits);
+  };
+
+  const loadFinancialInsights = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('financial_insights')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading financial insights:', error);
+      return;
+    }
+
+    const mappedInsights: FinancialInsight[] = (data || []).map(insight => ({
+      id: insight.id,
+      userId: insight.user_id,
+      insightType: insight.insight_type,
+      title: insight.title,
+      description: insight.description,
+      impactLevel: insight.impact_level,
+      isRead: insight.is_read,
+      expiresAt: insight.expires_at ? new Date(insight.expires_at) : undefined,
+      createdAt: new Date(insight.created_at)
+    }));
+
+    setFinancialInsights(mappedInsights);
+  };
+
+  // CRUD Operations
+  const addAccount = async (accountData: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('financial_accounts')
+      .insert({
+        user_id: user.id,
+        name: accountData.name,
+        type: accountData.type,
+        balance: accountData.balance,
+        institution: accountData.institution,
+        platform: accountData.platform,
+        account_number: accountData.accountNumber,
+        is_visible: accountData.isVisible,
+        currency: accountData.currency
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newAccount: FinancialAccount = {
+      id: data.id,
+      userId: data.user_id,
+      name: data.name,
+      type: data.type,
+      balance: Number(data.balance),
+      institution: data.institution,
+      platform: data.platform,
+      accountNumber: data.account_number,
+      isVisible: data.is_visible,
+      currency: data.currency,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
     };
-    return icons[type as keyof typeof icons] || Wallet;
-  }; // Already exists
 
-  const getAccountColor = (type: string) => {
-    const colors = {
-      bank_savings: 'bg-blue-500',
-      bank_current: 'bg-green-500',
-      bank_student: 'bg-purple-500',
-      digital_wallet: 'bg-orange-500',
-      cash: 'bg-gray-500',
-      credit_card: 'bg-red-500',
-      investment: 'bg-yellow-500'
-    }; // Already exists
-    return colors[type as keyof typeof colors] || 'bg-gray-500';
+    setAccounts(prev => [newAccount, ...prev]);
   };
 
-  const getAccountTypeName = (type: string) => {
-    const names = {
-      bank_savings: 'Savings Account',
-      bank_current: 'Current Account',
-      bank_student: 'Student Account',
-      digital_wallet: 'Digital Wallet',
-      cash: 'Cash',
-      credit_card: 'Credit Card',
-      investment: 'Investment Account'
-    }; // Already exists
-    return names[type as keyof typeof names] || 'Account';
+  const updateAccount = async (id: string, updates: Partial<FinancialAccount>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('financial_accounts')
+      .update({
+        name: updates.name,
+        type: updates.type,
+        balance: updates.balance,
+        institution: updates.institution,
+        platform: updates.platform,
+        account_number: updates.accountNumber,
+        is_visible: updates.isVisible,
+        currency: updates.currency
+      })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setAccounts(prev => prev.map(account => 
+      account.id === id ? { ...account, ...updates } : account
+    ));
   };
 
-  const totalBalance = (accounts || [])
-    .filter(account => account.isVisible)
-    .reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
+  const deleteAccount = async (id: string) => {
+    if (!user) throw new Error('User not authenticated');
 
-  const visibleAccounts = (accounts || []).filter(account => account.isVisible);
-  // Already exists
-  // Get transactions for specific account
-  const getAccountTransactions = (accountId: string) => {
-    return (transactions || [])
-      .filter(t => t.accountId === accountId)
-      .slice(0, 5);
-  }; // Already exists
+    const { error } = await supabase
+      .from('financial_accounts')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
 
-  // Get goals linked to account
-  const getAccountGoals = (accountId: string) => {
-    return (goals || []).filter(g => g.accountId === accountId); // Already exists
+    if (error) throw error;
+
+    setAccounts(prev => prev.filter(account => account.id !== id));
   };
 
-  // Get liabilities linked to account
-  const getAccountLiabilities = (accountId: string) => {
-    return (liabilities || []).filter(l => l.accountId === accountId);
+  const addTransaction = async (transactionData: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: user.id,
+        type: transactionData.type,
+        amount: transactionData.amount,
+        category: transactionData.category,
+        description: transactionData.description,
+        date: transactionData.date.toISOString().split('T')[0],
+        account_id: transactionData.accountId,
+        affects_balance: transactionData.affectsBalance,
+        reason: transactionData.reason,
+        transfer_to_account_id: transactionData.transferToAccountId,
+        status: transactionData.status || 'completed'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newTransaction: Transaction = {
+      id: data.id,
+      userId: data.user_id,
+      type: data.type,
+      amount: Number(data.amount),
+      category: data.category,
+      description: data.description,
+      date: new Date(data.date),
+      accountId: data.account_id,
+      affectsBalance: data.affects_balance,
+      reason: data.reason,
+      transferToAccountId: data.transfer_to_account_id,
+      status: data.status,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
+
+    setTransactions(prev => [newTransaction, ...prev]);
   };
 
-  // Get budgets linked to account
-  const getAccountBudgets = (accountId: string) => { // Already exists
-    return (budgets || []).filter(b => b.accountId === accountId);
+  const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('transactions')
+      .update({
+        type: updates.type,
+        amount: updates.amount,
+        category: updates.category,
+        description: updates.description,
+        date: updates.date?.toISOString().split('T')[0],
+        account_id: updates.accountId,
+        affects_balance: updates.affectsBalance,
+        reason: updates.reason,
+        transfer_to_account_id: updates.transferToAccountId,
+        status: updates.status
+      })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setTransactions(prev => prev.map(transaction => 
+      transaction.id === id ? { ...transaction, ...updates } : transaction
+    ));
   };
 
-  const selectedAccount = selectedAccountId ? accounts?.find(a => a.id === selectedAccountId) : null;
-  const selectedAccountTransactions = selectedAccountId ? getAccountTransactions(selectedAccountId) : [];
-  const selectedAccountGoals = selectedAccountId ? getAccountGoals(selectedAccountId) : [];
-  const selectedAccountLiabilities = selectedAccountId ? getAccountLiabilities(selectedAccountId) : [];
-  const selectedAccountBudgets = selectedAccountId ? getAccountBudgets(selectedAccountId) : [];
+  const deleteTransaction = async (id: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setTransactions(prev => prev.filter(transaction => transaction.id !== id));
+  };
+
+  const addGoal = async (goalData: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('goals')
+      .insert({
+        user_id: user.id,
+        title: goalData.title,
+        description: goalData.description,
+        target_amount: goalData.targetAmount,
+        current_amount: goalData.currentAmount,
+        target_date: goalData.targetDate.toISOString().split('T')[0],
+        category: goalData.category
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newGoal: Goal = {
+      id: data.id,
+      userId: data.user_id,
+      title: data.title,
+      description: data.description,
+      targetAmount: Number(data.target_amount),
+      currentAmount: Number(data.current_amount || 0),
+      targetDate: new Date(data.target_date),
+      category: data.category,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
+
+    setGoals(prev => [newGoal, ...prev]);
+  };
+
+  const updateGoal = async (id: string, updates: Partial<Goal>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('goals')
+      .update({
+        title: updates.title,
+        description: updates.description,
+        target_amount: updates.targetAmount,
+        current_amount: updates.currentAmount,
+        target_date: updates.targetDate?.toISOString().split('T')[0],
+        category: updates.category
+      })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setGoals(prev => prev.map(goal => 
+      goal.id === id ? { ...goal, ...updates } : goal
+    ));
+  };
+
+  const deleteGoal = async (id: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('goals')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setGoals(prev => prev.filter(goal => goal.id !== id));
+  };
+
+  const addLiability = async (liabilityData: Omit<EnhancedLiability, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('enhanced_liabilities')
+      .insert({
+        user_id: user.id,
+        name: liabilityData.name,
+        liability_type: liabilityData.liabilityType,
+        description: liabilityData.description,
+        total_amount: liabilityData.totalAmount,
+        remaining_amount: liabilityData.remainingAmount,
+        interest_rate: liabilityData.interestRate,
+        monthly_payment: liabilityData.monthlyPayment,
+        minimum_payment: liabilityData.minimumPayment,
+        payment_day: liabilityData.paymentDay,
+        loan_term_months: liabilityData.loanTermMonths,
+        remaining_term_months: liabilityData.remainingTermMonths,
+        start_date: liabilityData.startDate.toISOString().split('T')[0],
+        due_date: liabilityData.dueDate?.toISOString().split('T')[0],
+        next_payment_date: liabilityData.nextPaymentDate?.toISOString().split('T')[0],
+        linked_asset_id: liabilityData.linkedAssetId,
+        is_secured: liabilityData.isSecured,
+        disbursement_account_id: liabilityData.disbursementAccountId,
+        default_payment_account_id: liabilityData.defaultPaymentAccountId,
+        provides_funds: liabilityData.providesFunds,
+        affects_credit_score: liabilityData.affectsCreditScore,
+        status: liabilityData.status,
+        is_active: liabilityData.isActive,
+        auto_generate_bills: liabilityData.autoGenerateBills,
+        bill_generation_day: liabilityData.billGenerationDay
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newLiability: EnhancedLiability = {
+      id: data.id,
+      userId: data.user_id,
+      name: data.name,
+      liabilityType: data.liability_type,
+      description: data.description,
+      totalAmount: Number(data.total_amount),
+      remainingAmount: Number(data.remaining_amount),
+      interestRate: Number(data.interest_rate || 0),
+      monthlyPayment: Number(data.monthly_payment || 0),
+      minimumPayment: Number(data.minimum_payment || 0),
+      paymentDay: data.payment_day,
+      loanTermMonths: data.loan_term_months,
+      remainingTermMonths: data.remaining_term_months,
+      startDate: new Date(data.start_date),
+      dueDate: data.due_date ? new Date(data.due_date) : undefined,
+      nextPaymentDate: data.next_payment_date ? new Date(data.next_payment_date) : undefined,
+      linkedAssetId: data.linked_asset_id,
+      isSecured: data.is_secured,
+      disbursementAccountId: data.disbursement_account_id,
+      defaultPaymentAccountId: data.default_payment_account_id,
+      providesFunds: data.provides_funds,
+      affectsCreditScore: data.affects_credit_score,
+      status: data.status,
+      isActive: data.is_active,
+      autoGenerateBills: data.auto_generate_bills,
+      billGenerationDay: data.bill_generation_day,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
+
+    setLiabilities(prev => [newLiability, ...prev]);
+  };
+
+  const updateLiability = async (id: string, updates: Partial<EnhancedLiability>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('enhanced_liabilities')
+      .update({
+        name: updates.name,
+        liability_type: updates.liabilityType,
+        description: updates.description,
+        total_amount: updates.totalAmount,
+        remaining_amount: updates.remainingAmount,
+        interest_rate: updates.interestRate,
+        monthly_payment: updates.monthlyPayment,
+        minimum_payment: updates.minimumPayment,
+        payment_day: updates.paymentDay,
+        loan_term_months: updates.loanTermMonths,
+        remaining_term_months: updates.remainingTermMonths,
+        start_date: updates.startDate?.toISOString().split('T')[0],
+        due_date: updates.dueDate?.toISOString().split('T')[0],
+        next_payment_date: updates.nextPaymentDate?.toISOString().split('T')[0],
+        linked_asset_id: updates.linkedAssetId,
+        is_secured: updates.isSecured,
+        disbursement_account_id: updates.disbursementAccountId,
+        default_payment_account_id: updates.defaultPaymentAccountId,
+        provides_funds: updates.providesFunds,
+        affects_credit_score: updates.affectsCreditScore,
+        status: updates.status,
+        is_active: updates.isActive,
+        auto_generate_bills: updates.autoGenerateBills,
+        bill_generation_day: updates.billGenerationDay
+      })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setLiabilities(prev => prev.map(liability => 
+      liability.id === id ? { ...liability, ...updates } : liability
+    ));
+  };
+
+  const deleteLiability = async (id: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('enhanced_liabilities')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setLiabilities(prev => prev.filter(liability => liability.id !== id));
+  };
+
+  const addBudget = async (budgetData: Omit<Budget, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('budgets')
+      .insert({
+        user_id: user.id,
+        category: budgetData.category,
+        amount: budgetData.amount,
+        spent: budgetData.spent,
+        period: budgetData.period
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newBudget: Budget = {
+      id: data.id,
+      userId: data.user_id,
+      category: data.category,
+      amount: Number(data.amount),
+      spent: Number(data.spent || 0),
+      period: data.period,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
+
+    setBudgets(prev => [newBudget, ...prev]);
+  };
+
+  const updateBudget = async (id: string, updates: Partial<Budget>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('budgets')
+      .update({
+        category: updates.category,
+        amount: updates.amount,
+        spent: updates.spent,
+        period: updates.period
+      })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setBudgets(prev => prev.map(budget => 
+      budget.id === id ? { ...budget, ...updates } : budget
+    ));
+  };
+
+  const deleteBudget = async (id: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('budgets')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setBudgets(prev => prev.filter(budget => budget.id !== id));
+  };
+
+  const addBill = async (billData: Omit<Bill, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('bills')
+      .insert({
+        user_id: user.id,
+        title: billData.title,
+        description: billData.description,
+        category: billData.category,
+        bill_type: billData.billType,
+        amount: billData.amount,
+        estimated_amount: billData.estimatedAmount,
+        frequency: billData.frequency,
+        custom_frequency_days: billData.customFrequencyDays,
+        due_date: billData.dueDate.toISOString().split('T')[0],
+        next_due_date: billData.nextDueDate.toISOString().split('T')[0],
+        last_paid_date: billData.lastPaidDate?.toISOString().split('T')[0],
+        default_account_id: billData.defaultAccountId,
+        auto_pay: billData.autoPay,
+        linked_liability_id: billData.linkedLiabilityId,
+        is_emi: billData.isEmi,
+        is_active: billData.isActive,
+        is_essential: billData.isEssential,
+        reminder_days_before: billData.reminderDaysBefore,
+        send_due_date_reminder: billData.sendDueDateReminder,
+        send_overdue_reminder: billData.sendOverdueReminder
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newBill: Bill = {
+      id: data.id,
+      userId: data.user_id,
+      title: data.title,
+      description: data.description,
+      category: data.category,
+      billType: data.bill_type,
+      amount: Number(data.amount),
+      estimatedAmount: Number(data.estimated_amount || 0),
+      frequency: data.frequency,
+      customFrequencyDays: data.custom_frequency_days,
+      dueDate: new Date(data.due_date),
+      nextDueDate: new Date(data.next_due_date),
+      lastPaidDate: data.last_paid_date ? new Date(data.last_paid_date) : undefined,
+      defaultAccountId: data.default_account_id,
+      autoPay: data.auto_pay,
+      linkedLiabilityId: data.linked_liability_id,
+      isEmi: data.is_emi,
+      isActive: data.is_active,
+      isEssential: data.is_essential,
+      reminderDaysBefore: data.reminder_days_before,
+      sendDueDateReminder: data.send_due_date_reminder,
+      sendOverdueReminder: data.send_overdue_reminder,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
+
+    setBills(prev => [newBill, ...prev]);
+  };
+
+  const updateBill = async (id: string, updates: Partial<Bill>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('bills')
+      .update({
+        title: updates.title,
+        description: updates.description,
+        category: updates.category,
+        bill_type: updates.billType,
+        amount: updates.amount,
+        estimated_amount: updates.estimatedAmount,
+        frequency: updates.frequency,
+        custom_frequency_days: updates.customFrequencyDays,
+        due_date: updates.dueDate?.toISOString().split('T')[0],
+        next_due_date: updates.nextDueDate?.toISOString().split('T')[0],
+        last_paid_date: updates.lastPaidDate?.toISOString().split('T')[0],
+        default_account_id: updates.defaultAccountId,
+        auto_pay: updates.autoPay,
+        linked_liability_id: updates.linkedLiabilityId,
+        is_emi: updates.isEmi,
+        is_active: updates.isActive,
+        is_essential: updates.isEssential,
+        reminder_days_before: updates.reminderDaysBefore,
+        send_due_date_reminder: updates.sendDueDateReminder,
+        send_overdue_reminder: updates.sendOverdueReminder
+      })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setBills(prev => prev.map(bill => 
+      bill.id === id ? { ...bill, ...updates } : bill
+    ));
+  };
+
+  const deleteBill = async (id: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('bills')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setBills(prev => prev.filter(bill => bill.id !== id));
+  };
+
+  const addRecurringTransaction = async (rtData: Omit<RecurringTransaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('recurring_transactions')
+      .insert({
+        user_id: user.id,
+        type: rtData.type,
+        amount: rtData.amount,
+        category: rtData.category,
+        description: rtData.description,
+        frequency: rtData.frequency,
+        start_date: rtData.startDate.toISOString().split('T')[0],
+        end_date: rtData.endDate?.toISOString().split('T')[0],
+        next_occurrence_date: rtData.nextOccurrenceDate.toISOString().split('T')[0],
+        last_processed_date: rtData.lastProcessedDate?.toISOString().split('T')[0],
+        is_active: rtData.isActive,
+        day_of_week: rtData.dayOfWeek,
+        day_of_month: rtData.dayOfMonth,
+        month_of_year: rtData.monthOfYear,
+        max_occurrences: rtData.maxOccurrences,
+        current_occurrences: rtData.currentOccurrences
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newRecurringTransaction: RecurringTransaction = {
+      id: data.id,
+      userId: data.user_id,
+      type: data.type,
+      amount: Number(data.amount),
+      category: data.category,
+      description: data.description,
+      frequency: data.frequency,
+      startDate: new Date(data.start_date),
+      endDate: data.end_date ? new Date(data.end_date) : undefined,
+      nextOccurrenceDate: new Date(data.next_occurrence_date),
+      lastProcessedDate: data.last_processed_date ? new Date(data.last_processed_date) : undefined,
+      isActive: data.is_active,
+      dayOfWeek: data.day_of_week,
+      dayOfMonth: data.day_of_month,
+      monthOfYear: data.month_of_year,
+      maxOccurrences: data.max_occurrences,
+      currentOccurrences: data.current_occurrences,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
+
+    setRecurringTransactions(prev => [newRecurringTransaction, ...prev]);
+  };
+
+  const updateRecurringTransaction = async (id: string, updates: Partial<RecurringTransaction>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('recurring_transactions')
+      .update({
+        type: updates.type,
+        amount: updates.amount,
+        category: updates.category,
+        description: updates.description,
+        frequency: updates.frequency,
+        start_date: updates.startDate?.toISOString().split('T')[0],
+        end_date: updates.endDate?.toISOString().split('T')[0],
+        next_occurrence_date: updates.nextOccurrenceDate?.toISOString().split('T')[0],
+        last_processed_date: updates.lastProcessedDate?.toISOString().split('T')[0],
+        is_active: updates.isActive,
+        day_of_week: updates.dayOfWeek,
+        day_of_month: updates.dayOfMonth,
+        month_of_year: updates.monthOfYear,
+        max_occurrences: updates.maxOccurrences,
+        current_occurrences: updates.currentOccurrences
+      })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setRecurringTransactions(prev => prev.map(rt => 
+      rt.id === id ? { ...rt, ...updates } : rt
+    ));
+  };
+
+  const deleteRecurringTransaction = async (id: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('recurring_transactions')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setRecurringTransactions(prev => prev.filter(rt => rt.id !== id));
+  };
+
+  const transferBetweenAccounts = async (fromAccountId: string, toAccountId: string, amount: number, description: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    // Get account details for currency information
+    const fromAccount = accounts.find(a => a.id === fromAccountId);
+    const toAccount = accounts.find(a => a.id === toAccountId);
+
+    if (!fromAccount || !toAccount) {
+      throw new Error('Invalid account selection');
+    }
+
+    const { data, error } = await supabase
+      .from('enhanced_account_transfers')
+      .insert({
+        user_id: user.id,
+        from_account_id: fromAccountId,
+        to_account_id: toAccountId,
+        amount: amount,
+        from_currency: fromAccount.currency,
+        to_currency: toAccount.currency,
+        exchange_rate: 1.0, // Simplified for now
+        converted_amount: amount,
+        description: description,
+        transfer_date: new Date().toISOString().split('T')[0],
+        status: 'completed',
+        fees: 0
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newTransfer: AccountTransfer = {
+      id: data.id,
+      userId: data.user_id,
+      fromAccountId: data.from_account_id,
+      toAccountId: data.to_account_id,
+      amount: Number(data.amount),
+      description: data.description,
+      transferDate: new Date(data.transfer_date),
+      fromTransactionId: data.from_transaction_id,
+      toTransactionId: data.to_transaction_id,
+      createdAt: new Date(data.created_at)
+    };
+
+    setAccountTransfers(prev => [newTransfer, ...prev]);
+
+    // Update account balances
+    setAccounts(prev => prev.map(account => {
+      if (account.id === fromAccountId) {
+        return { ...account, balance: account.balance - amount };
+      }
+      if (account.id === toAccountId) {
+        return { ...account, balance: account.balance + amount };
+      }
+      return account;
+    }));
+  };
+
+  // Calculate statistics
+  const stats = {
+    totalIncome: transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0),
+    totalExpenses: transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0),
+    totalLiabilities: liabilities.reduce((sum, l) => sum + l.remainingAmount, 0),
+    totalSavings: accounts.reduce((sum, a) => sum + a.balance, 0),
+    monthlyIncome: transactions
+      .filter(t => t.type === 'income' && t.date >= new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+      .reduce((sum, t) => sum + t.amount, 0),
+    monthlyExpenses: transactions
+      .filter(t => t.type === 'expense' && t.date >= new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+      .reduce((sum, t) => sum + t.amount, 0)
+  };
+
+  const value: FinanceContextType = {
+    accounts,
+    transactions,
+    goals,
+    liabilities,
+    budgets,
+    bills,
+    recurringTransactions,
+    incomeSource,
+    accountTransfers,
+    userCategories,
+    billReminders,
+    debtPayments,
+    transactionSplits,
+    financialInsights,
+    loading,
+    addAccount,
+    updateAccount,
+    deleteAccount,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    addGoal,
+    updateGoal,
+    deleteGoal,
+    addLiability,
+    updateLiability,
+    deleteLiability,
+    addBudget,
+    updateBudget,
+    deleteBudget,
+    addBill,
+    updateBill,
+    deleteBill,
+    addRecurringTransaction,
+    updateRecurringTransaction,
+    deleteRecurringTransaction,
+    transferBetweenAccounts,
+    stats
+  };
 
   return (
-    <div className="min-h-screen text-white pb-20">
-      <TopNavigation // Already exists
-        title="💳 Your Money Accounts" 
-        showAdd 
-        onAdd={() => setShowAccountModal(true)}
-      />
-      
-      <div className="px-4 py-4 sm:py-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <p className="text-gray-400 text-sm sm:text-base">
-            🏦 Manage all your payment methods like a pro
-          </p>
-          <button
-            onClick={() => setShowBalances(!showBalances)}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-            title={showBalances ? "Hide balances" : "Show balances"}
-          >
-            {showBalances ? (
-              <EyeOff size={18} className="text-gray-400" />
-            ) : (
-              <Eye size={18} className="text-gray-400" />
-            )}
-          </button>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4"> // Already exists
-            <div className="flex items-center space-x-2">
-              <AlertCircle size={18} className="text-error-400" />
-              <p className="text-error-400 text-sm">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Header with Total Balance */}
-        <div className="bg-gradient-to-r from-forest-700/80 to-forest-600/80 backdrop-blur-md rounded-2xl p-6 border border-forest-500/20">
-          <div className="flex items-center justify-between mb-4"> // Already exists
-            <div className="flex items-center space-x-3">
-              <span className="text-3xl">💰</span>
-              <div>
-                <h3 className="text-xl font-heading font-bold text-white">Your Money Dashboard</h3>
-                <p className="text-sm text-forest-200 font-body">Track every rupee across all accounts</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Total Balance */}
-          {showBalances && ( // Already exists
-            <div className="bg-forest-800/30 rounded-xl p-4 text-center">
-              <p className="text-sm text-forest-300 mb-2 font-body">Total Money Available</p>
-              <p className="text-3xl font-numbers font-bold text-white">
-                <CurrencyIcon currencyCode={currency.code} size={24} className="inline mr-2" />
-                {totalBalance.toLocaleString()}
-              </p>
-              <p className="text-xs text-forest-400 font-body">{visibleAccounts.length} active accounts</p>
-            </div>
-          )}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3"> // Already exists
-          <Button
-            onClick={() => setShowTransferModal(true)}
-            variant="outline"
-            className="border-forest-500/30 text-forest-300 hover:bg-forest-600/10"
-            disabled={(accounts || []).length < 2}
-          >
-            <ArrowLeftRight size={16} className="mr-2" />
-            Move Money
-          </Button>
-          <Button
-            onClick={() => setShowAccountModal(true)}
-            className="bg-forest-600 hover:bg-forest-700"
-          >
-            <Plus size={16} className="mr-2" />
-            Add Account
-          </Button>
-        </div>
-
-        {/* Accounts List */}
-        {(accounts || []).length === 0 ? ( // Already exists
-          <div className="text-center py-16 bg-forest-900/30 backdrop-blur-md rounded-2xl border border-forest-600/20">
-            <span className="text-6xl mb-6 block">🏦</span>
-            <h3 className="text-xl font-heading font-bold text-white mb-3">Set up your first account!</h3>
-            <p className="text-forest-300 mb-6 font-body max-w-md mx-auto">
-              Add your cash wallet, bank account, or digital wallet to start tracking your money like a pro
-            </p>
-            <Button 
-              onClick={() => setShowAccountModal(true)}
-              className="bg-forest-600 hover:bg-forest-700"
-            >
-              <span className="mr-2">🚀</span>
-              Add First Account
-            </Button>
-          </div>
-        ) : ( // Already exists
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {(accounts || []).map((account) => {
-              const AccountIcon = getAccountIcon(account.type);
-              const isSelected = selectedAccountId === account.id;
-              
-              return (
-                <div 
-                  key={account.id} 
-                  className={`bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border transition-all duration-200 cursor-pointer ${
-                    isSelected 
-                      ? 'border-forest-500 bg-forest-600/10 shadow-xl transform scale-105' 
-                      : 'border-forest-600/20 hover:border-forest-500/40 hover:bg-forest-800/30'
-                  }`}
-                  onClick={() => setSelectedAccountId(isSelected ? null : account.id)}
-                >
-                  <div className="flex items-start justify-between mb-6"> // Already exists
-                    <div className="flex items-center space-x-4">
-                      <div className={`w-14 h-14 rounded-xl ${getAccountColor(account.type)} flex items-center justify-center shadow-lg`}>
-                        <AccountIcon size={28} className="text-white" />
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-heading font-bold text-white">{account.name}</h4>
-                        <p className="text-sm text-forest-300 font-body">{getAccountTypeName(account.type)}</p>
-                        {account.institution && (
-                          <p className="text-xs text-forest-400 font-body">{account.institution}</p>
-                        )}
-                        {account.platform && (
-                          <p className="text-xs text-forest-400 font-body">{account.platform}</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={(e) => { // Already exists
-                          e.stopPropagation();
-                          updateAccount(account.id, { isVisible: !account.isVisible });
-                        }}
-                        className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
-                        title={account.isVisible ? "Hide from dashboard" : "Show on dashboard"}
-                      >
-                        {account.isVisible ? (
-                          <Eye size={16} className="text-forest-400" />
-                        ) : (
-                          <EyeOff size={16} className="text-gray-400" />
-                        )}
-                      </button>
-                      <button
-                        onClick={(e) => { // Already exists
-                          e.stopPropagation();
-                          setEditingAccount(account);
-                          setShowAccountModal(true);
-                        }}
-                        className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
-                      >
-                        <Edit3 size={16} className="text-forest-400" />
-                      </button>
-                      <button
-                        onClick={(e) => { // Already exists
-                          e.stopPropagation();
-                          handleDeleteAccount(account.id);
-                        }}
-                        className="p-2 hover:bg-error-500/20 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={16} className="text-error-400" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Balance */}
-                  {(account.isVisible || showBalances) && ( // Already exists
-                    <div className="bg-forest-800/30 rounded-xl p-4 mb-4">
-                      <p className="text-xs text-forest-400 mb-2 font-body">Current Balance</p>
-                      <p className="text-2xl font-numbers font-bold text-white">
-                        <CurrencyIcon currencyCode={currency.code} size={20} className="inline mr-2" />
-                        {account.balance.toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-
-                  {!account.isVisible && ( // Already exists
-                    <div className="bg-gray-500/20 rounded-xl p-4 text-center mb-4 border border-gray-500/30">
-                      <p className="text-sm text-gray-400 font-body">Hidden from dashboard</p>
-                    </div>
-                  )}
-
-                  {/* Mock Transaction Button */}
-                  <div className="mb-4">
-                    <Button // Already exists
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedAccountForMock(account.id);
-                        setShowMockTransactionModal(true);
-                      }}
-                      size="sm"
-                      variant="outline"
-                      className="w-full border-forest-500/30 text-forest-300 hover:bg-forest-600/10"
-                    >
-                      <Plus size={14} className="mr-2" />
-                      Add Past Transaction
-                    </Button>
-                  </div>
-
-                  {/* Account-Specific Data when Selected */}
-                  {isSelected && (
-                    <div className="pt-4 border-t border-forest-600/20 space-y-4"> // Already exists
-                      {/* Recent Transactions */}
-                      {selectedAccountTransactions.length > 0 && (
-                        <div>
-                          <h5 className="text-sm font-heading font-medium text-white mb-3 flex items-center">
-                            <BarChart3 size={16} className="mr-2 text-forest-400" />
-                            Recent Activity
-                          </h5>
-                          <div className="space-y-2">
-                            {selectedAccountTransactions.map((transaction) => ( // Already exists
-                              <div key={transaction.id} className="flex items-center justify-between p-3 bg-forest-800/20 rounded-lg border border-forest-600/20">
-                                <div className="flex items-center space-x-3">
-                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                    transaction.type === 'income' ? 'bg-success-500/20' : 'bg-error-500/20'
-                                  }`}>
-                                    <span className={`text-xs font-bold ${
-                                      transaction.type === 'income' ? 'text-success-400' : 'text-error-400'
-                                    }`}>
-                                      {transaction.type === 'income' ? '+' : '-'} // Already exists
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-body font-medium text-white">{transaction.description}</p>
-                                    <p className="text-xs text-forest-400 font-body">{transaction.category}</p>
-                                  </div>
-                                </div>
-                                <span className={`text-sm font-numbers font-medium ${
-                                  transaction.type === 'income' ? 'text-success-400' : 'text-error-400' // Already exists
-                                }`}>
-                                  {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Linked Goals */}
-                      {selectedAccountGoals.length > 0 && (
-                        <div>
-                          <h5 className="text-sm font-heading font-medium text-white mb-3 flex items-center">
-                            <Target size={16} className="mr-2 text-forest-400" />
-                            Goals for This Account ({selectedAccountGoals.length})
-                          </h5>
-                          <div className="space-y-2">
-                            {selectedAccountGoals.map((goal) => ( // Already exists
-                              <div key={goal.id} className="p-3 bg-forest-600/10 rounded-lg border border-forest-500/20">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm font-body text-white">{goal.title}</span>
-                                  <span className="text-xs text-forest-400 font-numbers">
-                                    {((goal.currentAmount / goal.targetAmount) * 100).toFixed(1)}%
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Linked Liabilities */}
-                      {selectedAccountLiabilities.length > 0 && (
-                        <div>
-                          <h5 className="text-sm font-heading font-medium text-white mb-3 flex items-center">
-                            <CreditCard size={16} className="mr-2 text-error-400" />
-                            Debts on This Account ({selectedAccountLiabilities.length})
-                          </h5>
-                          <div className="space-y-2">
-                            {selectedAccountLiabilities.map((liability) => ( // Already exists
-                              <div key={liability.id} className="p-3 bg-error-500/10 rounded-lg border border-error-500/20">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm font-body text-white">{liability.name}</span>
-                                  <span className="text-xs text-error-400 font-numbers">
-                                    {formatCurrency(liability.remainingAmount)} left
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Linked Budgets */}
-                      {selectedAccountBudgets.length > 0 && (
-                        <div>
-                          <h5 className="text-sm font-heading font-medium text-white mb-3 flex items-center">
-                            <DollarSign size={16} className="mr-2 text-warning-400" />
-                            Budgets for This Account ({selectedAccountBudgets.length})
-                          </h5>
-                          <div className="space-y-2">
-                            {selectedAccountBudgets.map((budget) => ( // Already exists
-                              <div key={budget.id} className="p-3 bg-warning-500/10 rounded-lg border border-warning-500/20">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm font-body text-white">{budget.category}</span>
-                                  <span className="text-xs text-warning-400 font-numbers">
-                                    {((budget.spent / budget.amount) * 100).toFixed(1)}% used
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Student Guide */}
-        <div className="bg-forest-600/20 rounded-xl p-6 border border-forest-500/30">
-          <h4 className="font-heading font-medium text-forest-300 mb-4">🎓 Student Account Guide</h4> // Already exists
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <Building size={16} className="text-blue-400" />
-                <span className="text-forest-200 font-body">Bank Accounts (SBI, HDFC, ICICI)</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Smartphone size={16} className="text-orange-400" />
-                <span className="text-forest-200 font-body">Digital Wallets (PayTM, PhonePe)</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <CreditCard size={16} className="text-red-400" />
-                <span className="text-forest-200 font-body">Credit Cards (Student Cards)</span>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <Wallet size={16} className="text-gray-400" />
-                <span className="text-forest-200 font-body">Cash Wallet (Pocket Money)</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <TrendingUp size={16} className="text-yellow-400" />
-                <span className="text-forest-200 font-body">Investment (SIP, Stocks)</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Student Tip */}
-          <div className="mt-4 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30"> // Already exists
-            <p className="text-blue-300 text-sm">
-              💡 <strong>Pro Tip:</strong> Start with just 2-3 accounts (Cash + Bank + Digital Wallet). 
-              You can always add more as your financial life grows!
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Account Form Modal */}
-      <Modal // Already exists
-        isOpen={showAccountModal}
-        onClose={() => {
-          setShowAccountModal(false);
-          setEditingAccount(null);
-          setError(null);
-        }}
-        title={editingAccount ? 'Edit Account' : '🏦 Add New Account'}
-      >
-        <AccountForm // Already exists
-          initialData={editingAccount}
-          onSubmit={editingAccount ? handleEditAccount : handleAddAccount}
-          onCancel={() => {
-            setShowAccountModal(false);
-            setEditingAccount(null);
-            setError(null);
-          }}
-          isSubmitting={isSubmitting}
-        />
-      </Modal>
-
-      {/* Transfer Modal */}
-      <Modal // Already exists
-        isOpen={showTransferModal}
-        onClose={() => {
-          setShowTransferModal(false);
-          setError(null);
-        }}
-        title="💸 Move Money Between Accounts"
-      >
-        <TransferForm
-          accounts={accounts || []} // Already exists
-          onSubmit={handleTransfer}
-          onCancel={() => {
-            setShowTransferModal(false);
-            setError(null);
-          }}
-          isSubmitting={isSubmitting}
-        />
-      </Modal>
-
-      {/* Mock Transaction Modal */}
-      <Modal // Already exists
-        isOpen={showMockTransactionModal}
-        onClose={() => {
-          setShowMockTransactionModal(false);
-          setSelectedAccountForMock(null);
-          setError(null);
-        }}
-        title="📝 Add Past Transaction"
-      >
-        <div className="space-y-4"> // Already exists
-          <div className="bg-forest-600/20 rounded-lg p-4 border border-forest-500/30">
-            <div className="flex items-start space-x-3">
-              <Info size={18} className="text-forest-400 mt-0.5" />
-              <div>
-                <p className="text-forest-300 font-body font-medium text-sm">Historical Transaction</p>
-                <p className="text-forest-200 font-body text-xs mt-1">
-                  This won't change your current balance - it's just for tracking past expenses 
-                  to help you understand your spending patterns better.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <TransactionForm
-            onSubmit={handleAddMockTransaction}
-            onCancel={() => {
-              setShowMockTransactionModal(false);
-              setSelectedAccountForMock(null);
-              setError(null);
-            }}
-          />
-        </div>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal // Already exists
-        isOpen={showDeleteConfirm}
-        onClose={() => {
-          setShowDeleteConfirm(false);
-          setAccountToDelete(null);
-          setError(null);
-        }}
-        title="Delete Account"
-      >
-        <div className="space-y-4">
-          <div className="bg-error-500/20 rounded-lg p-4 border border-error-500/30"> // Already exists
-            <div className="flex items-start space-x-3">
-              <AlertCircle size={18} className="text-error-400 mt-0.5" />
-              <div>
-                <p className="text-error-400 font-body font-medium text-sm">⚠️ This can't be undone!</p>
-                <p className="text-error-300 font-body text-xs mt-1">
-                  Deleting this account will remove all transactions, goals, and budgets linked to it.
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <p className="text-forest-200 font-body"> // Already exists
-            Are you sure you want to delete this account? All your financial data for this account will be lost forever.
-          </p>
-          
-          <div className="flex space-x-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowDeleteConfirm(false);
-                setAccountToDelete(null);
-              }}
-              className="flex-1 border-forest-500/30 text-forest-300" // Already exists
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={confirmDeleteAccount}
-              className="flex-1 bg-error-500 hover:bg-error-600"
-              loading={isSubmitting}
-            >
-              Delete Account
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
+    <FinanceContext.Provider value={value}>
+      {children}
+    </FinanceContext.Provider>
   );
+};
+
+export const useFinance = () => {
+  const context = useContext(FinanceContext);
+  if (context === undefined) {
+    throw new Error('useFinance must be used within a FinanceProvider');
+  }
+  return context;
 };
