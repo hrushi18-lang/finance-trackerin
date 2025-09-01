@@ -129,7 +129,7 @@ export const FinancialAccountsHub: React.FC = () => {
   };
 
   const getAccountIcon = (type: string) => {
-    switch (type) { // Already exists
+    const icons = {
       bank_savings: Building,
       bank_current: Building,
       bank_student: Building,
@@ -138,6 +138,8 @@ export const FinancialAccountsHub: React.FC = () => {
       credit_card: CreditCard,
       investment: TrendingUp
     };
+    return icons[type as keyof typeof icons] || Wallet;
+    return icons[type as keyof typeof icons] || Wallet;
     return icons[type as keyof typeof icons] || Wallet;
   }; // Already exists
 
