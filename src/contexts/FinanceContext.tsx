@@ -43,7 +43,7 @@ interface FinanceContextType {
   updateAccount: (id: string, updates: Partial<FinancialAccount>) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
   
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<Transaction>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   
@@ -993,6 +993,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Reload accounts to reflect balance changes (handled by database triggers)
     await loadAccounts();
+    
+    return newTransaction;
   };
 
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
@@ -1522,6 +1524,34 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error('Invalid account selection');
     }
 
+    // Create paired transactions for the transfer
+    const transferDate = new Date();
+    
+    // Create outgoing transaction (expense from source account)
+    const outgoingTransaction = await addTransaction({
+      type: 'expense',
+      amount: amount,
+      category: 'Transfer',
+      description: `Transfer to ${toAccount.name}: ${description}`,
+      date: transferDate,
+      accountId: fromAccountId,
+      affectsBalance: true,
+      status: 'completed'
+    });
+
+    // Create incoming transaction (income to destination account)
+    const incomingTransaction = await addTransaction({
+      type: 'income',
+      amount: amount,
+      category: 'Transfer',
+      description: `Transfer from ${fromAccount.name}: ${description}`,
+      date: transferDate,
+      accountId: toAccountId,
+      affectsBalance: true,
+      status: 'completed'
+    });
+
+    // Create transfer record for tracking
     const { data, error } = await supabase
       .from('enhanced_account_transfers')
       .insert({
@@ -1529,14 +1559,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         from_account_id: fromAccountId,
         to_account_id: toAccountId,
         amount: amount,
-        from_currency: fromAccount.currency,
-        to_currency: toAccount.currency,
+        from_currency: fromAccount.currencyCode,
+        to_currency: toAccount.currencyCode,
         exchange_rate: 1.0, // Simplified for now
         converted_amount: amount,
         description: description,
-        transfer_date: new Date().toISOString().split('T')[0],
+        transfer_date: transferDate.toISOString().split('T')[0],
         status: 'completed',
-        fees: 0
+        fees: 0,
+        from_transaction_id: outgoingTransaction.id,
+        to_transaction_id: incomingTransaction.id
       })
       .select()
       .single();
@@ -1558,7 +1590,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setAccountTransfers(prev => [newTransfer, ...prev]);
 
-    // Reload accounts to reflect balance changes (handled by database triggers)
+    // Reload accounts to reflect balance changes
     await loadAccounts();
   };
 

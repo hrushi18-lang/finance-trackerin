@@ -312,46 +312,60 @@ export const AddTransaction: React.FC = () => {
               />
             </div>
 
-            {/* Account */}
-            <div>
-              <label className="block text-sm font-medium text-forest-300 mb-2">
-                Account
+            {/* Account Selection */}
+            <div className="bg-forest-800/30 rounded-xl p-4 border border-forest-600/20">
+              <label className="block text-sm font-medium text-forest-300 mb-3 flex items-center">
+                <CreditCard size={16} className="mr-2" />
+                Select Bank Account
               </label>
               <select
-                {...register('accountId', { required: 'Account is required' })}
-                className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-forest-500"
+                {...register('accountId', { required: 'Please select an account' })}
+                className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-forest-500 transition-colors"
               >
-                <option value="">Select an account</option>
+                <option value="">Choose your bank account...</option>
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.name} - {formatCurrency(account.balance)}
+                    {account.name} ({account.type.replace('_', ' ')}) - {formatCurrency(account.balance)}
                   </option>
                 ))}
               </select>
               {errors.accountId && (
-                <p className="text-red-400 text-sm mt-1">{errors.accountId.message}</p>
+                <p className="text-red-400 text-sm mt-2 flex items-center">
+                  <AlertCircle size={14} className="mr-1" />
+                  {errors.accountId.message}
+                </p>
+              )}
+              {accounts.length === 0 && (
+                <p className="text-yellow-400 text-sm mt-2 flex items-center">
+                  <AlertCircle size={14} className="mr-1" />
+                  No accounts found. Please add an account first.
+                </p>
               )}
             </div>
 
             {/* Transfer To Account (for transfers) */}
             {transactionType === 'transfer' && (
-              <div>
-                <label className="block text-sm font-medium text-forest-300 mb-2">
-                  Transfer To
+              <div className="bg-forest-800/30 rounded-xl p-4 border border-forest-600/20">
+                <label className="block text-sm font-medium text-forest-300 mb-3 flex items-center">
+                  <ArrowLeft size={16} className="mr-2" />
+                  Transfer To Account
                 </label>
                 <select
-                  {...register('transferToAccountId', { required: 'Transfer account is required' })}
-                  className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-forest-500"
+                  {...register('transferToAccountId', { required: 'Please select destination account' })}
+                  className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-forest-500 transition-colors"
                 >
-                  <option value="">Select destination account</option>
+                  <option value="">Choose destination account...</option>
                   {accounts.map((account) => (
                     <option key={account.id} value={account.id}>
-                      {account.name} - {formatCurrency(account.balance)}
+                      {account.name} ({account.type.replace('_', ' ')}) - {formatCurrency(account.balance)}
                     </option>
                   ))}
                 </select>
                 {errors.transferToAccountId && (
-                  <p className="text-red-400 text-sm mt-1">{errors.transferToAccountId.message}</p>
+                  <p className="text-red-400 text-sm mt-2 flex items-center">
+                    <AlertCircle size={14} className="mr-1" />
+                    {errors.transferToAccountId.message}
+                  </p>
                 )}
               </div>
             )}
