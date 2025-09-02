@@ -20,7 +20,8 @@ import {
   ChevronRight,
   Clock,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Plane
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
@@ -49,9 +50,9 @@ export const Overview: React.FC = () => {
     return totalAssets - totalLiabilities;
   }, [accounts, liabilities]);
 
-  // Calculate net worth change (mock for now)
+  // Calculate net worth change (mock for now - you can implement real calculation)
   const netWorthChange = useMemo(() => {
-    return { amount: 1234, percentage: 1.0 };
+    return { amount: 1234, percentage: 1.01 };
   }, []);
 
   // Calculate monthly income and expenses
@@ -76,12 +77,12 @@ export const Overview: React.FC = () => {
     return { income, expenses, net: income - expenses };
   }, [transactions]);
 
-  // Get recent transactions for analytics
+  // Get analytics data for the graph
   const analyticsData = useMemo(() => {
     const currentMonth = new Date();
     const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
     
-    // Generate data points for the month
+    // Generate data points for the month (Start, Mid, End)
     const dataPoints = [];
     for (let i = 0; i < 3; i++) {
       const date = new Date(startOfMonth.getTime() + (i * 10 * 24 * 60 * 60 * 1000));
@@ -100,8 +101,8 @@ export const Overview: React.FC = () => {
       
       dataPoints.push({
         period: i === 0 ? 'Start' : i === 1 ? 'Mid' : 'End',
-        income: dayIncome || Math.random() * 2000 + 1000,
-        expenses: dayExpenses || Math.random() * 1500 + 800
+        income: dayIncome || 0,
+        expenses: dayExpenses || 0
       });
     }
     
@@ -143,8 +144,8 @@ export const Overview: React.FC = () => {
   // Get goal icon
   const getGoalIcon = (goal: any) => {
     const category = goal.category?.toLowerCase() || '';
-    if (category.includes('car') || category.includes('vehicle')) return <Car size={20} className="text-blue-600" />;
-    if (category.includes('vacation') || category.includes('trip') || category.includes('travel')) return <TrendingUp size={20} className="text-green-600" />;
+    if (category.includes('car') || category.includes('vehicle')) return <Car size={20} className="text-purple-600" />;
+    if (category.includes('vacation') || category.includes('trip') || category.includes('travel')) return <Plane size={20} className="text-blue-600" />;
     if (category.includes('emergency')) return <Target size={20} className="text-orange-600" />;
     if (category.includes('home') || category.includes('house')) return <Home size={20} className="text-purple-600" />;
     return <Target size={20} className="text-gray-600" />;
@@ -191,32 +192,12 @@ export const Overview: React.FC = () => {
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 relative overflow-hidden">
           <div className="text-center">
             <h2 className="text-lg font-medium text-gray-600 mb-2">Net Worth</h2>
-            <p className="text-4xl font-serif font-bold text-gray-900 mb-2">
+            <p className="text-4xl font-serif font-bold text-green-700 mb-2">
               {showBalances ? formatCurrency(netWorth) : '••••••'}
             </p>
             <p className="text-sm text-green-600 font-medium">
               +{formatCurrency(netWorthChange.amount)} ({netWorthChange.percentage}%) this month
             </p>
-          </div>
-          {/* Animated progress ring */}
-          <div className="absolute top-4 right-4 w-16 h-16">
-            <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
-              <path
-                className="text-gray-200"
-                stroke="currentColor"
-                strokeWidth="3"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="text-green-600"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeDasharray={`${netWorthChange.percentage * 10}, 100`}
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-            </svg>
           </div>
         </div>
 
@@ -224,19 +205,28 @@ export const Overview: React.FC = () => {
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Manage Accounts</h3>
           <div className="flex space-x-4 overflow-x-auto pb-2">
-            {accounts.slice(0, 3).map((account) => (
-              <div key={account.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 min-w-[140px] flex-shrink-0">
-                <div className="flex items-center space-x-3 mb-3">
-                  {getAccountIcon(account)}
-                  <span className="text-sm font-medium text-gray-700">
-                    {account.name}
-                  </span>
+            {accounts.length > 0 ? (
+              accounts.slice(0, 3).map((account) => (
+                <div key={account.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 min-w-[140px] flex-shrink-0">
+                  <div className="flex items-center space-x-3 mb-3">
+                    {getAccountIcon(account)}
+                    <span className="text-sm font-medium text-gray-700">
+                      {account.name}
+                    </span>
+                  </div>
+                  <p className="text-lg font-bold text-gray-900">
+                    {showBalances ? formatCurrency(account.balance || 0) : '••••••'}
+                  </p>
                 </div>
-                <p className="text-lg font-bold text-gray-900">
-                  {showBalances ? formatCurrency(account.balance || 0) : '••••••'}
-                </p>
+              ))
+            ) : (
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 min-w-[140px] flex-shrink-0 flex items-center justify-center">
+                <div className="text-center">
+                  <Wallet size={24} className="text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No accounts</p>
+                </div>
               </div>
-            ))}
+            )}
             {/* Add Account Card */}
             <div className="bg-gray-100 rounded-2xl p-4 min-w-[140px] flex-shrink-0 flex items-center justify-center border-2 border-dashed border-gray-300">
               <button
@@ -251,16 +241,18 @@ export const Overview: React.FC = () => {
         </div>
 
         {/* Goals Section */}
-        {goals.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Goals</h3>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Goals</h3>
+          {goals.length > 0 ? (
             <div className="flex space-x-4 overflow-x-auto pb-2">
               {goals.slice(0, 3).map((goal) => {
                 const progress = (goal.currentAmount / goal.targetAmount) * 100;
                 return (
                   <div key={goal.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 min-w-[160px] flex-shrink-0">
                     <div className="flex items-center space-x-3 mb-3">
-                      {getGoalIcon(goal)}
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        {getGoalIcon(goal)}
+                      </div>
                       <span className="text-sm font-medium text-gray-700">
                         {goal.title}
                       </span>
@@ -272,7 +264,7 @@ export const Overview: React.FC = () => {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
-                          className="bg-gradient-to-r from-green-600 to-yellow-500 h-2 rounded-full transition-all duration-300"
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${Math.min(progress, 100)}%` }}
                         ></div>
                       </div>
@@ -281,13 +273,33 @@ export const Overview: React.FC = () => {
                 );
               })}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                  <Target size={24} className="text-gray-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Goals Yet</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Set your first financial goal to start saving
+                  </p>
+                  <button
+                    onClick={() => navigate('/goals')}
+                    className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                  >
+                    Add Goal
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Upcoming Bills Section */}
-        {upcomingBills.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Bills</h3>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Bills</h3>
+          {upcomingBills.length > 0 ? (
             <div className="space-y-3">
               {upcomingBills.map((bill, index) => (
                 <div key={bill.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -308,48 +320,80 @@ export const Overview: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                  <Calendar size={24} className="text-gray-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Bills Yet</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Add your first bill to start tracking payments
+                  </p>
+                  <button
+                    onClick={() => navigate('/bills')}
+                    className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                  >
+                    Add Bill
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Budgets & Liabilities Section */}
         <div className="grid grid-cols-2 gap-4">
           {/* Budgets Card */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <h4 className="font-semibold text-gray-900 mb-3">Budgets</h4>
-            <div className="space-y-3">
-              {budgets.slice(0, 2).map((budget) => {
-                const progress = ((budget.spent || 0) / (budget.amount || budget.limit || 1)) * 100;
-                return (
-                  <div key={budget.id}>
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
-                      <span>{budget.category}</span>
-                      <span>{progress.toFixed(0)}%</span>
+            {budgets.length > 0 ? (
+              <div className="space-y-3">
+                {budgets.slice(0, 2).map((budget) => {
+                  const progress = ((budget.spent || 0) / (budget.amount || budget.limit || 1)) * 100;
+                  return (
+                    <div key={budget.id}>
+                      <div className="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>{budget.category}</span>
+                        <span>{progress.toFixed(0)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(progress, 100)}%` }}
+                        ></div>
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(progress, 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-gray-500">No budgets</p>
+              </div>
+            )}
           </div>
 
           {/* Liabilities Card */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <h4 className="font-semibold text-gray-900 mb-3">Liabilities</h4>
-            <div className="space-y-3">
-              {liabilities.slice(0, 2).map((liability) => (
-                <div key={liability.id} className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">{liability.name}</span>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {showBalances ? formatCurrency(liability.remainingAmount || 0) : '••••'}
-                  </span>
-                </div>
-              ))}
-            </div>
+            {liabilities.length > 0 ? (
+              <div className="space-y-3">
+                {liabilities.slice(0, 2).map((liability) => (
+                  <div key={liability.id} className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">{liability.name}</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {showBalances ? formatCurrency(liability.remainingAmount || 0) : '••••'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-gray-500">No liabilities</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -365,23 +409,29 @@ export const Overview: React.FC = () => {
           
           {/* Mini Line Graph */}
           <div className="h-32 flex items-end justify-between space-x-2">
-            {analyticsData.map((data, index) => (
-              <div key={index} className="flex-1 flex flex-col items-center">
-                <div className="w-full flex flex-col items-center space-y-1 mb-2">
-                  {/* Income bar */}
-                  <div 
-                    className="w-full bg-gray-300 rounded-t"
-                    style={{ height: `${(data.income / Math.max(...analyticsData.map(d => d.income))) * 60}px` }}
-                  ></div>
-                  {/* Expenses bar */}
-                  <div 
-                    className="w-full bg-green-600 rounded-b"
-                    style={{ height: `${(data.expenses / Math.max(...analyticsData.map(d => d.expenses))) * 60}px` }}
-                  ></div>
+            {analyticsData.map((data, index) => {
+              const maxValue = Math.max(...analyticsData.map(d => Math.max(d.income, d.expenses)));
+              const incomeHeight = maxValue > 0 ? (data.income / maxValue) * 80 : 0;
+              const expensesHeight = maxValue > 0 ? (data.expenses / maxValue) * 80 : 0;
+              
+              return (
+                <div key={index} className="flex-1 flex flex-col items-center">
+                  <div className="w-full flex flex-col items-center space-y-1 mb-2">
+                    {/* Income bar */}
+                    <div 
+                      className="w-full bg-gray-300 rounded-t"
+                      style={{ height: `${incomeHeight}px` }}
+                    ></div>
+                    {/* Expenses bar */}
+                    <div 
+                      className="w-full bg-green-600 rounded-b"
+                      style={{ height: `${expensesHeight}px` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs text-gray-500">{data.period}</span>
                 </div>
-                <span className="text-xs text-gray-500">{data.period}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
           
           {/* Legend */}
@@ -399,5 +449,4 @@ export const Overview: React.FC = () => {
       </div>
     </div>
   );
-};
 };
