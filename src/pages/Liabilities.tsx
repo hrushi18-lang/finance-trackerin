@@ -48,34 +48,32 @@ export const Liabilities: React.FC = () => {
         dueDate: liability.dueDate ? new Date(liability.dueDate) : undefined,
         nextPaymentDate: liability.dueDate ? new Date(liability.dueDate) : undefined,
         linkedAssetId: liability.linkedAssetId,
-        isSecured: liability.isSecured,
-        disbursementAccountId: liability.disbursementAccountId,
-        defaultPaymentAccountId: liability.defaultPaymentAccountId,
-        providesFunds: liability.providesFunds,
-        affectsCreditScore: liability.affectsCreditScore,
         status: 'active',
-        isActive: true,
-        autoGenerateBills: liability.autoGenerateBills,
-        billGenerationDay: liability.billGenerationDay || 1
+        isActive: true
       });
-
-      // Handle fund disbursement
-      if (liability.providesFunds && liability.disbursementAccountId) {
-        await addTransaction({
-          type: 'income',
-          amount: liability.totalAmount,
-          category: 'Loan Disbursement',
-          description: `Funds received: ${liability.name}`,
-          date: liability.startDate,
-          accountId: liability.disbursementAccountId,
-          affectsBalance: true
-        });
-      }
-
+      
       setShowModal(false);
     } catch (error: any) {
       console.error('Error adding liability:', error);
       setError(error.message || 'Failed to add liability');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditLiability = async (liability: any) => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      
+      if (editingLiability) {
+        await updateLiability(editingLiability.id, liability);
+        setEditingLiability(null);
+        setShowEditModal(false);
+      }
+    } catch (error: any) {
+      console.error('Error updating liability:', error);
+      setError(error.message || 'Failed to update liability');
     } finally {
       setIsSubmitting(false);
     }
@@ -122,13 +120,14 @@ export const Liabilities: React.FC = () => {
   };
 
   const confirmDeleteLiability = async () => {
+    if (!liabilityToDelete) return;
+    
     try {
       setIsSubmitting(true);
-      if (liabilityToDelete) {
-        await deleteLiability(liabilityToDelete);
-        setLiabilityToDelete(null);
-        setShowDeleteConfirm(false);
-      }
+      setError(null);
+      await deleteLiability(liabilityToDelete);
+      setShowDeleteConfirm(false);
+      setLiabilityToDelete(null);
     } catch (error: any) {
       console.error('Error deleting liability:', error);
       setError(error.message || 'Failed to delete liability');
@@ -137,556 +136,295 @@ export const Liabilities: React.FC = () => {
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    const icons = {
-      personal_loan: Wallet,
-      student_loan: GraduationCap,
-      auto_loan: Car,
-      mortgage: Home,
-      credit_card: CreditCard,
-      bnpl: ShoppingCart,
-      installment: Calendar,
-      loan: Wallet, // Legacy support
-      other: CreditCard
-    };
-    return icons[type as keyof typeof icons] || CreditCard;
+  // Calculate liability statistics
+  const liabilityStats = {
+    totalLiabilities: liabilities.length,
+    activeLiabilities: liabilities.filter(l => l.status === 'active').length,
+    totalDebt: liabilities.reduce((sum, l) => sum + (l.remainingAmount || 0), 0),
+    totalMonthlyPayments: liabilities.reduce((sum, l) => sum + (l.monthlyPayment || 0), 0),
+    averageInterestRate: liabilities.length > 0 
+      ? liabilities.reduce((sum, l) => sum + (l.interestRate || 0), 0) / liabilities.length 
+      : 0
   };
 
-  const getTypeColor = (type: string) => {
-    const colors = {
-      personal_loan: 'bg-blue-500',
-      student_loan: 'bg-purple-500',
-      auto_loan: 'bg-green-500',
-      mortgage: 'bg-orange-500',
-      credit_card: 'bg-red-500',
-      bnpl: 'bg-pink-500',
-      installment: 'bg-indigo-500',
-      loan: 'bg-blue-500', // Legacy support
-      other: 'bg-gray-500'
-    };
-    return colors[type as keyof typeof colors] || 'bg-gray-500';
+  // Get liability icon
+  const getLiabilityIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'credit_card': return <CreditCard size={20} className="text-red-600" />;
+      case 'personal_loan': return <Wallet size={20} className="text-blue-600" />;
+      case 'mortgage': return <Home size={20} className="text-green-600" />;
+      case 'auto_loan': return <Car size={20} className="text-purple-600" />;
+      case 'student_loan': return <GraduationCap size={20} className="text-orange-600" />;
+      case 'business_loan': return <Building size={20} className="text-indigo-600" />;
+      default: return <CreditCard size={20} className="text-gray-600" />;
+    }
   };
 
-  const getTypeLabel = (type: string) => {
-    const labels = {
-      personal_loan: 'Personal Loan',
-      student_loan: 'Student Loan',
-      auto_loan: 'Auto Loan',
-      mortgage: 'Mortgage',
-      credit_card: 'Credit Card',
-      bnpl: 'Buy Now Pay Later',
-      installment: 'Installment Plan',
-      loan: 'Loan', // Legacy support
-      purchase: 'Purchase',
-      other: 'Other'
-    };
-    return labels[type as keyof typeof labels] || 'Other';
-  };
-
+  // Get liability status
   const getLiabilityStatus = (liability: any) => {
-    const remainingAmount = Number(liability.remainingAmount) || 0;
-    
-    if (remainingAmount <= 0) {
-      return { status: 'paid_off', color: 'success', label: '✅ Paid Off' };
-    }
-    
-    const daysUntilDue = differenceInDays(new Date(liability.nextPaymentDate), new Date());
-    
-    if (daysUntilDue < 0) {
-      return { status: 'overdue', color: 'error', label: '⚠️ Overdue' };
-    }
-    
-    if (daysUntilDue === 0) {
-      return { status: 'due_today', color: 'error', label: '🚨 Due Today' };
-    }
-    
-    if (daysUntilDue <= 7) {
-      return { status: 'due_soon', color: 'warning', label: `⏰ Due in ${daysUntilDue} days` };
-    }
-    
-    return { status: 'current', color: 'primary', label: '📅 Current' };
+    if (liability.status === 'paid_off') return { status: 'Paid Off', color: 'text-green-600 bg-green-100' };
+    if (liability.remainingAmount <= 0) return { status: 'Paid Off', color: 'text-green-600 bg-green-100' };
+    return { status: 'Active', color: 'text-blue-600 bg-blue-100' };
   };
-
-  const totalDebt = liabilities.reduce((sum, l) => sum + (Number(l.remainingAmount) || 0), 0);
-  const totalMonthlyPayments = liabilities.reduce((sum, l) => sum + (Number(l.monthlyPayment || l.minimumPayment) || 0), 0);
-  const activeLiabilities = liabilities.filter(l => (Number(l.remainingAmount) || 0) > 0);
 
   return (
-    <div className="min-h-screen text-white pb-20">
-      <TopNavigation 
-        title="💳 Debt & Liabilities" 
-        showAdd 
-        onAdd={() => setShowModal(true)}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
+      <TopNavigation title="Liabilities" showBack />
       
-      <div className="px-4 py-4 sm:py-6">
-        <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">
-          🎯 Track and manage all your debts in one place
-        </p>
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4 mb-4">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle size={18} className="text-error-400" />
-              <p className="text-error-400 text-sm">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Summary Dashboard */}
-        <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-2xl p-6 mb-6 border border-red-500/30">
+      <div className="px-6 py-6 space-y-8">
+        {/* Liability Summary */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-xl font-semibold text-white">Debt Overview</h3>
-              <p className="text-red-200 text-sm">Your complete debt picture</p>
+            <h2 className="text-lg font-semibold text-gray-900">Debt Overview</h2>
+            <button
+              onClick={() => setShowModal(true)}
+              className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors flex items-center space-x-2"
+            >
+              <Plus size={16} />
+              <span>Add Liability</span>
+            </button>
+          </div>
+          
+          {liabilities.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">{liabilityStats.activeLiabilities}</p>
+                <p className="text-sm text-gray-600">Active Debts</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-red-600">
+                  {formatCurrency(liabilityStats.totalDebt)}
+                </p>
+                <p className="text-sm text-gray-600">Total Debt</p>
+              </div>
             </div>
-            {activeLiabilities.length > 1 && (
-              <Button
-                onClick={() => setShowStrategyTool(true)}
-                size="sm"
-                className="bg-blue-500 hover:bg-blue-600"
+          ) : (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CreditCard size={24} className="text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Liabilities Yet</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Add your first liability to start tracking your debt
+              </p>
+              <button
+                onClick={() => setShowModal(true)}
+                className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
               >
-                <Calculator size={16} className="mr-2" />
-                Strategy Tool
-              </Button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-black/30 rounded-xl p-4 text-center">
-              <CreditCard size={20} className="mx-auto text-red-400 mb-2" />
-              <p className="text-xs text-gray-400 mb-1">Total Debt</p>
-              <p className="text-lg font-bold text-white">
-                {formatCurrency(totalDebt)}
-              </p>
+                Add Liability
+              </button>
             </div>
-            
-            <div className="bg-black/30 rounded-xl p-4 text-center">
-              <DollarSign size={20} className="mx-auto text-orange-400 mb-2" />
-              <p className="text-xs text-gray-400 mb-1">Monthly Payments</p>
-              <p className="text-lg font-bold text-white">
-                {formatCurrency(totalMonthlyPayments)}
-              </p>
-            </div>
-            
-            <div className="bg-black/30 rounded-xl p-4 text-center">
-              <Target size={20} className="mx-auto text-blue-400 mb-2" />
-              <p className="text-xs text-gray-400 mb-1">Active Debts</p>
-              <p className="text-lg font-bold text-white">{activeLiabilities.length}</p>
-            </div>
-            
-            <div className="bg-black/30 rounded-xl p-4 text-center">
-              <CheckCircle size={20} className="mx-auto text-success-400 mb-2" />
-              <p className="text-xs text-gray-400 mb-1">Paid Off</p>
-              <p className="text-lg font-bold text-white">
-                {liabilities.length - activeLiabilities.length}
-              </p>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex space-x-1 bg-black/20 rounded-xl p-1 border border-white/10 mb-6">
-          {[
-            { id: 'overview', label: 'Overview', icon: CreditCard },
-            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-            { id: 'payments', label: 'Payments', icon: DollarSign }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === tab.id
-                  ? 'bg-primary-500 text-white shadow-lg'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <tab.icon size={16} />
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
+        {liabilities.length > 0 && (
+          <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl">
+            {[
+              { key: 'overview', label: 'Overview', icon: BarChart3 },
+              { key: 'analytics', label: 'Analytics', icon: Calculator },
+              { key: 'payments', label: 'Payments', icon: DollarSign }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
+                  activeTab === tab.key
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <tab.icon size={16} />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* Tab Content */}
-        {activeTab === 'overview' && (
-          <div className="space-y-4">
-            {liabilities.length === 0 ? (
-              <div className="text-center py-12 sm:py-16">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-error-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CreditCard size={24} className="text-error-400 sm:w-8 sm:h-8" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">No debts tracked</h3>
-                <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">
-                  Add your debts to track repayment progress and get insights
-                </p>
-                <Button onClick={() => setShowModal(true)}>
-                  <Plus size={18} className="mr-2 sm:w-5 sm:h-5" />
-                  Add First Debt
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                {liabilities.map((liability) => {
-                  const totalAmount = Number(liability.totalAmount) || 0;
-                  const remainingAmount = Number(liability.remainingAmount) || 0;
-                  const monthlyPayment = Number(liability.monthlyPayment || liability.minimumPayment) || 0;
-                  const interestRate = Number(liability.interestRate) || 0;
-                  
-                  const payoffProgress = totalAmount > 0 ? ((totalAmount - remainingAmount) / totalAmount) * 100 : 0;
-                  const TypeIcon = getTypeIcon(liability.type);
-                  const liabilityStatus = getLiabilityStatus(liability);
-                  
-                  return (
-                    <div key={liability.id} className="bg-black/20 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-white/10">
-                      {/* Header */}
-                      <div className="flex items-start justify-between mb-4 sm:mb-6">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${getTypeColor(liability.type)} flex items-center justify-center`}>
-                            <TypeIcon size={20} className="text-white sm:w-6 sm:h-6" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-white text-sm sm:text-base">{liability.name}</h3>
-                            <p className="text-xs sm:text-sm text-gray-400">{getTypeLabel(liability.type)}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          {interestRate > 0 && (
-                            <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded">
-                              {interestRate}% APR
-                            </span>
-                          )}
-                          <button
-                            onClick={() => {
-                              setEditingLiability(liability);
-                              setShowEditModal(true);
-                            }}
-                            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                          >
-                            <Edit3 size={16} className="text-gray-400" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteLiability(liability.id)}
-                            className="p-2 hover:bg-error-500/20 rounded-lg transition-colors"
-                          >
-                            <Trash2 size={16} className="text-error-400" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Progress Section */}
-                      <div className="mb-4 sm:mb-6">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-xs sm:text-sm text-gray-400">Paid Off</span>
-                          <span className="text-sm sm:text-lg font-semibold text-white">
-                            {formatCurrency(totalAmount - remainingAmount)} / {formatCurrency(totalAmount)}
-                          </span>
-                        </div>
-                        
-                        {/* Progress Bar */}
-                        <div className="w-full bg-white/10 rounded-full h-2 mb-3">
-                          <div
-                            className="bg-orange-500 h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${payoffProgress}%` }}
-                          />
-                        </div>
-                        
-                        <div className="flex justify-between items-center text-xs sm:text-sm">
-                          <span className="font-medium text-orange-400">
-                            {payoffProgress.toFixed(1)}% paid off
-                          </span>
-                          <span className="text-gray-400">
-                            {formatCurrency(remainingAmount)} remaining
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Details Grid */}
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <p className="text-xs text-gray-400">Monthly Payment</p>
-                          <p className="text-sm font-medium text-white">
-                            {formatCurrency(monthlyPayment)}
-                          </p>
+        {/* Liabilities List */}
+        {liabilities.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Your Liabilities</h3>
+            <div className="space-y-4">
+              {liabilities.map((liability) => {
+                const status = getLiabilityStatus(liability);
+                const progress = ((liability.totalAmount - liability.remainingAmount) / liability.totalAmount) * 100;
+                
+                return (
+                  <div key={liability.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                          {getLiabilityIcon(liability.liabilityType)}
                         </div>
                         <div>
-                          <p className="text-xs text-gray-400">Due Date</p>
-                          <p className="text-sm font-medium text-white">
-                            {format(liability.nextPaymentDate || liability.dueDate, 'MMM dd')}
+                          <h4 className="font-semibold text-gray-900">{liability.name}</h4>
+                          <p className="text-sm text-gray-500 capitalize">
+                            {liability.liabilityType.replace('_', ' ')}
                           </p>
                         </div>
                       </div>
-
-                      {/* Status Badge */}
-                      <div className={`text-center py-2 sm:py-3 rounded-xl border mb-4 ${
-                        liabilityStatus.status === 'paid_off' ? 'bg-success-500/20 border-success-500/30' :
-                        liabilityStatus.status === 'overdue' ? 'bg-error-500/20 border-error-500/30' :
-                        liabilityStatus.status === 'due_soon' ? 'bg-warning-500/20 border-warning-500/30' :
-                        'bg-primary-500/20 border-primary-500/30'
-                      }`}>
-                        <span className={`font-medium text-sm ${
-                          liabilityStatus.status === 'paid_off' ? 'text-success-400' :
-                          liabilityStatus.status === 'overdue' ? 'text-error-400' :
-                          liabilityStatus.status === 'due_soon' ? 'text-warning-400' :
-                          'text-primary-400'
-                        }`}>
-                          {liabilityStatus.label}
-                        </span>
-                      </div>
-
-                      {/* Action Button */}
-                      {remainingAmount > 0 && (
-                        <Button
+                      <div className="flex items-center space-x-2">
+                        <button
                           onClick={() => {
                             setSelectedLiability(liability.id);
                             setShowPaymentModal(true);
                           }}
-                          className="w-full"
-                          size="sm"
+                          className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium hover:bg-green-200 transition-colors"
                         >
-                          💰 Make Payment
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'analytics' && (
-          <div className="space-y-6">
-            {/* Debt Breakdown by Type */}
-            <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-              <h4 className="font-medium text-white mb-4">Debt Breakdown by Type</h4>
-              
-              <div className="space-y-3">
-                {Object.entries(
-                  liabilities.reduce((acc, liability) => {
-                    const type = liability.type;
-                    const amount = Number(liability.remainingAmount) || 0;
-                    acc[type] = (acc[type] || 0) + amount;
-                    return acc;
-                  }, {} as Record<string, number>)
-                ).map(([type, amount]) => {
-                  const percentage = totalDebt > 0 ? (amount / totalDebt) * 100 : 0;
-                  const TypeIcon = getTypeIcon(type);
-                  
-                  return (
-                    <div key={type} className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-8 h-8 rounded-lg ${getTypeColor(type)} flex items-center justify-center`}>
-                          <TypeIcon size={16} className="text-white" />
-                        </div>
-                        <span className="font-medium text-white">{getTypeLabel(type)}</span>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-white">{formatCurrency(amount)}</p>
-                        <p className="text-xs text-gray-400">{percentage.toFixed(1)}%</p>
+                          Pay
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingLiability(liability);
+                            setShowEditModal(true);
+                          }}
+                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteLiability(liability.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Payment Schedule */}
-            <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-              <h4 className="font-medium text-white mb-4">Upcoming Payments</h4>
-              
-              <div className="space-y-3">
-                {activeLiabilities
-                  .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
-                  .slice(0, 5)
-                  .map((liability) => {
-                    const daysUntilDue = differenceInDays(new Date(liability.due_date), new Date());
                     
-                    return (
-                      <div key={liability.id} className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <Clock size={16} className="text-blue-400" />
-                          <div>
-                            <p className="font-medium text-white text-sm">{liability.name}</p>
-                            <p className="text-xs text-gray-400">
-                              {daysUntilDue === 0 ? 'Due today' :
-                               daysUntilDue === 1 ? 'Due tomorrow' :
-                               daysUntilDue > 0 ? `Due in ${daysUntilDue} days` :
-                               `${Math.abs(daysUntilDue)} days overdue`}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-white">
-                            {formatCurrency(Number(liability.monthlyPayment || liability.minimumPayment) || 0)}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {format(liability.due_date, 'MMM dd')}
-                          </p>
-                        </div>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Remaining</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {formatCurrency(liability.remainingAmount || 0)}
+                        </p>
                       </div>
-                    );
-                  })}
-              </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Interest Rate</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {(liability.interestRate || 0).toFixed(2)}%
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <div className="flex justify-between text-sm text-gray-600 mb-2">
+                        <span>Paid: {formatCurrency(liability.totalAmount - (liability.remainingAmount || 0))}</span>
+                        <span>Total: {formatCurrency(liability.totalAmount)}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(progress, 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${status.color}`}>
+                        {status.status}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {progress.toFixed(0)}% paid
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {activeTab === 'payments' && (
-          <div className="space-y-6">
-            {/* Payment History would go here */}
-            <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-              <h4 className="font-medium text-white mb-4">Payment History</h4>
-              <div className="text-center py-8">
-                <Clock size={48} className="mx-auto text-gray-600 mb-4" />
-                <p className="text-gray-400">Payment history tracking coming soon</p>
-              </div>
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle size={20} className="text-red-600" />
+              <p className="text-red-800 text-sm">{error}</p>
             </div>
           </div>
         )}
-
-        {/* Student Tips */}
-        <div className="bg-blue-500/20 rounded-lg p-4 border border-blue-500/30">
-          <div className="flex items-start space-x-3">
-            <span className="text-blue-400 mt-0.5">🎓</span>
-            <div>
-              <h4 className="font-medium text-blue-400 mb-1">💡 Student Debt Management Tips</h4>
-              <ul className="text-sm text-blue-300 space-y-1 list-disc list-inside">
-                <li>Track all your debts in one place - EMIs, credit cards, student loans</li>
-                <li>Pay more than the minimum when you can to save on interest</li>
-                <li>Focus on high-interest debt first (debt avalanche method)</li>
-                <li>Set up automatic bill reminders to never miss payments</li>
-                <li>Celebrate every payment - you're building financial freedom!</li>
-              </ul>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Enhanced Liability Form Modal */}
+      {/* Add Liability Modal */}
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title="Add New Debt"
+        title="Add Liability"
       >
         <EnhancedLiabilityForm
           onSubmit={handleAddLiability}
           onCancel={() => setShowModal(false)}
+          isSubmitting={isSubmitting}
         />
       </Modal>
 
       {/* Edit Liability Modal */}
       <Modal
         isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setEditingLiability(null);
-        }}
-        title="Edit Debt"
+        onClose={() => setShowEditModal(false)}
+        title="Edit Liability"
       >
-        {editingLiability && (
-          <EnhancedLiabilityForm
-            initialData={{
-              ...editingLiability,
-              // Ensure date fields are strings for form
-              startDate: editingLiability.startDate.toISOString().split('T')[0],
-              dueDate: editingLiability.dueDate?.toISOString().split('T')[0],
-              nextPaymentDate: editingLiability.nextPaymentDate?.toISOString().split('T')[0],
-              // Map liabilityType back to type for form compatibility if needed
-              type: editingLiability.liabilityType,
-              // Ensure numeric fields are numbers
-              totalAmount: Number(editingLiability.totalAmount),
-              remainingAmount: Number(editingLiability.remainingAmount),
-            }}
-            onSubmit={async (data) => {
-              await updateLiability(editingLiability.id, data);
-              setShowEditModal(false);
-              setEditingLiability(null);
-            }}
-            onCancel={() => {
-              setShowEditModal(false);
-              setEditingLiability(null);
-            }}
-          />
-        )}
+        <EnhancedLiabilityForm
+          liability={editingLiability}
+          onSubmit={handleEditLiability}
+          onCancel={() => setShowEditModal(false)}
+          isSubmitting={isSubmitting}
+        />
       </Modal>
 
       {/* Payment Modal */}
       <Modal
         isOpen={showPaymentModal}
-        onClose={() => {
-          setShowPaymentModal(false);
-          setSelectedLiability(null);
-        }}
+        onClose={() => setShowPaymentModal(false)}
         title="Make Payment"
       >
-        <PaymentForm
-          liability={liabilities.find(l => l.id === selectedLiability)}
-          accounts={accounts}
-          onSubmit={handleMakePayment}
-          onCancel={() => {
-            setShowPaymentModal(false);
-            setSelectedLiability(null);
-          }}
-        />
+        {selectedLiability && (
+          <PaymentForm
+            liability={liabilities.find(l => l.id === selectedLiability)}
+            accounts={accounts}
+            onSubmit={handleMakePayment}
+            onCancel={() => setShowPaymentModal(false)}
+            isSubmitting={isSubmitting}
+          />
+        )}
       </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal
         isOpen={showDeleteConfirm}
-        onClose={() => {
-          setShowDeleteConfirm(false);
-          setLiabilityToDelete(null);
-        }}
-        title="Delete Debt"
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Delete Liability"
       >
-        <div className="space-y-4">
-          <div className="bg-error-500/20 rounded-lg p-4 border border-error-500/30">
-            <div className="flex items-start space-x-3">
-              <AlertTriangle size={18} className="text-error-400 mt-0.5" />
-              <div>
-                <p className="text-error-400 font-medium">⚠️ This can't be undone!</p>
-                <p className="text-error-300 text-sm mt-1">
-                  Deleting this debt will remove all payment history and linked bills.
-                </p>
-              </div>
+        <div className="p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertTriangle size={24} className="text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Delete Liability</h3>
+              <p className="text-sm text-gray-500">
+                This action cannot be undone. Are you sure you want to delete this liability?
+              </p>
             </div>
           </div>
           
-          <p className="text-gray-300">
-            Are you sure you want to delete this debt? All related data will be lost forever.
-          </p>
-          
           <div className="flex space-x-3">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowDeleteConfirm(false);
-                setLiabilityToDelete(null);
-              }}
-              className="flex-1"
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={confirmDeleteLiability}
-              className="flex-1 bg-error-500 hover:bg-error-600"
-              loading={isSubmitting}
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
             >
-              Delete Debt
-            </Button>
+              {isSubmitting ? 'Deleting...' : 'Delete'}
+            </button>
           </div>
         </div>
-      </Modal>
-
-      {/* Debt Strategy Tool Modal */}
-      <Modal
-        isOpen={showStrategyTool}
-        onClose={() => setShowStrategyTool(false)}
-        title="Debt Repayment Strategy"
-      >
-        <DebtStrategyTool onClose={() => setShowStrategyTool(false)} />
       </Modal>
     </div>
   );

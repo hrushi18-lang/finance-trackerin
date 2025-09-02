@@ -49,111 +49,41 @@ export const Bills: React.FC = () => {
     totalAnnualAmount: bills
       .filter(b => b.isActive)
       .reduce((sum, bill) => {
-        let annualAmount = bill.amount;
-        if (bill.frequency === 'weekly') annualAmount = bill.amount * 52;
-        else if (bill.frequency === 'bi_weekly') annualAmount = bill.amount * 26;
-        else if (bill.frequency === 'monthly') annualAmount = bill.amount * 12;
-        else if (bill.frequency === 'quarterly') annualAmount = bill.amount * 4;
-        else if (bill.frequency === 'semi_annual') annualAmount = bill.amount * 2;
-        return sum + annualAmount;
+        const multiplier = bill.frequency === 'weekly' ? 52 : 
+                          bill.frequency === 'bi_weekly' ? 26 :
+                          bill.frequency === 'monthly' ? 12 :
+                          bill.frequency === 'quarterly' ? 4 :
+                          bill.frequency === 'semi_annual' ? 2 : 1;
+        return sum + (bill.amount * multiplier);
       }, 0)
   };
 
-  // Get recent bill-related transactions
-  const recentBillTransactions = transactions
-    .filter(t => t.category === 'Bills' || t.description?.includes('Bill payment'))
-    .slice(0, 5);
-
-  const handleAddBill = async (data: any) => {
+  const handleAddBill = async (bill: any) => {
     try {
       setIsSubmitting(true);
       setError(null);
-      
-      await addBill({
-        title: data.title,
-        description: data.description,
-        category: data.category,
-        billType: data.billType,
-        amount: data.amount,
-        estimatedAmount: data.estimatedAmount,
-        frequency: data.frequency,
-        customFrequencyDays: data.customFrequencyDays,
-        dueDate: data.dueDate,
-        nextDueDate: data.dueDate, // For new bills, next due date is the same as due date
-        defaultAccountId: data.defaultAccountId,
-        autoPay: data.autoPay,
-        linkedLiabilityId: data.linkedLiabilityId,
-        isEmi: data.isEmi,
-        isEssential: data.isEssential,
-        reminderDaysBefore: data.reminderDaysBefore,
-        sendDueDateReminder: data.sendDueDateReminder,
-        sendOverdueReminder: data.sendOverdueReminder,
-      });
+      await addBill(bill);
       setShowModal(false);
     } catch (error: any) {
       console.error('Error adding bill:', error);
-      setError(error.message || 'Failed to add bill');
+      setError(error.message || 'Failed to add bill. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleEditBill = async (data: any) => {
+  const handleEditBill = async (bill: any) => {
     try {
       setIsSubmitting(true);
       setError(null);
       if (editingBill) {
-        await updateBill(editingBill.id, {
-          title: data.title,
-          description: data.description,
-          category: data.category,
-          billType: data.billType,
-          amount: data.amount,
-          estimatedAmount: data.estimatedAmount,
-          frequency: data.frequency,
-          customFrequencyDays: data.customFrequencyDays,
-          dueDate: data.dueDate,
-          defaultAccountId: data.defaultAccountId,
-          autoPay: data.autoPay,
-          linkedLiabilityId: data.linkedLiabilityId,
-          isEmi: data.isEmi,
-          isEssential: data.isEssential,
-        });
+        await updateBill(editingBill.id, bill);
         setEditingBill(null);
         setShowModal(false);
       }
     } catch (error: any) {
       console.error('Error updating bill:', error);
-      setError(error.message || 'Failed to update bill');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handlePayBill = async (paymentData: { amount: number; description: string; accountId: string }) => {
-    try {
-      setIsSubmitting(true);
-      setError(null);
-      
-      await payBillFromAccount(paymentData.accountId, selectedBill.id, paymentData.amount, paymentData.description);
-
-      // If bill is linked to a liability, update the liability
-      if (selectedBill.linkedLiabilityId) {
-        const liability = liabilities.find(l => l.id === selectedBill.linkedLiabilityId);
-        if (liability) {
-          const newRemainingAmount = Math.max(0, liability.remainingAmount - paymentData.amount);
-          await updateLiability(selectedBill.linkedLiabilityId, {
-            remainingAmount: newRemainingAmount,
-            status: newRemainingAmount === 0 ? 'paid_off' : liability.status
-          });
-        }
-      }
-
-      setShowPaymentModal(false);
-      setSelectedBill(null);
-    } catch (error: any) {
-      console.error('Error paying bill:', error);
-      setError(error.message || 'Failed to process payment');
+      setError(error.message || 'Failed to update bill. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -165,16 +95,34 @@ export const Bills: React.FC = () => {
   };
 
   const confirmDeleteBill = async () => {
+    if (!billToDelete) return;
+    
     try {
       setIsSubmitting(true);
-      if (billToDelete) {
-        await deleteBill(billToDelete);
-        setBillToDelete(null);
-        setShowDeleteConfirm(false);
-      }
+      setError(null);
+      await deleteBill(billToDelete);
+      setShowDeleteConfirm(false);
+      setBillToDelete(null);
     } catch (error: any) {
       console.error('Error deleting bill:', error);
-      setError(error.message || 'Failed to delete bill');
+      setError(error.message || 'Failed to delete bill. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePayBill = async (paymentData: any) => {
+    if (!selectedBill) return;
+    
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      await payBillFromAccount(paymentData.accountId, selectedBill.id, paymentData.amount, paymentData.description);
+      setShowPaymentModal(false);
+      setSelectedBill(null);
+    } catch (error: any) {
+      console.error('Error paying bill:', error);
+      setError(error.message || 'Failed to pay bill. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -182,273 +130,204 @@ export const Bills: React.FC = () => {
 
   const getBillStatus = (bill: any) => {
     const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
-    
-    if (!bill.isActive) return 'inactive';
-    if (daysUntilDue < 0) return 'overdue';
-    if (daysUntilDue <= 3) return 'urgent';
-    if (daysUntilDue <= 7) return 'upcoming';
-    return 'active';
+    if (daysUntilDue < 0) return { status: 'overdue', color: 'text-red-600 bg-red-100', icon: AlertTriangle };
+    if (daysUntilDue <= 3) return { status: 'due_soon', color: 'text-yellow-600 bg-yellow-100', icon: Clock };
+    if (daysUntilDue <= 7) return { status: 'due_this_week', color: 'text-blue-600 bg-blue-100', icon: Calendar };
+    return { status: 'upcoming', color: 'text-green-600 bg-green-100', icon: CheckCircle };
   };
 
-  const getBillStatusColor = (status: string) => {
-    switch (status) {
-      case 'overdue': return 'text-red-500';
-      case 'urgent': return 'text-orange-500';
-      case 'upcoming': return 'text-yellow-500';
-      case 'active': return 'text-green-500';
-      case 'inactive': return 'text-gray-500';
-      default: return 'text-blue-500';
+  const getFrequencyIcon = (frequency: string) => {
+    switch (frequency) {
+      case 'weekly': return <Calendar size={16} className="text-blue-600" />;
+      case 'monthly': return <Calendar size={16} className="text-green-600" />;
+      case 'quarterly': return <Calendar size={16} className="text-purple-600" />;
+      case 'annual': return <Calendar size={16} className="text-orange-600" />;
+      default: return <Calendar size={16} className="text-gray-600" />;
     }
-  };
-
-  const getBillStatusIcon = (status: string) => {
-    switch (status) {
-      case 'overdue': return <AlertTriangle size={16} className="text-red-500" />;
-      case 'urgent': return <AlertCircle size={16} className="text-orange-500" />;
-      case 'upcoming': return <Clock size={16} className="text-yellow-500" />;
-      case 'active': return <CheckCircle size={16} className="text-green-500" />;
-      case 'inactive': return <Pause size={16} className="text-gray-500" />;
-      default: return <Bell size={16} className="text-blue-500" />;
-    }
-  };
-
-  const getLinkedLiabilityName = (liabilityId: string) => {
-    const liability = liabilities.find(l => l.id === liabilityId);
-    return liability ? liability.name : 'Unknown Liability';
   };
 
   return (
-    <div className="min-h-screen text-white pb-20">
-      <TopNavigation title="Bills & Payments" />
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
+      <TopNavigation title="Bills & Payments" showBack />
       
-      <div className="px-4 py-4 sm:py-6 space-y-6">
-        {/* Bill Statistics */}
-        <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <p className="text-forest-300 text-sm font-body">Total Bills</p>
-              <p className="text-2xl font-numbers font-bold text-white">{billStats.totalBills}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-forest-300 text-sm font-body">Active</p>
-              <p className="text-2xl font-numbers font-bold text-green-400">{billStats.activeBills}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-forest-300 text-sm font-body">Overdue</p>
-              <p className="text-2xl font-numbers font-bold text-red-400">{billStats.overdueBills}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-forest-300 text-sm font-body">Monthly</p>
-              <p className="text-2xl font-numbers font-bold text-white">{formatCurrency(billStats.totalMonthlyAmount)}</p>
-            </div>
+      <div className="px-6 py-6 space-y-8">
+        {/* Bill Summary */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Bill Overview</h2>
+            <button
+              onClick={() => setShowModal(true)}
+              className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors flex items-center space-x-2"
+            >
+              <Plus size={16} />
+              <span>Add Bill</span>
+            </button>
           </div>
           
-          {/* Annual Overview */}
-          <div className="mt-4">
-            <div className="flex justify-between text-sm text-forest-300 mb-2">
-              <span>Annual Bill Total</span>
-              <span>{formatCurrency(billStats.totalAnnualAmount)}</span>
+          {bills.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">{billStats.activeBills}</p>
+                <p className="text-sm text-gray-600">Active Bills</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-red-600">{billStats.overdueBills}</p>
+                <p className="text-sm text-gray-600">Overdue</p>
+              </div>
             </div>
-            <div className="w-full bg-forest-800/50 rounded-full h-2">
-              <div 
-                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${Math.min((billStats.totalAnnualAmount / 50000) * 100, 100)}%` }}
-              />
+          ) : (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Bell size={24} className="text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Bills Yet</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Add your first bill to start tracking payments
+              </p>
+              <button
+                onClick={() => setShowModal(true)}
+                className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+              >
+                Add Bill
+              </button>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex space-x-1 bg-forest-800/30 rounded-lg p-1">
-          {Object.entries({
-            upcoming: { label: 'Upcoming', count: categorizedBills.upcoming.length },
-            overdue: { label: 'Overdue', count: categorizedBills.overdue.length },
-            paid: { label: 'Paid', count: categorizedBills.paid.length },
-            all: { label: 'All', count: categorizedBills.all.length }
-          }).map(([key, { label, count }]) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key as any)}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                activeTab === key
-                  ? 'bg-forest-600 text-white'
-                  : 'text-forest-300 hover:text-white'
-              }`}
-            >
-              {label} ({count})
-            </button>
-          ))}
-        </div>
+        {bills.length > 0 && (
+          <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl">
+            {[
+              { key: 'upcoming', label: 'Upcoming', count: categorizedBills.upcoming.length },
+              { key: 'overdue', label: 'Overdue', count: categorizedBills.overdue.length },
+              { key: 'paid', label: 'Paid', count: categorizedBills.paid.length },
+              { key: 'all', label: 'All', count: categorizedBills.all.length }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {tab.label} ({tab.count})
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Bills List */}
-        <div className="space-y-4">
-          {categorizedBills[activeTab].map((bill) => {
-            const status = getBillStatus(bill);
-            const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
-            
-            return (
-              <div key={bill.id} className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CreditCard size={20} className="text-forest-400" />
-                      <h3 className="text-lg font-heading font-semibold text-white">{bill.title}</h3>
-                      {getBillStatusIcon(status)}
-                      {bill.isEssential && (
-                        <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full">Essential</span>
-                      )}
+        {bills.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Your Bills</h3>
+            <div className="space-y-4">
+              {categorizedBills[activeTab].map((bill) => {
+                const status = getBillStatus(bill);
+                const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
+                
+                return (
+                  <div key={bill.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          {getFrequencyIcon(bill.frequency)}
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{bill.title}</h4>
+                          <p className="text-sm text-gray-500">{bill.category}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            setSelectedBill(bill);
+                            setShowPaymentModal(true);
+                          }}
+                          className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium hover:bg-green-200 transition-colors"
+                        >
+                          Pay
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingBill(bill);
+                            setShowModal(true);
+                          }}
+                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBill(bill.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-forest-300 text-sm font-body mb-2">{bill.description}</p>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="text-forest-400 font-body">Category: {bill.category}</span>
-                      <span className="text-forest-400 font-body">
-                        Due: {format(new Date(bill.nextDueDate), 'MMM dd, yyyy')}
-                      </span>
-                      {bill.linkedLiabilityId && (
-                        <span className="text-forest-400 font-body">
-                          EMI: {getLinkedLiabilityName(bill.linkedLiabilityId)}
-                        </span>
-                      )}
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Amount</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {formatCurrency(bill.amount)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Due Date</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {format(new Date(bill.nextDueDate), 'MMM dd, yyyy')}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {bill.isActive && (
-                      <button
-                        onClick={() => {
-                          setSelectedBill(bill);
-                          setShowPaymentModal(true);
-                        }}
-                        className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
-                        title="Pay Bill"
-                      >
-                        <DollarSign size={16} className="text-forest-400" />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        setEditingBill(bill);
-                        setShowModal(true);
-                      }}
-                      className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
-                      title="Edit Bill"
-                    >
-                      <Edit3 size={16} className="text-forest-400" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteBill(bill.id)}
-                      className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
-                      title="Delete Bill"
-                    >
-                      <Trash2 size={16} className="text-forest-400" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Bill Details */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div className="bg-forest-800/20 rounded-lg p-3">
-                    <p className="text-forest-300 text-xs mb-1">Amount</p>
-                    <p className="text-lg font-numbers font-bold text-white">{formatCurrency(bill.amount)}</p>
-                  </div>
-                  <div className="bg-forest-800/20 rounded-lg p-3">
-                    <p className="text-forest-300 text-xs mb-1">Frequency</p>
-                    <p className="text-sm font-medium text-white capitalize">{bill.frequency.replace('_', ' ')}</p>
-                  </div>
-                  <div className="bg-forest-800/20 rounded-lg p-3">
-                    <p className="text-forest-300 text-xs mb-1">Status</p>
-                    <p className={`text-sm font-medium ${getBillStatusColor(status)}`}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </p>
-                  </div>
-                  <div className="bg-forest-800/20 rounded-lg p-3">
-                    <p className="text-forest-300 text-xs mb-1">Days Left</p>
-                    <p className={`text-sm font-medium ${
-                      daysUntilDue < 0 ? 'text-red-400' : 
-                      daysUntilDue <= 3 ? 'text-orange-400' : 
-                      daysUntilDue <= 7 ? 'text-yellow-400' : 'text-green-400'
-                    }`}>
-                      {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} overdue` : `${daysUntilDue} days`}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Auto-pay and Reminder Settings */}
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-4">
-                    {bill.autoPay && (
-                      <span className="flex items-center gap-1 text-green-400">
-                        <Zap size={14} />
-                        Auto-pay enabled
+                    
+                    <div className="flex items-center justify-between">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${status.color}`}>
+                        {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` :
+                         daysUntilDue === 0 ? 'Due today' :
+                         daysUntilDue === 1 ? 'Due tomorrow' :
+                         `Due in ${daysUntilDue} days`}
                       </span>
-                    )}
-                    {bill.sendDueDateReminder && (
-                      <span className="flex items-center gap-1 text-blue-400">
-                        <Bell size={14} />
-                        Reminders: {bill.reminderDaysBefore} days before
+                      <span className="text-sm text-gray-500 capitalize">
+                        {bill.frequency}
                       </span>
-                    )}
-                  </div>
-                  {bill.lastPaidDate && (
-                    <span className="text-forest-400">
-                      Last paid: {format(new Date(bill.lastPaidDate), 'MMM dd, yyyy')}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Recent Bill Transactions */}
-        {recentBillTransactions.length > 0 && (
-          <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-            <h3 className="text-lg font-heading font-semibold text-white mb-4">Recent Bill Payments</h3>
-            <div className="space-y-3">
-              {recentBillTransactions.map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between p-3 bg-forest-800/20 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <TrendingDown size={16} className="text-red-400" />
-                    <div>
-                      <p className="text-sm font-medium text-white">{transaction.description}</p>
-                      <p className="text-xs text-forest-400">{format(new Date(transaction.date), 'MMM dd, yyyy')}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-numbers font-bold text-red-400">
-                      -{formatCurrency(transaction.amount)}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Add Bill Button */}
-        <div className="fixed bottom-6 right-6">
-          <Button
-            onClick={() => setShowModal(true)}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full p-4 shadow-lg"
-          >
-            <Plus size={24} />
-          </Button>
-        </div>
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+            <div className="flex items-center space-x-2">
+              <AlertCircle size={20} className="text-red-600" />
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Add Bill Modal */}
+      {/* Add/Edit Bill Modal */}
       <Modal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title={editingBill ? "Edit Bill" : "Add New Bill"}
+        onClose={() => {
+          setShowModal(false);
+          setEditingBill(null);
+        }}
+        title={editingBill ? "Edit Bill" : "Add Bill"}
       >
         <EnhancedBillForm
+          bill={editingBill}
           onSubmit={editingBill ? handleEditBill : handleAddBill}
           onCancel={() => {
             setShowModal(false);
             setEditingBill(null);
           }}
-          initialData={editingBill}
+          isSubmitting={isSubmitting}
         />
       </Modal>
 
@@ -461,9 +340,9 @@ export const Bills: React.FC = () => {
         {selectedBill && (
           <BillPaymentForm
             bill={selectedBill}
-            accounts={accounts}
             onSubmit={handlePayBill}
             onCancel={() => setShowPaymentModal(false)}
+            isSubmitting={isSubmitting}
           />
         )}
       </Modal>
@@ -474,38 +353,36 @@ export const Bills: React.FC = () => {
         onClose={() => setShowDeleteConfirm(false)}
         title="Delete Bill"
       >
-        <div className="text-center">
-          <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-2">Are you sure?</h3>
-          <p className="text-forest-300 mb-6">
-            This action cannot be undone. All payment history for this bill will be lost.
-          </p>
-          <div className="flex space-x-4">
-            <Button
+        <div className="p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertTriangle size={24} className="text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Delete Bill</h3>
+              <p className="text-sm text-gray-500">
+                This action cannot be undone. Are you sure you want to delete this bill?
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex space-x-3">
+            <button
               onClick={() => setShowDeleteConfirm(false)}
-              variant="outline"
-              className="flex-1"
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={confirmDeleteBill}
-              variant="destructive"
-              className="flex-1"
               disabled={isSubmitting}
+              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
             >
-              {isSubmitting ? 'Deleting...' : 'Delete Bill'}
-            </Button>
+              {isSubmitting ? 'Deleting...' : 'Delete'}
+            </button>
           </div>
         </div>
       </Modal>
-
-      {/* Error Toast */}
-      {error && (
-        <div className="fixed bottom-6 left-6 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          {error}
-        </div>
-      )}
     </div>
   );
 };
