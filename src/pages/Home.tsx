@@ -52,11 +52,6 @@ export const Home: React.FC = () => {
     return { amount: 6234.50, percentage: 2.45 };
   }, []);
 
-  // Get display transactions
-  const displayTransactions = useMemo(() => {
-    return filteredTransactions;
-  }, [filteredTransactions]);
-
   // Get recent transactions
   const recentTransactions = useMemo(() => {
     return transactions
@@ -82,6 +77,11 @@ export const Home: React.FC = () => {
       }
     });
   }, [recentTransactions, activeFilter]);
+
+  // Get display transactions
+  const displayTransactions = useMemo(() => {
+    return filteredTransactions;
+  }, [filteredTransactions]);
 
   // Get main accounts (excluding Goals Vault)
   const mainAccounts = useMemo(() => {
