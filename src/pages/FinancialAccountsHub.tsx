@@ -135,14 +135,22 @@ export const FinancialAccountsHub: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen text-white pb-20">
-      <TopNavigation 
-        title="💳 Your Money Accounts" 
-        showAdd 
-        onAdd={() => setShowAccountModal(true)}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
+      {/* Immersive Header */}
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 pt-12 pb-8 px-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-heading text-gray-900">💳 Your Money Accounts</h1>
+          <button
+            onClick={() => setShowAccountModal(true)}
+            className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors flex items-center space-x-2"
+          >
+            <Plus size={16} />
+            <span>Add Account</span>
+          </button>
+        </div>
+      </div>
       
-      <div className="px-4 py-4 sm:py-6 space-y-6">
+      <div className="px-6 space-y-8">
         <div className="flex items-center justify-between">
           <p className="text-gray-400 text-sm sm:text-base">
             🏦 Manage all your payment methods like a pro

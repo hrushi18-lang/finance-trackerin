@@ -133,30 +133,28 @@ export const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
-      {/* Top Header */}
-      <header className="bg-white/90 backdrop-blur-sm sticky top-0 z-30">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-serif font-bold text-gray-900">Fin.</h1>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                <Bell size={18} className="text-gray-600" />
-              </button>
-              <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                <Settings size={18} className="text-gray-600" />
-              </button>
-              <button className="p-1 rounded-full hover:bg-gray-100 transition-colors">
-                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                  <User size={16} className="text-gray-600" />
-                </div>
-              </button>
-            </div>
+      {/* Immersive Header */}
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 pt-12 pb-8 px-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-heading text-gray-900">Fin.</h1>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Bell size={18} className="text-gray-600" />
+            </button>
+            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Settings size={18} className="text-gray-600" />
+            </button>
+            <button className="p-1 rounded-full hover:bg-gray-100 transition-colors">
+              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                <User size={16} className="text-gray-600" />
+              </div>
+            </button>
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="px-6 py-6 space-y-8">
         {/* Greeting Section */}

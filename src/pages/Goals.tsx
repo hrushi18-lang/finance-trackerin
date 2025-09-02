@@ -253,10 +253,22 @@ export const Goals: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen text-white pb-20">
-      <TopNavigation title="Financial Goals" showBack />
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
+      {/* Immersive Header */}
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 pt-12 pb-8 px-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-heading text-gray-900">Financial Goals</h1>
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors flex items-center space-x-2"
+          >
+            <Plus size={16} />
+            <span>Add Goal</span>
+          </button>
+        </div>
+      </div>
       
-      <div className="px-4 py-4 sm:py-6 space-y-6">
+      <div className="px-6 space-y-8">
         {/* Goal Statistics */}
         <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

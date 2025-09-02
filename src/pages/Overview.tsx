@@ -107,17 +107,18 @@ export const Overview: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
-      <TopNavigation title="Overview" showBack />
-      
-      <div className="px-6 py-6 space-y-8">
-        {/* Header with Month Filter */}
+      {/* Immersive Header */}
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 pt-12 pb-8 px-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-heading text-gray-900">Overview</h1>
+          <h1 className="text-3xl font-heading text-gray-900">Overview</h1>
           <div className="flex items-center space-x-2 bg-white rounded-2xl px-4 py-2 shadow-sm border border-gray-100">
             <Calendar size={16} className="text-gray-600" />
             <span className="text-sm font-medium text-gray-700">This Month</span>
           </div>
         </div>
+      </div>
+      
+      <div className="px-6 space-y-8">
 
         {/* Summary Section */}
         <div>

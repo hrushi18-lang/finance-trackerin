@@ -148,20 +148,25 @@ export const Bills: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
-      <TopNavigation title="Bills & Payments" showBack />
+      {/* Immersive Header */}
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 pt-12 pb-8 px-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-heading text-gray-900">Bills & Payments</h1>
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors flex items-center space-x-2"
+          >
+            <Plus size={16} />
+            <span>Add Bill</span>
+          </button>
+        </div>
+      </div>
       
-      <div className="px-6 py-6 space-y-8">
+      <div className="px-6 space-y-8">
         {/* Bill Summary */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Bill Overview</h2>
-            <button
-              onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors flex items-center space-x-2"
-            >
-              <Plus size={16} />
-              <span>Add Bill</span>
-            </button>
           </div>
           
           {bills.length > 0 ? (
