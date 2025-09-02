@@ -13,7 +13,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="space-y-2">
         {label && (
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
             {label}
           </label>
         )}
@@ -26,19 +26,26 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             className={clsx(
-              "block w-full rounded-xl border-gray-300 bg-white text-gray-900 shadow-sm focus:border-gray-900 focus:ring-gray-900 transition-colors duration-200 placeholder-gray-400 py-3",
+              "block w-full rounded-xl shadow-sm transition-colors duration-200 py-3",
               icon && 'pl-10',
               error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
               className
             )}
+            style={{
+              backgroundColor: 'var(--background)',
+              color: 'var(--text-primary)',
+              border: `1px solid ${error ? 'var(--error)' : 'var(--border)'}`,
+              '--tw-placeholder-opacity': '1',
+              '--tw-placeholder-color': 'var(--text-tertiary)'
+            }}
             {...props}
           />
         </div>
         {error && (
-          <p className="text-sm text-red-600">{error}</p>
+          <p className="text-sm" style={{ color: 'var(--error)' }}>{error}</p>
         )}
         {helpText && !error && (
-          <p className="text-xs text-gray-500">{helpText}</p>
+          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{helpText}</p>
         )}
       </div>
     );

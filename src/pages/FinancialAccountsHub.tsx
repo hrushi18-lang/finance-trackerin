@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Plus, Eye, EyeOff, ArrowLeftRight, AlertCircle } from 'lucide-react';
-import { TopNavigation } from '../components/layout/TopNavigation';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { SmartAccountForm } from '../components/forms/SmartAccountForm';
@@ -135,14 +134,14 @@ export const FinancialAccountsHub: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
+    <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
       {/* Immersive Header */}
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 pt-12 pb-8 px-6">
+      <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-heading text-gray-900">💳 Your Money Accounts</h1>
+          <h1 className="text-2xl font-heading">💳 Your Money Accounts</h1>
           <button
             onClick={() => setShowAccountModal(true)}
-            className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors flex items-center space-x-2"
+            className="btn-primary flex items-center space-x-2 px-4 py-2"
           >
             <Plus size={16} />
             <span>Add Account</span>
@@ -150,22 +149,23 @@ export const FinancialAccountsHub: React.FC = () => {
         </div>
       </div>
       
-      <div className="px-6 space-y-8">
+      <div className="px-4 space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-gray-400 text-sm sm:text-base">
+          <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>
             🏦 Manage all your payment methods like a pro
           </p>
           <div className="flex items-center space-x-2">
             <ContextualHelp context="accounts" />
             <button
               onClick={() => setShowBalances(!showBalances)}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 rounded-lg transition-colors"
+              style={{ backgroundColor: 'var(--background-secondary)' }}
               title={showBalances ? "Hide balances" : "Show balances"}
             >
               {showBalances ? (
-                <EyeOff size={18} className="text-gray-400" />
+                <EyeOff size={16} className="text-gray-400" />
               ) : (
-                <Eye size={18} className="text-gray-400" />
+                <Eye size={16} className="text-gray-400" />
               )}
             </button>
           </div>
@@ -173,77 +173,76 @@ export const FinancialAccountsHub: React.FC = () => {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4">
+          <div className="card p-4" style={{ backgroundColor: 'var(--error)', color: 'white' }}>
             <div className="flex items-center space-x-2">
-              <AlertCircle size={18} className="text-error-400" />
-              <p className="text-error-400 text-sm">{error}</p>
+              <AlertCircle size={16} />
+              <p className="text-sm font-body">{error}</p>
             </div>
           </div>
         )}
 
         {/* Header with Total Balance */}
-        <div className="bg-gradient-to-r from-forest-700/80 to-forest-600/80 backdrop-blur-md rounded-2xl p-6 border border-forest-500/20">
+        <div className="card-neumorphic p-4 slide-in-up">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <span className="text-3xl">💰</span>
+              <span className="text-2xl">💰</span>
               <div>
-                <h3 className="text-xl font-heading font-bold text-white">Your Money Dashboard</h3>
-                <p className="text-sm text-forest-200 font-body">Track every rupee across all accounts</p>
+                <h3 className="text-lg font-heading font-bold">Your Money Dashboard</h3>
+                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Track every rupee across all accounts</p>
               </div>
             </div>
           </div>
 
           {/* Total Balance */}
           {showBalances && (
-            <div className="bg-forest-800/30 rounded-xl p-4 text-center">
-              <p className="text-sm text-forest-300 mb-2 font-body">Total Money Available</p>
-              <p className="text-3xl font-numbers font-bold text-white">
-                <CurrencyIcon currencyCode={currency.code} size={24} className="inline mr-2" />
+            <div className="p-4 text-center rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
+              <p className="text-sm font-body mb-2" style={{ color: 'var(--text-tertiary)' }}>Total Money Available</p>
+              <p className="text-2xl font-numbers font-bold">
+                <CurrencyIcon currencyCode={currency.code} size={20} className="inline mr-2" />
                 {totalBalance.toLocaleString()}
               </p>
-              <p className="text-xs text-forest-400 font-body">{visibleAccounts.length} active accounts</p>
+              <p className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>{visibleAccounts.length} active accounts</p>
             </div>
           )}
         </div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3">
-          <Button
+          <button
             onClick={() => setShowTransferModal(true)}
-            variant="outline"
-            className="border-forest-500/30 text-forest-300 hover:bg-forest-600/10"
+            className="btn-secondary flex items-center justify-center"
             disabled={(accounts || []).length < 2}
           >
             <ArrowLeftRight size={16} className="mr-2" />
             Move Money
-          </Button>
-          <Button
+          </button>
+          <button
             onClick={() => setShowAccountModal(true)}
-            className="bg-forest-600 hover:bg-forest-700"
+            className="btn-primary flex items-center justify-center"
           >
             <Plus size={16} className="mr-2" />
             Add Account
-          </Button>
+          </button>
         </div>
 
         {/* Accounts List */}
         {(accounts || []).length === 0 ? (
-          <div className="text-center py-16 bg-forest-900/30 backdrop-blur-md rounded-2xl border border-forest-600/20">
-            <span className="text-6xl mb-6 block">🏦</span>
-            <h3 className="text-xl font-heading font-bold text-white mb-3">Set up your first account!</h3>
-            <p className="text-forest-300 mb-6 font-body max-w-md mx-auto">
+          <div className="text-center py-12 card">
+            <span className="text-4xl mb-4 block">🏦</span>
+            <h3 className="text-lg font-heading font-bold mb-3">Set up your first account!</h3>
+            <p className="text-sm font-body mb-6 max-w-md mx-auto" style={{ color: 'var(--text-tertiary)' }}>
               Add your cash wallet, bank account, or digital wallet to start tracking your money like a pro
             </p>
-            <Button 
+            <button 
               onClick={() => setShowAccountModal(true)}
-              className="bg-forest-600 hover:bg-forest-700"
+              className="btn-primary"
             >
               <span className="mr-2">🚀</span>
               Add First Account
-            </Button>
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3">
             {(accounts || []).map((account) => {
               const isSelected = selectedAccountId === account.id;
               const accountTransactions = getAccountTransactions(account.id);
