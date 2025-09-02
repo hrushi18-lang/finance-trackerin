@@ -7,7 +7,7 @@ import './index.css';
 import './i18n'; // Import i18n configuration
 import { LoadingScreen } from './components/common/LoadingScreen.tsx';
 import { ErrorFallback } from './components/common/ErrorFallback.tsx';
-import ErrorBoundary from './components/common/ErrorBoundary.tsx';
+import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
 import { OfflineNotice } from './components/common/OfflineNotice.tsx';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';

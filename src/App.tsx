@@ -10,10 +10,12 @@ import { PersonalizationProvider } from './contexts/PersonalizationContext';
 import { ToastProvider } from './components/common/Toast';
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { ErrorFallback } from './components/common/ErrorFallback';
-import ErrorBoundary from './components/common/ErrorBoundary';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { BottomNavigation } from './components/layout/BottomNavigation';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
+import { AccessibilityEnhancements, useKeyboardNavigation } from './components/common/AccessibilityEnhancements';
+import './styles/accessibility.css';
 
 // Lazy load pages for better performance
 const Auth = React.lazy(() => import('./pages/Auth').then(module => ({ default: module.Auth })));
@@ -56,6 +58,9 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  // Enable keyboard navigation
+  useKeyboardNavigation();
+
   return (
     <ErrorBoundary fallback={<ErrorFallback />}>
       <QueryClientProvider client={queryClient}>
@@ -69,6 +74,11 @@ function App() {
                       <div className="min-h-screen bg-forest-800 relative">
                         {/* Static Forest Green Background */}
                         <div className="fixed inset-0 bg-gradient-to-br from-forest-900 via-forest-800 to-forest-700"></div>
+
+                        {/* Accessibility Enhancements */}
+                        <div className="fixed top-4 right-4 z-50">
+                          <AccessibilityEnhancements />
+                        </div>
 
                         {/* Main Content */}
                         <div className="relative z-10">
@@ -85,7 +95,9 @@ function App() {
                                     <OnboardingFlow 
                                       onComplete={() => {
                                         // Always redirect to dashboard after onboarding
-                                        window.location.href = '/';
+                                        // Use SPA navigation instead of hard reload
+                                        const navigateEvent = new CustomEvent('app:navigate', { detail: { to: '/' } });
+                                        window.dispatchEvent(navigateEvent);
                                       }} 
                                     />
                                   </ProtectedRoute>

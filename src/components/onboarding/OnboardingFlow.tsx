@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react'; // Already exists
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { OnboardingWelcome } from './OnboardingWelcome';
 import { OnboardingUserDetails } from './OnboardingUserDetails';
-import { OnboardingAccountsSetup } from './OnboardingAccountsSetup';
+import { OnboardingSmartAccounts } from './OnboardingSmartAccounts';
 import { OnboardingCategories } from './OnboardingCategories';
 import { OnboardingGoals } from './OnboardingGoals';
 import { OnboardingActivities } from './OnboardingActivities';
@@ -13,7 +13,7 @@ import { OnboardingBudgets } from './OnboardingBudgets';
 import { OnboardingPreferences } from './OnboardingPreferences';
 import { OnboardingPlanningSetup } from './OnboardingPlanningSetup';
 import { OnboardingComplete } from './OnboardingComplete';
-import { useAuth } from '../../contexts/AuthContext'; // Already exists
+import { useAuth } from '../../contexts/AuthContext';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { Capacitor } from '@capacitor/core';
 
@@ -85,19 +85,27 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
     }
   }, [user]);
 
+  // If onboarding already completed, redirect to dashboard
+  useEffect(() => {
+    const completed = localStorage.getItem('onboardingCompleted') === 'true';
+    if (completed) {
+      navigate('/', { replace: true });
+    }
+  }, [navigate]);
+
   const steps = [
-    { title: "Welcome", component: OnboardingWelcome }, // Already exists
-    { title: "User Details", component: OnboardingUserDetails }, // Already exists
-    { title: "Accounts", component: OnboardingAccountsSetup }, // Already exists
-    { title: "Categories", component: OnboardingCategories }, // Already exists
-    { title: "Goals", component: OnboardingGoals }, // Already exists
-    { title: "Activities", component: OnboardingActivities }, // Already exists
-    { title: "Bills", component: OnboardingBills }, // Already exists
-    { title: "Liabilities", component: OnboardingLiabilities }, // Already exists
-    { title: "Budgets", component: OnboardingBudgets }, // Already exists
-    { title: "Preferences", component: OnboardingPreferences }, // Already exists
-    { title: "Planning", component: OnboardingPlanningSetup }, // Already exists
-    { title: "Complete", component: OnboardingComplete }, // Already exists
+    { title: "Welcome", component: OnboardingWelcome },
+    { title: "User Details", component: OnboardingUserDetails },
+    { title: "Smart Accounts", component: OnboardingSmartAccounts },
+    { title: "Categories", component: OnboardingCategories },
+    { title: "Goals", component: OnboardingGoals },
+    { title: "Activities", component: OnboardingActivities },
+    { title: "Bills", component: OnboardingBills },
+    { title: "Liabilities", component: OnboardingLiabilities },
+    { title: "Budgets", component: OnboardingBudgets },
+    { title: "Preferences", component: OnboardingPreferences },
+    { title: "Planning", component: OnboardingPlanningSetup },
+    { title: "Complete", component: OnboardingComplete },
   ];
 
   const nextStep = () => {
@@ -113,7 +121,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
   };
 
   const handleStepData = (data: any) => {
-    console.log(`🔄 Onboarding step ${currentStep + 1} data:`, data); // Already exists
+    console.log(`🔄 Onboarding step ${currentStep + 1} data:`, data);
     setOnboardingData(prev => ({ ...prev, ...data }));
     
     // Apply immediate personalization based on step data
@@ -121,7 +129,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       const selectedCurrency = supportedCurrencies.find(c => c.code === data.currency);
       if (selectedCurrency) {
         setCurrency(selectedCurrency);
-      } // Already exists
+      }
     }
     
     if (data.country && supportedRegions.find(r => r.countryCode === data.country)) {
@@ -129,7 +137,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       if (selectedRegion) {
         setRegion(selectedRegion);
       }
-    } // Already exists
+    }
     
     nextStep();
   };
@@ -141,11 +149,16 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
     const personalizedData = processOnboardingData(onboardingData);
     console.log('🔄 Processed personalization data:', personalizedData);
     
+    try {
+      localStorage.setItem('onboardingCompleted', 'true');
+    } catch {}
     onComplete(onboardingData);
+    // Navigate to dashboard after completion
+    navigate('/', { replace: true });
   };
 
   // Intelligent onboarding data processing
-  const processOnboardingData = (data: OnboardingData) => { // Already exists
+  const processOnboardingData = (data: OnboardingData) => {
     const personalization = {
       dashboardLayout: [] as string[],
       priorityFeatures: [] as string[],
@@ -155,7 +168,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       assistantPersonality: 'balanced' as 'conservative' | 'balanced' | 'aggressive',
     };
 
-    // Process user types // Already exists
+    // Process user types
     if (data.userTypes?.includes('student')) {
       personalization.dashboardLayout.push('budgeting', 'savings_goals', 'expense_tracking');
       personalization.budgetingFrequency = 'weekly';
@@ -167,7 +180,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       personalization.alertSettings.irregularIncomeWarning = true;
     }
     
-    if (data.userTypes?.includes('business_owner')) { // Already exists
+    if (data.userTypes?.includes('business_owner')) {
       personalization.dashboardLayout.push('business_tracking', 'investment_planning', 'tax_optimization');
       personalization.assistantPersonality = 'aggressive';
     }
@@ -181,7 +194,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       personalization.priorityFeatures.push('debt_strategies', 'emi_tracking', 'payoff_calculator');
     }
     
-    if (data.primaryFocus?.includes('invest_better')) { // Already exists
+    if (data.primaryFocus?.includes('invest_better')) {
       personalization.priorityFeatures.push('investment_tracking', 'portfolio_analysis');
     }
 
@@ -194,7 +207,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       personalization.hiddenFeatures.push('debt_tracking', 'emi_reminders');
     }
     
-    if (data.hasMultipleAccounts) { // Already exists
+    if (data.hasMultipleAccounts) {
       personalization.priorityFeatures.push('account_aggregation', 'transfer_tracking');
     }
 
@@ -204,7 +217,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
       personalization.priorityFeatures.push('emergency_fund', 'cash_flow_management');
     }
 
-    // Process experience level // Already exists
+    // Process experience level
     if (data.experience === 'beginner') {
       personalization.priorityFeatures.push('guided_tutorials', 'simple_interface', 'basic_tips');
       personalization.hiddenFeatures.push('advanced_analytics', 'complex_investments');
@@ -219,7 +232,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-lg"> // Already exists
+      <div className="w-full max-w-lg">
         {/* Progress Bar */}
         {currentStep > 0 && (
           <div className="mb-8">
@@ -230,7 +243,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
               <span className="text-sm text-gray-400">
                 {Math.round((currentStep / (steps.length - 1)) * 100)}%
               </span>
-            </div> // Already exists
+            </div>
             <div className="w-full bg-gray-700 rounded-full h-2">
               <div
                 className="bg-primary-500 h-2 rounded-full transition-all duration-300"
@@ -239,7 +252,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
             </div>
             
             {/* Step Indicators */}
-            <div className="flex justify-between mt-2"> // Already exists
+            <div className="flex justify-between mt-2">
               {steps.slice(1, -1).map((step, index) => (
                 <div
                   key={index}
@@ -257,7 +270,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
         )}
 
         {/* Step Content */}
-        <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-white/10 shadow-xl"> // Already exists
+        <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-white/10 shadow-xl">
           <CurrentStepComponent
             onNext={handleStepData}
             onPrev={prevStep}

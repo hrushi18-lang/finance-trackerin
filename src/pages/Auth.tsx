@@ -15,8 +15,8 @@ export const Auth: React.FC = () => {
     if (user) {
       // Add a small delay to ensure complete authentication
       const redirectTimer = setTimeout(() => {
-        // Always redirect to onboarding for returning users
-        navigate('/onboarding');
+        const completed = localStorage.getItem('onboardingCompleted') === 'true';
+        navigate(completed ? '/' : '/onboarding');
       }, 1000);
       
       return () => clearTimeout(redirectTimer);

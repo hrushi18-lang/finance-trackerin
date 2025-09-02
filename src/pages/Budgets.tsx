@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PieChart, Calculator, TrendingUp, AlertTriangle, Plus, Edit3, Trash2 } from 'lucide-react';
+import { PieChart, Calculator, TrendingUp, AlertTriangle, Plus, Edit3, Trash2, AlertCircle } from 'lucide-react';
 import { TopNavigation } from '../components/layout/TopNavigation';
 import { Modal } from '../components/common/Modal';
 import { BudgetForm } from '../components/forms/BudgetForm';

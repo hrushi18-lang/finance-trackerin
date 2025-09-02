@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Calendar, Bell, CreditCard, AlertCircle, Clock, Repeat, DollarSign, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
+import { CategorySelector } from '../common/CategorySelector';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { useFinance } from '../../contexts/FinanceContext';
@@ -207,20 +208,13 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
       {/* Category */}
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-3">Category</label>
-        <select
-          {...register('category', { required: 'Category is required' })}
-          className="block w-full rounded-xl border-white/20 bg-black/20 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
-        >
-          <option value="">Select category</option>
-          {billCategories.map((category) => (
-            <option key={category} value={category} className="bg-black/90">
-              {category}
-            </option>
-          ))}
-        </select>
-        {errors.category && (
-          <p className="text-sm text-error-400 mt-1">{errors.category.message}</p>
-        )}
+        <CategorySelector
+          value={watch('category')}
+          onChange={(category) => setValue('category', category)}
+          type="bill"
+          placeholder="Select category"
+          error={errors.category?.message}
+        />
       </div>
 
       {/* Frequency */}

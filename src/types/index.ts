@@ -9,12 +9,13 @@ export interface User {
 export interface FinancialAccount {
   id: string;
   name: string;
-  type: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment';
+  type: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment' | 'goals_vault';
   balance: number;
   institution?: string;
   platform?: string;
+  accountNumber?: string;
   isVisible: boolean;
-  currency: string;
+  currencyCode: string;
   userId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -44,6 +45,8 @@ export interface Transaction {
   isSplit?: boolean;
   splitGroupId?: string;
   status: 'completed' | 'pending' | 'cancelled';
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface RecurringTransaction {
@@ -83,10 +86,16 @@ export interface RecurringTransaction {
 
 export interface Goal {
   id: string;
+  userId: string;
   title: string;
   description: string;
-  // Removed fields as per schema, using EnhancedGoal instead
+  targetAmount: number;
+  currentAmount: number;
+  targetDate: Date;
+  category: string;
   accountId?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Liability {
@@ -373,7 +382,7 @@ export interface Budget {
   id: string;
   category: string;
   amount: number;
-  spent: number;
+  spent?: number;
   period: 'weekly' | 'monthly' | 'yearly';
   userId: string;
   accountId?: string; // Link budgets to specific accounts
@@ -429,6 +438,69 @@ export interface SplitTransaction {
   category: string;
   amount: number;
   description: string;
+}
+
+// Rich split record used by FinanceContext
+export interface TransactionSplit {
+  id: string;
+  userId: string;
+  parentTransactionId: string;
+  category: string;
+  amount: number;
+  description?: string;
+  createdAt: Date;
+}
+
+export interface AccountTransfer {
+  id: string;
+  userId: string;
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  description?: string;
+  transferDate: Date;
+  fromTransactionId?: string;
+  toTransactionId?: string;
+  createdAt: Date;
+}
+
+export interface BillReminder {
+  id: string;
+  userId: string;
+  recurringTransactionId?: string;
+  dueDate: Date;
+  amount: number;
+  status: 'pending' | 'sent' | 'dismissed' | 'paid';
+  reminderDays: number;
+  paymentMethod?: string;
+  priority?: 'high' | 'medium' | 'low';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DebtPayment {
+  id: string;
+  userId: string;
+  liabilityId: string;
+  paymentAmount: number;
+  principalAmount: number;
+  interestAmount: number;
+  paymentDate: Date;
+  paymentMethod?: string;
+  transactionId?: string;
+  createdAt: Date;
+}
+
+export interface FinancialInsight {
+  id: string;
+  userId: string;
+  insightType: string;
+  title: string;
+  description?: string;
+  impactLevel?: 'low' | 'medium' | 'high';
+  isRead: boolean;
+  expiresAt?: Date;
+  createdAt: Date;
 }
 
 export interface DebtPaymentPlan {

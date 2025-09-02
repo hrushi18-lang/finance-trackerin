@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { FileText, Calculator, Info, AlertTriangle } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
-import { Liability } from '../../types';
+import { Liability, FinancialAccount } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 
@@ -11,19 +11,22 @@ interface PaymentFormData {
   amount: number;
   description: string;
   createTransaction: boolean;
+  accountId: string;
 }
 
 interface PaymentFormProps {
   liability?: Liability;
+  accounts?: FinancialAccount[];
   onSubmit: (data: PaymentFormData) => void;
   onCancel: () => void;
 }
 
-export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, onSubmit, onCancel }) => {
+export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = [], onSubmit, onCancel }) => {
   const { currency, formatCurrency } = useInternationalization();
   const [paymentImpact, setPaymentImpact] = useState<{
     newBalance: number;
     percentagePaid: number;
+    accountName: string;
   } | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,30 +36,33 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, onSubmit, o
       description: liability ? `Payment for ${liability.name}` : '',
       amount: liability?.monthlyPayment || 0,
       createTransaction: true,
+      accountId: liability?.defaultPaymentAccountId || accounts?.[0]?.id || '',
     },
   });
 
   const watchedAmount = watch('amount');
   const createTransaction = watch('createTransaction');
+  const watchedAccountId = watch('accountId');
 
-  // Calculate payment impact when amount changes
+  // Calculate payment impact when amount or account changes
   React.useEffect(() => {
-    if (liability && watchedAmount) {
+    if (liability && watchedAmount && watchedAccountId) {
       const paymentAmount = Number(watchedAmount) || 0;
       const remainingAmount = Number(liability.remainingAmount) || 0;
       const totalAmount = Number(liability.totalAmount) || 0;
+      const selectedAccount = accounts.find(a => a.id === watchedAccountId);
       
-      if (paymentAmount > 0 && !isNaN(paymentAmount)) {
+      if (paymentAmount > 0 && selectedAccount && !isNaN(paymentAmount)) {
         const newBalance = Math.max(0, remainingAmount - paymentAmount);
-      const percentagePaid = totalAmount > 0 ? ((totalAmount - newBalance) / totalAmount) * 100 : 0;
-      setPaymentImpact({ newBalance, percentagePaid });
+        const percentagePaid = totalAmount > 0 ? ((totalAmount - newBalance) / totalAmount) * 100 : 0;
+        setPaymentImpact({ newBalance, percentagePaid, accountName: selectedAccount.name });
       } else {
         setPaymentImpact(null);
       }
     } else {
       setPaymentImpact(null);
     }
-  }, [watchedAmount, liability]);
+  }, [watchedAmount, watchedAccountId, liability, accounts]);
 
   const handleFormSubmit = (data: PaymentFormData) => {
     try {
@@ -197,6 +203,29 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, onSubmit, o
           />
         </div>
 
+        {/* Account Selection */}
+        {createTransaction && (
+          <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+            <label className="block text-sm font-medium text-gray-300 mb-3">
+              Pay From Account
+            </label>
+            <select
+              {...register('accountId', { required: createTransaction ? 'Please select an account' : false })}
+              className="w-full bg-black/40 border border-white/20 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            >
+              <option value="">Select an account</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name} - {formatCurrency(account.balance)} ({account.type.replace('_', ' ')})
+                </option>
+              ))}
+            </select>
+            {errors.accountId && (
+              <p className="text-red-400 text-sm mt-1">{errors.accountId.message}</p>
+            )}
+          </div>
+        )}
+
         {/* Create Transaction Toggle */}
         <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
           <div className="flex items-center justify-between">
@@ -238,6 +267,10 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, onSubmit, o
               <span className="font-medium">Payment Impact</span>
             </div>
             <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-300">Account:</span>
+                <span className="font-medium text-white">{paymentImpact.accountName}</span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-gray-300">New Balance:</span>
                 <span className="font-medium text-white">

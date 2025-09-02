@@ -344,9 +344,113 @@
  
 -DROP POLICY IF EXISTS "Users can delete own accounts" ON financial_accounts;
 -CREATE POLICY "Users can delete own accounts"
-+DROP POLICY IF EXISTS "Users can delete own financial accounts" ON financial_accounts;
-+CREATE POLICY "Users can delete own financial accounts"
-   ON financial_accounts
-   FOR DELETE
--  TO public
--  USING (uid() = user_id);
+  ON financial_accounts
+  FOR DELETE
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+-- Add triggers for enhanced_account_transfers to update account balances
+-- This ensures that account balances are automatically updated when transfers are made
+
+-- Function to update account balance when transfers are created
+CREATE OR REPLACE FUNCTION update_account_balance_from_transfer()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Update the from account balance (subtract amount)
+  UPDATE financial_accounts 
+  SET balance = balance - NEW.amount 
+  WHERE id = NEW.from_account_id;
+  
+  -- Update the to account balance (add amount)
+  UPDATE financial_accounts 
+  SET balance = balance + NEW.converted_amount 
+  WHERE id = NEW.to_account_id;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for account balance updates from transfers
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger 
+    WHERE tgname = 'update_account_balance_from_transfer_trigger'
+  ) THEN
+    CREATE TRIGGER update_account_balance_from_transfer_trigger
+      AFTER INSERT ON enhanced_account_transfers
+      FOR EACH ROW EXECUTE FUNCTION update_account_balance_from_transfer();
+  END IF;
+END $$;
+
+-- Function to update account balance when transfers are updated
+CREATE OR REPLACE FUNCTION update_account_balance_from_transfer_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- If this is an update, we need to reverse the old transfer and apply the new one
+  IF TG_OP = 'UPDATE' THEN
+    -- Reverse the old transfer
+    UPDATE financial_accounts 
+    SET balance = balance + OLD.amount 
+    WHERE id = OLD.from_account_id;
+    
+    UPDATE financial_accounts 
+    SET balance = balance - OLD.converted_amount 
+    WHERE id = OLD.to_account_id;
+    
+    -- Apply the new transfer
+    UPDATE financial_accounts 
+    SET balance = balance - NEW.amount 
+    WHERE id = NEW.from_account_id;
+    
+    UPDATE financial_accounts 
+    SET balance = balance + NEW.converted_amount 
+    WHERE id = NEW.to_account_id;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for account balance updates when transfers are updated
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger 
+    WHERE tgname = 'update_account_balance_from_transfer_update_trigger'
+  ) THEN
+    CREATE TRIGGER update_account_balance_from_transfer_update_trigger
+      AFTER UPDATE ON enhanced_account_transfers
+      FOR EACH ROW EXECUTE FUNCTION update_account_balance_from_transfer_update();
+  END IF;
+END $$;
+
+-- Function to update account balance when transfers are deleted
+CREATE OR REPLACE FUNCTION update_account_balance_from_transfer_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Reverse the transfer
+  UPDATE financial_accounts 
+  SET balance = balance + OLD.amount 
+  WHERE id = OLD.from_account_id;
+  
+  UPDATE financial_accounts 
+  SET balance = balance - OLD.converted_amount 
+  WHERE id = OLD.to_account_id;
+  
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for account balance updates when transfers are deleted
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger 
+    WHERE tgname = 'update_account_balance_from_transfer_delete_trigger'
+  ) THEN
+    CREATE TRIGGER update_account_balance_from_transfer_delete_trigger
+      AFTER DELETE ON enhanced_account_transfers
+      FOR EACH ROW EXECUTE FUNCTION update_account_balance_from_transfer_delete();
+  END IF;
+END $$;

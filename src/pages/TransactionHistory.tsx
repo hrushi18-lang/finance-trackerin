@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { ArrowLeft, Edit3, Trash2, Search, Filter, Calendar, TrendingUp, TrendingDown, Plus, Minus, Eye, EyeOff, CheckSquare, Square } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { PageNavigation } from '../components/layout/PageNavigation'; // Already exists
-import { SearchAndFilter } from '../components/common/SearchAndFilter'; // Already exists
-import { Modal } from '../components/common/Modal'; // Already exists
-import { TransactionForm } from '../components/forms/TransactionForm'; // Already exists
-import { Button } from '../components/common/Button'; // Already exists
+import { PageNavigation } from '../components/layout/PageNavigation';
+import { SearchAndFilter } from '../components/common/SearchAndFilter';
+import { Modal } from '../components/common/Modal';
+import { TransactionForm } from '../components/forms/TransactionForm';
+import { Button } from '../components/common/Button';
 import { useFinance } from '../contexts/FinanceContext';
-import { useInternationalization } from '../contexts/InternationalizationContext'; // Already exists
+import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { Transaction } from '../types';
 
@@ -33,7 +33,7 @@ export const TransactionHistory: React.FC = () => {
   });
 
   // Apply filters and sorting
-  const filteredAndSortedTransactions = useMemo(() => { // Already exists
+  const filteredAndSortedTransactions = useMemo(() => {
     let filtered = showSearch ? searchResults : transactions;
 
     // Apply type filter
@@ -41,7 +41,7 @@ export const TransactionHistory: React.FC = () => {
       filtered = filtered.filter(t => t.type === filterType);
     }
 
-    // Apply date range filter // Already exists
+    // Apply date range filter
     filtered = filtered.filter(t => 
       isWithinInterval(t.date, { start: dateRange.start, end: dateRange.end })
     );
@@ -73,7 +73,7 @@ export const TransactionHistory: React.FC = () => {
   const totalPages = Math.ceil(totalCount / pageSize);
   const paginatedTransactions = filteredAndSortedTransactions.slice(
     currentPage * pageSize,
-    (currentPage + 1) * pageSize // Already exists
+    (currentPage + 1) * pageSize
   );
 
   const hasActiveFilters = filterType !== 'all' || showSearch;
@@ -81,7 +81,7 @@ export const TransactionHistory: React.FC = () => {
   const handleEditTransaction = async (data: any) => {
     try {
       if (editingTransaction) {
-        await updateTransaction(editingTransaction.id, { // Already exists
+        await updateTransaction(editingTransaction.id, {
           originalAmount: data.originalAmount,
           originalCurrency: data.originalCurrency,
           exchangeRate: data.exchangeRate,
@@ -97,7 +97,7 @@ export const TransactionHistory: React.FC = () => {
   };
 
   const handleDeleteTransaction = (transactionId: string) => {
-    setTransactionToDelete(transactionId); // Already exists
+    setTransactionToDelete(transactionId);
     setShowDeleteConfirm(true);
   };
 
@@ -105,7 +105,7 @@ export const TransactionHistory: React.FC = () => {
     try {
       if (transactionToDelete) {
         await deleteTransaction(transactionToDelete);
-        setTransactionToDelete(null); // Already exists
+        setTransactionToDelete(null);
         setShowDeleteConfirm(false);
       }
     } catch (error) {
@@ -114,7 +114,7 @@ export const TransactionHistory: React.FC = () => {
   };
 
   const toggleTransactionSelection = (transactionId: string) => {
-    setSelectedTransactions(prev => // Already exists
+    setSelectedTransactions(prev =>
       prev.includes(transactionId)
         ? prev.filter(id => id !== transactionId)
         : [...prev, transactionId]
@@ -122,7 +122,7 @@ export const TransactionHistory: React.FC = () => {
   };
 
   const selectAllTransactions = () => {
-    if (selectedTransactions.length === paginatedTransactions.length) { // Already exists
+    if (selectedTransactions.length === paginatedTransactions.length) {
       setSelectedTransactions([]);
     } else {
       setSelectedTransactions(paginatedTransactions.map(t => t.id));
@@ -130,7 +130,7 @@ export const TransactionHistory: React.FC = () => {
   };
 
   const handleBulkDelete = async () => {
-    try { // Already exists
+    try {
       await Promise.all(selectedTransactions.map(id => deleteTransaction(id)));
       setSelectedTransactions([]);
       setShowBulkActions(false);
@@ -141,7 +141,7 @@ export const TransactionHistory: React.FC = () => {
 
   // Calculate summary stats for current view
   const summaryStats = useMemo(() => {
-    const income = filteredAndSortedTransactions // Already exists
+    const income = filteredAndSortedTransactions
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
 
@@ -154,7 +154,7 @@ export const TransactionHistory: React.FC = () => {
 
   return (
     <div className="min-h-screen text-white pb-20">
-      {/* Header with Navigation */} // Already exists
+      {/* Header with Navigation */}
       <header className="bg-black/20 backdrop-blur-md px-4 py-4 sm:py-6 sticky top-0 z-30 border-b border-white/10">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-white">Transaction History</h1>
@@ -162,7 +162,7 @@ export const TransactionHistory: React.FC = () => {
             <button 
               onClick={() => setShowSearch(!showSearch)}
               className={`p-2 rounded-xl transition-colors ${
-                showSearch ? 'bg-primary-500 text-white' : 'hover:bg-white/10 text-gray-300' // Already exists
+                showSearch ? 'bg-primary-500 text-white' : 'hover:bg-white/10 text-gray-300'
               }`}
             >
               <Search size={18} />
@@ -170,7 +170,7 @@ export const TransactionHistory: React.FC = () => {
             
             <button 
               onClick={() => setShowBulkActions(!showBulkActions)}
-              className={`p-2 rounded-xl transition-colors ${ // Already exists
+              className={`p-2 rounded-xl transition-colors ${
                 showBulkActions ? 'bg-primary-500 text-white' : 'hover:bg-white/10 text-gray-300'
               }`}
             >
@@ -183,7 +183,7 @@ export const TransactionHistory: React.FC = () => {
       
       <div className="px-4 py-6">
         {/* Search and Filters */}
-        {showSearch && ( // Already exists
+        {showSearch && (
           <div className="mb-6">
             <SearchAndFilter
               onResults={setSearchResults}
@@ -193,7 +193,7 @@ export const TransactionHistory: React.FC = () => {
         )}
 
         {/* Filter Controls */}
-        <div className="flex flex-wrap items-center gap-3 mb-6"> // Already exists
+        <div className="flex flex-wrap items-center gap-3 mb-6">
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as 'all' | 'income' | 'expense')}
@@ -204,7 +204,7 @@ export const TransactionHistory: React.FC = () => {
             <option value="expense">Expenses Only</option>
           </select>
 
-          <select // Already exists
+          <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'date' | 'amount' | 'category')}
             className="bg-black/20 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
@@ -214,7 +214,7 @@ export const TransactionHistory: React.FC = () => {
             <option value="category">Sort by Category</option>
           </select>
 
-          <button // Already exists
+          <button
             onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
             className="bg-black/20 border border-white/20 rounded-lg px-3 py-2 text-white text-sm hover:bg-white/10"
           >
@@ -224,7 +224,7 @@ export const TransactionHistory: React.FC = () => {
 
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 text-center border border-white/10"> // Already exists
+          <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 text-center border border-white/10">
             <p className="text-xs text-gray-400 mb-1">Income</p>
             <p className="text-lg font-bold text-success-400">
               +{formatCurrency(summaryStats.income)}
@@ -232,7 +232,7 @@ export const TransactionHistory: React.FC = () => {
           </div>
           
           <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 text-center border border-white/10">
-            <p className="text-xs text-gray-400 mb-1">Expenses</p> // Already exists
+            <p className="text-xs text-gray-400 mb-1">Expenses</p>
             <p className="text-lg font-bold text-error-400">
               -{formatCurrency(summaryStats.expenses)}
             </p>
@@ -240,7 +240,7 @@ export const TransactionHistory: React.FC = () => {
           
           <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 text-center border border-white/10">
             <p className="text-xs text-gray-400 mb-1">Net</p>
-            <p className={`text-lg font-bold ${ // Already exists
+            <p className={`text-lg font-bold ${
               summaryStats.net >= 0 ? 'text-success-400' : 'text-error-400'
             }`}>
               {summaryStats.net >= 0 ? '+' : ''}{formatCurrency(summaryStats.net)}
@@ -250,7 +250,7 @@ export const TransactionHistory: React.FC = () => {
 
         {/* Bulk Actions */}
         {showBulkActions && (
-          <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 mb-6 border border-white/10"> // Already exists
+          <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 mb-6 border border-white/10">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <button
@@ -258,7 +258,7 @@ export const TransactionHistory: React.FC = () => {
                   className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                 >
                   {selectedTransactions.length === paginatedTransactions.length ? (
-                    <CheckSquare size={18} className="text-primary-400" /> // Already exists
+                    <CheckSquare size={18} className="text-primary-400" />
                   ) : (
                     <Square size={18} className="text-gray-400" />
                   )}
@@ -268,7 +268,7 @@ export const TransactionHistory: React.FC = () => {
                 </span>
               </div>
               
-              {selectedTransactions.length > 0 && ( // Already exists
+              {selectedTransactions.length > 0 && (
                 <Button
                   onClick={handleBulkDelete}
                   size="sm"
@@ -283,7 +283,7 @@ export const TransactionHistory: React.FC = () => {
         )}
 
         {/* Transaction List */}
-        {paginatedTransactions.length === 0 ? ( // Already exists
+        {paginatedTransactions.length === 0 ? (
           <div className="text-center py-12">
             <Calendar size={48} className="mx-auto text-gray-600 mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">No transactions found</h3>
@@ -292,7 +292,7 @@ export const TransactionHistory: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-3"> // Already exists
+          <div className="space-y-3">
             {paginatedTransactions.map((transaction) => (
               <div
                 key={transaction.id}
@@ -301,7 +301,7 @@ export const TransactionHistory: React.FC = () => {
                 }`}
               >
                 {showBulkActions && (
-                  <button // Already exists
+                  <button
                     onClick={() => toggleTransactionSelection(transaction.id)}
                     className="p-2 hover:bg-white/10 rounded-lg transition-colors mr-3"
                   >
@@ -314,7 +314,7 @@ export const TransactionHistory: React.FC = () => {
                 )}
                 
                 <div className="flex items-center space-x-3 flex-1">
-                  <div className={`p-2 rounded-lg ${ // Already exists
+                  <div className={`p-2 rounded-lg ${
                     transaction.type === 'income' 
                       ? 'bg-success-500/20' 
                       : 'bg-error-500/20'
@@ -325,7 +325,7 @@ export const TransactionHistory: React.FC = () => {
                       <TrendingDown size={16} className="text-error-400" />
                     )}
                   </div>
-                  <div className="flex-1"> // Already exists
+                  <div className="flex-1">
                     <p className="font-medium text-white">
                       {transaction.description}
                     </p>
@@ -336,7 +336,7 @@ export const TransactionHistory: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center space-x-3">
-                  <div className="text-right"> // Already exists
+                  <div className="text-right">
                     <p className={`font-semibold ${
                       transaction.type === 'income' 
                         ? 'text-success-400' 
@@ -351,7 +351,7 @@ export const TransactionHistory: React.FC = () => {
                   </div>
                   
                   {!showBulkActions && (
-                    <div className="flex items-center space-x-1"> // Already exists
+                    <div className="flex items-center space-x-1">
                       <button
                         onClick={() => {
                           setEditingTransaction(transaction);
@@ -359,7 +359,7 @@ export const TransactionHistory: React.FC = () => {
                         }}
                         className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                       >
-                        <Edit3 size={14} className="text-gray-400" /> // Already exists
+                        <Edit3 size={14} className="text-gray-400" />
                       </button>
                       <button
                         onClick={() => handleDeleteTransaction(transaction.id)}
@@ -376,7 +376,7 @@ export const TransactionHistory: React.FC = () => {
         )}
 
         {/* Pagination Controls */}
-        {!hasActiveFilters && totalCount > pageSize && ( // Already exists
+        {!hasActiveFilters && totalCount > pageSize && (
           <div className="flex items-center justify-between mt-6 p-4 bg-black/20 backdrop-blur-md rounded-xl border border-white/10">
             <div className="flex items-center space-x-2">
               <Button
@@ -384,7 +384,7 @@ export const TransactionHistory: React.FC = () => {
                 disabled={currentPage === 0}
                 size="sm"
                 variant="outline"
-              > // Already exists
+              >
                 Previous
               </Button>
               <span className="text-sm text-gray-300">
@@ -394,7 +394,7 @@ export const TransactionHistory: React.FC = () => {
                 onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
                 disabled={currentPage === totalPages - 1}
                 size="sm"
-                variant="outline" // Already exists
+                variant="outline"
               >
                 Next
               </Button>
@@ -408,7 +408,7 @@ export const TransactionHistory: React.FC = () => {
       </div>
 
       {/* Edit Transaction Modal */}
-      <Modal // Already exists
+      <Modal
         isOpen={showEditModal}
         onClose={() => {
           setShowEditModal(false);
@@ -417,7 +417,7 @@ export const TransactionHistory: React.FC = () => {
         title="Edit Transaction"
       >
         {editingTransaction && (
-          <TransactionForm // Already exists
+          <TransactionForm
             initialData={editingTransaction}
             onSubmit={handleEditTransaction}
             onCancel={() => {
@@ -429,7 +429,7 @@ export const TransactionHistory: React.FC = () => {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal // Already exists
+      <Modal
         isOpen={showDeleteConfirm}
         onClose={() => {
           setShowDeleteConfirm(false);
@@ -438,7 +438,7 @@ export const TransactionHistory: React.FC = () => {
         title="Confirm Delete"
       >
         <div className="space-y-4">
-          <p className="text-gray-300"> // Already exists
+          <p className="text-gray-300">
             Are you sure you want to delete this transaction? This action cannot be undone.
           </p>
           <div className="flex space-x-3">
@@ -448,7 +448,7 @@ export const TransactionHistory: React.FC = () => {
                 setShowDeleteConfirm(false);
                 setTransactionToDelete(null);
               }}
-              className="flex-1" // Already exists
+              className="flex-1"
             >
               Cancel
             </Button>

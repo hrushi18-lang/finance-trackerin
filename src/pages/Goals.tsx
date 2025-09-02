@@ -1,46 +1,71 @@
 import React, { useState } from 'react';
-import { Target, Calendar, Plus, ArrowUpDown, TrendingUp, Edit3, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
-import { format, differenceInMonths } from 'date-fns';
-import { useQueryClient } from '@tanstack/react-query'; // Already exists
-import { toNumber, calculatePercentage, sanitizeFinancialData } from '../utils/validation'; // Already exists
-import { TopNavigation } from '../components/layout/TopNavigation'; // Already exists
-import { Modal } from '../components/common/Modal'; // Already exists
-import { GoalForm } from '../components/forms/GoalForm'; // Already exists
-import { GoalTransactionForm } from '../components/forms/GoalTransactionForm'; // Already exists
-import { Button } from '../components/common/Button'; // Already exists
+import { Target, Calendar, Plus, ArrowUpDown, TrendingUp, Edit3, Trash2, AlertCircle, CheckCircle, PiggyBank, TrendingDown } from 'lucide-react';
+import { format, differenceInDays } from 'date-fns';
+import { useQueryClient } from '@tanstack/react-query';
+import { calculatePercentage, sanitizeFinancialData } from '../utils/validation';
+import { TopNavigation } from '../components/layout/TopNavigation';
+import { Modal } from '../components/common/Modal';
+import { GoalForm } from '../components/forms/GoalForm';
+import { GoalTransactionForm } from '../components/forms/GoalTransactionForm';
+import { Button } from '../components/common/Button';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
-import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { Goal } from '../types';
 
 export const Goals: React.FC = () => {
   const queryClient = useQueryClient();
-  const { goals, addGoal, updateGoal, deleteGoal, addTransaction, accounts } = useFinance();
-  const { currency, formatCurrency } = useInternationalization();
+  const { goals, addGoal, updateGoal, deleteGoal, addTransaction, accounts, transactions, fundGoalFromAccount, withdrawGoalToAccount } = useFinance();
+  const { formatCurrency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [goalToDelete, setGoalToDelete] = useState<string | null>(null); // Already exists
+  const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const goalCategories = ['Emergency', 'Travel', 'Education', 'Home', 'Investment', 'Other'];
-  
-  // Student-focused goal categories
-  const studentGoalCategories = [
-    'Emergency Fund', 'New Laptop/Phone', 'Course/Certification', 'Travel', 
-    'First Car', 'Study Abroad', 'Internship Fund', 'Other'
-  ];
+  const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'upcoming'>('active');
 
   // Find emergency fund goal
   const emergencyFund = goals.find(g => g.category.toLowerCase() === 'emergency');
-  const emergencyFundBalance = emergencyFund ? (Number(emergencyFund.currentAmount) || 0) : 0;
+
+  // Enhanced goal categorization
+  const categorizedGoals = {
+    active: goals.filter(goal => {
+      const progress = calculatePercentage(goal.currentAmount, goal.targetAmount);
+      const daysUntilTarget = differenceInDays(new Date(goal.targetDate), new Date());
+      return progress < 100 && daysUntilTarget > 0;
+    }),
+    completed: goals.filter(goal => {
+      const progress = calculatePercentage(goal.currentAmount, goal.targetAmount);
+      return progress >= 100;
+    }),
+    upcoming: goals.filter(goal => {
+      const daysUntilTarget = differenceInDays(new Date(goal.targetDate), new Date());
+      return daysUntilTarget <= 0 && goal.currentAmount < goal.targetAmount;
+    })
+  };
+
+  // Calculate goal statistics
+  const goalStats = {
+    totalGoals: goals.length,
+    activeGoals: categorizedGoals.active.length,
+    completedGoals: categorizedGoals.completed.length,
+    totalTargetAmount: goals.reduce((sum, goal) => sum + goal.targetAmount, 0),
+    totalCurrentAmount: goals.reduce((sum, goal) => sum + goal.currentAmount, 0),
+    overallProgress: goals.length > 0 ? 
+      (goals.reduce((sum, goal) => sum + goal.currentAmount, 0) / 
+       goals.reduce((sum, goal) => sum + goal.targetAmount, 0)) * 100 : 0
+  };
+
+  // Get recent goal-related transactions
+  const recentGoalTransactions = transactions
+    .filter(t => t.category === 'Savings' || t.category === 'Goal Withdrawal' || t.category === 'Internal Transfer')
+    .slice(0, 5);
 
   const handleAddGoal = async (goal: any) => {
-    try { // Already exists
+    try {
       setIsSubmitting(true);
       setError(null);
       
@@ -48,7 +73,7 @@ export const Goals: React.FC = () => {
       const sanitizedGoal = sanitizeFinancialData(goal, ['targetAmount', 'currentAmount']);
       
       await addGoal(sanitizedGoal);
-      setShowModal(false); // Already exists
+      setShowModal(false);
       
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ['goals'] });
@@ -61,7 +86,7 @@ export const Goals: React.FC = () => {
   };
 
   const handleEditGoal = async (goal: Omit<Goal, 'id' | 'userId' | 'createdAt'>) => {
-    try { // Already exists
+    try {
       setIsSubmitting(true);
       setError(null);
       
@@ -69,7 +94,7 @@ export const Goals: React.FC = () => {
       const sanitizedGoal = sanitizeFinancialData(goal, ['targetAmount', 'currentAmount']);
       
       if (editingGoal) {
-        await updateGoal(editingGoal.id, sanitizedGoal); // Already exists
+        await updateGoal(editingGoal.id, sanitizedGoal);
         setEditingGoal(null);
         setShowEditModal(false);
         
@@ -85,7 +110,7 @@ export const Goals: React.FC = () => {
   };
 
   const handleDeleteGoal = (goalId: string) => {
-    setGoalToDelete(goalId); // Already exists
+    setGoalToDelete(goalId);
     setShowDeleteConfirm(true);
   };
 
@@ -93,7 +118,7 @@ export const Goals: React.FC = () => {
     try {
       setIsSubmitting(true);
       
-      if (goalToDelete) { // Already exists
+      if (goalToDelete) {
         await deleteGoal(goalToDelete);
         setGoalToDelete(null);
         setShowDeleteConfirm(false);
@@ -110,14 +135,14 @@ export const Goals: React.FC = () => {
   };
 
   const handleGoalTransaction = async (data: any) => {
-    try { // Already exists
+    try {
       setIsSubmitting(true);
       setError(null);
       
       const goal = goals.find(g => g.id === selectedGoalId);
       if (!goal) return;
 
-      const { amount, type, source, description, deductFromBalance } = data;
+      const { amount, type, source, description, deductFromBalance, targetAccountId } = data;
       const numericAmount = Number(amount) || 0;
 
       if (type === 'add') {
@@ -134,26 +159,27 @@ export const Goals: React.FC = () => {
           // Deduct from emergency fund
           const emergencyCurrentAmount = Number(emergencyFund.currentAmount) || 0;
           await updateGoal(emergencyFund.id, {
-            currentAmount: Math.max(0, emergencyCurrentAmount - numericAmount) // Already exists
+            currentAmount: Math.max(0, emergencyCurrentAmount - numericAmount)
           });
           
-          // Record as internal transfer
-          await addTransaction({
-            type: 'expense',
-            amount: numericAmount,
-            category: 'Internal Transfer',
-            description: `${description} (from Emergency Fund)`,
-            date: new Date(),
-          }); // Already exists
+          // No vault flow here; keep internal transfer semantics
+          if (targetAccountId) {
+            await addTransaction({
+              type: 'expense',
+              amount: numericAmount,
+              category: 'Internal Transfer',
+              description: `${description} (from Emergency Fund to ${goal.title})`,
+              date: new Date(),
+              accountId: targetAccountId,
+              affectsBalance: true,
+              status: 'completed'
+            });
+          }
         } else if (deductFromBalance) {
-          // Record as savings/investment expense (money leaves account)
-          await addTransaction({
-            type: 'expense',
-            amount: numericAmount,
-            category: 'Savings',
-            description: description,
-            date: new Date(), // Already exists
-          });
+          // Move money from selected account into Goals Vault and update allocation
+          if (targetAccountId) {
+            await fundGoalFromAccount(targetAccountId, goal.id, numericAmount, description);
+          }
         }
         // If deductFromBalance is false, we don't record any transaction
         // This is useful for tracking gifts, bonuses, or manual transfers
@@ -170,26 +196,26 @@ export const Goals: React.FC = () => {
           // Add to emergency fund
           const emergencyCurrentAmount = Number(emergencyFund.currentAmount) || 0;
           await updateGoal(emergencyFund.id, {
-            currentAmount: emergencyCurrentAmount + numericAmount // Already exists
+            currentAmount: emergencyCurrentAmount + numericAmount
           });
           
-          // Record as internal transfer
-          await addTransaction({
-            type: 'income',
-            amount: numericAmount,
-            category: 'Internal Transfer',
-            description: `${description} (to Emergency Fund)`,
-            date: new Date(), // Already exists
-          });
+          if (targetAccountId) {
+            await addTransaction({
+              type: 'income',
+              amount: numericAmount,
+              category: 'Internal Transfer',
+              description: `${description} (from ${goal.title} to Emergency Fund)`,
+              date: new Date(),
+              accountId: targetAccountId,
+              affectsBalance: true,
+              status: 'completed'
+            });
+          }
         } else {
-          // Record as income (money withdrawn to external account)
-          await addTransaction({
-            type: 'income',
-            amount: numericAmount,
-            category: 'Goal Withdrawal',
-            description: description, // Already exists
-            date: new Date(),
-          });
+          // Move from Goals Vault back to selected account
+          if (targetAccountId) {
+            await withdrawGoalToAccount(targetAccountId, goal.id, numericAmount, description);
+          }
         }
       }
 
@@ -203,387 +229,326 @@ export const Goals: React.FC = () => {
     }
   };
 
-  const selectedGoal = goals.find(g => g.id === selectedGoalId);
-  // Already exists
-  const getCategoryColor = (category: string) => {
-    const colors = {
-      'emergency': 'bg-red-500',
-      'travel': 'bg-blue-500',
-      'education': 'bg-purple-500',
-      'home': 'bg-green-500',
-      'investment': 'bg-yellow-500',
-      'other': 'bg-gray-500'
-    };
-    return colors[category.toLowerCase() as keyof typeof colors] || 'bg-gray-500'; // Already exists
+  const getGoalStatus = (goal: Goal) => {
+    const progress = calculatePercentage(goal.currentAmount, goal.targetAmount);
+    const daysUntilTarget = differenceInDays(new Date(goal.targetDate), new Date());
+    
+    if (progress >= 100) return 'completed';
+    if (daysUntilTarget < 0) return 'overdue';
+    if (daysUntilTarget <= 7) return 'urgent';
+    if (daysUntilTarget <= 30) return 'upcoming';
+    return 'active';
   };
 
-  const getEstimatedCompletion = (goal: any) => {
-    const remaining = (Number(goal.targetAmount) || 0) - (Number(goal.currentAmount) || 0);
-    if (remaining <= 0) return 'Completed';
-    
-    const monthsToTarget = differenceInMonths(goal.targetDate, new Date());
-    const monthlyNeeded = remaining / Math.max(monthsToTarget, 1);
-    
-    if (monthlyNeeded <= 500) {
-      return `${monthsToTarget} months`;
-    } else {
-      const realisticMonths = Math.ceil(remaining / 500);
-      return `${realisticMonths} months`;
-    }
-  };
+  // color helper removed (unused)
 
-  // Get goal status
-  const getGoalStatus = (goal: any) => { // Already exists
-    const currentAmount = toNumber(goal.currentAmount);
-    const targetAmount = toNumber(goal.targetAmount);
-    const progress = calculatePercentage(currentAmount, targetAmount);
-    const isCompleted = progress >= 100;
-    const isEmergencyFund = goal.category.toLowerCase() === 'emergency';
-    
-    if (isCompleted) {
-      return { status: 'completed', color: 'success', label: '🎉 Goal Completed!' };
+  const getGoalStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle size={16} className="text-green-500" />;
+      case 'overdue': return <AlertCircle size={16} className="text-red-500" />;
+      case 'urgent': return <AlertCircle size={16} className="text-orange-500" />;
+      case 'upcoming': return <Calendar size={16} className="text-yellow-500" />;
+      default: return <Target size={16} className="text-blue-500" />;
     }
-    
-    if (isEmergencyFund && currentAmount > 0) {
-      return { status: 'emergency_ready', color: 'warning', label: '💰 Emergency fund ready' };
-    }
-    
-    if (progress >= 75) {
-      return { status: 'almost_there', color: 'primary', label: '🎯 Almost there!' };
-    }
-    
-    if (progress >= 50) {
-      return { status: 'halfway', color: 'primary', label: '📈 Halfway there!' };
-    }
-    
-    if (progress >= 25) {
-      return { status: 'good_start', color: 'primary', label: '🌱 Good start!' };
-    }
-    
-    return { status: 'just_started', color: 'gray', label: '🚀 Let\'s get started!' };
   };
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <TopNavigation // Already exists
-        title="Goals" 
-        showAdd 
-        onAdd={() => setShowModal(true)}
-      />
+      <TopNavigation title="Financial Goals" />
       
-      <div className="px-4 py-4 sm:py-6">
-        <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">Track and achieve your financial goals</p>
-        
-        {/* Error Message */} // Already exists
-        {error && (
-          <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4 mb-4">
-            <div className="flex items-center space-x-2">
-              <AlertCircle size={18} className="text-error-400" />
-              <p className="text-error-400 text-sm">{error}</p>
+      <div className="px-4 py-4 sm:py-6 space-y-6">
+        {/* Goal Statistics */}
+        <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <p className="text-forest-300 text-sm font-body">Total Goals</p>
+              <p className="text-2xl font-numbers font-bold text-white">{goalStats.totalGoals}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-forest-300 text-sm font-body">Active</p>
+              <p className="text-2xl font-numbers font-bold text-blue-400">{goalStats.activeGoals}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-forest-300 text-sm font-body">Completed</p>
+              <p className="text-2xl font-numbers font-bold text-green-400">{goalStats.completedGoals}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-forest-300 text-sm font-body">Progress</p>
+              <p className="text-2xl font-numbers font-bold text-white">{Math.round(goalStats.overallProgress)}%</p>
             </div>
           </div>
-        )}
-        
-        {goals.length === 0 ? (
-          <div className="text-center py-12 sm:py-16"> // Already exists
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Target size={24} className="text-primary-400 sm:w-8 sm:h-8" />
+          
+          {/* Overall Progress Bar */}
+          <div className="mt-4">
+            <div className="flex justify-between text-sm text-forest-300 mb-2">
+              <span>Overall Progress</span>
+              <span>{formatCurrency(goalStats.totalCurrentAmount)} / {formatCurrency(goalStats.totalTargetAmount)}</span>
             </div>
-            <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">No goals yet</h3>
-            <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">Set your first financial goal to start tracking progress</p>
-            <Button onClick={() => setShowModal(true)}>
-              <Plus size={18} className="mr-2 sm:w-5 sm:h-5" />
-              Create Goal
-            </Button>
+            <div className="w-full bg-forest-800/50 rounded-full h-2">
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${Math.min(goalStats.overallProgress, 100)}%` }}
+              />
+            </div>
           </div>
-        ) : ( // Already exists
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            {goals.map((goal) => {
-              const currentAmount = toNumber(goal.currentAmount); // Already exists
-              const targetAmount = toNumber(goal.targetAmount);
-              const progress = calculatePercentage(currentAmount, targetAmount);
-              const isCompleted = progress >= 100;
-              const isEmergencyFund = goal.category.toLowerCase() === 'emergency';
-              const goalStatus = getGoalStatus(goal);
-              const estimatedCompletion = getEstimatedCompletion(goal);
-              
-              return (
-                <div key={goal.id} className="bg-black/20 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-white/10">
-                  {/* Header */} // Already exists
-                  <div className="flex items-start justify-between mb-4 sm:mb-6">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${getCategoryColor(goal.category)} flex items-center justify-center`}>
-                        <Target size={20} className="text-white sm:w-6 sm:h-6" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white text-sm sm:text-base">{goal.title}</h3>
-                        <p className="text-xs sm:text-sm text-gray-400">{goal.category}</p> // Already exists
-                        {goal.accountId && (
-                          <p className="text-xs text-forest-400">
-                            Account: {accounts?.find(a => a.id === goal.accountId)?.name || 'Unknown'}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => { // Already exists
-                          setEditingGoal(goal);
-                          setShowEditModal(true);
-                        }}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                        title="Edit Goal"
-                      >
-                        <Edit3 size={16} className="text-gray-400" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteGoal(goal.id)} // Already exists
-                        className="p-2 hover:bg-error-500/20 rounded-lg transition-colors"
-                        title="Delete Goal"
-                      >
-                        <Trash2 size={16} className="text-error-400" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedGoalId(goal.id); // Already exists
-                          setShowTransactionModal(true);
-                        }}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                      >
-                        <ArrowUpDown size={18} className="text-gray-400 sm:w-5 sm:h-5" />
-                      </button>
-                    </div>
-                  </div>
+        </div>
 
-                  {/* Progress Section */} // Already exists
-                  <div className="mb-4 sm:mb-6">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs sm:text-sm text-gray-400">Progress</span>
-                      <span className="text-sm sm:text-lg font-semibold text-white">
-                        <CurrencyIcon currencyCode={currency.code} size={16} className="inline mr-1" />
-                        {currentAmount.toLocaleString()} / <CurrencyIcon currencyCode={currency.code} size={16} className="inline mr-1" />{targetAmount.toLocaleString()}
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 bg-forest-800/30 rounded-lg p-1">
+          {Object.entries({
+            active: { label: 'Active', count: categorizedGoals.active.length },
+            upcoming: { label: 'Upcoming', count: categorizedGoals.upcoming.length },
+            completed: { label: 'Completed', count: categorizedGoals.completed.length }
+          }).map(([key, { label, count }]) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key as any)}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                activeTab === key
+                  ? 'bg-forest-600 text-white'
+                  : 'text-forest-300 hover:text-white'
+              }`}
+            >
+              {label} ({count})
+            </button>
+          ))}
+        </div>
+
+        {/* Goals List */}
+        <div className="space-y-4">
+          {categorizedGoals[activeTab].map((goal) => {
+            const progress = calculatePercentage(goal.currentAmount, goal.targetAmount);
+            const status = getGoalStatus(goal);
+            const daysUntilTarget = differenceInDays(new Date(goal.targetDate), new Date());
+            
+            return (
+              <div key={goal.id} className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target size={20} className="text-forest-400" />
+                      <h3 className="text-lg font-heading font-semibold text-white">{goal.title}</h3>
+                      {getGoalStatusIcon(status)}
+                    </div>
+                    <p className="text-forest-300 text-sm font-body mb-2">{goal.description}</p>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-forest-400 font-body">Category: {goal.category}</span>
+                      <span className="text-forest-400 font-body">
+                        Due: {format(new Date(goal.targetDate), 'MMM dd, yyyy')}
                       </span>
-                    </div>
-                    
-                    {/* Progress Bar */} // Already exists
-                    <div className="w-full bg-white/10 rounded-full h-2 mb-3">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-500 ${
-                          isCompleted ? 'bg-green-500' : 
-                          isEmergencyFund ? 'bg-red-500' : 'bg-blue-500'
-                        }`}
-                        style={{ width: `${Math.min(progress, 100)}%` }}
-                      />
-                    </div>
-                    
-                    <div className="flex justify-between items-center text-xs sm:text-sm"> // Already exists
-                      <span className={`font-medium ${
-                        isCompleted ? 'text-green-400' : 
-                        isEmergencyFund ? 'text-red-400' : 'text-blue-400'
-                      }`}>
-                        {progress.toFixed(1)}% complete
-                      </span>
-                      <span className="text-gray-400">
-                        <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
-                        {Math.max(0, targetAmount - currentAmount).toLocaleString()} remaining
-                      </span>
+                      {daysUntilTarget > 0 && (
+                        <span className="text-forest-400 font-body">
+                          {daysUntilTarget} days left
+                        </span>
+                      )}
                     </div>
                   </div>
-
-                  {/* Details Grid */}
-                  <div className="grid grid-cols-2 gap-4 mb-4"> // Already exists
-                    <div className="flex items-center space-x-2">
-                      <Calendar size={14} className="text-gray-400 sm:w-4 sm:h-4" />
-                      <div>
-                        <p className="text-xs text-gray-400">Due Date</p>
-                        <p className="text-xs sm:text-sm font-medium text-white">{format(goal.targetDate, 'MMM dd')}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <TrendingUp size={14} className="text-gray-400 sm:w-4 sm:h-4" />
-                      <div>
-                        <p className="text-xs text-gray-400">Estimated Completion</p>
-                        <p className="text-xs sm:text-sm font-medium text-white">{estimatedCompletion}</p>
-                      </div>
-                    </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedGoalId(goal.id);
+                        setShowTransactionModal(true);
+                      }}
+                      className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
+                      title="Add/Withdraw Money"
+                    >
+                      <ArrowUpDown size={16} className="text-forest-400" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingGoal(goal);
+                        setShowEditModal(true);
+                      }}
+                      className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
+                      title="Edit Goal"
+                    >
+                      <Edit3 size={16} className="text-forest-400" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteGoal(goal.id)}
+                      className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
+                      title="Delete Goal"
+                    >
+                      <Trash2 size={16} className="text-forest-400" />
+                    </button>
                   </div>
-
-                  {/* Status/Action Section */}
-                  {/* Status Badge */} // Already exists
-                  <div className={`text-center py-2 sm:py-3 rounded-xl border ${
-                    goalStatus.status === 'completed' ? 'bg-success-500/20 border-success-500/30' :
-                    goalStatus.status === 'emergency_ready' ? 'bg-warning-500/20 border-warning-500/30' :
-                    goalStatus.color === 'primary' ? 'bg-primary-500/20 border-primary-500/30' :
-                    'bg-gray-500/20 border-gray-500/30'
-                  }`}>
-                    <span className={`font-medium text-sm ${
-                      goalStatus.status === 'completed' ? 'text-success-400' :
-                      goalStatus.status === 'emergency_ready' ? 'text-warning-400' :
-                      goalStatus.color === 'primary' ? 'text-primary-400' :
-                      'text-gray-400'
-                    }`}>
-                      {goalStatus.label}
-                    </span>
-                  </div>
-
-                  {/* Action Buttons - Only show if not completed */}
-                  {!isCompleted && ( // Already exists
-                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mt-3">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedGoalId(goal.id);
-                          setShowTransactionModal(true);
-                        }}
-                        className="flex-1 text-xs sm:text-sm border-white/20 hover:border-white/40"
-                      >
-                        +<CurrencyIcon currencyCode={currency.code} size={12} className="inline mx-1" />100
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setSelectedGoalId(goal.id);
-                          setShowTransactionModal(true);
-                        }}
-                        className="flex-1 text-xs sm:text-sm"
-                      >
-                        Manage
-                      </Button>
-                    </div>
-                  )}
                 </div>
-              );
-            })}
-          </div>
-        )}
-        {/* Completed Goals Summary */}
-        {goals.filter(g => calculatePercentage(toNumber(g.currentAmount), toNumber(g.targetAmount)) >= 100).length > 0 && (
-          <div className="mt-6 bg-success-500/20 rounded-lg p-4 border border-success-500/30"> // Already exists
-            <div className="flex items-start space-x-3">
-              <CheckCircle size={18} className="text-success-400 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-success-400 mb-1">Achievements Unlocked!</h4>
-                <p className="text-sm text-success-300">
-                  You've completed {goals.filter(g => calculatePercentage(toNumber(g.currentAmount), toNumber(g.targetAmount)) >= 100).length} goal(s). 
-                  Excellent work on reaching your financial milestones!
-                </p>
+
+                {/* Progress Section */}
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm text-forest-300 mb-2">
+                    <span>Progress</span>
+                    <span>{formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}</span>
+                  </div>
+                  <div className="w-full bg-forest-800/50 rounded-full h-3">
+                    <div 
+                      className={`h-3 rounded-full transition-all duration-300 ${
+                        progress >= 100 
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+                          : progress >= 75
+                          ? 'bg-gradient-to-r from-blue-500 to-cyan-500'
+                          : progress >= 50
+                          ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
+                          : 'bg-gradient-to-r from-red-500 to-pink-500'
+                      }`}
+                      style={{ width: `${Math.min(progress, 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-forest-400 mt-1">
+                    <span>{Math.round(progress)}% Complete</span>
+                    <span>{formatCurrency(goal.targetAmount - goal.currentAmount)} remaining</span>
+                  </div>
+                </div>
+
+                {/* Monthly Savings Target */}
+                {daysUntilTarget > 0 && (
+                  <div className="bg-forest-800/20 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <PiggyBank size={16} className="text-forest-400" />
+                      <span className="text-sm font-medium text-forest-200">Monthly Savings Target</span>
+                    </div>
+                    <p className="text-lg font-numbers font-bold text-white">
+                      {formatCurrency((goal.targetAmount - goal.currentAmount) / Math.max(1, Math.ceil(daysUntilTarget / 30)))}
+                    </p>
+                    <p className="text-xs text-forest-400">per month to reach your goal</p>
+                  </div>
+                )}
               </div>
+            );
+          })}
+        </div>
+
+        {/* Recent Goal Transactions */}
+        {recentGoalTransactions.length > 0 && (
+          <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
+            <h3 className="text-lg font-heading font-semibold text-white mb-4">Recent Goal Activity</h3>
+            <div className="space-y-3">
+              {recentGoalTransactions.map((transaction) => (
+                <div key={transaction.id} className="flex items-center justify-between p-3 bg-forest-800/20 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {transaction.type === 'income' ? (
+                      <TrendingUp size={16} className="text-green-400" />
+                    ) : (
+                      <TrendingDown size={16} className="text-red-400" />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-white">{transaction.description}</p>
+                      <p className="text-xs text-forest-400">{format(new Date(transaction.date), 'MMM dd, yyyy')}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-numbers font-bold ${
+                      transaction.type === 'income' ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
+
+        {/* Add Goal Button */}
+        <div className="fixed bottom-6 right-6">
+          <Button
+            onClick={() => setShowModal(true)}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full p-4 shadow-lg"
+          >
+            <Plus size={24} />
+          </Button>
+        </div>
       </div>
 
-      {/* Create Goal Modal */}
+      {/* Add Goal Modal */}
       <Modal
-        isOpen={showModal} // Already exists
-        onClose={() => {
-          setShowModal(false);
-          setError(null);
-        }}
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
         title="Create New Goal"
       >
         <GoalForm
-          onSubmit={handleAddGoal} // Already exists
-          onCancel={() => {
-            setShowModal(false);
-            setError(null);
-          }}
+          onSubmit={handleAddGoal}
+          onCancel={() => setShowModal(false)}
         />
       </Modal>
 
       {/* Edit Goal Modal */}
-      <Modal // Already exists
+      <Modal
         isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setEditingGoal(null);
-          setError(null);
-        }}
+        onClose={() => setShowEditModal(false)}
         title="Edit Goal"
       >
         {editingGoal && (
-          <GoalForm // Already exists
+          <GoalForm
+            onSubmit={async (data) => handleEditGoal(data as any)}
+            onCancel={() => setShowEditModal(false)}
             initialData={{
               title: editingGoal.title,
               description: editingGoal.description,
               targetAmount: editingGoal.targetAmount,
               currentAmount: editingGoal.currentAmount,
               targetDate: editingGoal.targetDate.toISOString().split('T')[0],
-              category: editingGoal.category
-            }}
-            onSubmit={handleEditGoal}
-            onCancel={() => {
-              setShowEditModal(false);
-              setEditingGoal(null);
-              setError(null);
+              category: editingGoal.category,
+              accountId: editingGoal.accountId
             }}
           />
         )}
       </Modal>
 
       {/* Goal Transaction Modal */}
-      <Modal // Already exists
+      <Modal
         isOpen={showTransactionModal}
-        onClose={() => {
-          setShowTransactionModal(false);
-          setSelectedGoalId(null);
-          setError(null);
-        }}
-        title={`Manage ${selectedGoal?.title || 'Goal'}`}
+        onClose={() => setShowTransactionModal(false)}
+        title="Goal Transaction"
       >
-        {selectedGoal && (
-          <GoalTransactionForm // Already exists
-            goal={selectedGoal}
-            emergencyFundBalance={emergencyFundBalance}
+        {selectedGoalId && (
+          <GoalTransactionForm
             onSubmit={handleGoalTransaction}
-            onCancel={() => {
-              setShowTransactionModal(false);
-              setSelectedGoalId(null);
-              setError(null);
-            }}
+            onCancel={() => setShowTransactionModal(false)}
+            goal={goals.find(g => g.id === selectedGoalId)!}
+            emergencyFundBalance={0}
           />
         )}
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal // Already exists
+      <Modal
         isOpen={showDeleteConfirm}
-        onClose={() => {
-          setShowDeleteConfirm(false);
-          setGoalToDelete(null);
-          setError(null);
-        }}
-        title="Confirm Delete"
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Delete Goal"
       >
-        <div className="space-y-4">
-          <p className="text-gray-300"> // Already exists
-            Are you sure you want to delete this goal? This action cannot be undone.
+        <div className="text-center">
+          <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-white mb-2">Are you sure?</h3>
+          <p className="text-forest-300 mb-6">
+            This action cannot be undone. All progress and transaction history for this goal will be lost.
           </p>
-          <div className="flex space-x-3">
+          <div className="flex space-x-4">
             <Button
+              onClick={() => setShowDeleteConfirm(false)}
               variant="outline"
-              onClick={() => {
-                setShowDeleteConfirm(false);
-                setGoalToDelete(null);
-              }}
-              className="flex-1" // Already exists
-              disabled={isSubmitting}
+              className="flex-1"
             >
               Cancel
             </Button>
             <Button
               onClick={confirmDeleteGoal}
               className="flex-1 bg-error-500 hover:bg-error-600"
-              loading={isSubmitting}
+              disabled={isSubmitting}
             >
-              Delete
+              {isSubmitting ? 'Deleting...' : 'Delete Goal'}
             </Button>
           </div>
         </div>
       </Modal>
+
+      {/* Error Toast */}
+      {error && (
+        <div className="fixed bottom-6 left-6 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg">
+          {error}
+        </div>
+      )}
     </div>
   );
 };
