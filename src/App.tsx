@@ -19,6 +19,7 @@ import './styles/accessibility.css';
 
 // Lazy load pages for better performance
 const Auth = React.lazy(() => import('./pages/Auth').then(module => ({ default: module.Auth })));
+const Home = React.lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
 const Dashboard = React.lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
 const AddTransaction = React.lazy(() => import('./pages/AddTransaction').then(module => ({ default: module.AddTransaction })));
 const TransactionHistory = React.lazy(() => import('./pages/TransactionHistory').then(module => ({ default: module.TransactionHistory })));
@@ -109,8 +110,7 @@ function App() {
                                 path="/" 
                                 element={
                                   <ProtectedRoute requiresAuth={true}>
-                                    <Dashboard />
-                                    <BottomNavigation />
+                                    <Home />
                                   </ProtectedRoute>
                                 } 
                               />
