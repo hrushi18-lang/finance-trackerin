@@ -1,47 +1,94 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, BarChart3, Target, Settings, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+  Home, 
+  Target, 
+  PieChart, 
+  CreditCard, 
+  Receipt, 
+  BarChart3, 
+  User,
+  Plus
+} from 'lucide-react';
 
 export const BottomNavigation: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.pathname);
 
   const navItems = [
-    { path: '/', icon: Home, label: 'Home' },
-    { path: '/overview', icon: BarChart3, label: 'Reports' },
+    { path: '/home', icon: Home, label: 'Home' },
     { path: '/goals', icon: Target, label: 'Goals' },
-    { path: '/profile', icon: Settings, label: 'Settings' }
+    { path: '/budgets', icon: PieChart, label: 'Budgets' },
+    { path: '/liabilities', icon: CreditCard, label: 'Liabilities' },
+    { path: '/bills', icon: Receipt, label: 'Bills' },
+    { path: '/overview', icon: BarChart3, label: 'Overview' },
+    { path: '/accounts', icon: User, label: 'Accounts' },
   ];
 
+  const handleTabClick = (path: string) => {
+    setActiveTab(path);
+    navigate(path);
+  };
+
+  const isActive = (path: string) => activeTab === path;
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-green-800/95 backdrop-blur-md safe-area-pb z-40" role="navigation" aria-label="Main navigation">
-      <div className="flex justify-around items-center py-2 relative">
-        {navItems.map(({ path, icon: Icon, label }) => (
-          <NavLink
-            key={path}
-            to={path}
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center p-2 transition-all duration-200 min-w-0 ${
-                isActive
-                  ? 'text-green-400'
-                  : 'text-white/70 hover:text-white'
-              }`
-            }
-            aria-label={`Navigate to ${label}`}
-          >
-            <Icon size={20} aria-hidden="true" />
-            <span className="text-xs mt-1 font-medium truncate">{label}</span>
-          </NavLink>
-        ))}
-        
-        {/* Floating Add Button */}
-        <button
-          onClick={() => navigate('/add-transaction')}
-          className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg hover:bg-green-400 transition-colors"
-          aria-label="Add transaction"
-        >
-          <Plus size={24} className="text-white" />
-        </button>
+    <div className="fixed bottom-4 left-4 right-4 z-50">
+      <div 
+        className="px-4 py-3 mx-auto max-w-4xl rounded-2xl"
+        style={{ 
+          backgroundColor: 'var(--primary)',
+          boxShadow: 'var(--shadow-xl)',
+          border: '1px solid var(--border-light)'
+        }}
+      >
+        <div className="flex items-center justify-between">
+          {navItems.map((item, index) => {
+            const Icon = item.icon;
+            const isItemActive = isActive(item.path);
+            
+            return (
+              <button
+                key={item.path}
+                onClick={() => handleTabClick(item.path)}
+                className={`flex flex-col items-center space-y-1 px-2 py-2 rounded-xl transition-all duration-300 ${
+                  isItemActive
+                    ? 'text-white transform scale-110'
+                    : 'text-white/70 hover:text-white hover:scale-105'
+                }`}
+                style={{
+                  backgroundColor: isItemActive ? 'rgba(255, 255, 255, 0.2)' : 'transparent'
+                }}
+              >
+                <Icon 
+                  size={18} 
+                  className={`transition-all duration-300 ${
+                    isItemActive ? 'animate-pulse' : ''
+                  }`}
+                />
+                <span className="text-xs font-medium leading-tight text-center">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+          
+          {/* Central Add Transaction Button */}
+          <div className="relative">
+            <button
+              onClick={() => navigate('/add-transaction')}
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+              style={{ 
+                backgroundColor: 'var(--accent-light)',
+                boxShadow: 'var(--shadow-lg)'
+              }}
+            >
+              <Plus size={20} className="text-white" />
+            </button>
+          </div>
+        </div>
       </div>
-    </nav>
+    </div>
   );
 };

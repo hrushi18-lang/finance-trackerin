@@ -405,7 +405,10 @@ export const Overview: React.FC = () => {
         </div>
 
         {/* Analytics Snapshot */}
-        <div className="card p-4 slide-in-up">
+        <div 
+          className="card p-4 slide-in-up cursor-pointer hover:scale-105 transition-all duration-200"
+          onClick={() => navigate('/analytics')}
+        >
           <div className="flex items-center justify-between mb-4">
             <h4 className="font-heading">Spending vs Income</h4>
             <div className="flex items-center space-x-2 rounded-lg px-3 py-1" style={{ backgroundColor: 'var(--background-secondary)' }}>

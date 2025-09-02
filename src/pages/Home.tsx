@@ -16,7 +16,8 @@ import {
   CreditCard,
   Building,
   Smartphone,
-  Target
+  Target,
+  Calendar
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
@@ -132,50 +133,70 @@ export const Home: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
+    <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
       {/* Immersive Header */}
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 pt-12 pb-8 px-6">
+      <div className="pt-12 pb-8 px-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-heading text-gray-900">Fin.</h1>
+            <h1 className="text-3xl font-heading">Fin.</h1>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <Bell size={18} className="text-gray-600" />
+          {/* Immersive Top-Right Controls */}
+          <div className="flex items-center space-x-2">
+            <button 
+              onClick={() => navigate('/calendar')}
+              className="p-2 rounded-full transition-all duration-200 hover:scale-110"
+              style={{ backgroundColor: 'var(--background-secondary)' }}
+            >
+              <Calendar size={16} className="text-gray-600" />
             </button>
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <Settings size={18} className="text-gray-600" />
+            <button 
+              onClick={() => navigate('/notifications')}
+              className="p-2 rounded-full transition-all duration-200 hover:scale-110"
+              style={{ backgroundColor: 'var(--background-secondary)' }}
+            >
+              <Bell size={16} className="text-gray-600" />
             </button>
-            <button className="p-1 rounded-full hover:bg-gray-100 transition-colors">
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <User size={16} className="text-gray-600" />
+            <button 
+              onClick={() => navigate('/settings')}
+              className="p-2 rounded-full transition-all duration-200 hover:scale-110"
+              style={{ backgroundColor: 'var(--background-secondary)' }}
+            >
+              <Settings size={16} className="text-gray-600" />
+            </button>
+            <button 
+              onClick={() => navigate('/profile')}
+              className="p-1 rounded-full transition-all duration-200 hover:scale-110"
+              style={{ backgroundColor: 'var(--background-secondary)' }}
+            >
+              <div className="w-7 h-7 bg-gray-300 rounded-full flex items-center justify-center">
+                <User size={14} className="text-gray-600" />
               </div>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="px-6 py-6 space-y-8">
+      <div className="px-6 space-y-6">
         {/* Greeting Section */}
-        <div className="text-left">
-          <h2 className="text-2xl font-semibold text-gray-900">
+        <div className="text-left slide-in-up">
+          <h2 className="text-2xl font-heading">
             Hello, {user?.user_metadata?.full_name || 'Hrushi'} 👋
           </h2>
         </div>
 
         {/* Net Worth Card */}
-        <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+        <div className="card-neumorphic p-8 slide-in-up">
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-600 mb-3">Net Worth</p>
+            <p className="text-sm font-body mb-3">Net Worth</p>
             <div className="mb-3">
-              <span className="text-4xl font-bold text-gray-900">
+              <span className="text-4xl font-serif font-bold" style={{ color: 'var(--primary)' }}>
                 {hideBalance ? '••••••' : formatCurrency(netWorth)}
               </span>
             </div>
             <div className="flex items-center justify-center space-x-2">
-              <TrendingUp size={16} className="text-green-500" />
-              <span className="text-sm font-medium text-green-600">
+              <TrendingUp size={16} style={{ color: 'var(--success)' }} />
+              <span className="text-sm font-medium" style={{ color: 'var(--success)' }}>
                 +{hideBalance ? '••' : formatCurrency(netWorthChange.amount)} ({netWorthChange.percentage}%)
               </span>
             </div>
@@ -183,49 +204,62 @@ export const Home: React.FC = () => {
         </div>
 
         {/* Category Filter Buttons */}
-        <div className="flex space-x-4">
+        <div className="flex space-x-4 slide-in-up">
           <button
             onClick={() => setActiveFilter('income')}
-            className={`px-6 py-3 rounded-full text-sm font-medium transition-colors flex items-center space-x-2 ${
+            className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
               activeFilter === 'income'
-                ? 'bg-green-100 text-green-800'
-                : 'bg-white text-gray-700 border border-gray-200'
+                ? 'text-white transform scale-105'
+                : 'text-gray-700 hover:scale-105'
             }`}
+            style={{
+              backgroundColor: activeFilter === 'income' ? 'var(--success)' : 'var(--surface)',
+              border: activeFilter === 'income' ? 'none' : '1px solid var(--border)'
+            }}
           >
-            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: activeFilter === 'income' ? 'white' : 'var(--success)' }}></div>
             <span>Income</span>
           </button>
           <button
             onClick={() => setActiveFilter('expense')}
-            className={`px-6 py-3 rounded-full text-sm font-medium transition-colors flex items-center space-x-2 ${
+            className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
               activeFilter === 'expense'
-                ? 'bg-red-100 text-red-800'
-                : 'bg-white text-gray-700 border border-gray-200'
+                ? 'text-white transform scale-105'
+                : 'text-gray-700 hover:scale-105'
             }`}
+            style={{
+              backgroundColor: activeFilter === 'expense' ? 'var(--error)' : 'var(--surface)',
+              border: activeFilter === 'expense' ? 'none' : '1px solid var(--border)'
+            }}
           >
-            <div className="w-2 h-2 rounded-full bg-red-500"></div>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: activeFilter === 'expense' ? 'white' : 'var(--error)' }}></div>
             <span>Expense</span>
           </button>
           <button
             onClick={() => setActiveFilter('savings')}
-            className={`px-6 py-3 rounded-full text-sm font-medium transition-colors flex items-center space-x-2 ${
+            className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
               activeFilter === 'savings'
-                ? 'bg-blue-100 text-blue-800'
-                : 'bg-white text-gray-700 border border-gray-200'
+                ? 'text-white transform scale-105'
+                : 'text-gray-700 hover:scale-105'
             }`}
+            style={{
+              backgroundColor: activeFilter === 'savings' ? 'var(--primary)' : 'var(--surface)',
+              border: activeFilter === 'savings' ? 'none' : '1px solid var(--border)'
+            }}
           >
-            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: activeFilter === 'savings' ? 'white' : 'var(--primary)' }}></div>
             <span>Savings</span>
           </button>
         </div>
 
         {/* Accounts Contribution Section */}
-        <div>
+        <div className="slide-in-up">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Accounts Contribution</h3>
+            <h3 className="text-lg font-heading">Accounts Contribution</h3>
             <button
               onClick={() => setHideBalance(!hideBalance)}
-              className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+              className="flex items-center space-x-2 text-sm font-body hover:scale-105 transition-all duration-200"
+              style={{ color: 'var(--text-tertiary)' }}
             >
               {hideBalance ? <Eye size={16} /> : <EyeOff size={16} />}
               <span>{hideBalance ? 'Show' : 'Hide'} Balance</span>
@@ -235,32 +269,32 @@ export const Home: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             {mainAccounts.length > 0 ? (
               mainAccounts.map((account) => (
-                <div key={account.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div key={account.id} className="card p-6">
                   <div className="flex items-center space-x-3 mb-3">
                     {getAccountIcon(account)}
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                       {account.name}
                     </span>
                   </div>
-                  <p className="text-xl font-bold text-gray-900">
+                  <p className="text-xl font-numbers">
                     {hideBalance ? '••••••' : formatCurrency(account.balance || 0)}
                   </p>
                 </div>
               ))
             ) : (
-              <div className="col-span-2 bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center">
+              <div className="col-span-2 card p-8 text-center">
                 <div className="flex flex-col items-center space-y-4">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
                     <CreditCard size={24} className="text-gray-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Accounts Yet</h3>
-                    <p className="text-sm text-gray-500 mb-4">
+                    <h3 className="text-lg font-heading mb-2">No Accounts Yet</h3>
+                    <p className="text-sm font-body mb-4">
                       Add your first account to start tracking your finances
                     </p>
                     <button
                       onClick={() => navigate('/accounts')}
-                      className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                      className="btn-primary"
                     >
                       Add Account
                     </button>
@@ -272,28 +306,28 @@ export const Home: React.FC = () => {
         </div>
 
         {/* Recent Activity Section */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Recent Activity</h3>
+        <div className="slide-in-up">
+          <h3 className="text-lg font-heading mb-6">Recent Activity</h3>
           <div className="space-y-4">
             {displayTransactions.length > 0 ? (
               displayTransactions.map((transaction) => {
                 const tag = getTransactionTag(transaction);
                 return (
-                  <div key={transaction.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                  <div key={transaction.id} className="card p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         {getTransactionIcon(transaction)}
                         <div>
-                          <p className="font-medium text-gray-900">
+                          <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
                             {transaction.description || 'Transaction'}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm font-body">
                             {format(new Date(transaction.date), 'MMM dd, yyyy')}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`text-lg font-semibold ${
+                        <p className={`text-lg font-numbers ${
                           transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                         }`}>
                           {transaction.type === 'income' ? '+' : '-'}
@@ -308,19 +342,19 @@ export const Home: React.FC = () => {
                 );
               })
             ) : (
-              <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center">
+              <div className="card p-8 text-center">
                 <div className="flex flex-col items-center space-y-4">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
                     <DollarSign size={24} className="text-gray-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Transactions Yet</h3>
-                    <p className="text-sm text-gray-500 mb-4">
+                    <h3 className="text-lg font-heading mb-2">No Transactions Yet</h3>
+                    <p className="text-sm font-body mb-4">
                       Start tracking your income and expenses
                     </p>
                     <button
                       onClick={() => navigate('/add-transaction')}
-                      className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                      className="btn-primary"
                     >
                       Add Transaction
                     </button>
@@ -331,54 +365,6 @@ export const Home: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3">
-        <div className="flex items-center justify-around">
-          <button className="flex flex-col items-center space-y-1 p-2">
-            <div className="w-6 h-6 bg-gray-900 rounded-full flex items-center justify-center">
-              <div className="w-3 h-3 bg-white rounded-sm"></div>
-            </div>
-            <span className="text-xs font-medium text-gray-900">Home</span>
-          </button>
-          
-          <button 
-            onClick={() => navigate('/budgets')}
-            className="flex flex-col items-center space-y-1 p-2"
-          >
-            <div className="w-6 h-6 border-2 border-gray-300 rounded-full"></div>
-            <span className="text-xs text-gray-500">Budget</span>
-          </button>
-          
-          <button 
-            onClick={() => navigate('/add-transaction')}
-            className="flex flex-col items-center space-y-1 p-2"
-          >
-            <div className="w-14 h-14 bg-gray-900 rounded-full flex items-center justify-center shadow-lg">
-              <Plus size={28} className="text-white" />
-            </div>
-          </button>
-          
-          <button 
-            onClick={() => navigate('/accounts')}
-            className="flex flex-col items-center space-y-1 p-2"
-          >
-            <CreditCard size={24} className="text-gray-400" />
-            <span className="text-xs text-gray-500">Accounts</span>
-          </button>
-          
-          <button 
-            onClick={() => navigate('/profile')}
-            className="flex flex-col items-center space-y-1 p-2"
-          >
-            <User size={24} className="text-gray-400" />
-            <span className="text-xs text-gray-500">Profile</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Bottom padding to account for fixed navigation */}
-      <div className="h-20"></div>
     </div>
   );
 };

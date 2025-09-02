@@ -205,10 +205,20 @@ function App() {
                               />
                               
                               <Route 
-                                path="/accounts-hub" 
+                                path="/accounts" 
                                 element={
                                   <ProtectedRoute>
                                     <AccountsHub />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/home" 
+                                element={
+                                  <ProtectedRoute>
+                                    <Home />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
