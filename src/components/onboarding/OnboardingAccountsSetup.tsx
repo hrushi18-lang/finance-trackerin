@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Wallet, Building, DollarSign, Plus, Banknote } from 'lucide-react'; // Already exists
-import { Button } from '../common/Button'; // Already exists
-import { useInternationalization } from '../../contexts/InternationalizationContext'; // Already exists
-import { CurrencyIcon } from '../common/CurrencyIcon'; // Already exists
+import { Wallet, Building, DollarSign, Plus, Banknote } from 'lucide-react';
+import { Button } from '../common/Button';
+import { useInternationalization } from '../../contexts/InternationalizationContext';
+import { CurrencyIcon } from '../common/CurrencyIcon';
 
 interface AccountData {
   name: string;
@@ -21,11 +21,11 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
   onNext, 
   onPrev, 
   initialData,
-  canGoBack = true // Already exists
+  canGoBack = true
 }) => {
   const { currency } = useInternationalization();
   const [accounts, setAccounts] = useState<AccountData[]>(
-    initialData?.accounts || [ // Already exists
+    initialData?.accounts || [
       { name: 'Wallet', type: 'digital_wallet', balance: 0 },
       { name: 'Cash', type: 'cash', balance: 0 },
       { name: 'Bank Account', type: 'bank_savings', balance: 0 }
@@ -36,7 +36,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
   const [newAccountType, setNewAccountType] = useState<'digital_wallet' | 'cash' | 'bank_savings'>('digital_wallet');
 
   const updateAccountBalance = (index: number, balance: number) => {
-    const updatedAccounts = [...accounts]; // Already exists
+    const updatedAccounts = [...accounts];
     updatedAccounts[index].balance = balance;
     setAccounts(updatedAccounts);
   };
@@ -44,7 +44,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
   const addCustomAccount = () => {
     if (newAccountName.trim()) {
       setAccounts([...accounts, {
-        name: newAccountName, // Already exists
+        name: newAccountName,
         type: newAccountType,
         balance: 0
       }]);
@@ -54,7 +54,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
   };
 
   const getAccountIcon = (type: string) => {
-    switch (type) { // Already exists
+    switch (type) {
       case 'digital_wallet': return '💳';
       case 'cash': return '💵';
       case 'bank_savings': return '🏦';
@@ -64,7 +64,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
 
   const handleContinue = () => {
     onNext({ accounts });
-  }; // Already exists
+  };
 
   return (
     <div className="min-h-screen bg-forest-800 flex items-center justify-center p-4">
@@ -72,7 +72,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
         <div className="bg-forest-700/80 backdrop-blur-md rounded-3xl p-8 border border-forest-600/30 shadow-2xl">
           {/* Progress Indicator */}
           <div className="flex items-center justify-center space-x-4 mb-8">
-            <div className="flex items-center space-x-2"> // Already exists
+            <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
                 <span className="text-forest-800 font-bold text-sm">✓</span>
               </div>
@@ -80,7 +80,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
             </div>
             <div className="w-8 h-1 bg-forest-500 rounded-full"></div>
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center"> // Already exists
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
                 <span className="text-forest-800 font-bold text-sm">2</span>
               </div>
               <span className="text-white text-sm font-body">Accounts</span>
@@ -88,7 +88,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
             <div className="w-8 h-1 bg-forest-500/30 rounded-full"></div>
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-forest-500/30 rounded-full flex items-center justify-center">
-                <span className="text-forest-300 font-bold text-sm">3</span> // Already exists
+                <span className="text-forest-300 font-bold text-sm">3</span>
               </div>
               <span className="text-forest-300 text-sm font-body">Categories</span>
             </div>
@@ -97,7 +97,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
               <div className="w-8 h-8 bg-forest-500/30 rounded-full flex items-center justify-center">
                 <span className="text-forest-300 font-bold text-sm">4</span>
               </div>
-              <span className="text-forest-300 font-bold text-sm">Budget</span> // Already exists
+              <span className="text-forest-300 font-bold text-sm">Budget</span>
             </div>
           </div>
 
@@ -113,7 +113,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
 
           {/* Account Setup */}
           <div className="space-y-4 mb-8">
-            {accounts.map((account, index) => ( // Already exists
+            {accounts.map((account, index) => (
               <div key={index} className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <span className="text-xl">{getAccountIcon(account.type)}</span>
@@ -125,7 +125,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
                   type="number"
                   step="0.01"
                   placeholder="Enter initial balance"
-                  value={account.balance || ''} // Already exists
+                  value={account.balance || ''}
                   onChange={(e) => updateAccountBalance(index, Number(e.target.value) || 0)}
                   className="w-full pl-16 pr-12 py-4 bg-forest-600/30 border border-forest-500/30 rounded-2xl text-white placeholder-forest-300 focus:border-forest-400 focus:ring-2 focus:ring-forest-400/20 transition-all font-body"
                 />
@@ -136,7 +136,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
             ))}
 
             {/* Add Account Button */}
-            {!showAddForm ? ( // Already exists
+            {!showAddForm ? (
               <button
                 type="button"
                 onClick={() => setShowAddForm(true)}
@@ -145,7 +145,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
                 <Plus size={18} />
                 <span>Add Account</span>
               </button>
-            ) : ( // Already exists
+            ) : (
               <div className="space-y-3">
                 <input
                   type="text"
@@ -153,7 +153,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
                   value={newAccountName}
                   onChange={(e) => setNewAccountName(e.target.value)}
                   className="w-full px-4 py-3 bg-forest-600/30 border border-forest-500/30 rounded-xl text-white placeholder-forest-300 focus:border-forest-400 transition-all font-body"
-                /> // Already exists
+                />
                 <select
                   value={newAccountType}
                   onChange={(e) => setNewAccountType(e.target.value as any)}
@@ -163,7 +163,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
                   <option value="cash" className="bg-forest-800">Cash</option>
                   <option value="bank_savings" className="bg-forest-800">Bank Account</option>
                 </select>
-                <div className="flex space-x-2"> // Already exists
+                <div className="flex space-x-2">
                   <Button
                     onClick={addCustomAccount}
                     size="sm"
@@ -173,7 +173,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
                   </Button>
                   <Button
                     onClick={() => setShowAddForm(false)}
-                    size="sm" // Already exists
+                    size="sm"
                     variant="outline"
                     className="flex-1 border-forest-500/30 text-forest-300"
                   >
@@ -185,7 +185,7 @@ export const OnboardingAccountsSetup: React.FC<OnboardingAccountsSetupProps> = (
           </div>
 
           {/* Continue Button */}
-          <Button // Already exists
+          <Button
             onClick={handleContinue}
             className="w-full py-4 text-lg font-heading font-semibold bg-white text-forest-800 hover:bg-forest-50 rounded-2xl shadow-lg transition-all"
             disabled={accounts.every(acc => acc.balance === 0)}

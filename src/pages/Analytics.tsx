@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
-import { CollapsibleHeader } from '../components/layout/CollapsibleHeader'; // Already exists
+import { CollapsibleHeader } from '../components/layout/CollapsibleHeader';
 import { PageNavigation } from '../components/layout/PageNavigation';
 import { AdvancedFilters } from '../components/analytics/AdvancedFilters';
 import { TrendChart } from '../components/analytics/TrendChart';
@@ -14,7 +14,7 @@ import { SpendingPatternAnalysis } from '../components/analytics/SpendingPattern
 import { IncomeAnalysis } from '../components/analytics/IncomeAnalysis';
 import { BudgetPerformance } from '../components/analytics/BudgetPerformance';
 import { GoalProgressAnalytics } from '../components/analytics/GoalProgressAnalytics';
-import { useFinance } from '../contexts/FinanceContext'; // Already exists
+import { useFinance } from '../contexts/FinanceContext';
 import { ChevronDown, ChevronUp, TrendingUp, PieChart as PieChartIcon, DollarSign, Target, Calendar, Clock, Sparkles, BarChart3, Activity, Zap } from 'lucide-react';
 import { isWithinInterval, format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
@@ -42,7 +42,7 @@ interface TimelineRange {
 export const Analytics: React.FC = () => {
   const { 
     transactions, 
-    goals, // Already exists
+    goals,
     budgets, 
     liabilities,
     getMonthlyTrends, 
@@ -53,7 +53,7 @@ export const Analytics: React.FC = () => {
     getBudgetPerformance
   } = useFinance();
   
-  const [showDetailedCharts, setShowDetailedCharts] = useState(false); // Already exists
+  const [showDetailedCharts, setShowDetailedCharts] = useState(false);
   const [chartType, setChartType] = useState<'line' | 'area'>('line');
   const [showFilters, setShowFilters] = useState(false);
   const [timeRange, setTimeRange] = useState(12); // months
@@ -76,7 +76,7 @@ export const Analytics: React.FC = () => {
 
   // Get available categories
   const availableCategories = useMemo(() => {
-    const categories = new Set(transactions.map(t => t.category)); // Already exists
+    const categories = new Set(transactions.map(t => t.category));
     return Array.from(categories).sort();
   }, [transactions]);
 
@@ -89,7 +89,7 @@ export const Analytics: React.FC = () => {
       if (!isWithinInterval(t.date, { start: timelineRange.start, end: timelineRange.end })) {
         return false;
       }
-      // Already exists
+     
       // Additional filters
       if (filters.dateRange.start && t.date < new Date(filters.dateRange.start)) return false;
       if (filters.dateRange.end && t.date > new Date(filters.dateRange.end)) return false;
@@ -103,10 +103,10 @@ export const Analytics: React.FC = () => {
   }, [transactions, timelineRange, filters]);
 
   // Calculate analytics data
-  const monthlyTrends = useMemo(() => getMonthlyTrends(timeRange), [getMonthlyTrends, timeRange]); // Already exists
-  const spendingPatterns = useMemo(() => getSpendingPatterns(filteredTransactions), [getSpendingPatterns, filteredTransactions]); // Already exists
-  const incomeAnalysis = useMemo(() => getIncomeAnalysis(filteredTransactions), [getIncomeAnalysis, filteredTransactions]); // Already exists
-  const budgetPerformance = useMemo(() => getBudgetPerformance(), [getBudgetPerformance]); // Already exists
+  const monthlyTrends = useMemo(() => getMonthlyTrends(timeRange), [getMonthlyTrends, timeRange]);
+  const spendingPatterns = useMemo(() => getSpendingPatterns(filteredTransactions), [getSpendingPatterns, filteredTransactions]);
+  const incomeAnalysis = useMemo(() => getIncomeAnalysis(filteredTransactions), [getIncomeAnalysis, filteredTransactions]);
+  const budgetPerformance = useMemo(() => getBudgetPerformance(), [getBudgetPerformance]);
 
   // Timeline analytics
   const timelineAnalytics = useMemo(() => {
@@ -114,7 +114,7 @@ export const Analytics: React.FC = () => {
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
     
-    const expenses = filteredTransactions // Already exists
+    const expenses = filteredTransactions
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
 
@@ -139,7 +139,7 @@ export const Analytics: React.FC = () => {
 
   // Category breakdown
   const categoryBreakdown = useMemo(() => {
-    const expenses = filteredTransactions.filter(t => t.type === 'expense'); // Already exists
+    const expenses = filteredTransactions.filter(t => t.type === 'expense');
     const categoryTotals = expenses.reduce((acc, t) => {
       acc[t.category] = (acc[t.category] || 0) + t.amount;
       return acc;
@@ -163,7 +163,7 @@ export const Analytics: React.FC = () => {
 
   return (
     <div className="min-h-screen text-white pb-20">
-      {/* Collapsible Header */} // Already exists
+      {/* Collapsible Header */}
       <CollapsibleHeader>
         <div className="px-4 py-4 sm:py-6">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
@@ -185,7 +185,7 @@ export const Analytics: React.FC = () => {
       
       {/* Main Content */}
       <div className="pt-32 sm:pt-36 px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Timeline Selector */} // Already exists
+        {/* Timeline Selector */}
         <div className="bg-black/20 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-white/10">
           <TimelineSelector
             selectedType={timelineType}
@@ -198,7 +198,7 @@ export const Analytics: React.FC = () => {
         </div>
 
         {/* Timeline Analytics Summary */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4"> // Already exists
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 border border-white/10">
             <div className="flex items-center space-x-2 mb-2">
               <TrendingUp size={16} className="text-success-400" />
@@ -208,7 +208,7 @@ export const Analytics: React.FC = () => {
             <p className="text-xs text-gray-500">
               ${timelineAnalytics.dailyIncome.toFixed(0)}/day avg
             </p>
-          </div> // Already exists
+          </div>
 
           <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 border border-white/10">
             <div className="flex items-center space-x-2 mb-2">
@@ -219,7 +219,7 @@ export const Analytics: React.FC = () => {
             <p className="text-xs text-gray-500">
               ${timelineAnalytics.dailyExpenses.toFixed(0)}/day avg
             </p>
-          </div> // Already exists
+          </div>
 
           <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 border border-white/10">
             <div className="flex items-center space-x-2 mb-2">
@@ -232,7 +232,7 @@ export const Analytics: React.FC = () => {
             <p className="text-xs text-gray-500">
               {timelineAnalytics.transactionCount} transactions
             </p>
-          </div> // Already exists
+          </div>
 
           <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 border border-white/10">
             <div className="flex items-center space-x-2 mb-2">
@@ -243,7 +243,7 @@ export const Analytics: React.FC = () => {
             <p className="text-xs text-gray-500">
               days in {timelineType}
             </p>
-          </div> // Already exists
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -268,7 +268,7 @@ export const Analytics: React.FC = () => {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Financial Trends */}
-            <TrendChart data={monthlyTrends} type={chartType} /> // Already exists
+            <TrendChart data={monthlyTrends} type={chartType} />
 
             {/* Category Breakdown */}
             <div className="bg-black/20 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-white/10">
@@ -294,7 +294,7 @@ export const Analytics: React.FC = () => {
               
               {showDetailedCharts ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Expense Pie Chart */} // Already exists
+                  {/* Expense Pie Chart */}
                   {categoryBreakdown.length > 0 && (
                     <div>
                       <h4 className="text-sm font-medium text-gray-300 mb-3 flex items-center">
@@ -325,7 +325,7 @@ export const Analytics: React.FC = () => {
                               border: '1px solid rgba(255, 255, 255, 0.1)',
                               borderRadius: '8px',
                               color: '#F9FAFB',
-                              backdropFilter: 'blur(10px)' // Already exists
+                              backdropFilter: 'blur(10px)'
                             }}
                           />
                         </PieChart>
@@ -333,7 +333,7 @@ export const Analytics: React.FC = () => {
                     </div>
                   )}
                 </div>
-              ) : ( // Already exists
+              ) : (
                 <div className="space-y-3">
                   {categoryBreakdown.slice(0, 5).map((item, index) => (
                     <div key={item.name} className="flex items-center justify-between">
@@ -342,7 +342,7 @@ export const Analytics: React.FC = () => {
                           className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
                         />
-                        <span className="font-medium text-white text-sm sm:text-base">{item.name}</span> // Already exists
+                        <span className="font-medium text-white text-sm sm:text-base">{item.name}</span>
                       </div>
                       <span className="text-gray-400 text-sm sm:text-base">${item.value.toLocaleString()}</span>
                     </div>

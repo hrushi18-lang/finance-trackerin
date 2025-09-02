@@ -17,7 +17,7 @@ export const BottomNavigation: React.FC = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-forest-900/95 backdrop-blur-md border-t border-forest-700 safe-area-pb z-40">
+    <nav className="fixed bottom-0 left-0 right-0 bg-forest-900/95 backdrop-blur-md border-t border-forest-700 safe-area-pb z-40" role="navigation" aria-label="Main navigation">
       <div className="flex justify-around items-center py-1 sm:py-2">
         {navItems.map(({ path, icon: Icon, label }) => (
           <NavLink
@@ -30,8 +30,9 @@ export const BottomNavigation: React.FC = () => {
                   : 'text-gray-500 hover:text-forest-400 hover:bg-forest-700'
               }`
             }
+            aria-label={`Navigate to ${label}`}
           >
-            <Icon size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <Icon size={16} className="sm:w-[18px] sm:h-[18px]" aria-hidden="true" />
             <span className="text-xs mt-1 font-body font-medium truncate">{label}</span>
           </NavLink>
         ))}

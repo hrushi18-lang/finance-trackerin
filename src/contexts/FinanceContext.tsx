@@ -68,6 +68,22 @@ interface FinanceContextType {
   deleteRecurringTransaction: (id: string) => Promise<void>;
   
   transferBetweenAccounts: (fromAccountId: string, toAccountId: string, amount: number, description: string) => Promise<void>;
+  // System helpers
+  getGoalsVaultAccount: () => FinancialAccount | undefined;
+  ensureGoalsVaultAccount: () => Promise<void>;
+  // High-level flows
+  fundGoalFromAccount: (fromAccountId: string, goalId: string, amount: number, description?: string) => Promise<void>;
+  withdrawGoalToAccount: (toAccountId: string, goalId: string, amount: number, description?: string) => Promise<void>;
+  payBillFromAccount: (accountId: string, billId: string, amount?: number, description?: string) => Promise<void>;
+  repayLiabilityFromAccount: (accountId: string, liabilityId: string, amount: number, description?: string) => Promise<void>;
+  
+  // Analytics functions
+  getMonthlyTrends: (months: number) => Array<{ month: string; income: number; expenses: number; net: number }>;
+  getCategoryBreakdown: (transactions: Transaction[]) => Array<{ category: string; amount: number; percentage: number }>;
+  getNetWorthTrends: (months: number) => Array<{ month: string; netWorth: number }>;
+  getSpendingPatterns: (transactions: Transaction[]) => Array<{ category: string; amount: number; count: number }>;
+  getIncomeAnalysis: (transactions: Transaction[]) => Array<{ source: string; amount: number; percentage: number }>;
+  getBudgetPerformance: () => Array<{ budget: string; spent: number; limit: number; percentage: number }>;
   
   // Statistics
   stats: {
@@ -145,11 +161,138 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         loadTransactionSplits(),
         loadFinancialInsights()
       ]);
+      // Ensure Goals Vault exists after accounts load
+      await ensureGoalsVaultAccount();
     } catch (error) {
       console.error('Error loading data:', error);
+      // Add more specific error handling
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const ensureGoalsVaultAccount = async () => {
+    if (!user) return;
+    const existing = accounts.find(a => a.type === 'goals_vault');
+    if (existing) return;
+
+    // Use user's selected currency from onboarding/internationalization
+    const savedCurrency = typeof window !== 'undefined' ? localStorage.getItem('finspire_currency') : null;
+    const defaultCurrency = accounts[0]?.currency || savedCurrency || 'USD';
+
+    const { data, error } = await supabase
+      .from('financial_accounts')
+      .insert({
+        user_id: user.id,
+        name: 'Goals Vault',
+        type: 'goals_vault',
+        balance: 0,
+        is_visible: true,
+        currency: defaultCurrency
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to create Goals Vault account:', error);
+      return;
+    }
+
+    const newAccount: FinancialAccount = {
+      id: data.id,
+      userId: data.user_id,
+      name: data.name,
+      type: data.type,
+      balance: Number(data.balance),
+      isVisible: data.is_visible,
+      currency: data.currency,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    } as FinancialAccount;
+
+    setAccounts(prev => [newAccount, ...prev]);
+  };
+
+  const getGoalsVaultAccount = () => accounts.find(a => a.type === 'goals_vault');
+
+  const fundGoalFromAccount = async (fromAccountId: string, goalId: string, amount: number, description?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    await ensureGoalsVaultAccount();
+    const vault = getGoalsVaultAccount();
+    if (!vault) throw new Error('Goals Vault not available');
+
+    // Move funds from source to vault
+    await transferBetweenAccounts(fromAccountId, vault.id, amount, description || 'Goal Funding');
+
+    // Update goal allocation
+    const goal = goals.find(g => g.id === goalId);
+    if (goal) {
+      const newAmount = Math.min(Number(goal.currentAmount || 0) + Number(amount || 0), Number(goal.targetAmount || 0));
+      await updateGoal(goalId, { currentAmount: newAmount });
+    }
+  };
+
+  const withdrawGoalToAccount = async (toAccountId: string, goalId: string, amount: number, description?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    const vault = getGoalsVaultAccount();
+    if (!vault) throw new Error('Goals Vault not available');
+
+    // Move funds from vault to destination
+    await transferBetweenAccounts(vault.id, toAccountId, amount, description || 'Goal Withdrawal');
+
+    // Update goal allocation downwards
+    const goal = goals.find(g => g.id === goalId);
+    if (goal) {
+      const newAmount = Math.max(0, Number(goal.currentAmount || 0) - Number(amount || 0));
+      await updateGoal(goalId, { currentAmount: newAmount });
+    }
+  };
+
+  const payBillFromAccount = async (accountId: string, billId: string, amount?: number, description?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    const bill = bills.find(b => b.id === billId);
+    if (!bill) throw new Error('Bill not found');
+    const payAmount = Number(amount ?? bill.amount);
+
+    await addTransaction({
+      type: 'expense',
+      amount: payAmount,
+      category: bill.category || 'Bills',
+      description: description || `Bill Payment: ${bill.title}`,
+      date: new Date(),
+      accountId,
+      affectsBalance: true,
+      status: 'completed'
+    });
+
+    // Update bill schedule
+    const nextDueDate = new Date(bill.nextDueDate);
+    nextDueDate.setDate(nextDueDate.getDate() + (bill.frequency === 'weekly' ? 7 : bill.frequency === 'bi_weekly' ? 14 : bill.frequency === 'monthly' ? 30 : bill.frequency === 'quarterly' ? 90 : bill.frequency === 'semi_annual' ? 180 : bill.frequency === 'annual' ? 365 : 30));
+    await updateBill(billId, { lastPaidDate: new Date(), nextDueDate });
+  };
+
+  const repayLiabilityFromAccount = async (accountId: string, liabilityId: string, amount: number, description?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    const liability = liabilities.find(l => l.id === liabilityId);
+    if (!liability) throw new Error('Liability not found');
+
+    await addTransaction({
+      type: 'expense',
+      amount: Number(amount),
+      category: 'Liability Payment',
+      description: description || `Payment: ${liability.name}`,
+      date: new Date(),
+      accountId,
+      affectsBalance: true,
+      status: 'completed'
+    });
+
+    const newRemaining = Math.max(0, Number(liability.remainingAmount || 0) - Number(amount || 0));
+    await updateLiability(liabilityId, { remainingAmount: newRemaining, status: newRemaining === 0 ? 'paid_off' : liability.status });
   };
 
   const loadAccounts = async () => {
@@ -1044,8 +1187,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       amount: Number(data.amount),
       spent: Number(data.spent || 0),
       period: data.period,
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at)
+      createdAt: new Date(data.created_at)
     };
 
     setBudgets(prev => [newBudget, ...prev]);
@@ -1246,8 +1388,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       monthOfYear: data.month_of_year,
       maxOccurrences: data.max_occurrences,
       currentOccurrences: data.current_occurrences,
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at)
+      createdAt: new Date(data.created_at)
     };
 
     setRecurringTransactions(prev => [newRecurringTransaction, ...prev]);
@@ -1346,16 +1487,156 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setAccountTransfers(prev => [newTransfer, ...prev]);
 
-    // Update account balances
-    setAccounts(prev => prev.map(account => {
-      if (account.id === fromAccountId) {
-        return { ...account, balance: account.balance - amount };
-      }
-      if (account.id === toAccountId) {
-        return { ...account, balance: account.balance + amount };
-      }
-      return account;
-    }));
+    // Reload accounts to reflect balance changes (handled by database triggers)
+    await loadAccounts();
+  };
+
+  // Analytics functions
+  const getMonthlyTrends = (months: number) => {
+    const trends = [];
+    const now = new Date();
+    
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+      const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      
+      const monthTransactions = transactions.filter(t => 
+        t.date >= monthStart && t.date <= monthEnd
+      );
+      
+      const income = monthTransactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      const expenses = monthTransactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      trends.push({
+        month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        income,
+        expenses,
+        net: income - expenses
+      });
+    }
+    
+    return trends;
+  };
+
+  const getCategoryBreakdown = (transactions: Transaction[]) => {
+    const categoryMap = new Map<string, number>();
+    const total = transactions.reduce((sum, t) => sum + t.amount, 0);
+    
+    transactions.forEach(t => {
+      const current = categoryMap.get(t.category) || 0;
+      categoryMap.set(t.category, current + t.amount);
+    });
+    
+    return Array.from(categoryMap.entries())
+      .map(([category, amount]) => ({
+        category,
+        amount,
+        percentage: total > 0 ? (amount / total) * 100 : 0
+      }))
+      .sort((a, b) => b.amount - a.amount);
+  };
+
+  const getNetWorthTrends = (months: number) => {
+    const trends = [];
+    const now = new Date();
+    
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+      const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      
+      const monthTransactions = transactions.filter(t => 
+        t.date >= monthStart && t.date <= monthEnd
+      );
+      
+      const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0) +
+        monthTransactions
+          .filter(t => t.type === 'income')
+          .reduce((sum, t) => sum + t.amount, 0) -
+        monthTransactions
+          .filter(t => t.type === 'expense')
+          .reduce((sum, t) => sum + t.amount, 0);
+      
+      trends.push({
+        month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        netWorth
+      });
+    }
+    
+    return trends;
+  };
+
+  const getSpendingPatterns = (transactions: Transaction[]) => {
+    const categoryMap = new Map<string, { amount: number; count: number }>();
+    
+    transactions
+      .filter(t => t.type === 'expense')
+      .forEach(t => {
+        const current = categoryMap.get(t.category) || { amount: 0, count: 0 };
+        categoryMap.set(t.category, {
+          amount: current.amount + t.amount,
+          count: current.count + 1
+        });
+      });
+    
+    return Array.from(categoryMap.entries())
+      .map(([category, data]) => ({
+        category,
+        amount: data.amount,
+        count: data.count
+      }))
+      .sort((a, b) => b.amount - a.amount);
+  };
+
+  const getIncomeAnalysis = (transactions: Transaction[]) => {
+    const sourceMap = new Map<string, number>();
+    const total = transactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    transactions
+      .filter(t => t.type === 'income')
+      .forEach(t => {
+        const current = sourceMap.get(t.category) || 0;
+        sourceMap.set(t.category, current + t.amount);
+      });
+    
+    return Array.from(sourceMap.entries())
+      .map(([source, amount]) => ({
+        source,
+        amount,
+        percentage: total > 0 ? (amount / total) * 100 : 0
+      }))
+      .sort((a, b) => b.amount - a.amount);
+  };
+
+  const getBudgetPerformance = () => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    const monthTransactions = transactions.filter(t => 
+      t.date >= monthStart && t.date <= monthEnd
+    );
+    
+    return budgets.map(budget => {
+      const spent = monthTransactions
+        .filter(t => t.type === 'expense' && t.category === budget.category)
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      return {
+        budget: budget.category,
+        spent,
+        limit: budget.amount,
+        percentage: budget.amount > 0 ? (spent / budget.amount) * 100 : 0
+      };
+    });
   };
 
   // Calculate statistics
@@ -1410,6 +1691,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     updateRecurringTransaction,
     deleteRecurringTransaction,
     transferBetweenAccounts,
+    getGoalsVaultAccount,
+    ensureGoalsVaultAccount,
+    fundGoalFromAccount,
+    withdrawGoalToAccount,
+    payBillFromAccount,
+    repayLiabilityFromAccount,
+    getMonthlyTrends,
+    getCategoryBreakdown,
+    getNetWorthTrends,
+    getSpendingPatterns,
+    getIncomeAnalysis,
+    getBudgetPerformance,
     stats
   };
 

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { CreditCard, Percent, Calendar, Wallet, ShoppingCart, Info, ShieldCheck, AlertCircle, Clock } from 'lucide-react';
-import { validateLiability, sanitizeFinancialData, toNumber } from '../../utils/validation'; // Already exists
-import { Input } from '../common/Input'; // Already exists
-import { Button } from '../common/Button'; // Already exists
+import { validateLiability, sanitizeFinancialData, toNumber } from '../../utils/validation';
+import { Input } from '../common/Input';
+import { Button } from '../common/Button';
 import { EnhancedLiability, Transaction } from '../../types'; // Changed to EnhancedLiability
-import { useInternationalization } from '../../contexts/InternationalizationContext'; // Already exists
-import { CurrencyIcon } from '../common/CurrencyIcon'; // Already exists
-import { useFinance } from '../../contexts/FinanceContext'; // Already exists
+import { useInternationalization } from '../../contexts/InternationalizationContext';
+import { CurrencyIcon } from '../common/CurrencyIcon';
+import { useFinance } from '../../contexts/FinanceContext';
 
 interface LiabilityFormData {
   name: string;
@@ -18,7 +18,7 @@ interface LiabilityFormData {
   monthlyPayment: number;
   due_date: string;
   start_date: string;
-  linkedPurchaseId?: string; // Already exists
+  linkedPurchaseId?: string;
   // New fields from EnhancedLiability
   description?: string;
   minimumPayment?: number;
@@ -76,10 +76,10 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
   const linkedPurchaseId = watch('linkedPurchaseId');
 
   // Load recent transactions for purchase linking
-  useEffect(() => { // Already exists
+  useEffect(() => {
     if (selectedType === 'purchase') {
       // Get recent expense transactions
-      const recent = transactions // Already exists
+      const recent = transactions
         .filter(t => t.type === 'expense')
         .sort((a, b) => b.date.getTime() - a.date.getTime())
         .slice(0, 10);
@@ -89,7 +89,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
 
   const handleFormSubmit = async (data: LiabilityFormData) => {
     try {
-      setIsSubmitting(true); // Already exists
+      setIsSubmitting(true);
       setError(null);
       
       // Sanitize numeric fields
@@ -97,7 +97,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
         'totalAmount', 
         'remainingAmount', 
         'interestRate', 
-        'monthlyPayment' // Already exists
+        'monthlyPayment'
       ]);
       
       // Validate using schema
@@ -106,7 +106,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
         totalAmount: toNumber(sanitizedData.totalAmount),
         remainingAmount: toNumber(sanitizedData.remainingAmount),
         interestRate: toNumber(sanitizedData.interestRate),
-        monthlyPayment: toNumber(sanitizedData.monthlyPayment), // Already exists
+        monthlyPayment: toNumber(sanitizedData.monthlyPayment),
       });
       
       // For purchase type, addAsIncome should always be false
@@ -144,7 +144,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
 
   const getTypeIcon = (type: string) => {
     const icons = {
-      loan: '💰', // Already exists
+      loan: '💰',
       credit_card: '💳',
       mortgage: '🏠',
       purchase: '🛍️',
@@ -155,7 +155,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      {/* Error Message */} // Already exists
+      {/* Error Message */}
       {error && (
         <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4">
           <div className="flex items-center space-x-2">
@@ -166,7 +166,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
       )}
       
       {/* Header with Info */}
-      <div className="bg-gradient-to-r from-warning-500/20 to-error-500/20 rounded-xl p-4 mb-6 border border-warning-500/30"> // Already exists
+      <div className="bg-gradient-to-r from-warning-500/20 to-error-500/20 rounded-xl p-4 mb-6 border border-warning-500/30">
         <h3 className="text-lg font-semibold text-white mb-2 flex items-center">
           <CreditCard size={20} className="mr-2 text-warning-400" />
           {initialData ? 'Edit Debt' : 'Add New Debt'}
@@ -177,7 +177,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
       </div>
 
       {/* Debt Acquisition Type - Only for new liabilities and non-purchase types */}
-      {!initialData && selectedType !== 'purchase' && ( // Already exists
+      {!initialData && selectedType !== 'purchase' && (
         <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
           <label className="block text-sm font-medium text-gray-300 mb-3">
             What type of debt is this?
@@ -189,7 +189,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
                 type="radio"
                 checked={addAsIncome}
                 onChange={() => setAddAsIncome(true)}
-                className="sr-only" // Already exists
+                className="sr-only"
               />
               <div className={`p-4 rounded-xl border-2 transition-colors ${
                 addAsIncome 
@@ -213,7 +213,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
                 type="radio"
                 checked={!addAsIncome}
                 onChange={() => setAddAsIncome(false)}
-                className="sr-only" // Already exists
+                className="sr-only"
               />
               <div className={`p-4 rounded-xl border-2 transition-colors ${
                 !addAsIncome 
@@ -235,7 +235,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
 
           {/* Info Box */}
           <div className={`p-3 rounded-lg border mt-3 ${
-            addAsIncome // Already exists
+            addAsIncome
               ? 'bg-success-500/20 border-success-500/30 text-success-400' 
               : 'bg-primary-500/20 border-primary-500/30 text-primary-400'
           }`}>
@@ -254,7 +254,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
 
       {/* Liability Name */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input // Already exists
+        <Input
           label="Liability Name"
           type="text"
           icon={<CreditCard size={18} className="text-warning-400" />}
@@ -268,7 +268,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
       {/* Liability Type */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
         <label className="block text-sm font-medium text-gray-300 mb-3">
-          Type // Already exists
+          Type
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {['loan', 'credit_card', 'mortgage', 'purchase', 'other'].map((type) => (
@@ -276,7 +276,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
               <input
                 type="radio"
                 value={type}
-                {...register('type', { required: 'Type is required' })} // Already exists
+                {...register('type', { required: 'Type is required' })}
                 className="sr-only"
               />
               <div className={`p-3 rounded-lg border-2 text-center transition-colors ${
@@ -290,14 +290,14 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
             </label>
           ))}
         </div>
-        {errors.type && ( // Already exists
+        {errors.type && (
           <p className="text-sm text-error-400 mt-1">{errors.type.message}</p>
         )}
       </div>
 
       {/* Start Date */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input // Already exists
+        <Input
           label="Start Date"
           type="date"
           icon={<Clock size={18} className="text-blue-400" />}
@@ -310,7 +310,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
       </div>
 
       {/* Link to Purchase Transaction - Only for purchase type */}
-      {selectedType === 'purchase' && ( // Already exists
+      {selectedType === 'purchase' && (
         <div className="bg-purple-500/20 rounded-lg p-4 border border-purple-500/30">
           <div className="flex items-start space-x-3">
             <ShoppingCart size={18} className="text-purple-400 mt-0.5" />
@@ -330,7 +330,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
 
       {/* Amount Fields */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20 space-y-4">
-        <Input // Already exists
+        <Input
           label="Total Amount"
           type="number"
           step="0.01"
@@ -346,7 +346,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
         />
 
         <Input
-          label="Remaining Amount" // Already exists
+          label="Remaining Amount"
           type="number"
           step="0.01"
           icon={<CurrencyIcon currencyCode={currency.code} className="text-orange-400" />}
@@ -364,7 +364,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
 
       {/* Payment Details */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20 space-y-4">
-        <Input // Already exists
+        <Input
           label="Interest Rate (%)"
           type="number"
           step="0.01"
@@ -379,7 +379,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
         />
 
         <Input
-          label="Monthly Payment" // Already exists
+          label="Monthly Payment"
           type="number"
           step="0.01"
           icon={<CurrencyIcon currencyCode={currency.code} className="text-blue-400" />}
@@ -395,7 +395,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
 
       {/* Due Date */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input // Already exists
+        <Input
           label="Next Due Date"
           type="date"
           icon={<Calendar size={18} className="text-green-400" />}
@@ -404,7 +404,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
           className="bg-black/40 border-white/20 text-white"
           value={typeof initialData?.due_date === 'string' ? initialData.due_date : initialData?.due_date?.toISOString().split('T')[0]}
           helpText="When is your next payment due?"
-        /> // Already exists
+        />
         {/* Warn about past due dates */}
         {watch('due_date') && new Date(watch('due_date')) < new Date() && (
           <div className="mt-2 p-2 bg-warning-500/20 border border-warning-500/30 rounded text-xs text-warning-400">
@@ -414,7 +414,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
       </div>
 
       {/* Payment Summary */}
-      {totalAmount && interestRate && monthlyPayment && Number(monthlyPayment) > 0 && ( // Already exists
+      {totalAmount && interestRate && monthlyPayment && Number(monthlyPayment) > 0 && (
         <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
           <h4 className="text-sm font-medium text-white mb-3 flex items-center">
             <ShieldCheck size={16} className="mr-2 text-blue-400" />
@@ -439,7 +439,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
 
       {/* Actions */}
       <div className="flex space-x-4 pt-4">
-        <Button // Already exists
+        <Button
           type="button" 
           variant="outline" 
           onClick={onCancel} 
@@ -448,7 +448,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
         >
           Cancel
         </Button>
-        <Button // Already exists
+        <Button
           type="submit" 
           className="flex-1 bg-gradient-to-r from-warning-500 to-warning-600 hover:from-warning-600 hover:to-warning-700"
           loading={isSubmitting}

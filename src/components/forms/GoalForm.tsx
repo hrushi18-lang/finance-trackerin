@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Target, FileText, Calendar } from 'lucide-react';
-import { validateGoal, sanitizeFinancialData, toNumber } from '../../utils/validation'; // Already exists
-import { Input } from '../common/Input'; // Already exists
-import { Button } from '../common/Button'; // Already exists
-import { Goal } from '../../types'; // Already exists
-import { useInternationalization } from '../../contexts/InternationalizationContext'; // Already exists
-import { CurrencyIcon } from '../common/CurrencyIcon'; // Already exists
-import { AlertCircle } from 'lucide-react'; // Already exists
-import { useFinance } from '../../contexts/FinanceContext'; // Already exists
+import { validateGoal, sanitizeFinancialData, toNumber } from '../../utils/validation';
+import { Input } from '../common/Input';
+import { Button } from '../common/Button';
+import { CategorySelector } from '../common/CategorySelector';
+import { Goal } from '../../types';
+import { useInternationalization } from '../../contexts/InternationalizationContext';
+import { CurrencyIcon } from '../common/CurrencyIcon';
+import { AlertCircle } from 'lucide-react';
+import { useFinance } from '../../contexts/FinanceContext';
 
 interface GoalFormData {
   title: string;
@@ -32,13 +33,13 @@ export const GoalForm: React.FC<GoalFormProps> = ({
   onSubmit,
   onCancel,
   initialData
-}) => { // Already exists
+}) => {
   const { currency } = useInternationalization();
   const { accounts } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const { register, handleSubmit, formState: { errors } } = useForm<GoalFormData>({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<GoalFormData>({
     defaultValues: {
       currentAmount: initialData?.currentAmount || 0,
       title: initialData?.title || '',
@@ -52,7 +53,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
 
   const handleFormSubmit = async (data: GoalFormData) => {
     try {
-      setIsSubmitting(true); // Already exists
+      setIsSubmitting(true);
       setError(null);
       
       // Sanitize numeric fields
@@ -65,7 +66,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         currentAmount: toNumber(sanitizedData.currentAmount),
       });
       
-      await onSubmit({ // Already exists
+      await onSubmit({
         ...validatedData,
         targetDate: new Date(data.targetDate),
       });
@@ -80,7 +81,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      {/* Tip Section */} // Already exists
+      {/* Tip Section */}
       <div className="bg-gradient-to-r from-blue-500/20 to-primary-500/20 rounded-xl p-4 border border-blue-500/30">
         <div className="flex items-start space-x-3">
           <span className="text-blue-400 mt-0.5">🎯</span>
@@ -95,7 +96,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       </div>
 
       {/* Error Message */}
-      {error && ( // Already exists
+      {error && (
         <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <AlertCircle size={18} className="text-error-400" />
@@ -105,7 +106,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       )}
       
       {/* Header with Info */}
-      <div className="bg-gradient-to-r from-primary-500/20 to-blue-500/20 rounded-xl p-4 mb-6 border border-primary-500/30"> // Already exists
+      <div className="bg-gradient-to-r from-primary-500/20 to-blue-500/20 rounded-xl p-4 mb-6 border border-primary-500/30">
         <h3 className="text-lg font-semibold text-white mb-2 flex items-center">
           <Target size={20} className="mr-2 text-primary-400" />
           {initialData ? 'Edit Financial Goal' : 'New Financial Goal'}
@@ -118,7 +119,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       </div>
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input // Already exists
+        <Input
           label="Goal Title"
           type="text"
           icon={<Target size={18} className="text-primary-400" />}
@@ -130,7 +131,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       </div>
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input // Already exists
+        <Input
           label="Description"
           type="text"
           icon={<FileText size={18} className="text-blue-400" />}
@@ -142,7 +143,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       </div>
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input // Already exists
+        <Input
           label="Target Amount"
           type="number"
           step="0.01"
@@ -158,7 +159,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       </div>
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input // Already exists
+        <Input
           label="Current Amount"
           type="number"
           step="0.01"
@@ -175,26 +176,19 @@ export const GoalForm: React.FC<GoalFormProps> = ({
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
         <label className="block text-sm font-medium text-gray-300 mb-2">
-          Category // Already exists
+          Category
         </label>
-        <select
-          {...register('category', { required: 'Category is required' })}
-          className="block w-full rounded-xl border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
-        >
-          <option value="" className="bg-black/90">Select a category</option>
-          {goalCategories.map((category) => (
-            <option key={category} value={category} className="bg-black/90">
-              {category}
-            </option>
-          ))}
-        </select>
-        {errors.category && ( // Already exists
-          <p className="text-sm text-error-400 mt-1">{errors.category.message}</p>
-        )}
+        <CategorySelector
+          value={watch('category')}
+          onChange={(category) => setValue('category', category)}
+          type="goal"
+          placeholder="Select a category"
+          error={errors.category?.message}
+        />
       </div>
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <label className="block text-sm font-medium text-gray-300 mb-2"> // Already exists
+        <label className="block text-sm font-medium text-gray-300 mb-2">
           Link to Account (Optional)
         </label>
         <select
@@ -202,7 +196,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
           className="block w-full rounded-xl border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
         >
           <option value="" className="bg-black/90">No specific account</option>
-          {(accounts || []).map((account) => ( // Already exists
+          {(accounts || []).map((account) => (
             <option key={account.id} value={account.id} className="bg-black/90">
               {account.name} - {currency.symbol}{account.balance.toLocaleString()}
             </option>
@@ -214,7 +208,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       </div>
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input // Already exists
+        <Input
           label="Target Date"
           type="date"
           icon={<Calendar size={18} className="text-purple-400" />}
@@ -225,7 +219,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       </div>
 
       <div className="flex space-x-4 pt-4">
-        <Button // Already exists
+        <Button
           type="button" 
           variant="outline" 
           onClick={onCancel} 
@@ -234,7 +228,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         >
           Cancel
         </Button>
-        <Button // Already exists
+        <Button
           type="submit" 
           className="flex-1 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700"
           loading={isSubmitting}

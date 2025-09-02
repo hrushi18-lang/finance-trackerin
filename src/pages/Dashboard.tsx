@@ -126,7 +126,14 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const netWorth = stats.totalIncome - stats.totalExpenses - stats.totalLiabilities;
+  // Calculate net worth based on account balances minus liabilities
+  const totalAccountBalance = (accounts || [])
+    .reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
+  
+  const totalLiabilities = (liabilities || [])
+    .reduce((sum, liability) => sum + (Number(liability.remainingAmount) || 0), 0);
+  
+  const netWorth = totalAccountBalance - totalLiabilities;
   const financialHealthScore = Math.min(Math.max(((netWorth / 10000) * 100) + 500, 0), 1000);
 
   // Calculate total balance across all visible accounts
@@ -497,14 +504,95 @@ export const Dashboard: React.FC = () => {
             </button>
             
             <button
-              onClick={() => navigate('/bills')}
-              className="flex flex-col items-center p-4 rounded-xl border-2 border-dashed border-forest-500/30 hover:border-forest-500/50 hover:bg-forest-500/5 transition-all duration-200 hover:scale-105"
+              onClick={() => setShowAccountModal(true)}
+              className="flex flex-col items-center p-4 rounded-xl border-2 border-dashed border-blue-500/30 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all duration-200 hover:scale-105"
             >
-              <span className="text-2xl mb-2">📅</span>
-              <span className="text-xs font-body font-medium text-forest-300 text-center">Track Bills</span>
+              <span className="text-2xl mb-2">🏦</span>
+              <span className="text-xs font-body font-medium text-forest-300 text-center">Add Account</span>
             </button>
           </div>
         </div>
+
+        {/* Accounts Overview */}
+        {(accounts || []).length > 0 && (
+          <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-heading font-semibold text-white">Accounts Overview</h3>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowBalances(!showBalances)}
+                  className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
+                  title={showBalances ? "Hide balances" : "Show balances"}
+                >
+                  {showBalances ? (
+                    <EyeOff size={16} className="text-forest-400" />
+                  ) : (
+                    <Eye size={16} className="text-forest-400" />
+                  )}
+                </button>
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="text-forest-400 text-sm font-body hover:text-forest-300"
+                >
+                  Manage All
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {(accounts || []).map((account) => {
+                const AccountIcon = getAccountIcon(account.type);
+                return (
+                  <div key={account.id} className="bg-forest-800/20 rounded-xl p-4 border border-forest-600/20 hover:bg-forest-700/20 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-10 h-10 rounded-lg ${getAccountColor(account.type)} flex items-center justify-center`}>
+                          <AccountIcon size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-heading font-medium text-white">{account.name}</h4>
+                          <p className="text-xs text-forest-400 font-body capitalize">{getAccountTypeName(account.type)}</p>
+                        </div>
+                      </div>
+                      {!account.isVisible && (
+                        <span className="px-2 py-1 bg-forest-600/20 text-forest-400 text-xs rounded-full">Hidden</span>
+                      )}
+                    </div>
+                    
+                    {account.isVisible && showBalances ? (
+                      <p className="text-lg font-numbers font-bold text-white">
+                        <CurrencyIcon currencyCode={currency.code} size={16} className="inline mr-1" />
+                        {formatCurrency(account.balance)}
+                      </p>
+                    ) : account.isVisible ? (
+                      <p className="text-lg font-numbers font-bold text-forest-400">
+                        ••••••
+                      </p>
+                    ) : (
+                      <p className="text-sm text-forest-500 font-body">Account hidden</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Total Balance Summary */}
+            <div className="mt-4 pt-4 border-t border-forest-600/20">
+              <div className="flex items-center justify-between">
+                <span className="text-forest-300 text-sm font-body">Total Balance (Visible Accounts):</span>
+                <span className="text-lg font-numbers font-bold text-white">
+                  {showBalances ? formatCurrency(totalBalance) : '••••••'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-forest-300 text-sm font-body">Total Net Worth:</span>
+                <span className="text-lg font-numbers font-bold text-white">
+                  {showBalances ? formatCurrency(netWorth) : '••••••'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Recent Activity */}
         {transactions && transactions.length > 0 && (

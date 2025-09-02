@@ -1,6 +1,6 @@
 import React from 'react';
 import { Target, Home, Plane, GraduationCap, Heart, Car, Briefcase, PiggyBank } from 'lucide-react';
-import { Button } from '../common/Button'; // Already exists
+import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { useForm } from 'react-hook-form';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
@@ -23,7 +23,7 @@ interface OnboardingGoalsProps {
 export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({ 
   onNext, 
   onPrev, 
-  initialData, // Already exists
+  initialData,
   canGoBack = true
 }) => {
   const { currency } = useInternationalization();
@@ -39,7 +39,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
   const riskTolerance = watch('riskTolerance');
 
   const goalOptions = [
-    { id: 'emergency', label: 'Emergency Fund', icon: PiggyBank, color: 'red' }, // Already exists
+    { id: 'emergency', label: 'Emergency Fund', icon: PiggyBank, color: 'red' },
     { id: 'laptop', label: 'New Laptop/Phone', icon: Briefcase, color: 'blue' },
     { id: 'education', label: 'Course/Certification', icon: GraduationCap, color: 'purple' },
     { id: 'travel', label: 'Study Abroad', icon: Plane, color: 'blue' },
@@ -48,7 +48,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
     { id: 'other', label: 'Other Goal', icon: Target, color: 'indigo' }
   ];
 
-  const timeOptions = [ // Already exists
+  const timeOptions = [
     { value: '1year', label: 'Less than 1 year', description: 'Short-term goals' },
     { value: '2-5years', label: '2-5 years', description: 'Medium-term planning' },
     { value: '5-10years', label: '5-10 years', description: 'Long-term objectives' },
@@ -56,7 +56,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
   ];
 
   const riskOptions = [
-    { // Already exists
+    {
       value: 'conservative', 
       label: 'Conservative', 
       description: 'Prefer stability over growth',
@@ -77,7 +77,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
   ];
 
   const toggleGoal = (goalId: string) => {
-    const currentGoals = selectedGoals; // Already exists
+    const currentGoals = selectedGoals;
     const newGoals = currentGoals.includes(goalId)
       ? currentGoals.filter(id => id !== goalId)
       : [...currentGoals, goalId];
@@ -86,7 +86,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
 
   const getColorClasses = (color: string, isSelected: boolean) => {
     const colors = {
-      red: isSelected ? 'border-red-500 bg-red-500/20 text-red-400' : 'border-white/20 hover:border-red-400/50', // Already exists
+      red: isSelected ? 'border-red-500 bg-red-500/20 text-red-400' : 'border-white/20 hover:border-red-400/50',
       green: isSelected ? 'border-green-500 bg-green-500/20 text-green-400' : 'border-white/20 hover:border-green-400/50',
       blue: isSelected ? 'border-blue-500 bg-blue-500/20 text-blue-400' : 'border-white/20 hover:border-blue-400/50',
       purple: isSelected ? 'border-purple-500 bg-purple-500/20 text-purple-400' : 'border-white/20 hover:border-purple-400/50',
@@ -94,7 +94,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
       gray: isSelected ? 'border-gray-500 bg-gray-500/20 text-gray-400' : 'border-white/20 hover:border-gray-400/50',
       orange: isSelected ? 'border-orange-500 bg-orange-500/20 text-orange-400' : 'border-white/20 hover:border-orange-400/50',
       indigo: isSelected ? 'border-indigo-500 bg-indigo-500/20 text-indigo-400' : 'border-white/20 hover:border-indigo-400/50',
-    }; // Already exists
+    };
     return colors[color as keyof typeof colors];
   };
 
@@ -107,7 +107,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
       {/* Header */}
       <div className="text-center">
         <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Target size={32} className="text-green-400" /> // Already exists
+          <Target size={32} className="text-green-400" />
         </div>
         <h2 className="text-2xl font-bold text-white mb-2">What do you want to save for?</h2>
         <p className="text-gray-400">Your coach will help you reach these goals step by step</p>
@@ -115,7 +115,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
 
       {/* Student-Focused Introduction */}
       <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-xl p-4 border border-green-500/30">
-        <div className="flex items-start space-x-3"> // Already exists
+        <div className="flex items-start space-x-3">
           <span className="text-2xl">🎓</span>
           <div>
             <h3 className="font-semibold text-white mb-2">Why Set Goals Early?</h3>
@@ -130,7 +130,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Goal Selection */}
-        <div> // Already exists
+        <div>
           <label className="block text-sm font-medium text-gray-300 mb-3">
             What do you want to achieve? (Select all that excite you!)
           </label>
@@ -146,7 +146,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
                   onClick={() => toggleGoal(goal.id)}
                   className={`p-4 rounded-lg border-2 transition-colors text-left ${getColorClasses(goal.color, isSelected)}`}
                 >
-                  <div className="flex items-center space-x-3"> // Already exists
+                  <div className="flex items-center space-x-3">
                     <IconComponent size={24} className="opacity-80" />
                     <span className="font-medium">
                       {goal.label}
@@ -162,7 +162,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
         </div>
 
         {/* Emergency Fund */}
-        <Input // Already exists
+        <Input
           label="Emergency Fund Goal (Recommended: 3 months of expenses)"
           type="number"
           step="0.01"
@@ -177,7 +177,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
         />
         
         {/* Emergency Fund Explanation */}
-        <div className="bg-red-500/20 rounded-lg p-4 border border-red-500/30"> // Already exists
+        <div className="bg-red-500/20 rounded-lg p-4 border border-red-500/30">
           <div className="flex items-start space-x-2">
             <span className="text-red-400 mt-0.5">🚨</span>
             <div>
@@ -190,7 +190,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
         </div>
 
         {/* Time Horizon */}
-        <div> // Already exists
+        <div>
           <label className="block text-sm font-medium text-gray-300 mb-3">
             Primary Time Horizon
           </label>
@@ -203,7 +203,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
                   {...register('timeHorizon', { required: 'Please select a time horizon' })}
                   className="sr-only"
                 />
-                <div className={`p-3 rounded-lg border-2 transition-colors ${ // Already exists
+                <div className={`p-3 rounded-lg border-2 transition-colors ${
                   timeHorizon === option.value 
                     ? 'border-primary-500 bg-primary-500/20 text-primary-400' 
                     : 'border-white/20 hover:border-white/30 text-gray-300'
@@ -224,7 +224,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
         </div>
 
         {/* Risk Tolerance */}
-        <div> // Already exists
+        <div>
           <label className="block text-sm font-medium text-gray-300 mb-3">
             Risk Tolerance
           </label>
@@ -237,7 +237,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
                   {...register('riskTolerance', { required: 'Please select your risk tolerance' })}
                   className="sr-only"
                 />
-                <div className={`p-4 rounded-lg border-2 transition-colors ${ // Already exists
+                <div className={`p-4 rounded-lg border-2 transition-colors ${
                   riskTolerance === option.value 
                     ? 'border-primary-500 bg-primary-500/20 text-primary-400' 
                     : 'border-white/20 hover:border-white/30 text-gray-300'
@@ -259,7 +259,7 @@ export const OnboardingGoals: React.FC<OnboardingGoalsProps> = ({
         </div>
 
         {/* Navigation */}
-        <div className="flex space-x-3 pt-4"> // Already exists
+        <div className="flex space-x-3 pt-4">
           {canGoBack && (
             <Button type="button" variant="outline" onClick={onPrev} className="flex-1">
               Back

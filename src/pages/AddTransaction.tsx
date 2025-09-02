@@ -1,24 +1,28 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus, Minus, FileText, Tag, Calendar, Target, CreditCard, CheckCircle, AlertCircle, Scissors, Trash2, Wallet } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; // Already exists
-import { useForm } from 'react-hook-form'; // Already exists
-import { Input } from '../components/common/Input'; // Already exists
-import { Button } from '../components/common/Button'; // Already exists
-import { validateTransaction, sanitizeFinancialData, toNumber } from '../utils/validation'; // Already exists
-import { PageNavigation } from '../components/layout/PageNavigation'; // Already exists
-import { useFinance } from '../contexts/FinanceContext'; // Already exists
-import { useInternationalization } from '../contexts/InternationalizationContext'; // Already exists
+import { ArrowLeft, Plus, Minus, Target, CreditCard, AlertCircle, Trash2, Link, Unlink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { Input } from '../components/common/Input';
+import { Button } from '../components/common/Button';
+import { CategorySelector } from '../components/common/CategorySelector';
+import { toNumber } from '../utils/validation';
+import { TopNavigation } from '../components/layout/TopNavigation';
+import { useFinance } from '../contexts/FinanceContext';
+import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
-import { SplitTransaction } from '../types';
-import { AdvancedTransactionForm } from '../components/forms/AdvancedTransactionForm';
 
 interface TransactionFormData {
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   amount: number;
   description: string;
   date: string;
   category: string;
   accountId: string;
+  transferToAccountId?: string;
+  linkedGoalId?: string;
+  linkedBillId?: string;
+  linkedLiabilityId?: string;
+  affectsBalance: boolean;
 }
 
 interface SplitFormData {
@@ -27,39 +31,53 @@ interface SplitFormData {
   description: string;
 }
 
-export const AddTransaction: React.FC = () => { // Already exists
+export const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
   const { currency, formatCurrency } = useInternationalization();
-  const { addTransaction, addSplitTransaction, userCategories, accounts } = useFinance();
-  const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
+  const { 
+    addTransaction, 
+    userCategories, 
+    accounts, 
+    goals, 
+    bills, 
+    liabilities,
+    updateGoal,
+    updateBill,
+    updateLiability
+  } = useFinance();
+  const [transactionType, setTransactionType] = useState<'income' | 'expense' | 'transfer'>('expense');
   const [isSplitTransaction, setIsSplitTransaction] = useState(false);
   const [splits, setSplits] = useState<SplitFormData[]>([{ category: '', amount: 0, description: '' }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [useAdvancedMode, setUseAdvancedMode] = useState(false);
+  const [showLinkOptions, setShowLinkOptions] = useState(false);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<TransactionFormData>({
     defaultValues: {
       type: 'expense',
       date: new Date().toISOString().split('T')[0],
       category: '',
+      affectsBalance: true,
     },
   });
 
   const type = watch('type');
-  const amount = watch('amount');
   const category = watch('category');
+  const linkedGoalId = watch('linkedGoalId');
+  const linkedBillId = watch('linkedBillId');
+  const linkedLiabilityId = watch('linkedLiabilityId');
 
   // Get categories based on type (with fallback to default categories)
   const defaultCategories = {
     income: ['Salary', 'Freelance', 'Investment', 'Business', 'Other'],
-    expense: ['Food', 'Transportation', 'Entertainment', 'Shopping', 'Bills', 'Healthcare', 'Other']
+    expense: ['Food', 'Transportation', 'Entertainment', 'Shopping', 'Bills', 'Healthcare', 'Other'],
+    transfer: ['Transfer', 'Internal Transfer', 'Account Transfer']
   };
   
   const userCategoriesForType = userCategories.filter(c => c.type === type);
   const availableCategories = userCategoriesForType.length > 0 
     ? userCategoriesForType.map(c => ({ id: c.id, name: c.name }))
-    : defaultCategories[type].map(name => ({ id: name, name })); // Already exists
+    : defaultCategories[type].map(name => ({ id: name, name }));
 
   // Set default category when type changes
   React.useEffect(() => {
@@ -68,563 +86,510 @@ export const AddTransaction: React.FC = () => { // Already exists
     }
   }, [type, availableCategories, category, setValue]);
 
+  // Filter available goals, bills, and liabilities based on transaction type
+  const availableGoals = goals.filter(g => g.currentAmount < g.targetAmount);
+  const availableBills = bills.filter(b => b.isActive && type === 'expense');
+  const availableLiabilities = liabilities.filter(l => l.remainingAmount > 0 && type === 'expense');
+
   const handleFormSubmit = async (data: TransactionFormData) => {
     try {
       setIsSubmitting(true);
-      setError(null); // Clear any previous errors // Already exists
       setError(null);
       
       if (isSplitTransaction) {
-        // Validate splits
+        // For split transactions, create individual transactions for each split
         const totalSplitAmount = splits.reduce((sum, split) => sum + toNumber(split.amount), 0);
         const mainAmount = toNumber(data.amount);
         
-        if (Math.abs(totalSplitAmount - mainAmount) > 0.01) { // Allow for small rounding differences // Already exists
+        if (Math.abs(totalSplitAmount - mainAmount) > 0.01) {
           setError(`Split amounts must equal the total amount (${mainAmount})`);
           setIsSubmitting(false);
           return;
         }
 
-        // Format splits for submission
-        const formattedSplits: SplitTransaction[] = splits.map(split => ({
-          category: split.category,
-          amount: toNumber(split.amount),
-          description: split.description || data.description
-        }));
-        // Already exists
-        // Validate main transaction data
-        const validatedData = validateTransaction({
-          ...data,
-          amount: mainAmount,
-        });
-
-        // Add split transaction
-        await addSplitTransaction(
-          {
-            ...validatedData,
+        // Create individual transactions for each split
+        for (const split of splits) {
+          const transactionData = {
+            type: data.type as 'income' | 'expense',
+            amount: toNumber(split.amount),
+            description: split.description || data.description,
+            category: split.category || data.category,
             date: new Date(data.date),
-          },
-          formattedSplits
-        );
-      } else { // Already exists
-        // Sanitize and validate data
-        const sanitizedData = sanitizeFinancialData(data, ['amount']);
-        const validatedData = validateTransaction({
-          ...sanitizedData,
-          amount: toNumber(sanitizedData.amount),
-        });
-        
-        // Add regular transaction
-        await addTransaction({
-          ...validatedData,
-          category: data.category || (data.type === 'income' ?
-            (userCategories.find(c => c.type === 'income')?.name || 'Other') : 
-            (userCategories.find(c => c.type === 'expense')?.name || 'Other')), // Already exists
+            accountId: data.accountId,
+            affectsBalance: data.affectsBalance,
+            status: 'completed' as const
+          };
+
+          await addTransaction(transactionData);
+        }
+      } else {
+        // Create the complete transaction object
+        const transactionData = {
+          type: data.type as 'income' | 'expense',
+          amount: toNumber(data.amount),
+          description: data.description,
+          category: data.category,
           date: new Date(data.date),
           accountId: data.accountId,
-          affectsBalance: true
-        });
+          affectsBalance: data.affectsBalance,
+          status: 'completed' as const
+        };
+
+        // Submit the main transaction
+        await addTransaction(transactionData);
+
+        // Handle linked entities
+        if (linkedGoalId && type === 'expense') {
+          const goal = goals.find(g => g.id === linkedGoalId);
+          if (goal) {
+            const newAmount = Math.min(
+              (Number(goal.currentAmount) || 0) + (Number(data.amount) || 0), 
+              (Number(goal.targetAmount) || 0)
+            );
+            await updateGoal(linkedGoalId, { currentAmount: newAmount });
+          }
+        }
+
+        if (linkedBillId && type === 'expense') {
+          const bill = bills.find(b => b.id === linkedBillId);
+          if (bill) {
+            // Mark bill as paid and update next due date
+            const nextDueDate = new Date(bill.nextDueDate);
+            nextDueDate.setDate(nextDueDate.getDate() + 
+              (bill.frequency === 'weekly' ? 7 :
+               bill.frequency === 'bi_weekly' ? 14 :
+               bill.frequency === 'monthly' ? 30 :
+               bill.frequency === 'quarterly' ? 90 :
+               bill.frequency === 'semi_annual' ? 180 :
+               bill.frequency === 'annual' ? 365 : 30)
+            );
+            
+            await updateBill(linkedBillId, {
+              lastPaidDate: new Date(),
+              nextDueDate: nextDueDate
+            });
+          }
+        }
+
+        if (linkedLiabilityId && type === 'expense') {
+          const liability = liabilities.find(l => l.id === linkedLiabilityId);
+          if (liability) {
+            const newAmount = Math.max(
+              (Number(liability.remainingAmount) || 0) - (Number(data.amount) || 0), 
+              0
+            );
+            await updateLiability(linkedLiabilityId, { 
+              remainingAmount: newAmount,
+              status: newAmount === 0 ? 'paid_off' : liability.status
+            });
+          }
+        }
       }
 
+      // Success - navigate back
+      navigate(-1);
     } catch (error: any) {
-      console.error('Error adding transaction:', error);
-      setError(error.message || 'Failed to add transaction. Please try again.');
+      console.error('Error submitting transaction:', error);
+      setError(error.message || 'Failed to save transaction. Please try again.');
     } finally {
       setIsSubmitting(false);
-      
-      // Only navigate if no error occurred
-      if (!error) { // Already exists
-        navigate('/');
-      }
     }
   };
 
-  const handleTypeChange = (newType: 'income' | 'expense') => {
-    setTransactionType(newType); // Already exists
-    setValue('type', newType);
-    
-    // Reset splits if changing type
-    if (isSplitTransaction) {
-      setSplits([{ category: '', amount: 0, description: '' }]);
-    }
+  const addSplit = () => {
+    setSplits([...splits, { category: '', amount: 0, description: '' }]);
   };
 
-  const handleQuickAmount = (amount: number) => {
-    setValue('amount', amount); // Already exists
-    
-    // If split transaction, update first split amount
-    if (isSplitTransaction && splits.length > 0) {
-      const newSplits = [...splits];
-      newSplits[0].amount = amount;
-      setSplits(newSplits);
-    }
-  };
-
-  const addSplitRow = () => {
-    setSplits([...splits, { category: '', amount: 0, description: '' }]); // Already exists
-  };
-
-  const removeSplitRow = (index: number) => {
+  const removeSplit = (index: number) => {
     if (splits.length > 1) {
-      const newSplits = [...splits]; // Already exists
-      newSplits.splice(index, 1);
-      setSplits(newSplits);
+      setSplits(splits.filter((_, i) => i !== index));
     }
   };
 
-  const updateSplitField = (index: number, field: keyof SplitFormData, value: string | number) => {
+  const updateSplit = (index: number, field: keyof SplitFormData, value: string | number) => {
     const newSplits = [...splits];
-    newSplits[index] = { // Already exists
-      ...newSplits[index], 
-      [field]: field === 'amount' ? toNumber(value) : value 
-    };
+    newSplits[index] = { ...newSplits[index], [field]: value };
     setSplits(newSplits);
   };
 
-  const totalSplitAmount = splits.reduce((sum, split) => sum + toNumber(split.amount), 0);
-  const splitAmountDifference = toNumber(amount) - totalSplitAmount; // Already exists
+  const getLinkedEntityName = (type: string, id: string) => {
+    switch (type) {
+      case 'goal':
+        const goal = goals.find(g => g.id === id);
+        return goal ? goal.title : 'Unknown Goal';
+      case 'bill':
+        const bill = bills.find(b => b.id === id);
+        return bill ? bill.title : 'Unknown Bill';
+      case 'liability':
+        const liability = liabilities.find(l => l.id === id);
+        return liability ? liability.name : 'Unknown Liability';
+      default:
+        return 'Unknown';
+    }
+  };
 
-  const quickAmounts = type === 'income' 
-    ? [1000, 2500, 5000, 10000]
-    : [25, 50, 100, 500];
-  // Already exists
   return (
     <div className="min-h-screen text-white pb-20">
-      {/* Header with Navigation */}
-      <header className="bg-black/20 backdrop-blur-md px-4 py-4 sm:py-6 sticky top-0 z-30 border-b border-white/10">
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <button
-            onClick={() => navigate('/')}
-            className="p-2 rounded-xl hover:bg-white/10 transition-colors" // Already exists
-          >
-            <ArrowLeft size={20} className="text-gray-400" />
-          </button>
-          <h1 className="text-lg sm:text-xl font-semibold text-white">Add Transaction</h1>
-          <button
-            onClick={() => setUseAdvancedMode(!useAdvancedMode)}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-              useAdvancedMode // Already exists
-                ? 'bg-primary-500 text-white' 
-                : 'bg-black/20 text-gray-400 hover:text-white'
-            }`}
-          >
-            {useAdvancedMode ? 'Advanced' : 'Simple'}
-          </button>
+      <TopNavigation title="Add Transaction" />
+      
+      <div className="px-4 py-4 sm:py-6 space-y-6">
+        {/* Transaction Type Selector */}
+        <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
+          <h3 className="text-lg font-heading font-semibold text-white mb-4">Transaction Type</h3>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { type: 'expense', icon: Minus, label: 'Expense', color: 'text-red-400' },
+              { type: 'income', icon: Plus, label: 'Income', color: 'text-green-400' },
+              { type: 'transfer', icon: ArrowLeft, label: 'Transfer', color: 'text-blue-400' }
+            ].map(({ type, icon: Icon, label, color }) => (
+              <button
+                key={type}
+                onClick={() => setTransactionType(type as any)}
+                className={`p-4 rounded-xl border transition-all ${
+                  transactionType === type
+                    ? 'bg-forest-600/50 border-forest-500 text-white'
+                    : 'bg-forest-800/30 border-forest-600/30 text-forest-300 hover:bg-forest-700/30'
+                }`}
+              >
+                <Icon size={24} className={`mx-auto mb-2 ${color}`} />
+                <p className="text-sm font-medium">{label}</p>
+              </button>
+            ))}
+          </div>
         </div>
-        <PageNavigation />
-      </header>
 
-      <div className="px-4 py-6">
-        {useAdvancedMode ? ( // Already exists
-          <AdvancedTransactionForm
-            onSubmit={async (data) => {
-              await addTransaction(data);
-              navigate('/');
-            }}
-            onCancel={() => navigate('/')}
-          />
-        ) : (
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-          {/* Error Message */}
-          {error && ( // Already exists
-            <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4">
-              <div className="flex items-center space-x-2">
-                <AlertCircle size={18} className="text-error-400" />
-                <p className="text-error-400 text-sm">{error}</p>
-              </div>
-            </div>
-          )}
+        {/* Main Transaction Form */}
+        <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
+          <h3 className="text-lg font-heading font-semibold text-white mb-4">Transaction Details</h3>
           
-          {/* Transaction Type Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-4"> // Already exists
-              What type of transaction is this?
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => handleTypeChange('income')}
-                className={`relative p-6 rounded-2xl border-3 text-center transition-all duration-300 backdrop-blur-sm ${
-                  type === 'income' // Already exists
-                    ? 'border-success-500 bg-success-500/20 text-success-400 shadow-xl shadow-success-500/25 scale-105 ring-4 ring-success-500/30' 
-                    : 'border-white/20 hover:border-white/30 bg-black/20 text-gray-300 hover:bg-black/30 hover:scale-102'
-                }`}
-              >
-                {/* Large Selection Indicator */}
-                {type === 'income' && (
-                  <div className="absolute -top-3 -right-3 w-8 h-8 bg-success-500 rounded-full flex items-center justify-center shadow-lg">
-                    <CheckCircle size={20} className="text-white" /> // Already exists
-                  </div>
-                )}
-                
-                {/* Icon */}
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  type === 'income' ? 'bg-success-500 shadow-lg' : 'bg-gray-600'
-                }`}>
-                  <Plus size={32} className="text-white" />
-                </div>
-                
-                {/* Text */}
-                <div> // Already exists
-                  <p className={`font-bold text-xl mb-2 ${type === 'income' ? 'text-success-400' : 'text-gray-300'}`}>
-                    Income
-                  </p>
-                  <p className={`text-sm ${type === 'income' ? 'text-success-300' : 'text-gray-400'}`}>
-                    Money you receive
-                  </p>
-                  <p className={`text-xs mt-2 ${type === 'income' ? 'text-success-200' : 'text-gray-500'}`}>
-                    Salary, freelance, gifts
-                  </p>
-                </div>
-                
-                {/* Glow Effect */}
-                {type === 'income' && ( // Already exists
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-success-500/10 to-success-400/10 pointer-events-none animate-pulse"></div>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleTypeChange('expense')}
-                className={`relative p-6 rounded-2xl border-3 text-center transition-all duration-300 backdrop-blur-sm ${
-                  type === 'expense' // Already exists
-                    ? 'border-error-500 bg-error-500/20 text-error-400 shadow-xl shadow-error-500/25 scale-105 ring-4 ring-error-500/30' 
-                    : 'border-white/20 hover:border-white/30 bg-black/20 text-gray-300 hover:bg-black/30 hover:scale-102'
-                }`}
-              >
-                {/* Large Selection Indicator */}
-                {type === 'expense' && (
-                  <div className="absolute -top-3 -right-3 w-8 h-8 bg-error-500 rounded-full flex items-center justify-center shadow-lg">
-                    <CheckCircle size={20} className="text-white" /> // Already exists
-                  </div>
-                )}
-                
-                {/* Icon */}
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  type === 'expense' ? 'bg-error-500 shadow-lg' : 'bg-gray-600'
-                }`}>
-                  <Minus size={32} className="text-white" />
-                </div>
-                
-                {/* Text */}
-                <div> // Already exists
-                  <p className={`font-bold text-xl mb-2 ${type === 'expense' ? 'text-error-400' : 'text-gray-300'}`}>
-                    Expense
-                  </p>
-                  <p className={`text-sm ${type === 'expense' ? 'text-error-300' : 'text-gray-400'}`}>
-                    Money you spend
-                  </p>
-                  <p className={`text-xs mt-2 ${type === 'expense' ? 'text-error-200' : 'text-gray-500'}`}>
-                    Bills, food, shopping
-                  </p>
-                </div>
-                
-                {/* Glow Effect */}
-                {type === 'expense' && ( // Already exists
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-error-500/10 to-error-400/10 pointer-events-none animate-pulse"></div>
-                )}
-              </button>
+          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+            {/* Amount */}
+            <div>
+              <label className="block text-sm font-medium text-forest-300 mb-2">
+                Amount
+              </label>
+              <div className="relative">
+                <CurrencyIcon currencyCode={currency.code} size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-forest-400" />
+                <Input
+                  {...register('amount', { required: 'Amount is required' })}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  className="pl-10"
+                />
+              </div>
+              {errors.amount && (
+                <p className="text-red-400 text-sm mt-1">{errors.amount.message}</p>
+              )}
             </div>
-            
-            {/* Current Selection Indicator */}
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-400"> // Already exists
-                Selected: <span className={`font-semibold ${
-                  type === 'income' ? 'text-success-400' : 'text-error-400'
-                }`}>
-                  {type === 'income' ? 'Income' : 'Expense'}
-                </span>
-              </p>
-            </div>
-          </div>
 
-          {/* Split Transaction Toggle */}
-          {type === 'expense' && (
-            <div className="bg-black/20 backdrop-blur-md rounded-xl p-4 border border-white/10"> // Already exists
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Scissors size={20} className="text-primary-400" />
-                  <div>
-                    <h3 className="font-medium text-white">Split Transaction</h3>
-                    <p className="text-sm text-gray-400">Divide this expense into multiple categories</p>
-                  </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={isSplitTransaction} // Already exists
-                    onChange={() => setIsSplitTransaction(!isSplitTransaction)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500"></div>
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-forest-300 mb-2">
+                Description
+              </label>
+              <Input
+                {...register('description', { required: 'Description is required' })}
+                placeholder="Enter transaction description"
+              />
+              {errors.description && (
+                <p className="text-red-400 text-sm mt-1">{errors.description.message}</p>
+              )}
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="block text-sm font-medium text-forest-300 mb-2">
+                Category
+              </label>
+              <CategorySelector
+                value={watch('category')}
+                onChange={(category) => setValue('category', category)}
+                type="transaction"
+                placeholder="Select a category"
+                error={errors.category?.message}
+              />
+            </div>
+
+            {/* Account */}
+            <div>
+              <label className="block text-sm font-medium text-forest-300 mb-2">
+                Account
+              </label>
+              <select
+                {...register('accountId', { required: 'Account is required' })}
+                className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-forest-500"
+              >
+                <option value="">Select an account</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name} - {formatCurrency(account.balance)}
+                  </option>
+                ))}
+              </select>
+              {errors.accountId && (
+                <p className="text-red-400 text-sm mt-1">{errors.accountId.message}</p>
+              )}
+            </div>
+
+            {/* Transfer To Account (for transfers) */}
+            {transactionType === 'transfer' && (
+              <div>
+                <label className="block text-sm font-medium text-forest-300 mb-2">
+                  Transfer To
                 </label>
+                <select
+                  {...register('transferToAccountId', { required: 'Transfer account is required' })}
+                  className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-forest-500"
+                >
+                  <option value="">Select destination account</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} - {formatCurrency(account.balance)}
+                    </option>
+                  ))}
+                </select>
+                {errors.transferToAccountId && (
+                  <p className="text-red-400 text-sm mt-1">{errors.transferToAccountId.message}</p>
+                )}
               </div>
-            </div>
-          )}
-
-          {/* Quick Amount Buttons */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-3"> // Already exists
-              Quick Amounts
-            </label>
-            <div className="grid grid-cols-4 gap-3">
-              {quickAmounts.map((amount) => (
-                <Button
-                  key={amount}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAmount(amount)} // Already exists
-                  className="text-sm backdrop-blur-sm border-white/20 hover:border-white/40 hover:bg-white/10"
-                >
-                  <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
-                  {amount.toLocaleString()}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Payment Method Selection */}
-          <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <label className="block text-sm font-medium text-gray-300 mb-4 flex items-center"> // Already exists
-              <Wallet size={16} className="mr-2 text-blue-400" />
-              Payment Method (Required)
-            </label>
-            <select
-              {...register('accountId', { required: 'Payment method is required' })}
-              className="block w-full rounded-xl border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
-            >
-              <option value="" className="bg-black/90">Choose how you paid/received money</option> // Already exists
-              {(accounts || []).map((account) => (
-                <option key={account.id} value={account.id} className="bg-black/90">
-                  {account.name} - {formatCurrency(account.balance)}
-                </option>
-              ))}
-            </select>
-            {errors.accountId && (
-              <p className="text-sm text-error-400 mt-1">{errors.accountId.message}</p> // Already exists
             )}
-            {(accounts || []).length === 0 && (
-              <p className="text-xs text-yellow-400 mt-2">
-                💡 No accounts found. <button 
-                  onClick={() => navigate('/profile')} 
-                  className="text-primary-400 underline"
-                >
-                  Set up your first account
-                </button>
-              </p>
-            )}
-            
-            {/* Student Tip */} // Already exists
-            <div className="mt-3 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
-              <p className="text-blue-300 text-xs">
-                💡 <strong>Why this matters:</strong> Tracking which account you use helps you understand your spending patterns and manage your money better!
-              </p>
+
+            {/* Date */}
+            <div>
+              <label className="block text-sm font-medium text-forest-300 mb-2">
+                Date
+              </label>
+              <Input
+                {...register('date', { required: 'Date is required' })}
+                type="date"
+              />
+              {errors.date && (
+                <p className="text-red-400 text-sm mt-1">{errors.date.message}</p>
+              )}
             </div>
-          </div>
 
-          {/* Amount Input */}
-          <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <Input // Already exists
-              label="Amount"
-              type="number"
-              step="0.01"
-              icon={<CurrencyIcon currencyCode={currency.code} />}
-              {...register('amount', {
-                required: 'Amount is required',
-                min: { value: 0.01, message: 'Amount must be greater than 0' },
-              })}
-              error={errors.amount?.message}
-              className="bg-black/20 border-white/20 text-white text-lg"
-            />
-          </div>
-
-          {/* Category Selection */}
-          <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center"> // Already exists
-              <Tag size={16} className="mr-2 text-yellow-400" />
-              Category
-            </label>
-            <select
-              {...register('category', { required: 'Category is required' })}
-              className="block w-full rounded-xl border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
-            >
-              <option value="" className="bg-black/90">Select a category</option> // Already exists
-              {availableCategories.map((category) => (
-                <option key={category.id} value={category.name} className="bg-black/90">
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            {errors.category && (
-              <p className="text-sm text-error-400 mt-1">{errors.category.message}</p> // Already exists
-            )}
-          </div>
-
-          {/* Description */}
-          <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <Input // Already exists
-              label="Description"
-              type="text"
-              icon={<FileText size={18} className="text-gray-400" />}
-              {...register('description', { required: 'Description is required' })}
-              error={errors.description?.message}
-              className="bg-black/20 border-white/20 text-white"
-              placeholder={`e.g., ${type === 'income' ? 'Salary payment' : 'Grocery shopping'}`}
-            />
-          </div>
-
-          {/* Date */}
-          <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-            <Input // Already exists
-              label="Date"
-              type="date"
-              icon={<Calendar size={18} className="text-gray-400" />}
-              {...register('date', { required: 'Date is required' })}
-              error={errors.date?.message}
-              className="bg-black/20 border-white/20 text-white"
-            />
-          </div>
-
-          {/* Split Transaction Form */}
-          {isSplitTransaction && amount > 0 && (
-            <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10"> // Already exists
+            {/* Link Options */}
+            <div className="border-t border-forest-600/30 pt-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium text-white flex items-center">
-                  <Scissors size={18} className="mr-2 text-primary-400" />
-                  Split Details
-                </h3>
-                <Button
+                <h4 className="text-md font-medium text-white">Link to Other Items</h4>
+                <button
                   type="button"
-                  size="sm" // Already exists
-                  onClick={addSplitRow}
+                  onClick={() => setShowLinkOptions(!showLinkOptions)}
+                  className="flex items-center gap-2 text-forest-400 hover:text-white transition-colors"
                 >
-                  <Plus size={14} className="mr-1" />
-                  Add Split
-                </Button>
+                  {showLinkOptions ? <Unlink size={16} /> : <Link size={16} />}
+                  {showLinkOptions ? 'Hide' : 'Show'} Links
+                </button>
               </div>
 
-              {/* Split Rows */}
-              <div className="space-y-4">
-                {splits.map((split, index) => ( // Already exists
-                  <div key={index} className="p-4 bg-black/30 rounded-xl border border-white/10">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-white">Split #{index + 1}</h4>
+              {showLinkOptions && (
+                <div className="space-y-4">
+                  {/* Link to Goal */}
+                  {type === 'expense' && availableGoals.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-forest-300 mb-2">
+                        Link to Goal (Optional)
+                      </label>
+                      <select
+                        {...register('linkedGoalId')}
+                        className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-forest-500"
+                      >
+                        <option value="">No goal linked</option>
+                        {availableGoals.map((goal) => (
+                          <option key={goal.id} value={goal.id}>
+                            {goal.title} - {formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Link to Bill */}
+                  {type === 'expense' && availableBills.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-forest-300 mb-2">
+                        Link to Bill (Optional)
+                      </label>
+                      <select
+                        {...register('linkedBillId')}
+                        className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-forest-500"
+                      >
+                        <option value="">No bill linked</option>
+                        {availableBills.map((bill) => (
+                          <option key={bill.id} value={bill.id}>
+                            {bill.title} - {formatCurrency(bill.amount)} (Due: {new Date(bill.nextDueDate).toLocaleDateString()})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Link to Liability */}
+                  {type === 'expense' && availableLiabilities.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-forest-300 mb-2">
+                        Link to Liability (Optional)
+                      </label>
+                      <select
+                        {...register('linkedLiabilityId')}
+                        className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-forest-500"
+                      >
+                        <option value="">No liability linked</option>
+                        {availableLiabilities.map((liability) => (
+                          <option key={liability.id} value={liability.id}>
+                            {liability.name} - {formatCurrency(liability.remainingAmount)} remaining
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Show linked entities */}
+              {(linkedGoalId || linkedBillId || linkedLiabilityId) && (
+                <div className="mt-4 p-3 bg-forest-800/20 rounded-lg">
+                  <p className="text-sm font-medium text-forest-200 mb-2">Linked Items:</p>
+                  <div className="space-y-1">
+                    {linkedGoalId && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Target size={14} className="text-blue-400" />
+                        <span className="text-forest-300">Goal: {getLinkedEntityName('goal', linkedGoalId)}</span>
+                      </div>
+                    )}
+                    {linkedBillId && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <CreditCard size={14} className="text-orange-400" />
+                        <span className="text-forest-300">Bill: {getLinkedEntityName('bill', linkedBillId)}</span>
+                      </div>
+                    )}
+                    {linkedLiabilityId && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <AlertCircle size={14} className="text-red-400" />
+                        <span className="text-forest-300">Liability: {getLinkedEntityName('liability', linkedLiabilityId)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Split Transaction Toggle */}
+            <div className="border-t border-forest-600/30 pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-md font-medium text-white">Split Transaction</h4>
+                  <p className="text-sm text-forest-400">Split this transaction into multiple categories</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSplitTransaction(!isSplitTransaction)}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    isSplitTransaction
+                      ? 'bg-forest-600 text-white'
+                      : 'bg-forest-800/50 text-forest-300 hover:bg-forest-700/50'
+                  }`}
+                >
+                  {isSplitTransaction ? 'Enabled' : 'Disabled'}
+                </button>
+              </div>
+            </div>
+
+            {/* Affects Balance Toggle */}
+            <div className="border-t border-forest-600/30 pt-4">
+              <div className="bg-forest-800/20 rounded-lg p-4 border border-forest-600/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-md font-medium text-white">Affects Balance</h4>
+                    <p className="text-sm text-forest-400">Disable for record-only entries</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      {...register('affectsBalance')}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-forest-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-forest-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-forest-500"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Split Transaction Form */}
+            {isSplitTransaction && (
+              <div className="space-y-4 p-4 bg-forest-800/20 rounded-lg">
+                <h5 className="text-sm font-medium text-white">Split Details</h5>
+                {splits.map((split, index) => (
+                  <div key={index} className="grid grid-cols-3 gap-3">
+                    <CategorySelector
+                      value={split.category}
+                      onChange={(category) => updateSplit(index, 'category', category)}
+                      type="transaction"
+                      placeholder="Category"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Amount"
+                      value={split.amount}
+                      onChange={(e) => updateSplit(index, 'amount', parseFloat(e.target.value) || 0)}
+                    />
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Description"
+                        value={split.description}
+                        onChange={(e) => updateSplit(index, 'description', e.target.value)}
+                      />
                       {splits.length > 1 && (
                         <button
                           type="button"
-                          onClick={() => removeSplitRow(index)}
-                          className="p-1 hover:bg-error-500/20 rounded-lg transition-colors" // Already exists
+                          onClick={() => removeSplit(index)}
+                          className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30"
                         >
-                          <Trash2 size={14} className="text-error-400" />
+                          <Trash2 size={16} />
                         </button>
                       )}
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
-                      {/* Category */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-300 mb-1">
-                          Category
-                        </label>
-                        <select
-                          value={split.category}
-                          onChange={(e) => updateSplitField(index, 'category', e.target.value)}
-                          className="block w-full rounded-lg border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-2 px-3 text-sm"
-                        > // Already exists
-                          <option value="" className="bg-black/90">Select a category</option>
-                          {availableCategories.map((category) => (
-                            <option key={category.id} value={category.name} className="bg-black/90">
-                              {category.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Amount */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-300 mb-1">
-                          Amount
-                        </label>
-                        <div className="relative">
-                          <CurrencyIcon currencyCode={currency.code} size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={split.amount}
-                            onChange={(e) => updateSplitField(index, 'amount', Number(e.target.value))}
-                            className="block w-full pl-10 pr-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white"
-                          /> // Already exists
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Description (Optional) */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-300 mb-1">
-                        Description (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={split.description}
-                        onChange={(e) => updateSplitField(index, 'description', e.target.value)}
-                        placeholder="Leave blank to use main description"
-                        className="block w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white text-sm" // Already exists
-                      />
-                    </div>
                   </div>
                 ))}
+                <button
+                  type="button"
+                  onClick={addSplit}
+                  className="flex items-center gap-2 text-forest-400 hover:text-white transition-colors"
+                >
+                  <Plus size={16} />
+                  Add Split
+                </button>
               </div>
+            )}
 
-              {/* Split Summary */}
-              <div className={`mt-4 p-3 rounded-lg ${
-                splitAmountDifference === 0 // Already exists
-                  ? 'bg-success-500/20 border border-success-500/30' 
-                  : 'bg-warning-500/20 border border-warning-500/30'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    {splitAmountDifference === 0 ? (
-                      <CheckCircle size={16} className="text-success-400" />
-                    ) : ( // Already exists
-                      <AlertCircle size={16} className="text-warning-400" />
-                    )}
-                    <span className={`text-sm font-medium ${
-                      splitAmountDifference === 0 ? 'text-success-400' : 'text-warning-400'
-                    }`}>
-                      Split Summary
-                    </span>
-                  </div>
-                  <span className="text-sm text-gray-300">
-                    {formatCurrency(totalSplitAmount)} / {formatCurrency(amount)}
-                  </span>
-                </div> // Already exists
-                
-                {splitAmountDifference !== 0 && (
-                  <p className="text-xs text-warning-300 mt-1">
-                    {splitAmountDifference > 0 
-                      ? `Remaining: ${formatCurrency(splitAmountDifference)}` 
-                      : `Excess: ${formatCurrency(Math.abs(splitAmountDifference))}`}
-                    . Split amounts must equal the total amount.
-                  </p>
-                )}
-              </div>
+            {/* Submit Button */}
+            <div className="flex space-x-4 pt-4">
+              <Button
+                type="button"
+                onClick={() => navigate(-1)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Saving...' : 'Save Transaction'}
+              </Button>
             </div>
-          )}
+          </form>
+        </div>
 
-          {/* Submit Button */}
-          <div className="pt-4">
-            <Button // Already exists
-              type="submit" 
-              className="w-full py-4 text-lg font-semibold"
-              disabled={(isSplitTransaction && splitAmountDifference !== 0) || isSubmitting}
-              loading={isSubmitting}
-            >
-              Add {type === 'income' ? 'Income' : 'Expense'}
-              {amount ? ` - ${currency.symbol}${Number(amount).toLocaleString()}` : ''}
-            </Button>
+        {/* Error Toast */}
+        {error && (
+          <div className="fixed bottom-6 left-6 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg">
+            {error}
           </div>
-        </form>
         )}
       </div>
     </div>

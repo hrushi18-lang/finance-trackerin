@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { User, Settings, Bell, Shield, HelpCircle, Info, LogOut, Repeat, DollarSign, Globe, Calculator, RefreshCw, Tag, Wallet, CreditCard, Target, PieChart, Calendar, TrendingUp, Edit3, Eye, EyeOff } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; // Already exists
+import { User, Settings, Bell, Shield, HelpCircle, Info, LogOut, Repeat, DollarSign, Globe, Calculator, RefreshCw, Tag, Wallet, CreditCard, Target, PieChart, Calendar, TrendingUp, Edit3, Eye, EyeOff, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TopNavigation } from '../components/layout/TopNavigation';
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
@@ -17,7 +17,7 @@ import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { format } from 'date-fns';
 
 export const Profile: React.FC = () => {
-  const { user, logout } = useAuth(); // Already exists
+  const { user, logout } = useAuth();
   const { accounts, goals, budgets, liabilities, recurringTransactions } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
   const { t } = useTranslation();
@@ -29,7 +29,7 @@ export const Profile: React.FC = () => {
   const [showBalances, setShowBalances] = useState(true);
 
   const handleLogout = async () => {
-    try { // Already exists
+    try {
       setIsLoggingOut(true);
       await logout();
       navigate('/auth');
@@ -41,19 +41,19 @@ export const Profile: React.FC = () => {
   };
 
   const handleRestartOnboarding = () => {
-    navigate('/onboarding'); // Already exists
+    navigate('/onboarding');
   };
 
   // Calculate summary stats
   const totalBalance = (accounts || [])
     .filter(account => account.isVisible)
-    .reduce((sum, account) => sum + (Number(account.balance) || 0), 0); // Already exists
+    .reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
 
   const activeGoals = (goals || []).filter(g => 
     (g.currentAmount / g.targetAmount) < 1
   );
 
-  const totalGoalTarget = (goals || []).reduce((sum, g) => sum + g.targetAmount, 0); // Already exists
+  const totalGoalTarget = (goals || []).reduce((sum, g) => sum + g.targetAmount, 0);
 
   const activeBudgets = (budgets || []).length;
   const totalBudgetLimit = (budgets || []).reduce((sum, b) => sum + b.amount, 0);
@@ -61,7 +61,7 @@ export const Profile: React.FC = () => {
   const outstandingLiabilities = (liabilities || []).filter(l => l.remainingAmount > 0);
   const totalDebt = outstandingLiabilities.reduce((sum, l) => sum + l.remainingAmount, 0);
 
-  const upcomingBills = (bills || []) // Changed to bills
+  const upcomingBills = (recurringTransactions || [])
     .filter(rt => rt.isActive && rt.type === 'expense')
     .sort((a, b) => new Date(a.nextOccurrenceDate).getTime() - new Date(b.nextOccurrenceDate).getTime())
     .slice(0, 3);
@@ -81,7 +81,7 @@ export const Profile: React.FC = () => {
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <TopNavigation title="Profile & Settings" /> // Already exists
+      <TopNavigation title="Profile & Settings" />
       
       <div className="px-4 py-4 sm:py-6 space-y-6">
         {/* Basic Info Section */}
@@ -93,7 +93,7 @@ export const Profile: React.FC = () => {
             <h2 className="text-xl font-semibold text-white">Basic Information</h2>
           </div>
           
-          {/* User Profile */} // Already exists
+          {/* User Profile */}
           <div className="text-center mb-6">
             <div className="w-20 h-20 bg-primary-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
               {user?.avatar ? (
@@ -115,7 +115,7 @@ export const Profile: React.FC = () => {
             </p>
           </div>
 
-          {/* International Settings */} // Already exists
+          {/* International Settings */}
           <div className="space-y-4">
             <LanguageSwitcher />
             <CurrencySelector />
@@ -132,7 +132,7 @@ export const Profile: React.FC = () => {
             <h2 className="text-xl font-semibold text-white">Account & Subscription</h2>
           </div>
           
-          <div className="space-y-4"> // Already exists
+          <div className="space-y-4">
             <div className="bg-black/30 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -160,7 +160,7 @@ export const Profile: React.FC = () => {
         {/* Linked Accounts Overview */}
         <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3"> // Already exists
+            <div className="flex items-center space-x-3">
               <div className="p-3 bg-green-500/20 rounded-lg">
                 <Wallet size={24} className="text-green-400" />
               </div>
@@ -189,7 +189,7 @@ export const Profile: React.FC = () => {
             </div>
           </div>
 
-          {(accounts || []).length === 0 ? ( // Already exists
+          {(accounts || []).length === 0 ? (
             <div className="text-center py-8">
               <Wallet size={48} className="mx-auto text-gray-600 mb-4" />
               <p className="text-gray-400 mb-4">No accounts added yet</p>
@@ -198,7 +198,7 @@ export const Profile: React.FC = () => {
                 Add First Account
               </Button>
             </div>
-          ) : ( // Already exists
+          ) : (
             <div className="space-y-3">
               {/* Total Balance */}
               {showBalances && (
@@ -214,7 +214,7 @@ export const Profile: React.FC = () => {
                 </div>
               )}
 
-              {/* Account List */} // Already exists
+              {/* Account List */}
               {(accounts || []).slice(0, 5).map((account) => (
                 <div key={account.id} className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
                   <div className="flex items-center space-x-3">
@@ -237,7 +237,7 @@ export const Profile: React.FC = () => {
                 </div>
               ))}
               
-              {(accounts || []).length > 5 && ( // Already exists
+              {(accounts || []).length > 5 && (
                 <div className="text-center pt-2">
                   <button
                     onClick={() => navigate('/accounts-hub')}
@@ -254,7 +254,7 @@ export const Profile: React.FC = () => {
         {/* Goals & Budgets Snapshot */}
         <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="p-3 bg-yellow-500/20 rounded-lg"> // Already exists
+            <div className="p-3 bg-yellow-500/20 rounded-lg">
               <Target size={24} className="text-yellow-400" />
             </div>
             <h2 className="text-xl font-semibold text-white">Goals & Budgets</h2>
@@ -262,7 +262,7 @@ export const Profile: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             {/* Goals Summary */}
-            <div className="bg-black/30 rounded-lg p-4"> // Already exists
+            <div className="bg-black/30 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
                   <Target size={16} className="text-primary-400" />
@@ -289,7 +289,7 @@ export const Profile: React.FC = () => {
               </div>
             </div>
 
-            {/* Budgets Summary */} // Already exists
+            {/* Budgets Summary */}
             <div className="bg-black/30 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
@@ -318,7 +318,7 @@ export const Profile: React.FC = () => {
             </div>
           </div>
 
-          {/* Recent Goals */} // Already exists
+          {/* Recent Goals */}
           {(goals || []).length > 0 && (
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-gray-300">Recent Goals</h4>
@@ -349,7 +349,7 @@ export const Profile: React.FC = () => {
         {/* Liabilities & Bills Snapshot */}
         <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="p-3 bg-red-500/20 rounded-lg"> // Already exists
+            <div className="p-3 bg-red-500/20 rounded-lg">
               <CreditCard size={24} className="text-red-400" />
             </div>
             <h2 className="text-xl font-semibold text-white">Liabilities & Bills</h2>
@@ -357,7 +357,7 @@ export const Profile: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             {/* Liabilities Summary */}
-            <div className="bg-black/30 rounded-lg p-4"> // Already exists
+            <div className="bg-black/30 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
                   <CreditCard size={16} className="text-error-400" />
@@ -384,7 +384,7 @@ export const Profile: React.FC = () => {
               </div>
             </div>
 
-            {/* Bills Summary */} // Already exists
+            {/* Bills Summary */}
             <div className="bg-black/30 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
@@ -412,7 +412,7 @@ export const Profile: React.FC = () => {
             </div>
           </div>
 
-          {/* Upcoming Bills */} // Already exists
+          {/* Upcoming Bills */}
           {upcomingBills.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-gray-300">Upcoming Bills</h4>
@@ -420,7 +420,7 @@ export const Profile: React.FC = () => {
                 <div key={bill.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
                   <div className="flex items-center space-x-3">
                     <Calendar size={14} className="text-blue-400" />
-                    <div> // Already exists
+                    <div>
                       <p className="text-sm font-medium text-white">{bill.description}</p>
                       <p className="text-xs text-gray-400">{bill.category}</p>
                     </div>
@@ -428,7 +428,7 @@ export const Profile: React.FC = () => {
                   <div className="text-right">
                     <p className="text-sm font-medium text-white">
                       {formatCurrency(bill.amount)}
-                    </p> // Already exists
+                    </p>
                     <p className="text-xs text-gray-400">
                       {format(new Date(bill.nextOccurrenceDate), 'MMM dd')}
                     </p>
@@ -442,7 +442,7 @@ export const Profile: React.FC = () => {
         {/* App Settings */}
         <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="p-3 bg-purple-500/20 rounded-lg"> // Already exists
+            <div className="p-3 bg-purple-500/20 rounded-lg">
               <Settings size={24} className="text-purple-400" />
             </div>
             <h2 className="text-xl font-semibold text-white">App Settings</h2>
@@ -450,7 +450,7 @@ export const Profile: React.FC = () => {
 
           <div className="space-y-3">
             <button 
-              className="w-full p-4 flex items-center space-x-4 text-left bg-black/30 rounded-lg hover:bg-black/40 transition-colors" // Already exists
+              className="w-full p-4 flex items-center space-x-4 text-left bg-black/30 rounded-lg hover:bg-black/40 transition-colors"
               onClick={() => setShowNotifications(true)}
             >
               <Bell size={18} className="text-gray-400" />
@@ -462,7 +462,7 @@ export const Profile: React.FC = () => {
             </button>
 
             <button 
-              className="w-full p-4 flex items-center space-x-4 text-left bg-black/30 rounded-lg hover:bg-black/40 transition-colors" // Already exists
+              className="w-full p-4 flex items-center space-x-4 text-left bg-black/30 rounded-lg hover:bg-black/40 transition-colors"
               onClick={() => setShowCategoryModal(true)}
             >
               <Tag size={18} className="text-gray-400" />
@@ -474,7 +474,7 @@ export const Profile: React.FC = () => {
             </button>
 
             <button 
-              className="w-full p-4 flex items-center space-x-4 text-left bg-black/30 rounded-lg hover:bg-black/40 transition-colors" // Already exists
+              className="w-full p-4 flex items-center space-x-4 text-left bg-black/30 rounded-lg hover:bg-black/40 transition-colors"
               onClick={handleRestartOnboarding}
             >
               <RefreshCw size={18} className="text-gray-400" />
@@ -486,7 +486,7 @@ export const Profile: React.FC = () => {
             </button>
 
             <button 
-              className="w-full p-4 flex items-center space-x-4 text-left bg-black/30 rounded-lg hover:bg-black/40 transition-colors" // Already exists
+              className="w-full p-4 flex items-center space-x-4 text-left bg-black/30 rounded-lg hover:bg-black/40 transition-colors"
               onClick={() => navigate('/privacy')}
             >
               <Shield size={18} className="text-gray-400" />
@@ -498,7 +498,7 @@ export const Profile: React.FC = () => {
             </button>
 
             <button 
-              className="w-full p-4 flex items-center space-x-4 text-left bg-black/30 rounded-lg hover:bg-black/40 transition-colors" // Already exists
+              className="w-full p-4 flex items-center space-x-4 text-left bg-black/30 rounded-lg hover:bg-black/40 transition-colors"
               onClick={() => navigate('/about')}
             >
               <Info size={18} className="text-gray-400" />
@@ -514,7 +514,7 @@ export const Profile: React.FC = () => {
         {/* Account Actions */}
         <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="p-3 bg-gray-500/20 rounded-lg"> // Already exists
+            <div className="p-3 bg-gray-500/20 rounded-lg">
               <User size={24} className="text-gray-400" />
             </div>
             <h2 className="text-xl font-semibold text-white">Account Actions</h2>
@@ -522,7 +522,7 @@ export const Profile: React.FC = () => {
 
           <div className="space-y-3">
             <Button
-              onClick={() => setShowLogoutConfirm(true)} // Already exists
+              onClick={() => setShowLogoutConfirm(true)}
               variant="outline"
               className="w-full border-error-500 text-error-400 hover:bg-error-500/10"
             >
@@ -533,7 +533,7 @@ export const Profile: React.FC = () => {
         </div>
 
         {/* App Info */}
-        <div className="bg-black/20 backdrop-blur-md rounded-2xl p-4 border border-white/10"> // Already exists
+        <div className="bg-black/20 backdrop-blur-md rounded-2xl p-4 border border-white/10">
           <div className="flex items-center space-x-3 text-gray-400">
             <Info size={14} />
             <div className="text-xs">
@@ -545,7 +545,7 @@ export const Profile: React.FC = () => {
       </div>
 
       {/* Notifications Panel */}
-      <NotificationsPanel // Already exists
+      <NotificationsPanel
         isOpen={showNotifications} 
         onClose={() => setShowNotifications(false)} 
       />
@@ -560,7 +560,7 @@ export const Profile: React.FC = () => {
       </Modal>
 
       {/* Logout Confirmation Modal */}
-      <Modal // Already exists
+      <Modal
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}
         title="Sign Out"
@@ -569,7 +569,7 @@ export const Profile: React.FC = () => {
           <p className="text-gray-300">
             Are you sure you want to sign out? You'll need to sign in again to access your account.
           </p>
-          <div className="flex space-x-3 pt-4"> // Already exists
+          <div className="flex space-x-3 pt-4">
             <Button
               variant="outline"
               onClick={() => setShowLogoutConfirm(false)}

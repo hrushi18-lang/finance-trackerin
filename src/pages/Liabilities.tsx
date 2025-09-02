@@ -12,7 +12,7 @@ import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { DebtStrategyTool } from '../components/liabilities/DebtStrategyTool';
 
 export const Liabilities: React.FC = () => {
-  const { liabilities, addLiability, updateLiability, deleteLiability, addTransaction, accounts } = useFinance();
+  const { liabilities, addLiability, updateLiability, deleteLiability, addTransaction, accounts, repayLiabilityFromAccount } = useFinance();
   const { currency, formatCurrency } = useInternationalization();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,14 +33,30 @@ export const Liabilities: React.FC = () => {
       
       // Create the liability
       await addLiability({
-        ...liability,
-        type: liability.liabilityType, // Map to old format for compatibility
+        name: liability.name,
+        liabilityType: liability.liabilityType,
+        description: liability.description,
         totalAmount: liability.totalAmount,
         remainingAmount: liability.remainingAmount,
         interestRate: liability.interestRate,
         monthlyPayment: liability.monthlyPayment || liability.minimumPayment || 0,
-        due_date: liability.dueDate || liability.nextPaymentDate || new Date(),
-        start_date: liability.startDate
+        minimumPayment: liability.minimumPayment || 0,
+        paymentDay: liability.paymentDay || 1,
+        loanTermMonths: liability.loanTermMonths,
+        remainingTermMonths: liability.loanTermMonths,
+        startDate: new Date(liability.startDate),
+        dueDate: liability.dueDate ? new Date(liability.dueDate) : undefined,
+        nextPaymentDate: liability.dueDate ? new Date(liability.dueDate) : undefined,
+        linkedAssetId: liability.linkedAssetId,
+        isSecured: liability.isSecured,
+        disbursementAccountId: liability.disbursementAccountId,
+        defaultPaymentAccountId: liability.defaultPaymentAccountId,
+        providesFunds: liability.providesFunds,
+        affectsCreditScore: liability.affectsCreditScore,
+        status: 'active',
+        isActive: true,
+        autoGenerateBills: liability.autoGenerateBills,
+        billGenerationDay: liability.billGenerationDay || 1
       });
 
       // Handle fund disbursement
@@ -65,7 +81,7 @@ export const Liabilities: React.FC = () => {
     }
   };
 
-  const handleMakePayment = async (paymentData: { amount: number; description: string; createTransaction: boolean }) => {
+  const handleMakePayment = async (paymentData: { amount: number; description: string; createTransaction: boolean; accountId: string }) => {
     const liability = liabilities.find(l => l.id === selectedLiability);
     if (!liability) return;
     
@@ -80,30 +96,14 @@ export const Liabilities: React.FC = () => {
       const actualPayment = Math.min(paymentAmount, currentRemaining);
       
       // Create payment transaction if requested
-      if (paymentData.createTransaction) {
-        await addTransaction({
-          type: 'expense',
-          amount: actualPayment,
-          category: 'Debt Payment',
-          description: paymentData.description || `Payment for ${liability.name}`,
-          date: new Date(),
-          accountId: liability.defaultPaymentAccountId // Use default payment account
-        });
+      if (paymentData.createTransaction && paymentData.accountId) {
+        await repayLiabilityFromAccount(paymentData.accountId, liability.id, actualPayment, paymentData.description);
       }
       
       // Update liability remaining amount
       await updateLiability(liability.id, {
-        // Update specific fields
-        totalAmount: liability.totaltotalAmount,
         remainingAmount: Math.max(0, currentRemaining - actualPayment),
-        interestRate: liability.interestRate,
-        monthlyPayment: liability.monthlyPayment,
-        paymentDay: liability.paymentDay,
-        startDate: liability.startDate,
-        dueDate: liability.dueDate,
-        nextPaymentDate: liability.nextPaymentDate,
-        status: Math.max(0, currentRemaining - actualPayment) === 0 ? 'paid_off' : liability.status,
-        remainingAmount: Math.max(0, currentRemaining - actualPayment)
+        status: Math.max(0, currentRemaining - actualPayment) === 0 ? 'paid_off' : liability.status
       });
       
       setShowPaymentModal(false);
@@ -623,6 +623,7 @@ export const Liabilities: React.FC = () => {
       >
         <PaymentForm
           liability={liabilities.find(l => l.id === selectedLiability)}
+          accounts={accounts}
           onSubmit={handleMakePayment}
           onCancel={() => {
             setShowPaymentModal(false);
