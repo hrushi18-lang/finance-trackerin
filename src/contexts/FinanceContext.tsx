@@ -76,6 +76,8 @@ interface FinanceContextType {
   withdrawGoalToAccount: (toAccountId: string, goalId: string, amount: number, description?: string) => Promise<void>;
   payBillFromAccount: (accountId: string, billId: string, amount?: number, description?: string) => Promise<void>;
   repayLiabilityFromAccount: (accountId: string, liabilityId: string, amount: number, description?: string) => Promise<void>;
+  markBillAsPaid: (billId: string, paidDate?: Date) => Promise<void>;
+  markRecurringTransactionAsPaid: (recurringTransactionId: string, paidDate?: Date) => Promise<void>;
   
   // Analytics functions
   getMonthlyTrends: (months: number) => Array<{ month: string; income: number; expenses: number; net: number }>;
@@ -269,10 +271,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: 'completed'
     });
 
-    // Update bill schedule
+    // Update bill schedule and mark as paid
     const nextDueDate = new Date(bill.nextDueDate);
     nextDueDate.setDate(nextDueDate.getDate() + (bill.frequency === 'weekly' ? 7 : bill.frequency === 'bi_weekly' ? 14 : bill.frequency === 'monthly' ? 30 : bill.frequency === 'quarterly' ? 90 : bill.frequency === 'semi_annual' ? 180 : bill.frequency === 'annual' ? 365 : 30));
     await updateBill(billId, { lastPaidDate: new Date(), nextDueDate });
+
+    // Also update recurring transaction if it exists
+    const recurringBill = recurringTransactions.find(rt => rt.description === bill.title && rt.type === 'expense');
+    if (recurringBill) {
+      await updateRecurringTransaction(recurringBill.id, { 
+        isPaid: true, 
+        paidDate: new Date(), 
+        nextDueDate: nextDueDate 
+      });
+    }
   };
 
   const repayLiabilityFromAccount = async (accountId: string, liabilityId: string, amount: number, description?: string) => {
@@ -293,6 +305,65 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const newRemaining = Math.max(0, Number(liability.remainingAmount || 0) - Number(amount || 0));
     await updateLiability(liabilityId, { remainingAmount: newRemaining, status: newRemaining === 0 ? 'paid_off' : liability.status });
+  };
+
+  const markBillAsPaid = async (billId: string, paidDate?: Date) => {
+    if (!user) throw new Error('User not authenticated');
+    const bill = bills.find(b => b.id === billId);
+    if (!bill) throw new Error('Bill not found');
+    
+    const paymentDate = paidDate || new Date();
+    
+    // Update bill with payment info
+    const nextDueDate = new Date(bill.nextDueDate);
+    nextDueDate.setDate(nextDueDate.getDate() + (bill.frequency === 'weekly' ? 7 : bill.frequency === 'bi_weekly' ? 14 : bill.frequency === 'monthly' ? 30 : bill.frequency === 'quarterly' ? 90 : bill.frequency === 'semi_annual' ? 180 : bill.frequency === 'annual' ? 365 : 30));
+    
+    await updateBill(billId, { 
+      lastPaidDate: paymentDate, 
+      nextDueDate: nextDueDate 
+    });
+
+    // Also update recurring transaction if it exists
+    const recurringBill = recurringTransactions.find(rt => rt.description === bill.title && rt.type === 'expense');
+    if (recurringBill) {
+      await updateRecurringTransaction(recurringBill.id, { 
+        isPaid: true, 
+        paidDate: paymentDate, 
+        nextDueDate: nextDueDate 
+      });
+    }
+  };
+
+  const markRecurringTransactionAsPaid = async (recurringTransactionId: string, paidDate?: Date) => {
+    if (!user) throw new Error('User not authenticated');
+    const recurringTransaction = recurringTransactions.find(rt => rt.id === recurringTransactionId);
+    if (!recurringTransaction) throw new Error('Recurring transaction not found');
+    
+    const paymentDate = paidDate || new Date();
+    
+    // Calculate next due date based on frequency
+    const nextDueDate = new Date(recurringTransaction.nextOccurrenceDate);
+    switch (recurringTransaction.frequency) {
+      case 'daily':
+        nextDueDate.setDate(nextDueDate.getDate() + 1);
+        break;
+      case 'weekly':
+        nextDueDate.setDate(nextDueDate.getDate() + 7);
+        break;
+      case 'monthly':
+        nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+        break;
+      case 'yearly':
+        nextDueDate.setFullYear(nextDueDate.getFullYear() + 1);
+        break;
+    }
+    
+    await updateRecurringTransaction(recurringTransactionId, { 
+      isPaid: true, 
+      paidDate: paymentDate, 
+      nextDueDate: nextDueDate,
+      lastProcessedDate: paymentDate
+    });
   };
 
   const loadAccounts = async () => {
@@ -1697,6 +1768,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     withdrawGoalToAccount,
     payBillFromAccount,
     repayLiabilityFromAccount,
+    markBillAsPaid,
+    markRecurringTransactionAsPaid,
     getMonthlyTrends,
     getCategoryBreakdown,
     getNetWorthTrends,

@@ -131,7 +131,7 @@ export const DEFAULT_CATEGORIES = {
   ]
 };
 
-// Category colors for UI
+// Category colors for UI - using unique keys only
 export const CATEGORY_COLORS = {
   // Income colors (greens)
   'Salary': '#10B981',
@@ -258,7 +258,7 @@ export const isValidCategory = (category: string, type: 'transaction' | 'bill' |
   return defaultCategories.includes(category);
 };
 
-// Get category icon (using Lucide React icons)
+// Get category icon (using Lucide React icons) - using unique keys only
 export const getCategoryIcon = (category: string): string => {
   const iconMap: Record<string, string> = {
     // Income

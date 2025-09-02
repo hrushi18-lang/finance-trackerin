@@ -69,6 +69,10 @@ export interface RecurringTransaction {
   monthOfYear?: number; // For yearly (1-12)
   maxOccurrences?: number; // Optional limit on total occurrences
   currentOccurrences: number; // Track how many times it has occurred
+  // Payment tracking for bills
+  isPaid?: boolean; // Track if this recurring transaction (bill) is paid
+  paidDate?: Date; // Track when it was paid
+  nextDueDate?: Date; // For bills, track next due date
   isBill?: boolean; // Added as per schema
   paymentMethod?: string; // Added as per schema
   accountId?: string; // Added as per schema
