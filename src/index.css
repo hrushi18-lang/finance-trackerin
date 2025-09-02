@@ -2,19 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Olive Green Theme Variables */
+/* Strict Design Language - Olive Green + Soft Beige */
 :root {
+  /* Primary Colors */
   --primary: #3e5725;
-  --secondary: #6b7280;
-  --accent: #3e5725;
+  --primary-light: #5a7a3a;
+  --primary-dark: #2d3f1a;
+  
+  /* Background Colors */
   --background: #fefcf8;
+  --background-secondary: #f5f5f0;
+  --background-tertiary: #f9f9f4;
+  
+  /* Surface Colors */
   --surface: #ffffff;
+  --surface-elevated: #fafafa;
+  --surface-pressed: #f0f0f0;
+  
+  /* Text Colors */
   --text-primary: #3e5725;
   --text-secondary: #6b7280;
-  --border: #e5e7eb;
+  --text-tertiary: #9ca3af;
+  --text-inverse: #ffffff;
+  
+  /* Accent Colors */
+  --accent: #3e5725;
+  --accent-light: #5a7a3a;
   --success: #3e5725;
   --error: #ef4444;
   --warning: #f59e0b;
+  
+  /* Border Colors */
+  --border: #e5e7eb;
+  --border-light: #f3f4f6;
+  --border-dark: #d1d5db;
+  
+  /* Shadow Colors */
+  --shadow-sm: 0 1px 2px 0 rgba(62, 87, 37, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(62, 87, 37, 0.1), 0 2px 4px -1px rgba(62, 87, 37, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(62, 87, 37, 0.1), 0 4px 6px -2px rgba(62, 87, 37, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(62, 87, 37, 0.1), 0 10px 10px -5px rgba(62, 87, 37, 0.04);
+  
+  /* Neumorphic Shadows */
+  --neumorphic-light: 8px 8px 16px rgba(255, 255, 255, 0.7), -8px -8px 16px rgba(62, 87, 37, 0.1);
+  --neumorphic-inset: inset 8px 8px 16px rgba(62, 87, 37, 0.1), inset -8px -8px 16px rgba(255, 255, 255, 0.7);
 }
 
 /* Global Background */
@@ -28,20 +59,131 @@ body {
 .font-heading {
   font-family: 'Archivo Black', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 900;
+  color: var(--text-primary);
 }
 
 .font-numbers {
   font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
+  color: var(--text-primary);
 }
 
 .font-body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text-secondary);
 }
 
 .font-serif {
   font-family: 'Playfair Display', serif;
+  color: var(--text-primary);
+}
+
+/* Design System Classes */
+.card {
+  background: var(--surface);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.card-neumorphic {
+  background: var(--background);
+  border-radius: 1rem;
+  box-shadow: var(--neumorphic-light);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.card-neumorphic:hover {
+  box-shadow: var(--neumorphic-inset);
+}
+
+.card-elevated {
+  background: var(--surface-elevated);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--text-inverse);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background: var(--primary-light);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-secondary:hover {
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+/* Animation Classes */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.slide-in-up {
+  animation: slideInUp 0.5s ease-out;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from { 
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* Hide scrollbars globally while maintaining functionality */

@@ -169,14 +169,14 @@ export const Overview: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
+    <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
       {/* Top Header */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4">
+      <div className="card-elevated mx-6 mt-6 mb-4 px-6 py-4 fade-in">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-heading text-gray-900">Overview</h1>
+          <h1 className="text-2xl font-heading">Overview</h1>
           <div className="flex items-center space-x-3">
-            <button className="p-2 text-gray-600 hover:text-gray-800 transition-colors">
-              <Bell size={20} />
+            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Bell size={20} className="text-gray-600" />
             </button>
             <button className="p-1">
               <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
@@ -187,51 +187,52 @@ export const Overview: React.FC = () => {
         </div>
       </div>
 
-      <div className="px-6 py-6 space-y-8">
+      <div className="px-6 space-y-6">
         {/* Net Worth Hero Card */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 relative overflow-hidden">
+        <div className="card-neumorphic p-8 relative overflow-hidden slide-in-up">
           <div className="text-center">
-            <h2 className="text-lg font-medium text-gray-600 mb-2">Net Worth</h2>
-            <p className="text-4xl font-serif font-bold text-green-700 mb-2">
+            <h2 className="text-lg font-body mb-2">Net Worth</h2>
+            <p className="text-4xl font-serif font-bold mb-2" style={{ color: 'var(--primary)' }}>
               {showBalances ? formatCurrency(netWorth) : '••••••'}
             </p>
-            <p className="text-sm text-green-600 font-medium">
+            <p className="text-sm font-medium" style={{ color: 'var(--success)' }}>
               +{formatCurrency(netWorthChange.amount)} ({netWorthChange.percentage}%) this month
             </p>
           </div>
         </div>
 
         {/* Manage Accounts Section */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Manage Accounts</h3>
+        <div className="slide-in-up">
+          <h3 className="text-lg font-heading mb-4">Manage Accounts</h3>
           <div className="flex space-x-4 overflow-x-auto pb-2">
             {accounts.length > 0 ? (
               accounts.slice(0, 3).map((account) => (
-                <div key={account.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 min-w-[140px] flex-shrink-0">
+                <div key={account.id} className="card min-w-[140px] flex-shrink-0 p-4">
                   <div className="flex items-center space-x-3 mb-3">
                     {getAccountIcon(account)}
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                       {account.name}
                     </span>
                   </div>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-lg font-numbers">
                     {showBalances ? formatCurrency(account.balance || 0) : '••••••'}
                   </p>
                 </div>
               ))
             ) : (
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 min-w-[140px] flex-shrink-0 flex items-center justify-center">
+              <div className="card min-w-[140px] flex-shrink-0 p-4 flex items-center justify-center">
                 <div className="text-center">
                   <Wallet size={24} className="text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No accounts</p>
+                  <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No accounts</p>
                 </div>
               </div>
             )}
             {/* Add Account Card */}
-            <div className="bg-gray-100 rounded-2xl p-4 min-w-[140px] flex-shrink-0 flex items-center justify-center border-2 border-dashed border-gray-300">
+            <div className="card-neumorphic min-w-[140px] flex-shrink-0 p-4 flex items-center justify-center border-2 border-dashed" style={{ borderColor: 'var(--border)' }}>
               <button
                 onClick={() => navigate('/accounts')}
-                className="flex flex-col items-center space-y-2 text-gray-500 hover:text-gray-700 transition-colors"
+                className="flex flex-col items-center space-y-2 transition-colors"
+                style={{ color: 'var(--text-tertiary)' }}
               >
                 <Plus size={24} />
                 <span className="text-sm font-medium">Add Account</span>
@@ -241,31 +242,34 @@ export const Overview: React.FC = () => {
         </div>
 
         {/* Goals Section */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Goals</h3>
+        <div className="slide-in-up">
+          <h3 className="text-lg font-heading mb-4">Goals</h3>
           {goals.length > 0 ? (
             <div className="flex space-x-4 overflow-x-auto pb-2">
               {goals.slice(0, 3).map((goal) => {
                 const progress = (goal.currentAmount / goal.targetAmount) * 100;
                 return (
-                  <div key={goal.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 min-w-[160px] flex-shrink-0">
+                  <div key={goal.id} className="card min-w-[160px] flex-shrink-0 p-4">
                     <div className="flex items-center space-x-3 mb-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
                         {getGoalIcon(goal)}
                       </div>
-                      <span className="text-sm font-medium text-gray-700">
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                         {goal.title}
                       </span>
                     </div>
                     <div className="mb-3">
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
+                      <div className="flex justify-between text-sm mb-1" style={{ color: 'var(--text-tertiary)' }}>
                         <span>{showBalances ? formatCurrency(goal.currentAmount) : '••••'}</span>
                         <span>{showBalances ? formatCurrency(goal.targetAmount) : '••••'}</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--border-light)' }}>
                         <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(progress, 100)}%` }}
+                          className="h-2 rounded-full transition-all duration-300"
+                          style={{ 
+                            width: `${Math.min(progress, 100)}%`,
+                            backgroundColor: 'var(--primary)'
+                          }}
                         ></div>
                       </div>
                     </div>
@@ -274,19 +278,19 @@ export const Overview: React.FC = () => {
               })}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center">
+            <div className="card p-8 text-center">
               <div className="flex flex-col items-center space-y-4">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
                   <Target size={24} className="text-gray-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Goals Yet</h3>
-                  <p className="text-sm text-gray-500 mb-4">
+                  <h3 className="text-lg font-heading mb-2">No Goals Yet</h3>
+                  <p className="text-sm font-body mb-4">
                     Set your first financial goal to start saving
                   </p>
                   <button
                     onClick={() => navigate('/goals')}
-                    className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                    className="btn-primary"
                   >
                     Add Goal
                   </button>
@@ -297,22 +301,22 @@ export const Overview: React.FC = () => {
         </div>
 
         {/* Upcoming Bills Section */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Bills</h3>
+        <div className="slide-in-up">
+          <h3 className="text-lg font-heading mb-4">Upcoming Bills</h3>
           {upcomingBills.length > 0 ? (
             <div className="space-y-3">
               {upcomingBills.map((bill, index) => (
-                <div key={bill.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <div key={bill.id} className="card p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <div className={`w-1 h-12 rounded-full ${getBillStatusColor(bill.status)}`}></div>
                       <div>
-                        <h4 className="font-semibold text-gray-900">{bill.description}</h4>
-                        <p className="text-sm text-gray-500">{getBillStatusText(bill.dueIn)}</p>
+                        <h4 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{bill.description}</h4>
+                        <p className="text-sm font-body">{getBillStatusText(bill.dueIn)}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-gray-900">
+                      <p className="text-lg font-numbers">
                         {showBalances ? formatCurrency(bill.amount) : '••••'}
                       </p>
                     </div>
@@ -321,19 +325,19 @@ export const Overview: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center">
+            <div className="card p-8 text-center">
               <div className="flex flex-col items-center space-y-4">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
                   <Calendar size={24} className="text-gray-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Bills Yet</h3>
-                  <p className="text-sm text-gray-500 mb-4">
+                  <h3 className="text-lg font-heading mb-2">No Bills Yet</h3>
+                  <p className="text-sm font-body mb-4">
                     Add your first bill to start tracking payments
                   </p>
                   <button
                     onClick={() => navigate('/bills')}
-                    className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                    className="btn-primary"
                   >
                     Add Bill
                   </button>
@@ -344,24 +348,27 @@ export const Overview: React.FC = () => {
         </div>
 
         {/* Budgets & Liabilities Section */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 slide-in-up">
           {/* Budgets Card */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h4 className="font-semibold text-gray-900 mb-3">Budgets</h4>
+          <div className="card p-4">
+            <h4 className="font-heading mb-3">Budgets</h4>
             {budgets.length > 0 ? (
               <div className="space-y-3">
                 {budgets.slice(0, 2).map((budget) => {
                   const progress = ((budget.spent || 0) / (budget.amount || budget.limit || 1)) * 100;
                   return (
                     <div key={budget.id}>
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
+                      <div className="flex justify-between text-sm mb-1" style={{ color: 'var(--text-tertiary)' }}>
                         <span>{budget.category}</span>
                         <span>{progress.toFixed(0)}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--border-light)' }}>
                         <div 
-                          className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(progress, 100)}%` }}
+                          className="h-2 rounded-full transition-all duration-300"
+                          style={{ 
+                            width: `${Math.min(progress, 100)}%`,
+                            backgroundColor: 'var(--success)'
+                          }}
                         ></div>
                       </div>
                     </div>
@@ -370,20 +377,20 @@ export const Overview: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-4">
-                <p className="text-sm text-gray-500">No budgets</p>
+                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>No budgets</p>
               </div>
             )}
           </div>
 
           {/* Liabilities Card */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h4 className="font-semibold text-gray-900 mb-3">Liabilities</h4>
+          <div className="card p-4">
+            <h4 className="font-heading mb-3">Liabilities</h4>
             {liabilities.length > 0 ? (
               <div className="space-y-3">
                 {liabilities.slice(0, 2).map((liability) => (
                   <div key={liability.id} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">{liability.name}</span>
-                    <span className="text-sm font-semibold text-gray-900">
+                    <span className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>{liability.name}</span>
+                    <span className="text-sm font-numbers">
                       {showBalances ? formatCurrency(liability.remainingAmount || 0) : '••••'}
                     </span>
                   </div>
@@ -391,19 +398,19 @@ export const Overview: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-4">
-                <p className="text-sm text-gray-500">No liabilities</p>
+                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>No liabilities</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Analytics Snapshot */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+        <div className="card p-4 slide-in-up">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="font-semibold text-gray-900">Spending vs Income</h4>
-            <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-3 py-1">
+            <h4 className="font-heading">Spending vs Income</h4>
+            <div className="flex items-center space-x-2 rounded-lg px-3 py-1" style={{ backgroundColor: 'var(--background-secondary)' }}>
               <Calendar size={14} className="text-gray-600" />
-              <span className="text-sm text-gray-600">This Month</span>
+              <span className="text-sm font-body">This Month</span>
             </div>
           </div>
           
@@ -419,16 +426,22 @@ export const Overview: React.FC = () => {
                   <div className="w-full flex flex-col items-center space-y-1 mb-2">
                     {/* Income bar */}
                     <div 
-                      className="w-full bg-gray-300 rounded-t"
-                      style={{ height: `${incomeHeight}px` }}
+                      className="w-full rounded-t"
+                      style={{ 
+                        height: `${incomeHeight}px`,
+                        backgroundColor: 'var(--border-dark)'
+                      }}
                     ></div>
                     {/* Expenses bar */}
                     <div 
-                      className="w-full bg-green-600 rounded-b"
-                      style={{ height: `${expensesHeight}px` }}
+                      className="w-full rounded-b"
+                      style={{ 
+                        height: `${expensesHeight}px`,
+                        backgroundColor: 'var(--success)'
+                      }}
                     ></div>
                   </div>
-                  <span className="text-xs text-gray-500">{data.period}</span>
+                  <span className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>{data.period}</span>
                 </div>
               );
             })}
@@ -437,12 +450,12 @@ export const Overview: React.FC = () => {
           {/* Legend */}
           <div className="flex items-center justify-center space-x-4 mt-3">
             <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-gray-300 rounded"></div>
-              <span className="text-xs text-gray-600">Income</span>
+              <div className="w-3 h-3 rounded" style={{ backgroundColor: 'var(--border-dark)' }}></div>
+              <span className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>Income</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-green-600 rounded"></div>
-              <span className="text-xs text-gray-600">Spending</span>
+              <div className="w-3 h-3 rounded" style={{ backgroundColor: 'var(--success)' }}></div>
+              <span className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>Spending</span>
             </div>
           </div>
         </div>
