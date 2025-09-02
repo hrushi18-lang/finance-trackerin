@@ -229,13 +229,13 @@ export const AddTransaction: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen text-white pb-20">
-      <TopNavigation title="Add Transaction" />
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
+      <TopNavigation title="Add Transaction" showBack />
       
       <div className="px-4 py-4 sm:py-6 space-y-6">
         {/* Transaction Type Selector */}
-        <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-          <h3 className="text-lg font-heading font-semibold text-white mb-4">Transaction Type</h3>
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Type</h3>
           <div className="grid grid-cols-3 gap-3">
             {[
               { type: 'expense', icon: Minus, label: 'Expense', color: 'text-red-400' },
@@ -247,8 +247,8 @@ export const AddTransaction: React.FC = () => {
                 onClick={() => setTransactionType(type as any)}
                 className={`p-4 rounded-xl border transition-all ${
                   transactionType === type
-                    ? 'bg-forest-600/50 border-forest-500 text-white'
-                    : 'bg-forest-800/30 border-forest-600/30 text-forest-300 hover:bg-forest-700/30'
+                    ? 'bg-gray-900 border-gray-900 text-white'
+                    : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
                 }`}
               >
                 <Icon size={24} className={`mx-auto mb-2 ${color}`} />
@@ -259,8 +259,8 @@ export const AddTransaction: React.FC = () => {
         </div>
 
         {/* Main Transaction Form */}
-        <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-          <h3 className="text-lg font-heading font-semibold text-white mb-4">Transaction Details</h3>
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Details</h3>
           
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
             {/* Amount */}

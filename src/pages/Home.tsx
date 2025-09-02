@@ -41,14 +41,9 @@ export const Home: React.FC = () => {
 
   // Calculate net worth
   const netWorth = useMemo(() => {
-    if (accounts.length > 0) {
-      const totalAssets = accounts.reduce((sum, account) => sum + (account.balance || 0), 0);
-      const totalLiabilities = 0; // You can add liabilities calculation here
-      return totalAssets - totalLiabilities;
-    }
-    
-    // Sample net worth for demo
-    return 256789.54;
+    const totalAssets = accounts.reduce((sum, account) => sum + (account.balance || 0), 0);
+    const totalLiabilities = 0; // You can add liabilities calculation here
+    return totalAssets - totalLiabilities;
   }, [accounts]);
 
   // Calculate net worth change (mock data for now)
@@ -57,40 +52,10 @@ export const Home: React.FC = () => {
     return { amount: 6234.50, percentage: 2.45 };
   }, []);
 
-  // Add some sample transactions if none exist
+  // Get display transactions
   const displayTransactions = useMemo(() => {
-    if (transactions.length > 0) {
-      return filteredTransactions;
-    }
-    
-    // Sample transactions for demo
-    return [
-      {
-        id: 'sample-1',
-        description: 'Zara',
-        category: 'Shopping',
-        type: 'expense',
-        amount: 124.50,
-        date: new Date(),
-      },
-      {
-        id: 'sample-2',
-        description: 'Salary',
-        category: 'From Work',
-        type: 'income',
-        amount: 4500.00,
-        date: new Date(Date.now() - 86400000),
-      },
-      {
-        id: 'sample-3',
-        description: 'Stock Dividend',
-        category: 'Investment',
-        type: 'income',
-        amount: 85.40,
-        date: new Date(Date.now() - 172800000),
-      }
-    ];
-  }, [filteredTransactions, transactions.length]);
+    return filteredTransactions;
+  }, [filteredTransactions]);
 
   // Get recent transactions
   const recentTransactions = useMemo(() => {
@@ -120,25 +85,7 @@ export const Home: React.FC = () => {
 
   // Get main accounts (excluding Goals Vault)
   const mainAccounts = useMemo(() => {
-    if (accounts.length > 0) {
-      return accounts.filter(account => account.type !== 'goals_vault').slice(0, 2);
-    }
-    
-    // Sample accounts for demo
-    return [
-      {
-        id: 'sample-checking',
-        name: 'Checking Account',
-        type: 'checking',
-        balance: 12450.21,
-      },
-      {
-        id: 'sample-savings',
-        name: 'Savings Account',
-        type: 'savings',
-        balance: 88920.00,
-      }
-    ];
+    return accounts.filter(account => account.type !== 'goals_vault').slice(0, 2);
   }, [accounts]);
 
   // Get transaction icon and color
@@ -288,19 +235,41 @@ export const Home: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-2 gap-4">
-            {mainAccounts.map((account) => (
-              <div key={account.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div className="flex items-center space-x-3 mb-3">
-                  {getAccountIcon(account)}
-                  <span className="text-sm font-medium text-gray-700">
-                    {account.name}
-                  </span>
+            {mainAccounts.length > 0 ? (
+              mainAccounts.map((account) => (
+                <div key={account.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center space-x-3 mb-3">
+                    {getAccountIcon(account)}
+                    <span className="text-sm font-medium text-gray-700">
+                      {account.name}
+                    </span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900">
+                    {hideBalance ? '••••••' : formatCurrency(account.balance || 0)}
+                  </p>
                 </div>
-                <p className="text-xl font-bold text-gray-900">
-                  {hideBalance ? '••••••' : formatCurrency(account.balance || 0)}
-                </p>
+              ))
+            ) : (
+              <div className="col-span-2 bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center">
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                    <CreditCard size={24} className="text-gray-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Accounts Yet</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Add your first account to start tracking your finances
+                    </p>
+                    <button
+                      onClick={() => navigate('/accounts')}
+                      className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                    >
+                      Add Account
+                    </button>
+                  </div>
+                </div>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -308,37 +277,59 @@ export const Home: React.FC = () => {
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Recent Activity</h3>
           <div className="space-y-4">
-            {displayTransactions.map((transaction) => {
-              const tag = getTransactionTag(transaction);
-              return (
-                <div key={transaction.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      {getTransactionIcon(transaction)}
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {transaction.description || 'Transaction'}
+            {displayTransactions.length > 0 ? (
+              displayTransactions.map((transaction) => {
+                const tag = getTransactionTag(transaction);
+                return (
+                  <div key={transaction.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        {getTransactionIcon(transaction)}
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {transaction.description || 'Transaction'}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {format(new Date(transaction.date), 'MMM dd, yyyy')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-lg font-semibold ${
+                          transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {transaction.type === 'income' ? '+' : '-'}
+                          {hideBalance ? '••••' : formatCurrency(transaction.amount)}
                         </p>
-                        <p className="text-sm text-gray-500">
-                          {format(new Date(transaction.date), 'MMM dd, yyyy')}
-                        </p>
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${tag.color}`}>
+                          {tag.text}
+                        </span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`text-lg font-semibold ${
-                        transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {transaction.type === 'income' ? '+' : '-'}
-                        {hideBalance ? '••••' : formatCurrency(transaction.amount)}
-                      </p>
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${tag.color}`}>
-                        {tag.text}
-                      </span>
-                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center">
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                    <DollarSign size={24} className="text-gray-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Transactions Yet</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Start tracking your income and expenses
+                    </p>
+                    <button
+                      onClick={() => navigate('/add-transaction')}
+                      className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                    >
+                      Add Transaction
+                    </button>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            )}
           </div>
         </div>
       </div>

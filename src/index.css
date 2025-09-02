@@ -2,32 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Forest Green Theme Variables */
+/* Light Theme Variables */
 :root {
-  --forest-primary: #4A5D23;
-  --forest-secondary: #7f8f55;
-  --forest-light: #b4bf95;
-  --forest-dark: #2b3316;
-  --forest-accent: #9aa673;
+  --primary: #1f2937;
+  --secondary: #6b7280;
+  --accent: #f59e0b;
+  --background: #fef7ed;
+  --surface: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --border: #e5e7eb;
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
 }
 
 /* Global Background */
 body {
-  background: linear-gradient(135deg, #2b3316 0%, #4A5D23 50%, #3d4a1c 100%);
-  font-family: 'Playfair Display', serif;
+  background: linear-gradient(135deg, #fef7ed 0%, #fed7aa 50%, #fef3c7 100%);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text-primary);
 }
 
 /* Typography Classes */
 .font-heading {
-  font-family: 'Archivo Black', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
 }
 
 .font-numbers {
-  font-family: 'Archivo', monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-variant-numeric: tabular-nums;
+  font-weight: 500;
 }
 
 .font-body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.font-serif {
   font-family: 'Playfair Display', serif;
 }
 
