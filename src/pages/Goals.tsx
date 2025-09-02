@@ -3,7 +3,6 @@ import { Target, Calendar, Plus, ArrowUpDown, TrendingUp, Edit3, Trash2, AlertCi
 import { format, differenceInDays } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { calculatePercentage, sanitizeFinancialData } from '../utils/validation';
-import { TopNavigation } from '../components/layout/TopNavigation';
 import { Modal } from '../components/common/Modal';
 import { GoalForm } from '../components/forms/GoalForm';
 import { GoalTransactionForm } from '../components/forms/GoalTransactionForm';
@@ -253,14 +252,14 @@ export const Goals: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
+    <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
       {/* Immersive Header */}
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 pt-12 pb-8 px-6">
+      <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-heading text-gray-900">Financial Goals</h1>
+          <h1 className="text-2xl font-heading">Financial Goals</h1>
           <button
             onClick={() => setShowModal(true)}
-            className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors flex items-center space-x-2"
+            className="btn-primary flex items-center space-x-2 px-4 py-2"
           >
             <Plus size={16} />
             <span>Add Goal</span>
@@ -268,45 +267,48 @@ export const Goals: React.FC = () => {
         </div>
       </div>
       
-      <div className="px-6 space-y-8">
+      <div className="px-4 space-y-4">
         {/* Goal Statistics */}
-        <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card-neumorphic p-4 slide-in-up">
+          <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
-              <p className="text-forest-300 text-sm font-body">Total Goals</p>
-              <p className="text-2xl font-numbers font-bold text-white">{goalStats.totalGoals}</p>
+              <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Total Goals</p>
+              <p className="text-2xl font-numbers">{goalStats.totalGoals}</p>
             </div>
             <div className="text-center">
-              <p className="text-forest-300 text-sm font-body">Active</p>
-              <p className="text-2xl font-numbers font-bold text-blue-400">{goalStats.activeGoals}</p>
+              <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Active</p>
+              <p className="text-2xl font-numbers">{goalStats.activeGoals}</p>
             </div>
             <div className="text-center">
-              <p className="text-forest-300 text-sm font-body">Completed</p>
-              <p className="text-2xl font-numbers font-bold text-green-400">{goalStats.completedGoals}</p>
+              <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Completed</p>
+              <p className="text-2xl font-numbers">{goalStats.completedGoals}</p>
             </div>
             <div className="text-center">
-              <p className="text-forest-300 text-sm font-body">Progress</p>
-              <p className="text-2xl font-numbers font-bold text-white">{Math.round(goalStats.overallProgress)}%</p>
+              <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Progress</p>
+              <p className="text-2xl font-numbers">{Math.round(goalStats.overallProgress)}%</p>
             </div>
           </div>
           
           {/* Overall Progress Bar */}
           <div className="mt-4">
-            <div className="flex justify-between text-sm text-forest-300 mb-2">
+            <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--text-tertiary)' }}>
               <span>Overall Progress</span>
               <span>{formatCurrency(goalStats.totalCurrentAmount)} / {formatCurrency(goalStats.totalTargetAmount)}</span>
             </div>
-            <div className="w-full bg-forest-800/50 rounded-full h-2">
+            <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--border-light)' }}>
               <div 
-                className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${Math.min(goalStats.overallProgress, 100)}%` }}
+                className="h-2 rounded-full transition-all duration-300"
+                style={{ 
+                  width: `${Math.min(goalStats.overallProgress, 100)}%`,
+                  backgroundColor: 'var(--primary)'
+                }}
               />
             </div>
           </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex space-x-1 bg-forest-800/30 rounded-lg p-1">
+        <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
           {Object.entries({
             active: { label: 'Active', count: categorizedGoals.active.length },
             upcoming: { label: 'Upcoming', count: categorizedGoals.upcoming.length },
@@ -315,11 +317,14 @@ export const Goals: React.FC = () => {
             <button
               key={key}
               onClick={() => setActiveTab(key as any)}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 activeTab === key
-                  ? 'bg-forest-600 text-white'
-                  : 'text-forest-300 hover:text-white'
+                  ? 'text-white transform scale-105'
+                  : 'text-gray-600 hover:text-gray-900 hover:scale-105'
               }`}
+              style={{
+                backgroundColor: activeTab === key ? 'var(--primary)' : 'transparent'
+              }}
             >
               {label} ({count})
             </button>
@@ -327,87 +332,84 @@ export const Goals: React.FC = () => {
         </div>
 
         {/* Goals List */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {categorizedGoals[activeTab].map((goal) => {
             const progress = calculatePercentage(goal.currentAmount, goal.targetAmount);
             const status = getGoalStatus(goal);
             const daysUntilTarget = differenceInDays(new Date(goal.targetDate), new Date());
             
             return (
-              <div key={goal.id} className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-                <div className="flex items-start justify-between mb-4">
+              <div key={goal.id} className="card p-4">
+                <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <Target size={20} className="text-forest-400" />
-                      <h3 className="text-lg font-heading font-semibold text-white">{goal.title}</h3>
+                      <Target size={16} className="text-blue-500" />
+                      <h3 className="text-lg font-heading font-semibold" style={{ color: 'var(--text-primary)' }}>{goal.title}</h3>
                       {getGoalStatusIcon(status)}
                     </div>
-                    <p className="text-forest-300 text-sm font-body mb-2">{goal.description}</p>
+                    <p className="text-sm font-body mb-2">{goal.description}</p>
                     <div className="flex items-center gap-4 text-sm">
-                      <span className="text-forest-400 font-body">Category: {goal.category}</span>
-                      <span className="text-forest-400 font-body">
+                      <span className="font-body" style={{ color: 'var(--text-tertiary)' }}>Category: {goal.category}</span>
+                      <span className="font-body" style={{ color: 'var(--text-tertiary)' }}>
                         Due: {format(new Date(goal.targetDate), 'MMM dd, yyyy')}
                       </span>
                       {daysUntilTarget > 0 && (
-                        <span className="text-forest-400 font-body">
+                        <span className="font-body" style={{ color: 'var(--text-tertiary)' }}>
                           {daysUntilTarget} days left
                         </span>
                       )}
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => {
                         setSelectedGoalId(goal.id);
                         setShowTransactionModal(true);
                       }}
-                      className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                       title="Add/Withdraw Money"
                     >
-                      <ArrowUpDown size={16} className="text-forest-400" />
+                      <ArrowUpDown size={14} className="text-gray-600" />
                     </button>
                     <button
                       onClick={() => {
                         setEditingGoal(goal);
                         setShowEditModal(true);
                       }}
-                      className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                       title="Edit Goal"
                     >
-                      <Edit3 size={16} className="text-forest-400" />
+                      <Edit3 size={14} className="text-gray-600" />
                     </button>
                     <button
                       onClick={() => handleDeleteGoal(goal.id)}
-                      className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                       title="Delete Goal"
                     >
-                      <Trash2 size={16} className="text-forest-400" />
+                      <Trash2 size={14} className="text-gray-600" />
                     </button>
                   </div>
                 </div>
 
                 {/* Progress Section */}
-                <div className="mb-4">
-                  <div className="flex justify-between text-sm text-forest-300 mb-2">
+                <div className="mb-3">
+                  <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--text-tertiary)' }}>
                     <span>Progress</span>
                     <span>{formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}</span>
                   </div>
-                  <div className="w-full bg-forest-800/50 rounded-full h-3">
+                  <div className="w-full rounded-full h-3" style={{ backgroundColor: 'var(--border-light)' }}>
                     <div 
-                      className={`h-3 rounded-full transition-all duration-300 ${
-                        progress >= 100 
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-                          : progress >= 75
-                          ? 'bg-gradient-to-r from-blue-500 to-cyan-500'
-                          : progress >= 50
-                          ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
-                          : 'bg-gradient-to-r from-red-500 to-pink-500'
-                      }`}
-                      style={{ width: `${Math.min(progress, 100)}%` }}
+                      className="h-3 rounded-full transition-all duration-300"
+                      style={{ 
+                        width: `${Math.min(progress, 100)}%`,
+                        backgroundColor: progress >= 100 ? 'var(--success)' :
+                                       progress >= 75 ? 'var(--primary)' :
+                                       progress >= 50 ? 'var(--warning)' : 'var(--error)'
+                      }}
                     />
                   </div>
-                  <div className="flex justify-between text-xs text-forest-400 mt-1">
+                  <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
                     <span>{Math.round(progress)}% Complete</span>
                     <span>{formatCurrency(goal.targetAmount - goal.currentAmount)} remaining</span>
                   </div>
@@ -415,15 +417,15 @@ export const Goals: React.FC = () => {
 
                 {/* Monthly Savings Target */}
                 {daysUntilTarget > 0 && (
-                  <div className="bg-forest-800/20 rounded-lg p-3">
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--background-secondary)' }}>
                     <div className="flex items-center gap-2 mb-2">
-                      <PiggyBank size={16} className="text-forest-400" />
-                      <span className="text-sm font-medium text-forest-200">Monthly Savings Target</span>
+                      <PiggyBank size={16} className="text-blue-500" />
+                      <span className="text-sm font-medium">Monthly Savings Target</span>
                     </div>
-                    <p className="text-lg font-numbers font-bold text-white">
+                    <p className="text-lg font-numbers font-bold">
                       {formatCurrency((goal.targetAmount - goal.currentAmount) / Math.max(1, Math.ceil(daysUntilTarget / 30)))}
                     </p>
-                    <p className="text-xs text-forest-400">per month to reach your goal</p>
+                    <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>per month to reach your goal</p>
                   </div>
                 )}
               </div>

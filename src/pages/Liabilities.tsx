@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { CreditCard, Calendar, Percent, TrendingDown, Plus, Edit3, Trash2, BarChart3, Calculator, Info, AlertTriangle, ShoppingCart, CheckCircle, Building, Car, Home, GraduationCap, Wallet, Target, Clock, DollarSign } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
-import { TopNavigation } from '../components/layout/TopNavigation';
 import { Modal } from '../components/common/Modal';
 import { EnhancedLiabilityForm } from '../components/forms/EnhancedLiabilityForm';
 import { PaymentForm } from '../components/forms/PaymentForm';
@@ -168,14 +167,14 @@ export const Liabilities: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
+    <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
       {/* Immersive Header */}
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 pt-12 pb-8 px-6">
+      <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-heading text-gray-900">Liabilities</h1>
+          <h1 className="text-2xl font-heading">Liabilities</h1>
           <button
             onClick={() => setShowModal(true)}
-            className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors flex items-center space-x-2"
+            className="btn-primary flex items-center space-x-2 px-4 py-2"
           >
             <Plus size={16} />
             <span>Add Liability</span>
@@ -183,38 +182,38 @@ export const Liabilities: React.FC = () => {
         </div>
       </div>
       
-      <div className="px-6 space-y-8">
+      <div className="px-4 space-y-4">
         {/* Liability Summary */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <div className="card p-4 slide-in-up">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Debt Overview</h2>
+            <h2 className="text-lg font-heading">Debt Overview</h2>
           </div>
           
           {liabilities.length > 0 ? (
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{liabilityStats.activeLiabilities}</p>
-                <p className="text-sm text-gray-600">Active Debts</p>
+                <p className="text-2xl font-numbers">{liabilityStats.activeLiabilities}</p>
+                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Active Debts</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-red-600">
+                <p className="text-2xl font-numbers" style={{ color: 'var(--error)' }}>
                   {formatCurrency(liabilityStats.totalDebt)}
                 </p>
-                <p className="text-sm text-gray-600">Total Debt</p>
+                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Total Debt</p>
               </div>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CreditCard size={24} className="text-gray-400" />
+            <div className="text-center py-6">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: 'var(--background-secondary)' }}>
+                <CreditCard size={20} className="text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Liabilities Yet</h3>
-              <p className="text-sm text-gray-500 mb-4">
+              <h3 className="text-lg font-heading mb-2">No Liabilities Yet</h3>
+              <p className="text-sm font-body mb-4">
                 Add your first liability to start tracking your debt
               </p>
               <button
                 onClick={() => setShowModal(true)}
-                className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                className="btn-primary"
               >
                 Add Liability
               </button>
@@ -224,7 +223,7 @@ export const Liabilities: React.FC = () => {
 
         {/* Tab Navigation */}
         {liabilities.length > 0 && (
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl">
+          <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
             {[
               { key: 'overview', label: 'Overview', icon: BarChart3 },
               { key: 'analytics', label: 'Analytics', icon: Calculator },
@@ -233,13 +232,16 @@ export const Liabilities: React.FC = () => {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
+                className={`flex-1 py-2 px-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-1 ${
                   activeTab === tab.key
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'text-white transform scale-105'
+                    : 'text-gray-600 hover:text-gray-900 hover:scale-105'
                 }`}
+                style={{
+                  backgroundColor: activeTab === tab.key ? 'var(--primary)' : 'transparent'
+                }}
               >
-                <tab.icon size={16} />
+                <tab.icon size={14} />
                 <span>{tab.label}</span>
               </button>
             ))}
@@ -248,34 +250,35 @@ export const Liabilities: React.FC = () => {
 
         {/* Liabilities List */}
         {liabilities.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Your Liabilities</h3>
-            <div className="space-y-4">
+          <div className="slide-in-up">
+            <h3 className="text-lg font-heading mb-4">Your Liabilities</h3>
+            <div className="space-y-3">
               {liabilities.map((liability) => {
                 const status = getLiabilityStatus(liability);
                 const progress = ((liability.totalAmount - liability.remainingAmount) / liability.totalAmount) * 100;
                 
                 return (
-                  <div key={liability.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between mb-4">
+                  <div key={liability.id} className="card p-4">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
                           {getLiabilityIcon(liability.liabilityType)}
                         </div>
                         <div>
-                          <h4 className="font-semibold text-gray-900">{liability.name}</h4>
-                          <p className="text-sm text-gray-500 capitalize">
+                          <h4 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{liability.name}</h4>
+                          <p className="text-sm font-body capitalize">
                             {liability.liabilityType.replace('_', ' ')}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1">
                         <button
                           onClick={() => {
                             setSelectedLiability(liability.id);
                             setShowPaymentModal(true);
                           }}
-                          className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium hover:bg-green-200 transition-colors"
+                          className="px-3 py-1 rounded-full text-xs font-medium transition-colors"
+                          style={{ backgroundColor: 'var(--success)', color: 'white' }}
                         >
                           Pay
                         </button>
@@ -284,43 +287,46 @@ export const Liabilities: React.FC = () => {
                             setEditingLiability(liability);
                             setShowEditModal(true);
                           }}
-                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
                         >
-                          <Edit3 size={16} />
+                          <Edit3 size={14} />
                         </button>
                         <button
                           onClick={() => handleDeleteLiability(liability.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                          className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-full hover:bg-gray-100"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-2 gap-4 mb-3">
                       <div>
-                        <p className="text-sm text-gray-600">Remaining</p>
-                        <p className="text-lg font-semibold text-gray-900">
+                        <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Remaining</p>
+                        <p className="text-lg font-numbers">
                           {formatCurrency(liability.remainingAmount || 0)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">Interest Rate</p>
-                        <p className="text-lg font-semibold text-gray-900">
+                        <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Interest Rate</p>
+                        <p className="text-lg font-numbers">
                           {(liability.interestRate || 0).toFixed(2)}%
                         </p>
                       </div>
                     </div>
                     
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm text-gray-600 mb-2">
+                    <div className="mb-3">
+                      <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--text-tertiary)' }}>
                         <span>Paid: {formatCurrency(liability.totalAmount - (liability.remainingAmount || 0))}</span>
                         <span>Total: {formatCurrency(liability.totalAmount)}</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--border-light)' }}>
                         <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(progress, 100)}%` }}
+                          className="h-2 rounded-full transition-all duration-300"
+                          style={{ 
+                            width: `${Math.min(progress, 100)}%`,
+                            backgroundColor: 'var(--primary)'
+                          }}
                         ></div>
                       </div>
                     </div>
@@ -329,7 +335,7 @@ export const Liabilities: React.FC = () => {
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${status.color}`}>
                         {status.status}
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>
                         {progress.toFixed(0)}% paid
                       </span>
                     </div>
@@ -342,10 +348,10 @@ export const Liabilities: React.FC = () => {
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+          <div className="card p-4" style={{ backgroundColor: 'var(--error)', color: 'white' }}>
             <div className="flex items-center space-x-2">
-              <AlertTriangle size={20} className="text-red-600" />
-              <p className="text-red-800 text-sm">{error}</p>
+              <AlertTriangle size={16} />
+              <p className="text-sm font-body">{error}</p>
             </div>
           </div>
         )}
