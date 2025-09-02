@@ -211,18 +211,18 @@ export const CATEGORY_COLORS = {
   'Other Debt': '#EF4444',
   
   // Budget colors (mixed)
-  'Savings': '#B45309',
+  'Savings Budget': '#B45309',
   'Other Budget': '#78350F',
   
   // Account colors (teals)
   'Primary Banking': '#14B8A6',
-  'Savings': '#0D9488',
-  'Investment': '#0F766E',
+  'Savings Account': '#0D9488',
+  'Investment Account': '#0F766E',
   'Credit': '#115E59',
   'Digital Wallet': '#134E4A',
   'Cash': '#042F2E',
   'Goals Vault': '#14B8A6',
-  'Business': '#0D9488',
+  'Business Account': '#0D9488',
   'Joint': '#0F766E',
   'Other Account': '#115E59'
 };
@@ -340,18 +340,18 @@ export const getCategoryIcon = (category: string): string => {
     'Other Debt': 'CreditCard',
     
     // Budgets
-    'Savings': 'PiggyBank',
+    'Savings Budget': 'PiggyBank',
     'Other Budget': 'PieChart',
     
     // Accounts
     'Primary Banking': 'Building',
-    'Savings': 'PiggyBank',
-    'Investment': 'TrendingUp',
+    'Savings Account': 'PiggyBank',
+    'Investment Account': 'TrendingUp',
     'Credit': 'CreditCard',
     'Digital Wallet': 'Smartphone',
     'Cash': 'Banknote',
     'Goals Vault': 'Target',
-    'Business': 'Building',
+    'Business Account': 'Building',
     'Joint': 'Users',
     'Other Account': 'Wallet'
   };

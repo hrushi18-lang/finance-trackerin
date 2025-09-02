@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { FileText, PiggyBank, AlertTriangle, Plus, Minus, ToggleLeft, ToggleRight } from 'lucide-react';
+import { FileText, PiggyBank, AlertTriangle, Plus, Minus, ToggleLeft, ToggleRight, CreditCard } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
-import { Goal } from '../../types';
+import { Goal, FinancialAccount } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 
@@ -12,6 +12,7 @@ interface GoalTransactionFormData {
   description: string;
   source: 'manual' | 'emergency_fund';
   deductFromBalance: boolean;
+  targetAccountId?: string;
 }
 
 interface GoalTransactionFormProps {
@@ -19,13 +20,15 @@ interface GoalTransactionFormProps {
   onSubmit: (data: GoalTransactionFormData & { type: 'add' | 'withdraw' }) => Promise<void>;
   onCancel: () => void;
   emergencyFundBalance: number;
+  accounts: FinancialAccount[];
 }
 
 export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({ 
   goal, 
   onSubmit, 
   onCancel,
-  emergencyFundBalance 
+  emergencyFundBalance,
+  accounts 
 }) => {
   const { currency } = useInternationalization();
   const [transactionType, setTransactionType] = useState<'add' | 'withdraw'>('add');
@@ -289,6 +292,39 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
             )}
           </div>
         </div>
+
+        {/* Account Selection - Only show when deductFromBalance is true */}
+        {deductFromBalance && (
+          <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+            <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center">
+              <CreditCard size={16} className="mr-2" />
+              Select Account
+            </label>
+            <select
+              {...register('targetAccountId', { required: deductFromBalance ? 'Please select an account' : false })}
+              className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+            >
+              <option value="">Choose your account...</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name} ({account.type.replace('_', ' ')}) - {account.balance.toLocaleString()}
+                </option>
+              ))}
+            </select>
+            {errors.targetAccountId && (
+              <p className="text-red-400 text-sm mt-2 flex items-center">
+                <AlertTriangle size={14} className="mr-1" />
+                {errors.targetAccountId.message}
+              </p>
+            )}
+            {accounts.length === 0 && (
+              <p className="text-yellow-400 text-sm mt-2 flex items-center">
+                <AlertTriangle size={14} className="mr-1" />
+                No accounts found. Please add an account first.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Quick Amount Buttons */}
         <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">

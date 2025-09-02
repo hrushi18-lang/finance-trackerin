@@ -254,7 +254,7 @@ export const Goals: React.FC = () => {
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <TopNavigation title="Financial Goals" />
+      <TopNavigation title="Financial Goals" showBack />
       
       <div className="px-4 py-4 sm:py-6 space-y-6">
         {/* Goal Statistics */}
@@ -508,6 +508,7 @@ export const Goals: React.FC = () => {
             onCancel={() => setShowTransactionModal(false)}
             goal={goals.find(g => g.id === selectedGoalId)!}
             emergencyFundBalance={0}
+            accounts={accounts}
           />
         )}
       </Modal>
