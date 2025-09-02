@@ -2,36 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Light Theme Variables */
+/* Olive Green Theme Variables */
 :root {
-  --primary: #1f2937;
+  --primary: #3e5725;
   --secondary: #6b7280;
-  --accent: #f59e0b;
-  --background: #fef7ed;
+  --accent: #3e5725;
+  --background: #fefcf8;
   --surface: #ffffff;
-  --text-primary: #111827;
+  --text-primary: #3e5725;
   --text-secondary: #6b7280;
   --border: #e5e7eb;
-  --success: #10b981;
+  --success: #3e5725;
   --error: #ef4444;
   --warning: #f59e0b;
 }
 
 /* Global Background */
 body {
-  background: linear-gradient(135deg, #fef7ed 0%, #fed7aa 50%, #fef3c7 100%);
+  background: linear-gradient(135deg, #fefcf8 0%, #f5f5f0 50%, #f9f9f4 100%);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--text-primary);
 }
 
 /* Typography Classes */
 .font-heading {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-weight: 600;
+  font-family: 'Archivo Black', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 900;
 }
 
 .font-numbers {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
 }
