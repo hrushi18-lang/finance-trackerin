@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { PieChart, Calculator, TrendingUp, AlertTriangle, Plus, Edit3, Trash2, AlertCircle, Target } from 'lucide-react';
-import { TopNavigation } from '../components/layout/TopNavigation';
 import { Modal } from '../components/common/Modal';
 import { BudgetForm } from '../components/forms/BudgetForm';
 import { Button } from '../components/common/Button';
@@ -96,14 +95,14 @@ export const Budgets: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
+    <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
       {/* Immersive Header */}
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 pt-12 pb-8 px-6">
+      <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-heading text-gray-900">Budgets</h1>
+          <h1 className="text-2xl font-heading">Budgets</h1>
           <button
             onClick={() => setShowModal(true)}
-            className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors flex items-center space-x-2"
+            className="btn-primary flex items-center space-x-2 px-4 py-2"
           >
             <Plus size={16} />
             <span>Add Budget</span>
@@ -111,41 +110,41 @@ export const Budgets: React.FC = () => {
         </div>
       </div>
       
-      <div className="px-6 space-y-8">
+      <div className="px-4 space-y-4">
         {/* Budget Summary */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <div className="card p-4 slide-in-up">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Budget Overview</h2>
+            <h2 className="text-lg font-heading">Budget Overview</h2>
           </div>
           
           {budgets.length > 0 ? (
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{budgets.length}</p>
-                <p className="text-sm text-gray-600">Active Budgets</p>
+                <p className="text-2xl font-numbers">{budgets.length}</p>
+                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Active Budgets</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-2xl font-numbers">
                   {budgets.filter(b => {
                     const progress = getBudgetProgress(b);
                     return progress.percentage >= 80;
                   }).length}
                 </p>
-                <p className="text-sm text-gray-600">Near Limit</p>
+                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Near Limit</p>
               </div>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <PieChart size={24} className="text-gray-400" />
+            <div className="text-center py-6">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: 'var(--background-secondary)' }}>
+                <PieChart size={20} className="text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Budgets Yet</h3>
-              <p className="text-sm text-gray-500 mb-4">
+              <h3 className="text-lg font-heading mb-2">No Budgets Yet</h3>
+              <p className="text-sm font-body mb-4">
                 Create your first budget to start tracking your spending
               </p>
               <button
                 onClick={() => setShowModal(true)}
-                className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                className="btn-primary"
               >
                 Create Budget
               </button>
@@ -155,57 +154,58 @@ export const Budgets: React.FC = () => {
 
         {/* Budgets List */}
         {budgets.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Your Budgets</h3>
-            <div className="space-y-4">
+          <div className="slide-in-up">
+            <h3 className="text-lg font-heading mb-4">Your Budgets</h3>
+            <div className="space-y-3">
               {budgets.map((budget) => {
                 const progress = getBudgetProgress(budget);
                 const statusColor = getBudgetStatusColor(progress.percentage);
                 const statusText = getBudgetStatusText(progress.percentage);
                 
                 return (
-                  <div key={budget.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between mb-4">
+                  <div key={budget.id} className="card p-4">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          <Target size={20} className="text-blue-600" />
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
+                          <Target size={16} className="text-blue-600" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-gray-900">{budget.name}</h4>
-                          <p className="text-sm text-gray-500">{budget.category}</p>
+                          <h4 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{budget.name}</h4>
+                          <p className="text-sm font-body">{budget.category}</p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1">
                         <button
                           onClick={() => {
                             setEditingBudget(budget.id);
                             setShowModal(true);
                           }}
-                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
                         >
-                          <Edit3 size={16} />
+                          <Edit3 size={14} />
                         </button>
                         <button
                           onClick={() => handleDeleteBudget(budget.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                          className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-full hover:bg-gray-100"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
                     
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm text-gray-600 mb-2">
+                    <div className="mb-3">
+                      <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--text-tertiary)' }}>
                         <span>Spent: {formatCurrency(progress.spent)}</span>
                         <span>Limit: {formatCurrency(progress.limit)}</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--border-light)' }}>
                         <div 
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            progress.percentage >= 100 ? 'bg-red-500' :
-                            progress.percentage >= 80 ? 'bg-yellow-500' : 'bg-green-500'
-                          }`}
-                          style={{ width: `${progress.percentage}%` }}
+                          className="h-2 rounded-full transition-all duration-300"
+                          style={{ 
+                            width: `${progress.percentage}%`,
+                            backgroundColor: progress.percentage >= 100 ? 'var(--error)' :
+                                           progress.percentage >= 80 ? 'var(--warning)' : 'var(--success)'
+                          }}
                         ></div>
                       </div>
                     </div>
@@ -214,7 +214,7 @@ export const Budgets: React.FC = () => {
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
                         {statusText}
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>
                         {progress.percentage.toFixed(0)}% used
                       </span>
                     </div>
@@ -227,10 +227,10 @@ export const Budgets: React.FC = () => {
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+          <div className="card p-4" style={{ backgroundColor: 'var(--error)', color: 'white' }}>
             <div className="flex items-center space-x-2">
-              <AlertCircle size={20} className="text-red-600" />
-              <p className="text-red-800 text-sm">{error}</p>
+              <AlertCircle size={16} />
+              <p className="text-sm font-body">{error}</p>
             </div>
           </div>
         )}
@@ -262,14 +262,14 @@ export const Budgets: React.FC = () => {
         onClose={() => setShowDeleteConfirm(false)}
         title="Delete Budget"
       >
-        <div className="p-6">
+        <div className="p-4">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-              <AlertTriangle size={24} className="text-red-600" />
+            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--error)' }}>
+              <AlertTriangle size={20} className="text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Delete Budget</h3>
-              <p className="text-sm text-gray-500">
+              <h3 className="text-lg font-heading">Delete Budget</h3>
+              <p className="text-sm font-body">
                 This action cannot be undone. Are you sure you want to delete this budget?
               </p>
             </div>
@@ -278,14 +278,15 @@ export const Budgets: React.FC = () => {
           <div className="flex space-x-3">
             <button
               onClick={() => setShowDeleteConfirm(false)}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="btn-secondary flex-1"
             >
               Cancel
             </button>
             <button
               onClick={confirmDeleteBudget}
               disabled={isSubmitting}
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+              style={{ backgroundColor: 'var(--error)', color: 'white' }}
             >
               {isSubmitting ? 'Deleting...' : 'Delete'}
             </button>

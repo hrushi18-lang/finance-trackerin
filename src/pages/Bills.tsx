@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar, Bell, Plus, Edit3, Trash2, AlertTriangle, CheckCircle, Clock, CreditCard, Zap, Play, Pause, Target, DollarSign, AlertCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { format, differenceInDays, addDays, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
-import { TopNavigation } from '../components/layout/TopNavigation';
 import { Modal } from '../components/common/Modal';
 import { EnhancedBillForm } from '../components/forms/EnhancedBillForm';
 import { BillPaymentForm } from '../components/forms/BillPaymentForm';
@@ -147,14 +146,14 @@ export const Bills: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
+    <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
       {/* Immersive Header */}
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 pt-12 pb-8 px-6">
+      <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-heading text-gray-900">Bills & Payments</h1>
+          <h1 className="text-2xl font-heading">Bills & Payments</h1>
           <button
             onClick={() => setShowModal(true)}
-            className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors flex items-center space-x-2"
+            className="btn-primary flex items-center space-x-2 px-4 py-2"
           >
             <Plus size={16} />
             <span>Add Bill</span>
@@ -162,36 +161,36 @@ export const Bills: React.FC = () => {
         </div>
       </div>
       
-      <div className="px-6 space-y-8">
+      <div className="px-4 space-y-4">
         {/* Bill Summary */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <div className="card p-4 slide-in-up">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Bill Overview</h2>
+            <h2 className="text-lg font-heading">Bill Overview</h2>
           </div>
           
           {bills.length > 0 ? (
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{billStats.activeBills}</p>
-                <p className="text-sm text-gray-600">Active Bills</p>
+                <p className="text-2xl font-numbers">{billStats.activeBills}</p>
+                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Active Bills</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-red-600">{billStats.overdueBills}</p>
-                <p className="text-sm text-gray-600">Overdue</p>
+                <p className="text-2xl font-numbers" style={{ color: 'var(--error)' }}>{billStats.overdueBills}</p>
+                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Overdue</p>
               </div>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Bell size={24} className="text-gray-400" />
+            <div className="text-center py-6">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: 'var(--background-secondary)' }}>
+                <Bell size={20} className="text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Bills Yet</h3>
-              <p className="text-sm text-gray-500 mb-4">
+              <h3 className="text-lg font-heading mb-2">No Bills Yet</h3>
+              <p className="text-sm font-body mb-4">
                 Add your first bill to start tracking payments
               </p>
               <button
                 onClick={() => setShowModal(true)}
-                className="px-6 py-3 bg-gray-900 text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                className="btn-primary"
               >
                 Add Bill
               </button>
@@ -201,7 +200,7 @@ export const Bills: React.FC = () => {
 
         {/* Tab Navigation */}
         {bills.length > 0 && (
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl">
+          <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
             {[
               { key: 'upcoming', label: 'Upcoming', count: categorizedBills.upcoming.length },
               { key: 'overdue', label: 'Overdue', count: categorizedBills.overdue.length },
@@ -211,11 +210,14 @@ export const Bills: React.FC = () => {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   activeTab === tab.key
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'text-white transform scale-105'
+                    : 'text-gray-600 hover:text-gray-900 hover:scale-105'
                 }`}
+                style={{
+                  backgroundColor: activeTab === tab.key ? 'var(--primary)' : 'transparent'
+                }}
               >
                 {tab.label} ({tab.count})
               </button>
@@ -225,32 +227,33 @@ export const Bills: React.FC = () => {
 
         {/* Bills List */}
         {bills.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Your Bills</h3>
-            <div className="space-y-4">
+          <div className="slide-in-up">
+            <h3 className="text-lg font-heading mb-4">Your Bills</h3>
+            <div className="space-y-3">
               {categorizedBills[activeTab].map((bill) => {
                 const status = getBillStatus(bill);
                 const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
                 
                 return (
-                  <div key={bill.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between mb-4">
+                  <div key={bill.id} className="card p-4">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
                           {getFrequencyIcon(bill.frequency)}
                         </div>
                         <div>
-                          <h4 className="font-semibold text-gray-900">{bill.title}</h4>
-                          <p className="text-sm text-gray-500">{bill.category}</p>
+                          <h4 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{bill.title}</h4>
+                          <p className="text-sm font-body">{bill.category}</p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1">
                         <button
                           onClick={() => {
                             setSelectedBill(bill);
                             setShowPaymentModal(true);
                           }}
-                          className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium hover:bg-green-200 transition-colors"
+                          className="px-3 py-1 rounded-full text-xs font-medium transition-colors"
+                          style={{ backgroundColor: 'var(--success)', color: 'white' }}
                         >
                           Pay
                         </button>
@@ -259,29 +262,29 @@ export const Bills: React.FC = () => {
                             setEditingBill(bill);
                             setShowModal(true);
                           }}
-                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
                         >
-                          <Edit3 size={16} />
+                          <Edit3 size={14} />
                         </button>
                         <button
                           onClick={() => handleDeleteBill(bill.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                          className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-full hover:bg-gray-100"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-2 gap-4 mb-3">
                       <div>
-                        <p className="text-sm text-gray-600">Amount</p>
-                        <p className="text-lg font-semibold text-gray-900">
+                        <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Amount</p>
+                        <p className="text-lg font-numbers">
                           {formatCurrency(bill.amount)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">Due Date</p>
-                        <p className="text-lg font-semibold text-gray-900">
+                        <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Due Date</p>
+                        <p className="text-lg font-numbers">
                           {format(new Date(bill.nextDueDate), 'MMM dd, yyyy')}
                         </p>
                       </div>
@@ -294,7 +297,7 @@ export const Bills: React.FC = () => {
                          daysUntilDue === 1 ? 'Due tomorrow' :
                          `Due in ${daysUntilDue} days`}
                       </span>
-                      <span className="text-sm text-gray-500 capitalize">
+                      <span className="text-sm font-body capitalize" style={{ color: 'var(--text-tertiary)' }}>
                         {bill.frequency}
                       </span>
                     </div>
@@ -307,10 +310,10 @@ export const Bills: React.FC = () => {
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+          <div className="card p-4" style={{ backgroundColor: 'var(--error)', color: 'white' }}>
             <div className="flex items-center space-x-2">
-              <AlertCircle size={20} className="text-red-600" />
-              <p className="text-red-800 text-sm">{error}</p>
+              <AlertCircle size={16} />
+              <p className="text-sm font-body">{error}</p>
             </div>
           </div>
         )}
