@@ -111,6 +111,7 @@ function App() {
                                 element={
                                   <ProtectedRoute requiresAuth={true}>
                                     <Home />
+                                    <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
                               />
@@ -120,6 +121,7 @@ function App() {
                                 element={
                                   <ProtectedRoute>
                                     <AddTransaction />
+                                    <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
                               />
