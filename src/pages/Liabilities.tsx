@@ -339,6 +339,49 @@ export const Liabilities: React.FC = () => {
                         {progress.toFixed(0)}% paid
                       </span>
                     </div>
+
+                    {/* Liability Completion Actions */}
+                    {progress >= 100 && (
+                      <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--success)', color: 'white' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle size={16} />
+                          <span className="text-sm font-medium">Liability Paid Off! 🎉</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              // Archive liability
+                              updateLiability(liability.id, { ...liability, status: 'archived' });
+                            }}
+                            className="px-3 py-1 text-xs rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                          >
+                            Archive
+                          </button>
+                          <button
+                            onClick={() => {
+                              // Delete liability
+                              handleDeleteLiability(liability.id);
+                            }}
+                            className="px-3 py-1 text-xs rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                          >
+                            Delete
+                          </button>
+                          <button
+                            onClick={() => {
+                              // Restart liability (reset to original amount)
+                              updateLiability(liability.id, { 
+                                ...liability, 
+                                remainingAmount: liability.totalAmount,
+                                status: 'active'
+                              });
+                            }}
+                            className="px-3 py-1 text-xs rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                          >
+                            Restart
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

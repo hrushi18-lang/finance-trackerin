@@ -10,6 +10,7 @@ import { Button } from '../components/common/Button';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { Goal } from '../types';
+import { ProgressBar } from '../components/analytics/ProgressBar';
 
 export const Goals: React.FC = () => {
   const queryClient = useQueryClient();
@@ -394,26 +395,56 @@ export const Goals: React.FC = () => {
 
                 {/* Progress Section */}
                 <div className="mb-3">
-                  <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--text-tertiary)' }}>
-                    <span>Progress</span>
-                    <span>{formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}</span>
-                  </div>
-                  <div className="w-full rounded-full h-3" style={{ backgroundColor: 'var(--border-light)' }}>
-                    <div 
-                      className="h-3 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${Math.min(progress, 100)}%`,
-                        backgroundColor: progress >= 100 ? 'var(--success)' :
-                                       progress >= 75 ? 'var(--primary)' :
-                                       progress >= 50 ? 'var(--warning)' : 'var(--error)'
-                      }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                    <span>{Math.round(progress)}% Complete</span>
-                    <span>{formatCurrency(goal.targetAmount - goal.currentAmount)} remaining</span>
-                  </div>
+                  <ProgressBar
+                    current={goal.currentAmount}
+                    target={goal.targetAmount}
+                    size="md"
+                    showPercentage={true}
+                    showValues={true}
+                  />
                 </div>
+
+                {/* Goal Completion Actions */}
+                {progress >= 100 && (
+                  <div className="mb-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--success)', color: 'white' }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle size={16} />
+                      <span className="text-sm font-medium">Goal Completed! 🎉</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          // Withdraw all money to default account
+                          const defaultAccount = accounts.find(acc => acc.type === 'savings') || accounts[0];
+                          if (defaultAccount) {
+                            withdrawGoalToAccount(goal.id, goal.currentAmount, defaultAccount.id, 'Goal completed - withdrawing all funds');
+                          }
+                        }}
+                        className="px-3 py-1 text-xs rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                      >
+                        Withdraw All
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Archive goal
+                          updateGoal(goal.id, { ...goal, isArchived: true });
+                        }}
+                        className="px-3 py-1 text-xs rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                      >
+                        Archive
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Restart goal
+                          updateGoal(goal.id, { ...goal, currentAmount: 0, targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) });
+                        }}
+                        className="px-3 py-1 text-xs rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                      >
+                        Restart
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Monthly Savings Target */}
                 {daysUntilTarget > 0 && (

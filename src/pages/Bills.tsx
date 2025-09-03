@@ -301,6 +301,45 @@ export const Bills: React.FC = () => {
                         {bill.frequency}
                       </span>
                     </div>
+
+                    {/* Bill Completion Actions */}
+                    {bill.lastPaidDate && (
+                      <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--success)', color: 'white' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle size={16} />
+                          <span className="text-sm font-medium">Bill Paid! ✅</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              // Archive bill
+                              updateBill(bill.id, { ...bill, isArchived: true });
+                            }}
+                            className="px-3 py-1 text-xs rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                          >
+                            Archive
+                          </button>
+                          <button
+                            onClick={() => {
+                              // Delete bill
+                              handleDeleteBill(bill.id);
+                            }}
+                            className="px-3 py-1 text-xs rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                          >
+                            Delete
+                          </button>
+                          <button
+                            onClick={() => {
+                              // Restart bill (reset payment status)
+                              updateBill(bill.id, { ...bill, lastPaidDate: null, nextDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) });
+                            }}
+                            className="px-3 py-1 text-xs rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                          >
+                            Restart
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

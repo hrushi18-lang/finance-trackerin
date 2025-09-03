@@ -24,6 +24,7 @@ import { useFinance } from '../contexts/FinanceContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { format } from 'date-fns';
+import { RingChart } from '../components/analytics/RingChart';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -302,6 +303,29 @@ export const Home: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Spending Breakdown */}
+        <div className="slide-in-up">
+          <h3 className="text-lg font-heading mb-4">Spending Breakdown</h3>
+          <div 
+            className="p-4 rounded-2xl"
+            style={{
+              backgroundColor: 'var(--background)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <RingChart
+              data={[
+                { label: 'Groceries', value: 450.50, color: 'hsl(120, 60%, 50%)' },
+                { label: 'Bills', value: 210.00, color: 'hsl(150, 60%, 50%)' },
+                { label: 'Shopping', value: 315.25, color: 'hsl(180, 60%, 50%)' },
+                { label: 'Transport', value: 125.00, color: 'hsl(210, 60%, 50%)' }
+              ]}
+              size={160}
+              strokeWidth={12}
+            />
           </div>
         </div>
 

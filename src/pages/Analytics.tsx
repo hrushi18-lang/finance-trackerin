@@ -14,6 +14,8 @@ import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { RingChart } from '../components/analytics/RingChart';
+import { BarChart } from '../components/analytics/BarChart';
 
 export const Analytics: React.FC = () => {
   const navigate = useNavigate();
@@ -96,31 +98,53 @@ export const Analytics: React.FC = () => {
   return (
     <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
       {/* Header */}
-      <div className="card-elevated mx-6 mt-6 mb-4 px-6 py-4 fade-in">
+      <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             <button
               onClick={() => navigate('/overview')}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-full transition-all duration-200 hover:scale-105"
+              style={{ 
+                backgroundColor: 'var(--background-secondary)',
+                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
+              }}
             >
-              <ArrowLeft size={20} className="text-gray-600" />
+              <ArrowLeft size={18} style={{ color: 'var(--text-primary)' }} />
             </button>
             <h1 className="text-2xl font-heading">Analytics</h1>
           </div>
           <div className="flex items-center space-x-2">
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <Filter size={18} className="text-gray-600" />
+            <button 
+              className="p-2 rounded-full transition-all duration-200 hover:scale-105"
+              style={{ 
+                backgroundColor: 'var(--background-secondary)',
+                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
+              }}
+            >
+              <Filter size={16} style={{ color: 'var(--text-primary)' }} />
             </button>
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <Calendar size={18} className="text-gray-600" />
+            <button 
+              className="p-2 rounded-full transition-all duration-200 hover:scale-105"
+              style={{ 
+                backgroundColor: 'var(--background-secondary)',
+                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
+              }}
+            >
+              <Calendar size={16} style={{ color: 'var(--text-primary)' }} />
             </button>
           </div>
         </div>
       </div>
 
-      <div className="px-6 space-y-6">
+      <div className="px-4 space-y-4">
         {/* Period Selector */}
-        <div className="card p-4 slide-in-up">
+        <div 
+          className="p-4 rounded-2xl slide-in-up"
+          style={{
+            backgroundColor: 'var(--background)',
+            boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-heading">Time Period</h3>
             <span className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>
@@ -137,14 +161,14 @@ export const Analytics: React.FC = () => {
               <button
                 key={period.key}
                 onClick={() => setSelectedPeriod(period.key)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  selectedPeriod === period.key
-                    ? 'text-white transform scale-105'
-                    : 'text-gray-700 hover:scale-105'
-                }`}
+                className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200"
                 style={{
-                  backgroundColor: selectedPeriod === period.key ? 'var(--primary)' : 'var(--surface)',
-                  border: selectedPeriod === period.key ? 'none' : '1px solid var(--border)'
+                  backgroundColor: selectedPeriod === period.key ? 'var(--primary)' : 'var(--background-secondary)',
+                  color: selectedPeriod === period.key ? 'white' : 'var(--text-primary)',
+                  boxShadow: selectedPeriod === period.key 
+                    ? 'inset 2px 2px 4px rgba(0,0,0,0.2)' 
+                    : '4px 4px 8px rgba(0,0,0,0.1), -4px -4px 8px rgba(255,255,255,0.7)',
+                  transform: selectedPeriod === period.key ? 'scale(0.98)' : 'scale(1)'
                 }}
               >
                 {period.label}
@@ -154,60 +178,155 @@ export const Analytics: React.FC = () => {
         </div>
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-2 gap-4 slide-in-up">
-          <div className="card p-6">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--success)' }}>
-                <TrendingUp size={20} className="text-white" />
+        <div className="grid grid-cols-2 gap-3 slide-in-up">
+          <div 
+            className="p-4 rounded-2xl"
+            style={{
+              backgroundColor: 'var(--background)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="flex items-center space-x-3">
+              <div 
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ 
+                  backgroundColor: 'var(--success)',
+                  boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.2), inset -2px -2px 4px rgba(255,255,255,0.3)'
+                }}
+              >
+                <TrendingUp size={16} className="text-white" />
               </div>
               <div>
-                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Income</p>
-                <p className="text-xl font-numbers">{formatCurrency(analyticsData.income)}</p>
+                <p className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>Income</p>
+                <p className="text-lg font-numbers">{formatCurrency(analyticsData.income)}</p>
               </div>
             </div>
           </div>
 
-          <div className="card p-6">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--error)' }}>
-                <TrendingDown size={20} className="text-white" />
+          <div 
+            className="p-4 rounded-2xl"
+            style={{
+              backgroundColor: 'var(--background)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="flex items-center space-x-3">
+              <div 
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ 
+                  backgroundColor: 'var(--error)',
+                  boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.2), inset -2px -2px 4px rgba(255,255,255,0.3)'
+                }}
+              >
+                <TrendingDown size={16} className="text-white" />
               </div>
               <div>
-                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Expenses</p>
-                <p className="text-xl font-numbers">{formatCurrency(analyticsData.expenses)}</p>
+                <p className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>Expenses</p>
+                <p className="text-lg font-numbers">{formatCurrency(analyticsData.expenses)}</p>
               </div>
             </div>
           </div>
 
-          <div className="card p-6">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--primary)' }}>
-                <DollarSign size={20} className="text-white" />
+          <div 
+            className="p-4 rounded-2xl"
+            style={{
+              backgroundColor: 'var(--background)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="flex items-center space-x-3">
+              <div 
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ 
+                  backgroundColor: 'var(--primary)',
+                  boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.2), inset -2px -2px 4px rgba(255,255,255,0.3)'
+                }}
+              >
+                <DollarSign size={16} className="text-white" />
               </div>
               <div>
-                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Net Income</p>
-                <p className={`text-xl font-numbers ${analyticsData.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>Net Income</p>
+                <p className={`text-lg font-numbers ${analyticsData.netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(analyticsData.netIncome)}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="card p-6">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent)' }}>
-                <BarChart3 size={20} className="text-white" />
+          <div 
+            className="p-4 rounded-2xl"
+            style={{
+              backgroundColor: 'var(--background)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="flex items-center space-x-3">
+              <div 
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ 
+                  backgroundColor: 'var(--accent)',
+                  boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.2), inset -2px -2px 4px rgba(255,255,255,0.3)'
+                }}
+              >
+                <BarChart3 size={16} className="text-white" />
               </div>
               <div>
-                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Transactions</p>
-                <p className="text-xl font-numbers">{analyticsData.transactionCount}</p>
+                <p className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>Transactions</p>
+                <p className="text-lg font-numbers">{analyticsData.transactionCount}</p>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Spending Ring Chart */}
+        <div 
+          className="p-4 rounded-2xl slide-in-up"
+          style={{
+            backgroundColor: 'var(--background)',
+            boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+          }}
+        >
+          <h3 className="text-lg font-heading mb-4">Spending Breakdown</h3>
+          <RingChart
+            data={Object.entries(analyticsData.categoryBreakdown).map(([category, data], index) => ({
+              label: category,
+              value: data.amount,
+              color: `hsl(${120 + index * 30}, 60%, 50%)`
+            }))}
+            size={180}
+            strokeWidth={15}
+          />
+        </div>
+
+        {/* Income vs Spending Bar Chart */}
+        <div 
+          className="p-4 rounded-2xl slide-in-up"
+          style={{
+            backgroundColor: 'var(--background)',
+            boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+          }}
+        >
+          <h3 className="text-lg font-heading mb-4">Income vs Spending</h3>
+          <BarChart
+            data={[
+              { month: 'Jan', income: analyticsData.income * 0.8, spending: analyticsData.expenses * 0.9 },
+              { month: 'Feb', income: analyticsData.income * 0.9, spending: analyticsData.expenses * 0.8 },
+              { month: 'Mar', income: analyticsData.income * 1.1, spending: analyticsData.expenses * 1.0 },
+              { month: 'Apr', income: analyticsData.income * 0.95, spending: analyticsData.expenses * 0.95 },
+              { month: 'May', income: analyticsData.income * 1.2, spending: analyticsData.expenses * 1.1 },
+              { month: 'Jun', income: analyticsData.income, spending: analyticsData.expenses }
+            ]}
+          />
+        </div>
+
         {/* Category Breakdown */}
-        <div className="card p-6 slide-in-up">
+        <div 
+          className="p-4 rounded-2xl slide-in-up"
+          style={{
+            backgroundColor: 'var(--background)',
+            boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+          }}
+        >
           <h3 className="text-lg font-heading mb-4">Category Breakdown</h3>
           <div className="space-y-4">
             {Object.entries(analyticsData.categoryBreakdown).length > 0 ? (
