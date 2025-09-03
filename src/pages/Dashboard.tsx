@@ -1,773 +1,523 @@
-import React, { useState } from 'react';
-import { DollarSign, TrendingUp, Wallet, CreditCard, Plus, Target, Receipt, Search, Bell, History, Repeat, User, Eye, EyeOff, ArrowLeftRight, Calculator, PieChart, Calendar, BarChart3, Building, Smartphone, Settings } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { Modal } from '../components/common/Modal';
-import { GoalForm } from '../components/forms/GoalForm';
-import { LiabilityForm } from '../components/forms/LiabilityForm';
-import { RecurringTransactionForm } from '../components/forms/RecurringTransactionForm';
-import { AccountForm } from '../components/forms/AccountForm';
-import { TransferForm } from '../components/forms/TransferForm';
-import { QuickActions } from '../components/common/QuickActions';
-import { SearchAndFilter } from '../components/common/SearchAndFilter';
-import { PageNavigation } from '../components/layout/PageNavigation';
-import { CollapsibleHeader } from '../components/layout/CollapsibleHeader';
-import { NotificationsPanel } from '../components/common/NotificationsPanel';
-import { ProfileMenu } from '../components/common/ProfileMenu';
-import { useFinance } from '../contexts/FinanceContext';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { usePersonalization } from '../contexts/PersonalizationContext';
-import { useInternationalization } from '../contexts/InternationalizationContext';
+import { useFinance } from '../contexts/FinanceContext';
+import { financeManager } from '../lib/finance-manager';
+import { AccountCard } from '../components/accounts/AccountCard';
 import { Button } from '../components/common/Button';
-import { CurrencyIcon } from '../components/common/CurrencyIcon';
+import { Modal } from '../components/common/Modal';
+import { AccountForm } from '../components/accounts/AccountForm';
+import { 
+  Plus, 
+  TrendingUp, 
+  TrendingDown, 
+  Target, 
+  CreditCard, 
+  FileText,
+  Calendar,
+  Settings,
+  Bell,
+  User,
+  ArrowUpRight,
+  ArrowDownRight,
+  Wallet,
+  PiggyBank
+} from 'lucide-react';
+import { format } from 'date-fns';
+import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 
 export const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const { settings, getDashboardComponents, shouldShowTutorial } = usePersonalization();
   const { 
-    stats, 
-    transactions, 
     accounts, 
+    transactions, 
     goals, 
+    budgets, 
     liabilities, 
-    budgets,
-    recurringTransactions,
-    addGoal, 
-    addLiability, 
-    addTransaction, 
-    addRecurringTransaction,
-    addAccount,
-    transferBetweenAccounts,
-    loading, 
-    getMonthlyTrends 
+    bills,
+    isLoading,
+    error 
   } = useFinance();
-  const { formatCurrency, currency } = useInternationalization();
-  const { t } = useTranslation();
   
-  const [showGoalModal, setShowGoalModal] = useState(false);
-  const [showLiabilityModal, setShowLiabilityModal] = useState(false);
-  const [showRecurringModal, setShowRecurringModal] = useState(false);
-  const [showAccountModal, setShowAccountModal] = useState(false);
-  const [showTransferModal, setShowTransferModal] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
-  const [searchResults, setSearchResults] = useState(transactions);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showBalances, setShowBalances] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAccountForm, setShowAccountForm] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [showQuickActions, setShowQuickActions] = useState(false);
 
-  const handleAddGoal = async (goal: any) => {
-    try {
-      setIsSubmitting(true);
-      await addGoal(goal);
-      setShowGoalModal(false);
-    } catch (error) {
-      console.error('Error adding goal:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleAddLiability = async (liability: any, addAsIncome: boolean) => {
-    try {
-      setIsSubmitting(true);
-      await addLiability(liability);
-      if (addAsIncome && liability.type !== 'purchase') {
-        await addTransaction({
-          type: 'income',
-          amount: liability.totalAmount,
-          category: 'Loan',
-          description: `Loan received: ${liability.name}`,
-          date: new Date(),
-        });
-      }
-      setShowLiabilityModal(false);
-    } catch (error) {
-      console.error('Error adding liability:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleAddRecurringTransaction = async (data: any) => {
-    try {
-      setIsSubmitting(true);
-      await addRecurringTransaction(data);
-      setShowRecurringModal(false);
-    } catch (error) {
-      console.error('Error adding recurring transaction:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleAddAccount = async (data: any) => {
-    try {
-      setIsSubmitting(true);
-      await addAccount(data);
-      setShowAccountModal(false);
-    } catch (error) {
-      console.error('Error adding account:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleTransfer = async (data: any) => {
-    try {
-      setIsSubmitting(true);
-      await transferBetweenAccounts(data.fromAccountId, data.toAccountId, data.amount, data.description);
-      setShowTransferModal(false);
-    } catch (error) {
-      console.error('Error transferring funds:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Calculate net worth based on account balances minus liabilities
-  const totalAccountBalance = (accounts || [])
-    .reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
+  // Calculate financial metrics
+  const totalBalance = accounts.reduce((sum, account) => sum + (account.balance || 0), 0);
+  const totalIncome = transactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalExpenses = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+  const netWorth = totalBalance - liabilities.reduce((sum, l) => sum + (l.remaining_amount || 0), 0);
   
-  const totalLiabilities = (liabilities || [])
-    .reduce((sum, liability) => sum + (Number(liability.remainingAmount) || 0), 0);
-  
-  const netWorth = totalAccountBalance - totalLiabilities;
-  const financialHealthScore = Math.min(Math.max(((netWorth / 10000) * 100) + 500, 0), 1000);
+  const activeGoals = goals.filter(g => !g.is_archived);
+  const totalGoalProgress = activeGoals.reduce((sum, g) => sum + ((g.current_amount || 0) / g.target_amount), 0);
+  const averageGoalProgress = activeGoals.length > 0 ? totalGoalProgress / activeGoals.length : 0;
 
-  // Calculate total balance across all visible accounts
-  const totalBalance = (accounts || [])
-    .filter(account => account.isVisible)
-    .reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
+  const upcomingBills = bills.filter(b => 
+    new Date(b.due_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+  );
 
-  // Helper functions for account display
-  const getAccountIcon = (type: string) => {
-    const icons = {
-      bank_savings: Building,
-      bank_current: Building,
-      bank_student: Building,
-      digital_wallet: Smartphone,
-      cash: Wallet,
-      credit_card: CreditCard,
-      investment: TrendingUp
-    };
-    return icons[type as keyof typeof icons] || Wallet;
+  const recentTransactions = transactions
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
+
+  const handleAddAccount = () => {
+    setSelectedAccount(null);
+    setShowAccountForm(true);
   };
 
-  const getAccountColor = (type: string) => {
-    const colors = {
-      bank_savings: 'bg-blue-500',
-      bank_current: 'bg-green-500',
-      bank_student: 'bg-purple-500',
-      digital_wallet: 'bg-orange-500',
-      cash: 'bg-gray-500',
-      credit_card: 'bg-red-500',
-      investment: 'bg-yellow-500'
-    };
-    return colors[type as keyof typeof colors] || 'bg-gray-500';
+  const handleEditAccount = (account: any) => {
+    setSelectedAccount(account);
+    setShowAccountForm(true);
   };
 
-  const getAccountTypeName = (type: string) => {
-    const names = {
-      bank_savings: 'Savings Account',
-      bank_current: 'Current Account',
-      bank_student: 'Student Account',
-      digital_wallet: 'Digital Wallet',
-      cash: 'Cash',
-      credit_card: 'Credit Card',
-      investment: 'Investment Account'
-    };
-    return names[type as keyof typeof names] || 'Account';
+  const handleQuickAction = (action: string) => {
+    setShowQuickActions(false);
+    // Navigate to appropriate page or open modal
+    switch (action) {
+      case 'add-transaction':
+        // Navigate to add transaction page
+        break;
+      case 'add-goal':
+        // Navigate to add goal page
+        break;
+      case 'add-budget':
+        // Navigate to add budget page
+        break;
+      case 'add-bill':
+        // Navigate to add bill page
+        break;
+    }
   };
 
-  // Get upcoming bills (next 7 days)
-  const upcomingBills = (recurringTransactions || [])
-    .filter(rt => rt.isActive && rt.type === 'expense')
-    .slice(0, 3);
-
-  // Show welcome message for new users
-  const isNewUser = !transactions || transactions.length === 0;
-  const dashboardComponents = getDashboardComponents();
-  const showTutorial = shouldShowTutorial('dashboard');
-
-  // Get monthly trends for mini chart
-  const monthlyTrends = getMonthlyTrends(3);
-  const currentMonthNet = monthlyTrends[monthlyTrends.length - 1]?.net || 0;
-  const previousMonthNet = monthlyTrends[monthlyTrends.length - 2]?.net || 0;
-  const netChange = currentMonthNet - previousMonthNet;
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen text-white pb-20 flex items-center justify-center bg-forest-800">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-forest-500 mx-auto mb-4"></div>
-          <p className="text-forest-300 font-body">{t('common.loading')}</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--primary)' }}></div>
+          <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: 'var(--background)' }}>
+        <div className="text-center">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h2 className="text-xl font-heading mb-2" style={{ color: 'var(--text-primary)' }}>Something went wrong</h2>
+          <p className="text-sm font-body mb-4" style={{ color: 'var(--text-secondary)' }}>
+            {error.message}
+          </p>
+          <Button variant="primary" onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen text-white pb-20 bg-forest-800">
-      {/* Collapsible Header */}
-      <CollapsibleHeader>
-        <div className="px-4 py-4 sm:py-6">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
+    <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--background)' }}>
+      {/* Header */}
+      <div className="pt-12 pb-6 px-4">
+        <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-xl sm:text-2xl font-heading font-bold text-white">
-                FinTrack
+            <h1 className="text-2xl font-heading" style={{ color: 'var(--text-primary)' }}>
+              Welcome back, {user?.user_metadata?.name || 'User'}!
               </h1>
-              <p className="text-xs sm:text-sm text-forest-300 font-body">
-                {t('welcome_back', { userName: user?.name?.split(' ')[0] || 'User' })}
+            <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
+              {format(new Date(), 'EEEE, MMMM do, yyyy')}
               </p>
             </div>
-            
-            <div className="flex items-center space-x-1 sm:space-x-2">
-              <button 
-                onClick={() => navigate('/calendar')}
-                className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
-                title="Calendar"
-              >
-                <Calendar size={18} className="text-forest-300 sm:w-5 sm:h-5" />
+          <div className="flex items-center space-x-2">
+            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Bell size={20} style={{ color: 'var(--text-secondary)' }} />
               </button>
-              
-              <button 
-                onClick={() => navigate('/add-transaction')}
-                className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
-                title="Add Transaction"
-              >
-                <Plus size={18} className="text-forest-300 sm:w-5 sm:h-5" />
+            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Settings size={20} style={{ color: 'var(--text-secondary)' }} />
               </button>
-              
-              <button 
-                onClick={() => navigate('/settings')}
-                className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
-                title="Settings"
-              >
-                <Settings size={18} className="text-forest-300 sm:w-5 sm:h-5" />
-              </button>
-              
-              <button 
-                onClick={() => setShowNotifications(true)}
-                className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors relative"
-                title="Notifications"
-              >
-                <Bell size={18} className="text-forest-300 sm:w-5 sm:h-5" />
-                {isNewUser && (
-                  <span className="absolute -top-1 -right-1 h-2 w-2 sm:h-3 sm:w-3 bg-forest-500 rounded-full"></span>
-                )}
-              </button>
-              
-              <button 
-                onClick={() => navigate('/transaction-history')}
-                className="p-2 rounded-xl hover:bg-forest-600/20 transition-colors"
-                title="Transaction History"
-              >
-                <History size={18} className="text-forest-300 sm:w-5 sm:h-5" />
+            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <User size={20} style={{ color: 'var(--text-secondary)' }} />
               </button>
             </div>
           </div>
 
-          {/* Page Navigation */}
-          <PageNavigation />
-        </div>
-      </CollapsibleHeader>
-      
-      {/* Main Content with top padding to account for fixed header */}
-      <div className="pt-32 sm:pt-36 px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Search */}
-        {showSearch && (
-          <SearchAndFilter
-            onResults={setSearchResults}
-            placeholder="Search transactions, goals, or categories..."
-          />
-        )}
-
-        {/* Welcome Message for New Users */}
-        {isNewUser && (
-          <div className="bg-gradient-to-r from-forest-700/80 to-forest-600/80 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-forest-500/20">
-            <div className="flex items-start space-x-4">
-              <div className="w-12 h-12 bg-forest-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-2xl">🎓</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-heading font-semibold text-white mb-2">
-                  Welcome to your Financial Coach! 🎯
-                </h3>
-                <p className="text-forest-100 text-sm mb-4 font-body">
-                  Ready to build better money habits? Start by setting up your accounts (cash, savings, cards), 
-                  then manually track every transaction to become more aware of your spending patterns.
-                </p>
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-                  <button
-                    onClick={() => setShowAccountModal(true)}
-                    className="bg-white text-forest-600 py-2 px-4 rounded-lg font-medium hover:bg-forest-50 transition-colors text-sm flex items-center justify-center"
-                  >
-                    <span className="mr-2">🏦</span>
-                    Set Up Accounts
-                  </button>
-                  <button
-                    onClick={() => navigate('/add-transaction')}
-                    className="bg-forest-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-forest-700 transition-colors text-sm flex items-center justify-center"
-                  >
-                    <span className="mr-2">💸</span>
-                    Track First Expense
-                  </button>
-                </div>
-              </div>
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div
+            className="p-4 rounded-2xl"
+            style={{
+              backgroundColor: 'var(--background-secondary)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>Net Worth</span>
+              <TrendingUp size={16} style={{ color: 'var(--success)' }} />
             </div>
+            <p className="text-lg font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
+              ${netWorth.toLocaleString()}
+            </p>
           </div>
-        )}
-
-        {/* Hero Financial Health Card */}
-        <div className="bg-gradient-to-br from-forest-700/80 to-forest-600/80 backdrop-blur-md rounded-2xl p-4 sm:p-6 relative overflow-hidden border border-forest-500/20">
-          <div className="absolute inset-0 bg-gradient-to-r from-forest-600/20 to-forest-500/20"></div>
-          <div className="relative z-10">
-            <div className="mb-4 sm:mb-6">
+          <div
+            className="p-4 rounded-2xl"
+            style={{
+              backgroundColor: 'var(--background-secondary)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-forest-100 text-sm sm:text-base font-body font-medium">{t('dashboard.net_worth')}</span>
-                {!isNewUser && (
-                  <div className="flex items-center space-x-2">
-                    <span className={`text-xs sm:text-sm flex items-center font-body ${
-                      netChange >= 0 ? 'text-success-400' : 'text-error-400'
-                    }`}>
-                      {netChange >= 0 ? (
-                        <TrendingUp size={12} className="mr-1 sm:w-3.5 sm:h-3.5" />
-                      ) : (
-                        <TrendingUp size={12} className="mr-1 sm:w-3.5 sm:h-3.5 rotate-180" />
-                      )}
-                      {Math.abs(netChange).toFixed(1)} {t('dashboard.vs_last_month')}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <p className="text-3xl sm:text-5xl font-numbers font-bold text-white mb-2">
-                {formatCurrency(netWorth)}
-              </p>
-              
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2">
-                  <span className="text-forest-200 text-xs sm:text-sm font-body">{t('dashboard.health_score')}:</span>
-                  <span className="text-white text-sm sm:text-base font-numbers font-semibold">
-                    {Math.round(financialHealthScore)}/1000
-                  </span>
-                </div>
-                <span className="text-forest-200 text-xs font-body">
-                  {financialHealthScore >= 750 ? t('dashboard.excellent') : 
-                   financialHealthScore >= 500 ? t('dashboard.good') : 
-                   isNewUser ? t('dashboard.getting_started') : t('dashboard.needs_work')}
-                </span>
-              </div>
+              <span className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>This Month</span>
+              <TrendingDown size={16} style={{ color: 'var(--error)' }} />
+            </div>
+            <p className="text-lg font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
+              ${(totalIncome - totalExpenses).toLocaleString()}
+            </p>
+          </div>
+        </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-              <button
-                onClick={() => navigate('/add-transaction')}
-                className="flex-1 bg-white text-forest-600 py-2.5 sm:py-3 px-4 rounded-xl font-heading font-semibold hover:bg-forest-50 transition-colors text-sm sm:text-base flex items-center justify-center"
-              >
-                <span className="mr-2">💸</span>
-                Track Money
-              </button>
+      {/* Quick Actions */}
+      <div className="px-4 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>Quick Actions</h2>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setShowQuickActions(true)}
+            icon={<Plus size={16} />}
+          >
+            Add
+          </Button>
+        </div>
+        <div className="grid grid-cols-4 gap-3">
               <button 
-                onClick={() => navigate('/transaction-history')}
-                className="flex-1 border border-forest-400/30 text-white py-2.5 sm:py-3 px-4 rounded-xl font-heading font-semibold hover:bg-forest-600/10 transition-colors text-sm sm:text-base flex items-center justify-center"
-              >
-                <span className="mr-2">📊</span>
-                View History
+            onClick={() => handleQuickAction('add-transaction')}
+            className="p-4 rounded-xl text-center hover:scale-105 transition-transform"
+            style={{
+              backgroundColor: 'var(--background-secondary)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="text-2xl mb-2">💸</div>
+            <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>Transaction</p>
               </button>
-            </div>
+            <button
+            onClick={() => handleQuickAction('add-goal')}
+            className="p-4 rounded-xl text-center hover:scale-105 transition-transform"
+            style={{
+              backgroundColor: 'var(--background-secondary)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="text-2xl mb-2">🎯</div>
+            <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>Goal</p>
+            </button>
+            <button
+            onClick={() => handleQuickAction('add-budget')}
+            className="p-4 rounded-xl text-center hover:scale-105 transition-transform"
+            style={{
+              backgroundColor: 'var(--background-secondary)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="text-2xl mb-2">📊</div>
+            <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>Budget</p>
+            </button>
+            <button
+            onClick={() => handleQuickAction('add-bill')}
+            className="p-4 rounded-xl text-center hover:scale-105 transition-transform"
+            style={{
+              backgroundColor: 'var(--background-secondary)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="text-2xl mb-2">📄</div>
+            <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>Bill</p>
+            </button>
           </div>
         </div>
 
-        {/* Quick Stats Cards */}
-        <div className="space-y-3 sm:space-y-4">
-          <h3 className="text-base sm:text-lg font-heading font-semibold text-white">{t('dashboard.financial_overview')}</h3>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="bg-forest-900/20 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-forest-600/20 hover:bg-forest-800/30 transition-colors">
-              <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-success-500/20 rounded-lg flex items-center justify-center">
-                  <TrendingUp size={16} className="text-success-400 sm:w-5 sm:h-5" />
-                </div>
-                <span className="text-xs text-forest-400 font-body">{t('dashboard.this_month')}</span>
-              </div>
-              <p className="text-xs sm:text-sm text-forest-300 mb-1 font-body">{t('dashboard.income')}</p>
-              <p className="text-base sm:text-xl font-numbers font-bold text-white">
-                {formatCurrency(stats.monthlyIncome)}
-              </p>
-            </div>
-
-            <div className="bg-forest-900/20 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-forest-600/20 hover:bg-forest-800/30 transition-colors">
-              <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-error-500/20 rounded-lg flex items-center justify-center">
-                  <Receipt size={16} className="text-error-400 sm:w-5 sm:h-5" />
-                </div>
-                <span className="text-xs text-forest-400 font-body">{t('dashboard.this_month')}</span>
-              </div>
-              <p className="text-xs sm:text-sm text-forest-300 mb-1 font-body">{t('dashboard.expenses')}</p>
-              <p className="text-base sm:text-xl font-numbers font-bold text-white">
-                {formatCurrency(stats.monthlyExpenses)}
-              </p>
-            </div>
-
-            <div className="bg-forest-900/20 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-forest-600/20 hover:bg-forest-800/30 transition-colors">
-              <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-warning-500/20 rounded-lg flex items-center justify-center">
-                  <CreditCard size={16} className="text-warning-400 sm:w-5 sm:h-5" />
-                </div>
-                <span className="text-xs text-forest-400 font-body">{t('dashboard.total_debt')}</span>
-              </div>
-              <p className="text-xs sm:text-sm text-forest-300 mb-1 font-body">Liabilities</p>
-              <p className="text-base sm:text-xl font-numbers font-bold text-white">
-                {formatCurrency(stats.totalLiabilities)}
-              </p>
-            </div>
-
-            <div className="bg-forest-900/20 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-forest-600/20 hover:bg-forest-800/30 transition-colors">
-              <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-forest-500/20 rounded-lg flex items-center justify-center">
-                  <Target size={16} className="text-forest-400 sm:w-5 sm:h-5" />
-                </div>
-                <span className="text-xs text-forest-400 font-body">{t('dashboard.saved')}</span>
-              </div>
-              <p className="text-xs sm:text-sm text-forest-300 mb-1 font-body">{t('dashboard.goal_progress')}</p>
-              <p className="text-base sm:text-xl font-numbers font-bold text-white">
-                {formatCurrency(stats.totalSavings)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Upcoming Bills */}
-        {upcomingBills.length > 0 && (
-          <div className="bg-forest-900/20 backdrop-blur-md rounded-2xl p-4 border border-forest-600/20">
+      {/* Accounts Section */}
+      <div className="px-4 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-heading font-semibold text-white">Upcoming Bills</h3>
-              <button 
-                onClick={() => navigate('/recurring-transactions')}
-                className="text-forest-400 text-sm font-body hover:text-forest-300"
-              >
-                View All
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              {upcomingBills.map((bill) => (
-                <div key={bill.id} className="flex items-center justify-between p-3 bg-forest-800/20 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-warning-500/20 rounded-lg flex items-center justify-center">
-                      <Calendar size={16} className="text-warning-400" />
-                    </div>
-                    <div>
-                      <p className="font-body font-medium text-white text-sm">{bill.description}</p>
-                      <p className="text-xs text-forest-400 font-body">{bill.category}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-numbers font-semibold text-warning-400">
-                      {formatCurrency(bill.amount)}
-                    </p>
-                    <p className="text-xs text-forest-400 font-body">Due soon</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Quick Actions */}
-        <div className="space-y-3 sm:space-y-4">
-          <h3 className="text-base sm:text-lg font-heading font-semibold text-white">🚀 Quick Actions</h3>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <button
-              onClick={() => navigate('/add-transaction')}
-              className="flex flex-col items-center p-4 rounded-xl border-2 border-dashed border-forest-500/30 hover:border-forest-500/50 hover:bg-forest-600/5 transition-all duration-200 hover:scale-105"
-            >
-              <span className="text-2xl mb-2">💸</span>
-              <span className="text-xs font-body font-medium text-forest-300 text-center">Track Money</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/analytics')}
-              className="flex flex-col items-center p-4 rounded-xl border-2 border-dashed border-success-500/30 hover:border-success-500/50 hover:bg-success-500/5 transition-all duration-200 hover:scale-105"
-            >
-              <span className="text-2xl mb-2">📊</span>
-              <span className="text-xs font-body font-medium text-forest-300 text-center">See Insights</span>
-            </button>
-            
-            <button
-              onClick={() => setShowGoalModal(true)}
-              className="flex flex-col items-center p-4 rounded-xl border-2 border-dashed border-warning-500/30 hover:border-warning-500/50 hover:bg-warning-500/5 transition-all duration-200 hover:scale-105"
-            >
-              <span className="text-2xl mb-2">🎯</span>
-              <span className="text-xs font-body font-medium text-forest-300 text-center">Set Goal</span>
-            </button>
-            
-            <button
-              onClick={() => setShowAccountModal(true)}
-              className="flex flex-col items-center p-4 rounded-xl border-2 border-dashed border-blue-500/30 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all duration-200 hover:scale-105"
-            >
-              <span className="text-2xl mb-2">🏦</span>
-              <span className="text-xs font-body font-medium text-forest-300 text-center">Add Account</span>
-            </button>
-          </div>
+          <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>Your Accounts</h2>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleAddAccount}
+            icon={<Plus size={16} />}
+          >
+            Add Account
+          </Button>
         </div>
-
-        {/* Accounts Overview */}
-        {(accounts || []).length > 0 && (
-          <div className="bg-forest-900/30 backdrop-blur-md rounded-2xl p-6 border border-forest-600/20">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-heading font-semibold text-white">Accounts Overview</h3>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setShowBalances(!showBalances)}
-                  className="p-2 hover:bg-forest-600/20 rounded-lg transition-colors"
-                  title={showBalances ? "Hide balances" : "Show balances"}
-                >
-                  {showBalances ? (
-                    <EyeOff size={16} className="text-forest-400" />
-                  ) : (
-                    <Eye size={16} className="text-forest-400" />
-                  )}
-                </button>
-                <button
-                  onClick={() => navigate('/profile')}
-                  className="text-forest-400 text-sm font-body hover:text-forest-300"
-                >
-                  Manage All
-                </button>
+        {accounts.length === 0 ? (
+          <div
+            className="p-8 rounded-2xl text-center"
+            style={{
+              backgroundColor: 'var(--background-secondary)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="text-4xl mb-4">🏦</div>
+            <h3 className="text-lg font-heading mb-2" style={{ color: 'var(--text-primary)' }}>
+              No accounts yet
+            </h3>
+            <p className="text-sm font-body mb-4" style={{ color: 'var(--text-secondary)' }}>
+              Add your first account to start tracking your finances
+            </p>
+            <Button variant="primary" onClick={handleAddAccount}>
+              Add Your First Account
+            </Button>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(accounts || []).map((account) => {
-                const AccountIcon = getAccountIcon(account.type);
-                return (
-                  <div key={account.id} className="bg-forest-800/20 rounded-xl p-4 border border-forest-600/20 hover:bg-forest-700/20 transition-colors">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-10 h-10 rounded-lg ${getAccountColor(account.type)} flex items-center justify-center`}>
-                          <AccountIcon size={20} className="text-white" />
-                        </div>
-                        <div>
-                          <h4 className="font-heading font-medium text-white">{account.name}</h4>
-                          <p className="text-xs text-forest-400 font-body capitalize">{getAccountTypeName(account.type)}</p>
-                        </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {accounts.map((account) => (
+              <AccountCard
+                key={account.id}
+                account={account}
+                onClick={handleEditAccount}
+              />
+            ))}
                       </div>
-                      {!account.isVisible && (
-                        <span className="px-2 py-1 bg-forest-600/20 text-forest-400 text-xs rounded-full">Hidden</span>
                       )}
                     </div>
                     
-                    {account.isVisible && showBalances ? (
-                      <p className="text-lg font-numbers font-bold text-white">
-                        <CurrencyIcon currencyCode={currency.code} size={16} className="inline mr-1" />
-                        {formatCurrency(account.balance)}
-                      </p>
-                    ) : account.isVisible ? (
-                      <p className="text-lg font-numbers font-bold text-forest-400">
-                        ••••••
-                      </p>
-                    ) : (
-                      <p className="text-sm text-forest-500 font-body">Account hidden</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Total Balance Summary */}
-            <div className="mt-4 pt-4 border-t border-forest-600/20">
-              <div className="flex items-center justify-between">
-                <span className="text-forest-300 text-sm font-body">Total Balance (Visible Accounts):</span>
-                <span className="text-lg font-numbers font-bold text-white">
-                  {showBalances ? formatCurrency(totalBalance) : '••••••'}
+      {/* Goals Section */}
+      <div className="px-4 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>Your Goals</h2>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handleQuickAction('add-goal')}
+            icon={<Plus size={16} />}
+          >
+            Add Goal
+          </Button>
+        </div>
+        {activeGoals.length === 0 ? (
+          <div
+            className="p-6 rounded-2xl text-center"
+            style={{
+              backgroundColor: 'var(--background-secondary)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="text-3xl mb-3">🎯</div>
+            <h3 className="text-base font-heading mb-1" style={{ color: 'var(--text-primary)' }}>
+              No goals set
+            </h3>
+            <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
+              Set your first financial goal to get started
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {activeGoals.slice(0, 3).map((goal) => (
+              <div
+                key={goal.id}
+                className="p-4 rounded-2xl"
+                style={{
+                  backgroundColor: 'var(--background-secondary)',
+                  boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+                }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-heading text-sm" style={{ color: 'var(--text-primary)' }}>
+                    {goal.description || 'Untitled Goal'}
+                  </h3>
+                  <span className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+                    {Math.round(((goal.current_amount || 0) / goal.target_amount) * 100)}%
                 </span>
               </div>
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-forest-300 text-sm font-body">Total Net Worth:</span>
-                <span className="text-lg font-numbers font-bold text-white">
-                  {showBalances ? formatCurrency(netWorth) : '••••••'}
-                </span>
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                  <div
+                    className="h-2 rounded-full transition-all duration-300"
+                    style={{
+                      backgroundColor: 'var(--primary)',
+                      width: `${Math.min(((goal.current_amount || 0) / goal.target_amount) * 100, 100)}%`
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+                  <span>${(goal.current_amount || 0).toLocaleString()}</span>
+                  <span>${(goal.target_amount || 0).toLocaleString()}</span>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         )}
+      </div>
 
-        {/* Recent Activity */}
-        {transactions && transactions.length > 0 && (
-          <div className="space-y-3 sm:space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base sm:text-lg font-heading font-semibold text-white">{t('dashboard.recent_activity')}</h3>
-              <button 
-                onClick={() => navigate('/transaction-history')}
-                className="text-forest-400 text-xs sm:text-sm font-body font-medium hover:text-forest-300"
-              >
-                {t('dashboard.view_all')}
-              </button>
+      {/* Recent Transactions */}
+      <div className="px-4 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>Recent Transactions</h2>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handleQuickAction('add-transaction')}
+            icon={<Plus size={16} />}
+          >
+            Add Transaction
+          </Button>
+        </div>
+        {recentTransactions.length === 0 ? (
+          <div
+            className="p-6 rounded-2xl text-center"
+            style={{
+              backgroundColor: 'var(--background-secondary)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="text-3xl mb-3">💸</div>
+            <h3 className="text-base font-heading mb-1" style={{ color: 'var(--text-primary)' }}>
+              No transactions yet
+            </h3>
+            <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
+              Add your first transaction to start tracking
+            </p>
             </div>
-            
+        ) : (
             <div className="space-y-3">
-              {(showSearch ? searchResults : transactions).slice(0, 5).map((transaction) => (
+            {recentTransactions.map((transaction) => (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between p-3 sm:p-4 bg-forest-900/20 backdrop-blur-md rounded-xl hover:bg-forest-800/30 transition-colors border border-forest-600/20"
+                className="p-4 rounded-2xl flex items-center justify-between"
+                style={{
+                  backgroundColor: 'var(--background-secondary)',
+                  boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+                }}
                 >
                   <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${
-                      transaction.type === 'income' 
-                        ? 'bg-success-500/20' 
-                        : 'bg-error-500/20'
-                    }`}>
-                      {transaction.type === 'income' ? (
-                        <TrendingUp size={14} className="text-success-400 sm:w-4 sm:h-4" />
-                      ) : (
-                        <Receipt size={14} className="text-error-400 sm:w-4 sm:h-4" />
-                      )}
-                    </div>
+                    <LuxuryCategoryIcon 
+                      category={transaction.category} 
+                      size={16} 
+                      variant="luxury"
+                    />
                     <div>
-                      <p className="font-body font-medium text-white text-sm sm:text-base">
+                    <h3 className="font-heading text-sm" style={{ color: 'var(--text-primary)' }}>
                         {transaction.description}
-                      </p>
-                      <p className="text-xs sm:text-sm text-forest-400 font-body">
-                        {transaction.category} • {transaction.date.toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <p className={`font-numbers font-semibold text-sm sm:text-base ${
-                      transaction.type === 'income' 
-                        ? 'text-success-400' 
-                        : 'text-error-400'
-                    }`}>
-                      {transaction.type === 'income' ? '+' : '-'}
-                      {formatCurrency(transaction.amount)}
+                    </h3>
+                    <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+                      {format(new Date(transaction.date), 'MMM dd, yyyy')}
                     </p>
                   </div>
                 </div>
-              ))}
+                <div className="text-right">
+                  <p className={`font-numbers text-sm font-bold ${
+                    transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {transaction.type === 'income' ? '+' : '-'}${(transaction.amount || 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+                    {transaction.category}
+                  </p>
             </div>
           </div>
-        )}
-
-        {/* Budget Health Overview */}
-        {(budgets || []).length > 0 && (
-          <div className="bg-forest-900/20 backdrop-blur-md rounded-2xl p-4 border border-forest-600/20">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-heading font-semibold text-white">Budget Health</h3>
-              <button 
-                onClick={() => navigate('/budgets')}
-                className="text-forest-400 text-sm font-body hover:text-forest-300"
-              >
-                Manage
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              {(budgets || []).slice(0, 3).map((budget) => {
-                const utilization = (budget.spent / budget.amount) * 100;
-                return (
-                  <div key={budget.id} className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-body text-white">{budget.category}</span>
-                        <span className="text-xs font-numbers text-forest-400">
-                          {utilization.toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-forest-700/30 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all duration-500 ${
-                            utilization >= 100 ? 'bg-error-500' :
-                            utilization >= 80 ? 'bg-warning-500' : 'bg-success-500'
-                          }`}
-                          style={{ width: `${Math.min(utilization, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            ))}
           </div>
         )}
       </div>
 
       {/* Modals */}
-      <Modal
-        isOpen={showGoalModal}
-        onClose={() => setShowGoalModal(false)}
-        title="Create New Goal"
-      >
-        <GoalForm
-          onSubmit={handleAddGoal}
-          onCancel={() => setShowGoalModal(false)}
-        />
-      </Modal>
-
-      <Modal
-        isOpen={showLiabilityModal}
-        onClose={() => setShowLiabilityModal(false)}
-        title="Add New Liability"
-      >
-        <LiabilityForm
-          onSubmit={handleAddLiability}
-          onCancel={() => setShowLiabilityModal(false)}
-        />
-      </Modal>
-
-      <Modal
-        isOpen={showRecurringModal}
-        onClose={() => setShowRecurringModal(false)}
-        title="Create Recurring Transaction"
-      >
-        <RecurringTransactionForm
-          onSubmit={handleAddRecurringTransaction}
-          onCancel={() => setShowRecurringModal(false)}
-        />
-      </Modal>
-
-      <Modal
-        isOpen={showAccountModal}
-        onClose={() => setShowAccountModal(false)}
-        title="Add Financial Account"
-      >
-        <AccountForm
-          onSubmit={handleAddAccount}
-          onCancel={() => setShowAccountModal(false)}
-          isSubmitting={isSubmitting}
-        />
-      </Modal>
-
-      <Modal
-        isOpen={showTransferModal}
-        onClose={() => setShowTransferModal(false)}
-        title="Transfer Between Accounts"
-      >
-        <TransferForm
-          accounts={accounts || []}
-          onSubmit={handleTransfer}
-          onCancel={() => setShowTransferModal(false)}
-          isSubmitting={isSubmitting}
-        />
-      </Modal>
-
-      {/* Notifications Panel */}
-      <NotificationsPanel 
-        isOpen={showNotifications} 
-        onClose={() => setShowNotifications(false)} 
+      <AccountForm
+        isOpen={showAccountForm}
+        onClose={() => setShowAccountForm(false)}
+        account={selectedAccount}
+        loading={false}
       />
 
-      {/* Profile Menu */}
-      <ProfileMenu 
-        isOpen={showProfileMenu} 
-        onClose={() => setShowProfileMenu(false)}
-        onOpenNotifications={() => {
-          setShowNotifications(true);
-          setShowProfileMenu(false);
-        }}
-      />
+      <Modal
+        isOpen={showQuickActions}
+        onClose={() => setShowQuickActions(false)}
+        title="Quick Actions"
+      >
+        <div className="space-y-3">
+          <button
+            onClick={() => handleQuickAction('add-transaction')}
+            className="w-full p-4 rounded-xl text-left hover:bg-gray-50 transition-colors"
+            style={{ backgroundColor: 'var(--background-secondary)' }}
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--primary)' }}>
+                <Plus size={16} className="text-white" />
+              </div>
+              <div>
+                <h3 className="font-heading text-sm" style={{ color: 'var(--text-primary)' }}>
+                  Add Transaction
+                </h3>
+                <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+                  Record income or expense
+                </p>
+              </div>
+            </div>
+          </button>
+          <button
+            onClick={() => handleQuickAction('add-goal')}
+            className="w-full p-4 rounded-xl text-left hover:bg-gray-50 transition-colors"
+            style={{ backgroundColor: 'var(--background-secondary)' }}
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--primary)' }}>
+                <Target size={16} className="text-white" />
+              </div>
+              <div>
+                <h3 className="font-heading text-sm" style={{ color: 'var(--text-primary)' }}>
+                  Add Goal
+                </h3>
+                <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+                  Set a financial target
+                </p>
+              </div>
+            </div>
+          </button>
+          <button
+            onClick={() => handleQuickAction('add-budget')}
+            className="w-full p-4 rounded-xl text-left hover:bg-gray-50 transition-colors"
+            style={{ backgroundColor: 'var(--background-secondary)' }}
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--primary)' }}>
+                <CreditCard size={16} className="text-white" />
+              </div>
+              <div>
+                <h3 className="font-heading text-sm" style={{ color: 'var(--text-primary)' }}>
+                  Add Budget
+                </h3>
+                <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+                  Set spending limits
+                </p>
+              </div>
+            </div>
+          </button>
+          <button
+            onClick={() => handleQuickAction('add-bill')}
+            className="w-full p-4 rounded-xl text-left hover:bg-gray-50 transition-colors"
+            style={{ backgroundColor: 'var(--background-secondary)' }}
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--primary)' }}>
+                <FileText size={16} className="text-white" />
+              </div>
+              <div>
+                <h3 className="font-heading text-sm" style={{ color: 'var(--text-primary)' }}>
+                  Add Bill
+                </h3>
+                <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+                  Track recurring payments
+                </p>
+              </div>
+            </div>
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 };

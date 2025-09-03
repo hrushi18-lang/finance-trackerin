@@ -27,6 +27,7 @@ import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { format } from 'date-fns';
+import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 
 export const Overview: React.FC = () => {
   const navigate = useNavigate();
@@ -170,96 +171,222 @@ export const Overview: React.FC = () => {
 
   return (
     <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
-      {/* Top Header */}
-      <div className="card-elevated mx-6 mt-6 mb-4 px-6 py-4 fade-in">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-heading">Overview</h1>
-          <div className="flex items-center space-x-3">
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <Bell size={20} className="text-gray-600" />
-            </button>
-            <button className="p-1">
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <User size={16} className="text-gray-600" />
-              </div>
-            </button>
+      {/* Immersive Header */}
+      <div className="relative">
+        <div className="px-6 pt-6 pb-4">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-heading font-bold" style={{ color: 'var(--text-primary)' }}>
+                Overview
+              </h1>
+              <p className="text-sm font-body mt-1" style={{ color: 'var(--text-secondary)' }}>
+                Your financial dashboard
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button 
+                className="p-2 rounded-xl transition-all duration-200 hover:scale-105"
+                style={{ backgroundColor: 'var(--background-secondary)' }}
+              >
+                <Bell size={18} style={{ color: 'var(--text-secondary)' }} />
+              </button>
+              <button className="p-1">
+                <div 
+                  className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-105"
+                  style={{ backgroundColor: 'var(--background-secondary)' }}
+                >
+                  <User size={16} style={{ color: 'var(--text-secondary)' }} />
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Net Worth Hero Card */}
+          <div 
+            className="relative overflow-hidden rounded-3xl p-8 mb-6"
+            style={{
+              background: 'linear-gradient(135deg, var(--primary) 0%, #2d5016 100%)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.06)'
+            }}
+          >
+            <div className="text-center text-white">
+              <h2 className="text-lg font-body mb-2 opacity-90">Net Worth</h2>
+              <p className="text-4xl font-serif font-bold mb-2">
+                {showBalances ? formatCurrency(netWorth) : '••••••'}
+              </p>
+              <p className="text-sm font-medium opacity-90">
+                +{formatCurrency(netWorthChange.amount)} ({netWorthChange.percentage}%) this month
+              </p>
+            </div>
+            {/* Decorative elements */}
+            <div className="absolute top-4 right-4 w-16 h-16 rounded-full opacity-10" style={{ backgroundColor: 'white' }}></div>
+            <div className="absolute bottom-4 left-4 w-12 h-12 rounded-full opacity-10" style={{ backgroundColor: 'white' }}></div>
           </div>
         </div>
       </div>
 
       <div className="px-6 space-y-6">
-        {/* Net Worth Hero Card */}
-        <div className="card-neumorphic p-8 relative overflow-hidden slide-in-up">
-          <div className="text-center">
-            <h2 className="text-lg font-body mb-2">Net Worth</h2>
-            <p className="text-4xl font-serif font-bold mb-2" style={{ color: 'var(--primary)' }}>
-              {showBalances ? formatCurrency(netWorth) : '••••••'}
+        {/* Quick Stats Row */}
+        <div className="grid grid-cols-2 gap-4">
+          <div 
+            className="rounded-2xl p-4"
+            style={{
+              backgroundColor: 'var(--background-secondary)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--success)', opacity: 0.1 }}>
+                <TrendingUp size={16} style={{ color: 'var(--success)' }} />
+              </div>
+              <span className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>Monthly Income</span>
+            </div>
+            <p className="text-xl font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
+              {showBalances ? formatCurrency(monthlyStats.income) : '••••••'}
             </p>
-            <p className="text-sm font-medium" style={{ color: 'var(--success)' }}>
-              +{formatCurrency(netWorthChange.amount)} ({netWorthChange.percentage}%) this month
+          </div>
+
+          <div 
+            className="rounded-2xl p-4"
+            style={{
+              backgroundColor: 'var(--background-secondary)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--error)', opacity: 0.1 }}>
+                <TrendingUp size={16} style={{ color: 'var(--error)' }} />
+              </div>
+              <span className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>Monthly Expenses</span>
+            </div>
+            <p className="text-xl font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
+              {showBalances ? formatCurrency(monthlyStats.expenses) : '••••••'}
             </p>
           </div>
         </div>
 
-        {/* Manage Accounts Section */}
-        <div className="slide-in-up">
-          <h3 className="text-lg font-heading mb-4">Manage Accounts</h3>
+        {/* Accounts Section */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-heading font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Accounts
+            </h3>
+            <button
+              onClick={() => navigate('/accounts')}
+              className="text-sm font-body px-3 py-1 rounded-lg transition-colors"
+              style={{ 
+                color: 'var(--primary)',
+                backgroundColor: 'var(--background-secondary)'
+              }}
+            >
+              View All
+            </button>
+          </div>
+          
           <div className="flex space-x-4 overflow-x-auto pb-2">
             {accounts.length > 0 ? (
               accounts.slice(0, 3).map((account) => (
-                <div key={account.id} className="card min-w-[140px] flex-shrink-0 p-4">
+                <div 
+                  key={account.id} 
+                  className="min-w-[160px] flex-shrink-0 p-4 rounded-2xl"
+                  style={{
+                    backgroundColor: 'var(--background-secondary)',
+                    boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+                  }}
+                >
                   <div className="flex items-center space-x-3 mb-3">
-                    {getAccountIcon(account)}
+                    <LuxuryCategoryIcon 
+                      category={account.type === 'bank_current' ? 'Primary Banking' : 
+                               account.type === 'bank_savings' ? 'Savings' :
+                               account.type === 'credit_card' ? 'Credit' :
+                               account.type === 'digital_wallet' ? 'Digital Wallet' : 'Other Account'}
+                      size={20}
+                      variant="luxury"
+                    />
                     <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                       {account.name}
                     </span>
                   </div>
-                  <p className="text-lg font-numbers">
+                  <p className="text-lg font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
                     {showBalances ? formatCurrency(account.balance || 0) : '••••••'}
                   </p>
                 </div>
               ))
             ) : (
-              <div className="card min-w-[140px] flex-shrink-0 p-4 flex items-center justify-center">
+              <div 
+                className="min-w-[160px] flex-shrink-0 p-4 flex items-center justify-center rounded-2xl border-2 border-dashed"
+                style={{ 
+                  backgroundColor: 'var(--background-secondary)',
+                  borderColor: 'var(--border)'
+                }}
+              >
                 <div className="text-center">
                   <Wallet size={24} className="text-gray-400 mx-auto mb-2" />
                   <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No accounts</p>
                 </div>
               </div>
             )}
+            
             {/* Add Account Card */}
-            <div className="card-neumorphic min-w-[140px] flex-shrink-0 p-4 flex items-center justify-center border-2 border-dashed" style={{ borderColor: 'var(--border)' }}>
-              <button
-                onClick={() => navigate('/accounts')}
-                className="flex flex-col items-center space-y-2 transition-colors"
-                style={{ color: 'var(--text-tertiary)' }}
-              >
-                <Plus size={24} />
-                <span className="text-sm font-medium">Add Account</span>
-              </button>
+            <div 
+              className="min-w-[160px] flex-shrink-0 p-4 flex items-center justify-center rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-200 hover:scale-105"
+              style={{ 
+                backgroundColor: 'var(--background-secondary)',
+                borderColor: 'var(--border)'
+              }}
+              onClick={() => navigate('/accounts')}
+            >
+              <div className="flex flex-col items-center space-y-2">
+                <Plus size={24} style={{ color: 'var(--text-tertiary)' }} />
+                <span className="text-sm font-medium" style={{ color: 'var(--text-tertiary)' }}>Add Account</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Goals Section */}
-        <div className="slide-in-up">
-          <h3 className="text-lg font-heading mb-4">Goals</h3>
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-heading font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Goals
+            </h3>
+            <button
+              onClick={() => navigate('/goals')}
+              className="text-sm font-body px-3 py-1 rounded-lg transition-colors"
+              style={{ 
+                color: 'var(--primary)',
+                backgroundColor: 'var(--background-secondary)'
+              }}
+            >
+              View All
+            </button>
+          </div>
+          
           {goals.length > 0 ? (
             <div className="flex space-x-4 overflow-x-auto pb-2">
               {goals.slice(0, 3).map((goal) => {
                 const progress = (goal.currentAmount / goal.targetAmount) * 100;
                 return (
-                  <div key={goal.id} className="card min-w-[160px] flex-shrink-0 p-4">
+                  <div 
+                    key={goal.id} 
+                    className="min-w-[180px] flex-shrink-0 p-4 rounded-2xl"
+                    style={{
+                      backgroundColor: 'var(--background-secondary)',
+                      boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+                    }}
+                  >
                     <div className="flex items-center space-x-3 mb-3">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
-                        {getGoalIcon(goal)}
-                      </div>
+                      <LuxuryCategoryIcon 
+                        category={goal.category || 'Other Goal'}
+                        size={20}
+                        variant="luxury"
+                      />
                       <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                         {goal.title}
                       </span>
                     </div>
                     <div className="mb-3">
-                      <div className="flex justify-between text-sm mb-1" style={{ color: 'var(--text-tertiary)' }}>
+                      <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--text-tertiary)' }}>
                         <span>{showBalances ? formatCurrency(goal.currentAmount) : '••••'}</span>
                         <span>{showBalances ? formatCurrency(goal.targetAmount) : '••••'}</span>
                       </div>
@@ -272,20 +399,29 @@ export const Overview: React.FC = () => {
                           }}
                         ></div>
                       </div>
+                      <p className="text-xs font-body mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                        {progress.toFixed(0)}% complete
+                      </p>
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="card p-8 text-center">
+            <div 
+              className="p-8 text-center rounded-2xl"
+              style={{
+                backgroundColor: 'var(--background-secondary)',
+                boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+              }}
+            >
               <div className="flex flex-col items-center space-y-4">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
                   <Target size={24} className="text-gray-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-heading mb-2">No Goals Yet</h3>
-                  <p className="text-sm font-body mb-4">
+                  <h3 className="text-lg font-heading mb-2" style={{ color: 'var(--text-primary)' }}>No Goals Yet</h3>
+                  <p className="text-sm font-body mb-4" style={{ color: 'var(--text-secondary)' }}>
                     Set your first financial goal to start saving
                   </p>
                   <button
@@ -300,165 +436,273 @@ export const Overview: React.FC = () => {
           )}
         </div>
 
-        {/* Upcoming Bills Section */}
-        <div className="slide-in-up">
-          <h3 className="text-lg font-heading mb-4">Upcoming Bills</h3>
-          {upcomingBills.length > 0 ? (
-            <div className="space-y-3">
-              {upcomingBills.map((bill, index) => (
-                <div key={bill.id} className="card p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className={`w-1 h-12 rounded-full ${getBillStatusColor(bill.status)}`}></div>
-                      <div>
-                        <h4 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{bill.description}</h4>
-                        <p className="text-sm font-body">{getBillStatusText(bill.dueIn)}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-numbers">
-                        {showBalances ? formatCurrency(bill.amount) : '••••'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+        {/* Bills & Analytics Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Upcoming Bills */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-heading font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Upcoming Bills
+              </h3>
+              <button
+                onClick={() => navigate('/bills')}
+                className="text-sm font-body px-3 py-1 rounded-lg transition-colors"
+                style={{ 
+                  color: 'var(--primary)',
+                  backgroundColor: 'var(--background-secondary)'
+                }}
+              >
+                View All
+              </button>
             </div>
-          ) : (
-            <div className="card p-8 text-center">
-              <div className="flex flex-col items-center space-y-4">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--background-secondary)' }}>
-                  <Calendar size={24} className="text-gray-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-heading mb-2">No Bills Yet</h3>
-                  <p className="text-sm font-body mb-4">
-                    Add your first bill to start tracking payments
-                  </p>
-                  <button
-                    onClick={() => navigate('/bills')}
-                    className="btn-primary"
+            
+            {upcomingBills.length > 0 ? (
+              <div className="space-y-3">
+                {upcomingBills.map((bill, index) => (
+                  <div 
+                    key={bill.id} 
+                    className="p-4 rounded-2xl"
+                    style={{
+                      backgroundColor: 'var(--background-secondary)',
+                      boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+                    }}
                   >
-                    Add Bill
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Budgets & Liabilities Section */}
-        <div className="grid grid-cols-2 gap-4 slide-in-up">
-          {/* Budgets Card */}
-          <div className="card p-4">
-            <h4 className="font-heading mb-3">Budgets</h4>
-            {budgets.length > 0 ? (
-              <div className="space-y-3">
-                {budgets.slice(0, 2).map((budget) => {
-                  const progress = ((budget.spent || 0) / (budget.amount || budget.limit || 1)) * 100;
-                  return (
-                    <div key={budget.id}>
-                      <div className="flex justify-between text-sm mb-1" style={{ color: 'var(--text-tertiary)' }}>
-                        <span>{budget.category}</span>
-                        <span>{progress.toFixed(0)}%</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className={`w-1 h-12 rounded-full ${getBillStatusColor(bill.status)}`}></div>
+                        <div>
+                          <h4 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{bill.description}</h4>
+                          <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>{getBillStatusText(bill.dueIn)}</p>
+                        </div>
                       </div>
-                      <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--border-light)' }}>
-                        <div 
-                          className="h-2 rounded-full transition-all duration-300"
-                          style={{ 
-                            width: `${Math.min(progress, 100)}%`,
-                            backgroundColor: 'var(--success)'
-                          }}
-                        ></div>
+                      <div className="text-right">
+                        <p className="text-lg font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
+                          {showBalances ? formatCurrency(bill.amount) : '••••'}
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>No budgets</p>
-              </div>
-            )}
-          </div>
-
-          {/* Liabilities Card */}
-          <div className="card p-4">
-            <h4 className="font-heading mb-3">Liabilities</h4>
-            {liabilities.length > 0 ? (
-              <div className="space-y-3">
-                {liabilities.slice(0, 2).map((liability) => (
-                  <div key={liability.id} className="flex justify-between items-center">
-                    <span className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>{liability.name}</span>
-                    <span className="text-sm font-numbers">
-                      {showBalances ? formatCurrency(liability.remainingAmount || 0) : '••••'}
-                    </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-4">
-                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>No liabilities</p>
+              <div 
+                className="p-6 text-center rounded-2xl"
+                style={{
+                  backgroundColor: 'var(--background-secondary)',
+                  boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+                }}
+              >
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
+                    <Calendar size={20} className="text-gray-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-heading mb-1" style={{ color: 'var(--text-primary)' }}>No Bills Yet</h3>
+                    <p className="text-sm font-body mb-3" style={{ color: 'var(--text-secondary)' }}>
+                      Add your first bill to start tracking
+                    </p>
+                    <button
+                      onClick={() => navigate('/bills')}
+                      className="btn-primary text-sm px-4 py-2"
+                    >
+                      Add Bill
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
+
+          {/* Analytics Snapshot */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-heading font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Analytics
+              </h3>
+              <button
+                onClick={() => navigate('/analytics')}
+                className="text-sm font-body px-3 py-1 rounded-lg transition-colors"
+                style={{ 
+                  color: 'var(--primary)',
+                  backgroundColor: 'var(--background-secondary)'
+                }}
+              >
+                View Details
+              </button>
+            </div>
+            
+            <div 
+              className="p-4 rounded-2xl cursor-pointer transition-all duration-200 hover:scale-105"
+              style={{
+                backgroundColor: 'var(--background-secondary)',
+                boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+              }}
+              onClick={() => navigate('/analytics')}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-heading" style={{ color: 'var(--text-primary)' }}>Spending vs Income</h4>
+                <div className="flex items-center space-x-2 rounded-lg px-3 py-1" style={{ backgroundColor: 'var(--background)' }}>
+                  <Calendar size={14} style={{ color: 'var(--text-secondary)' }} />
+                  <span className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>This Month</span>
+                </div>
+              </div>
+              
+              {/* Mini Bar Chart */}
+              <div className="h-24 flex items-end justify-between space-x-2 mb-3">
+                {analyticsData.map((data, index) => {
+                  const maxValue = Math.max(...analyticsData.map(d => Math.max(d.income, d.expenses)));
+                  const incomeHeight = maxValue > 0 ? (data.income / maxValue) * 60 : 0;
+                  const expensesHeight = maxValue > 0 ? (data.expenses / maxValue) * 60 : 0;
+                  
+                  return (
+                    <div key={index} className="flex-1 flex flex-col items-center">
+                      <div className="w-full flex flex-col items-center space-y-1 mb-2">
+                        {/* Income bar */}
+                        <div 
+                          className="w-full rounded-t"
+                          style={{ 
+                            height: `${incomeHeight}px`,
+                            backgroundColor: 'var(--success)'
+                          }}
+                        ></div>
+                        {/* Expenses bar */}
+                        <div 
+                          className="w-full rounded-b"
+                          style={{ 
+                            height: `${expensesHeight}px`,
+                            backgroundColor: 'var(--error)'
+                          }}
+                        ></div>
+                      </div>
+                      <span className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>{data.period}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Legend */}
+              <div className="flex items-center justify-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: 'var(--success)' }}></div>
+                  <span className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>Income</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: 'var(--error)' }}></div>
+                  <span className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>Spending</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Analytics Snapshot */}
-        <div 
-          className="card p-4 slide-in-up cursor-pointer hover:scale-105 transition-all duration-200"
-          onClick={() => navigate('/analytics')}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-heading">Spending vs Income</h4>
-            <div className="flex items-center space-x-2 rounded-lg px-3 py-1" style={{ backgroundColor: 'var(--background-secondary)' }}>
-              <Calendar size={14} className="text-gray-600" />
-              <span className="text-sm font-body">This Month</span>
+        {/* Budgets & Liabilities Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Budgets */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-heading font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Budgets
+              </h3>
+              <button
+                onClick={() => navigate('/budgets')}
+                className="text-sm font-body px-3 py-1 rounded-lg transition-colors"
+                style={{ 
+                  color: 'var(--primary)',
+                  backgroundColor: 'var(--background-secondary)'
+                }}
+              >
+                View All
+              </button>
             </div>
-          </div>
-          
-          {/* Mini Line Graph */}
-          <div className="h-32 flex items-end justify-between space-x-2">
-            {analyticsData.map((data, index) => {
-              const maxValue = Math.max(...analyticsData.map(d => Math.max(d.income, d.expenses)));
-              const incomeHeight = maxValue > 0 ? (data.income / maxValue) * 80 : 0;
-              const expensesHeight = maxValue > 0 ? (data.expenses / maxValue) * 80 : 0;
-              
-              return (
-                <div key={index} className="flex-1 flex flex-col items-center">
-                  <div className="w-full flex flex-col items-center space-y-1 mb-2">
-                    {/* Income bar */}
-                    <div 
-                      className="w-full rounded-t"
-                      style={{ 
-                        height: `${incomeHeight}px`,
-                        backgroundColor: 'var(--border-dark)'
-                      }}
-                    ></div>
-                    {/* Expenses bar */}
-                    <div 
-                      className="w-full rounded-b"
-                      style={{ 
-                        height: `${expensesHeight}px`,
-                        backgroundColor: 'var(--success)'
-                      }}
-                    ></div>
-                  </div>
-                  <span className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>{data.period}</span>
+            
+            <div 
+              className="p-4 rounded-2xl"
+              style={{
+                backgroundColor: 'var(--background-secondary)',
+                boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+              }}
+            >
+              {budgets.length > 0 ? (
+                <div className="space-y-4">
+                  {budgets.slice(0, 3).map((budget) => {
+                    const progress = ((budget.spent || 0) / (budget.amount || budget.limit || 1)) * 100;
+                    return (
+                      <div key={budget.id}>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>{budget.category}</span>
+                          <span className="text-sm font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
+                            {progress.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--border-light)' }}>
+                          <div 
+                            className="h-2 rounded-full transition-all duration-300"
+                            style={{ 
+                              width: `${Math.min(progress, 100)}%`,
+                              backgroundColor: progress > 100 ? 'var(--error)' : 'var(--success)'
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-          
-          {/* Legend */}
-          <div className="flex items-center justify-center space-x-4 mt-3">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded" style={{ backgroundColor: 'var(--border-dark)' }}></div>
-              <span className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>Income</span>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>No budgets set</p>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded" style={{ backgroundColor: 'var(--success)' }}></div>
-              <span className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>Spending</span>
+          </div>
+
+          {/* Liabilities */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-heading font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Liabilities
+              </h3>
+              <button
+                onClick={() => navigate('/liabilities')}
+                className="text-sm font-body px-3 py-1 rounded-lg transition-colors"
+                style={{ 
+                  color: 'var(--primary)',
+                  backgroundColor: 'var(--background-secondary)'
+                }}
+              >
+                View All
+              </button>
+            </div>
+            
+            <div 
+              className="p-4 rounded-2xl"
+              style={{
+                backgroundColor: 'var(--background-secondary)',
+                boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+              }}
+            >
+              {liabilities.length > 0 ? (
+                <div className="space-y-4">
+                  {liabilities.slice(0, 3).map((liability) => (
+                    <div key={liability.id} className="flex justify-between items-center">
+                      <div className="flex items-center space-x-3">
+                        <LuxuryCategoryIcon 
+                          category={liability.category || 'Other Debt'}
+                          size={16}
+                          variant="minimal"
+                        />
+                        <span className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>{liability.name}</span>
+                      </div>
+                      <span className="text-sm font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
+                        {showBalances ? formatCurrency(liability.remainingAmount || 0) : '••••'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>No liabilities</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

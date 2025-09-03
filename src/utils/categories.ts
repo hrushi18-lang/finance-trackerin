@@ -264,7 +264,7 @@ export const getCategoryIcon = (category: string): string => {
     // Income
     'Salary': 'Briefcase',
     'Freelance': 'User',
-    'Business Income': 'Building',
+    'Business Income': 'Building2',
     'Investment Returns': 'TrendingUp',
     'Rental Income': 'Home',
     'Gift Received': 'Gift',
@@ -304,7 +304,7 @@ export const getCategoryIcon = (category: string): string => {
     'Phone': 'Phone',
     'Cable/TV': 'Tv',
     'Rent': 'Home',
-    'Mortgage': 'Building',
+    'Mortgage': 'Building2',
     'Credit Card': 'CreditCard',
     'Loan Payment': 'Banknote',
     'Subscription': 'Calendar',
@@ -321,7 +321,7 @@ export const getCategoryIcon = (category: string): string => {
     'Retirement': 'Clock',
     'Investment': 'TrendingUp',
     'Debt Payoff': 'CreditCard',
-    'Business': 'Building',
+    'Business': 'Building2',
     'Health': 'Heart',
     'Technology': 'Laptop',
     'Furniture': 'Sofa',
@@ -336,7 +336,7 @@ export const getCategoryIcon = (category: string): string => {
     'Installment Plan': 'Calendar',
     'Medical Debt': 'Heart',
     'Tax Debt': 'FileText',
-    'Business Loan': 'Building',
+    'Business Loan': 'Building2',
     'Other Debt': 'CreditCard',
     
     // Budgets
@@ -344,14 +344,14 @@ export const getCategoryIcon = (category: string): string => {
     'Other Budget': 'PieChart',
     
     // Accounts
-    'Primary Banking': 'Building',
+    'Primary Banking': 'Building2',
     'Savings Account': 'PiggyBank',
     'Investment Account': 'TrendingUp',
     'Credit': 'CreditCard',
     'Digital Wallet': 'Smartphone',
     'Cash': 'Banknote',
     'Goals Vault': 'Target',
-    'Business Account': 'Building',
+    'Business Account': 'Building2',
     'Joint': 'Users',
     'Other Account': 'Wallet'
   };
@@ -385,4 +385,88 @@ export const removeCustomCategory = (category: string, type: 'transaction' | 'bi
   const existing = JSON.parse(localStorage.getItem(key) || '[]');
   const filtered = existing.filter((c: string) => c !== category);
   localStorage.setItem(key, JSON.stringify(filtered));
+};
+
+// Luxury icon system integration
+export const getLuxuryCategoryIcon = (category: string): string => {
+  return getCategoryIcon(category);
+};
+
+// Get luxury category colors
+export const getLuxuryCategoryColors = (category: string) => {
+  const categoryType = getCategoryType(category);
+  const luxuryColors = {
+    // Income - Premium Greens
+    income: {
+      primary: '#10B981',
+      secondary: '#059669',
+      accent: '#047857',
+      background: '#ECFDF5'
+    },
+    // Expenses - Sophisticated Reds/Oranges
+    expense: {
+      primary: '#EF4444',
+      secondary: '#DC2626',
+      accent: '#B91C1C',
+      background: '#FEF2F2'
+    },
+    // Bills - Professional Blues
+    bill: {
+      primary: '#3B82F6',
+      secondary: '#2563EB',
+      accent: '#1D4ED8',
+      background: '#EFF6FF'
+    },
+    // Goals - Elegant Purples
+    goal: {
+      primary: '#7C3AED',
+      secondary: '#5B21B6',
+      accent: '#4C1D95',
+      background: '#F3E8FF'
+    },
+    // Liabilities - Warning Reds
+    liability: {
+      primary: '#EF4444',
+      secondary: '#DC2626',
+      accent: '#B91C1C',
+      background: '#FEF2F2'
+    },
+    // Budgets - Balanced Teals
+    budget: {
+      primary: '#14B8A6',
+      secondary: '#0D9488',
+      accent: '#0F766E',
+      background: '#F0FDFA'
+    },
+    // Accounts - Trustworthy Teals
+    account: {
+      primary: '#14B8A6',
+      secondary: '#0D9488',
+      accent: '#0F766E',
+      background: '#F0FDFA'
+    }
+  };
+  
+  return luxuryColors[categoryType] || luxuryColors.expense;
+};
+
+// Determine category type for color selection
+const getCategoryType = (category: string): 'income' | 'expense' | 'bill' | 'goal' | 'liability' | 'budget' | 'account' => {
+  const incomeCategories = ['Salary', 'Freelance', 'Business Income', 'Investment Returns', 'Rental Income', 'Gift Received', 'Refund', 'Cashback', 'Interest Earned', 'Dividend', 'Other Income'];
+  const expenseCategories = ['Food & Dining', 'Transportation', 'Housing', 'Utilities', 'Healthcare', 'Entertainment', 'Shopping', 'Education', 'Travel', 'Insurance', 'Taxes', 'Personal Care', 'Subscriptions', 'Gifts & Donations', 'Emergency Fund', 'Goal Funding', 'Bill Payment', 'Debt Payment', 'Transfer', 'Other Expense'];
+  const billCategories = ['Electricity', 'Water', 'Gas', 'Internet', 'Phone', 'Cable/TV', 'Rent', 'Mortgage', 'Credit Card', 'Loan Payment', 'Subscription', 'Membership', 'Tax', 'Medical', 'Other Bill'];
+  const goalCategories = ['Emergency Fund', 'Vacation', 'Education', 'Home Purchase', 'Car Purchase', 'Wedding', 'Retirement', 'Investment', 'Debt Payoff', 'Business', 'Health', 'Technology', 'Furniture', 'Travel', 'Gift', 'Other Goal'];
+  const liabilityCategories = ['Personal Loan', 'Student Loan', 'Auto Loan', 'Mortgage', 'Credit Card', 'Buy Now Pay Later', 'Installment Plan', 'Medical Debt', 'Tax Debt', 'Business Loan', 'Other Debt'];
+  const budgetCategories = ['Food & Dining', 'Transportation', 'Housing', 'Utilities', 'Healthcare', 'Entertainment', 'Shopping', 'Education', 'Travel', 'Insurance', 'Personal Care', 'Subscriptions', 'Gifts & Donations', 'Emergency Fund', 'Savings', 'Debt Payment', 'Other Budget'];
+  const accountCategories = ['Primary Banking', 'Savings', 'Investment', 'Credit', 'Digital Wallet', 'Cash', 'Goals Vault', 'Business', 'Joint', 'Other Account'];
+
+  if (incomeCategories.includes(category)) return 'income';
+  if (expenseCategories.includes(category)) return 'expense';
+  if (billCategories.includes(category)) return 'bill';
+  if (goalCategories.includes(category)) return 'goal';
+  if (liabilityCategories.includes(category)) return 'liability';
+  if (budgetCategories.includes(category)) return 'budget';
+  if (accountCategories.includes(category)) return 'account';
+  
+  return 'expense'; // Default fallback
 };
