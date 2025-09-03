@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface BarChartData {
   month: string;
@@ -9,9 +9,17 @@ interface BarChartData {
 interface BarChartProps {
   data: BarChartData[];
   className?: string;
+  interactive?: boolean;
+  onBarClick?: (data: BarChartData) => void;
 }
 
-export const BarChart: React.FC<BarChartProps> = ({ data, className = '' }) => {
+export const BarChart: React.FC<BarChartProps> = ({ 
+  data, 
+  className = '', 
+  interactive = false, 
+  onBarClick 
+}) => {
+  const [hoveredBar, setHoveredBar] = useState<number | null>(null);
   const maxValue = Math.max(
     ...data.flatMap(d => [d.income, d.spending])
   );
@@ -25,31 +33,51 @@ export const BarChart: React.FC<BarChartProps> = ({ data, className = '' }) => {
           const spendingHeight = (item.spending / maxValue) * 100;
           
           return (
-            <div key={index} className="flex-1 flex flex-col items-center space-y-1">
+            <div 
+              key={index} 
+              className={`flex-1 flex flex-col items-center space-y-1 ${
+                interactive ? 'cursor-pointer' : ''
+              }`}
+              onMouseEnter={() => interactive && setHoveredBar(index)}
+              onMouseLeave={() => interactive && setHoveredBar(null)}
+              onClick={() => {
+                if (interactive && onBarClick) {
+                  onBarClick(item);
+                }
+              }}
+            >
               {/* Bars */}
               <div className="flex flex-col justify-end h-32 w-full space-y-1">
                 {/* Income Bar */}
                 <div
-                  className="w-full rounded-t-sm transition-all duration-500 ease-out"
+                  className={`w-full rounded-t-sm transition-all duration-500 ease-out ${
+                    hoveredBar === index ? 'opacity-80' : ''
+                  }`}
                   style={{
                     height: `${incomeHeight}%`,
                     backgroundColor: 'var(--primary)',
-                    minHeight: '4px'
+                    minHeight: '4px',
+                    filter: hoveredBar === index ? 'brightness(1.1)' : 'none'
                   }}
                 />
                 {/* Spending Bar */}
                 <div
-                  className="w-full rounded-t-sm transition-all duration-500 ease-out"
+                  className={`w-full rounded-t-sm transition-all duration-500 ease-out ${
+                    hoveredBar === index ? 'opacity-80' : ''
+                  }`}
                   style={{
                     height: `${spendingHeight}%`,
                     backgroundColor: 'var(--accent)',
-                    minHeight: '4px'
+                    minHeight: '4px',
+                    filter: hoveredBar === index ? 'brightness(1.1)' : 'none'
                   }}
                 />
               </div>
               
               {/* Month Label */}
-              <div className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
+              <div className={`text-xs font-body transition-all duration-200 ${
+                hoveredBar === index ? 'font-medium' : ''
+              }`} style={{ color: 'var(--text-tertiary)' }}>
                 {item.month}
               </div>
             </div>

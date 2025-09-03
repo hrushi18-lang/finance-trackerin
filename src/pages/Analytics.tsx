@@ -16,6 +16,7 @@ import { useInternationalization } from '../contexts/InternationalizationContext
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { RingChart } from '../components/analytics/RingChart';
 import { BarChart } from '../components/analytics/BarChart';
+import { ChartPopup } from '../components/analytics/ChartPopup';
 
 export const Analytics: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +25,9 @@ export const Analytics: React.FC = () => {
   
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
   const [selectedView, setSelectedView] = useState('overview');
+  const [showChartPopup, setShowChartPopup] = useState(false);
+  const [popupData, setPopupData] = useState<any>(null);
+  const [popupType, setPopupType] = useState<'ring' | 'bar'>('ring');
 
   // Calculate analytics data
   const analyticsData = useMemo(() => {
@@ -295,6 +299,12 @@ export const Analytics: React.FC = () => {
             }))}
             size={180}
             strokeWidth={15}
+            interactive={true}
+            onSegmentClick={(segment) => {
+              setPopupData(segment);
+              setPopupType('ring');
+              setShowChartPopup(true);
+            }}
           />
         </div>
 
@@ -308,14 +318,43 @@ export const Analytics: React.FC = () => {
         >
           <h3 className="text-lg font-heading mb-4">Income vs Spending</h3>
           <BarChart
-            data={[
-              { month: 'Jan', income: analyticsData.income * 0.8, spending: analyticsData.expenses * 0.9 },
-              { month: 'Feb', income: analyticsData.income * 0.9, spending: analyticsData.expenses * 0.8 },
-              { month: 'Mar', income: analyticsData.income * 1.1, spending: analyticsData.expenses * 1.0 },
-              { month: 'Apr', income: analyticsData.income * 0.95, spending: analyticsData.expenses * 0.95 },
-              { month: 'May', income: analyticsData.income * 1.2, spending: analyticsData.expenses * 1.1 },
-              { month: 'Jun', income: analyticsData.income, spending: analyticsData.expenses }
-            ]}
+            data={(() => {
+              // Calculate real historical data for the last 6 months
+              const months = [];
+              const currentDate = new Date();
+              
+              for (let i = 5; i >= 0; i--) {
+                const monthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+                const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() - i + 1, 0);
+                
+                const monthTransactions = transactions.filter(t => {
+                  const transactionDate = new Date(t.date);
+                  return transactionDate >= monthDate && transactionDate <= monthEnd;
+                });
+                
+                const monthIncome = monthTransactions
+                  .filter(t => t.type === 'income')
+                  .reduce((sum, t) => sum + t.amount, 0);
+                
+                const monthSpending = monthTransactions
+                  .filter(t => t.type === 'expense')
+                  .reduce((sum, t) => sum + t.amount, 0);
+                
+                months.push({
+                  month: monthDate.toLocaleDateString('en-US', { month: 'short' }),
+                  income: monthIncome,
+                  spending: monthSpending
+                });
+              }
+              
+              return months;
+            })()}
+            interactive={true}
+            onBarClick={(data) => {
+              setPopupData(data);
+              setPopupType('bar');
+              setShowChartPopup(true);
+            }}
           />
         </div>
 
@@ -391,6 +430,20 @@ export const Analytics: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Interactive Chart Popup */}
+      <ChartPopup
+        isOpen={showChartPopup}
+        onClose={() => setShowChartPopup(false)}
+        title={popupType === 'ring' ? 'Category Details' : 'Monthly Details'}
+        data={popupData}
+        type={popupType}
+        onRangeSelect={(startDate, endDate) => {
+          // Handle date range selection
+          console.log('Date range selected:', startDate, endDate);
+          setShowChartPopup(false);
+        }}
+      />
     </div>
   );
 };

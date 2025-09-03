@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface RingChartData {
   label: string;
@@ -13,6 +13,8 @@ interface RingChartProps {
   showLegend?: boolean;
   total?: number;
   className?: string;
+  interactive?: boolean;
+  onSegmentClick?: (segment: RingChartData) => void;
 }
 
 export const RingChart: React.FC<RingChartProps> = ({
@@ -21,8 +23,11 @@ export const RingChart: React.FC<RingChartProps> = ({
   strokeWidth = 20,
   showLegend = true,
   total,
-  className = ''
+  className = '',
+  interactive = false,
+  onSegmentClick
 }) => {
+  const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
@@ -66,7 +71,7 @@ export const RingChart: React.FC<RingChartProps> = ({
           />
           
           {/* Data segments */}
-          {segments.map((segment) => (
+          {segments.map((segment, index) => (
             <circle
               key={segment.key}
               cx={center}
@@ -78,10 +83,22 @@ export const RingChart: React.FC<RingChartProps> = ({
               strokeDasharray={segment.strokeDasharray}
               strokeDashoffset={segment.strokeDashoffset}
               strokeLinecap="round"
-              className="transition-all duration-1000 ease-out"
+              className={`transition-all duration-1000 ease-out ${
+                interactive ? 'cursor-pointer' : ''
+              } ${
+                hoveredSegment === index ? 'opacity-80' : ''
+              }`}
               style={{
                 strokeDasharray: segment.strokeDasharray,
-                strokeDashoffset: segment.strokeDashoffset
+                strokeDashoffset: segment.strokeDashoffset,
+                filter: hoveredSegment === index ? 'brightness(1.1)' : 'none'
+              }}
+              onMouseEnter={() => interactive && setHoveredSegment(index)}
+              onMouseLeave={() => interactive && setHoveredSegment(null)}
+              onClick={() => {
+                if (interactive && onSegmentClick) {
+                  onSegmentClick(segment);
+                }
               }}
             />
           ))}

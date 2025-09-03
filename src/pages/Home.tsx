@@ -25,6 +25,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { format } from 'date-fns';
 import { RingChart } from '../components/analytics/RingChart';
+import { ChartPopup } from '../components/analytics/ChartPopup';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -40,6 +41,8 @@ export const Home: React.FC = () => {
 
   const [hideBalance, setHideBalance] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'income' | 'expense' | 'savings'>('all');
+  const [showChartPopup, setShowChartPopup] = useState(false);
+  const [popupData, setPopupData] = useState<any>(null);
 
   // Calculate net worth
   const netWorth = useMemo(() => {
@@ -316,16 +319,57 @@ export const Home: React.FC = () => {
               boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
             }}
           >
-            <RingChart
-              data={[
-                { label: 'Groceries', value: 450.50, color: 'hsl(120, 60%, 50%)' },
-                { label: 'Bills', value: 210.00, color: 'hsl(150, 60%, 50%)' },
-                { label: 'Shopping', value: 315.25, color: 'hsl(180, 60%, 50%)' },
-                { label: 'Transport', value: 125.00, color: 'hsl(210, 60%, 50%)' }
-              ]}
-              size={160}
-              strokeWidth={12}
-            />
+            {(() => {
+              // Calculate real spending data from transactions
+              const currentMonth = new Date();
+              const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+              const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+              
+              const monthlyExpenses = transactions.filter(t => 
+                t.type === 'expense' && 
+                new Date(t.date) >= monthStart && 
+                new Date(t.date) <= monthEnd
+              );
+              
+              const categoryTotals = monthlyExpenses.reduce((acc, transaction) => {
+                const category = transaction.category || 'Other';
+                acc[category] = (acc[category] || 0) + transaction.amount;
+                return acc;
+              }, {} as Record<string, number>);
+              
+              const spendingData = Object.entries(categoryTotals)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 4)
+                .map(([category, amount], index) => ({
+                  label: category,
+                  value: amount,
+                  color: `hsl(${120 + index * 30}, 60%, 50%)`
+                }));
+              
+              if (spendingData.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">📊</div>
+                    <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>
+                      No spending data for this month
+                    </p>
+                  </div>
+                );
+              }
+              
+              return (
+                <RingChart
+                  data={spendingData}
+                  size={160}
+                  strokeWidth={12}
+                  interactive={true}
+                  onSegmentClick={(segment) => {
+                    setPopupData(segment);
+                    setShowChartPopup(true);
+                  }}
+                />
+              );
+            })()}
           </div>
         </div>
 
@@ -389,6 +433,20 @@ export const Home: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Interactive Chart Popup */}
+      <ChartPopup
+        isOpen={showChartPopup}
+        onClose={() => setShowChartPopup(false)}
+        title="Spending Category Details"
+        data={popupData}
+        type="ring"
+        onRangeSelect={(startDate, endDate) => {
+          // Handle date range selection
+          console.log('Date range selected:', startDate, endDate);
+          setShowChartPopup(false);
+        }}
+      />
     </div>
   );
 };
