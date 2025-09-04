@@ -122,7 +122,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
           <div className="bg-black/20 p-3 rounded-lg">
             <span className="text-gray-400">Amount:</span>
             <span className="font-medium ml-2 text-white">
-              <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
+              <CurrencyIcon currencycode={currency.code} size={14} className="inline mr-1" />
               {formatCurrency(bill.amount)}
             </span>
           </div>
@@ -186,7 +186,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
               onClick={() => handleQuickAmount(bill.amount * 1.5)}
               className="border-white/20 text-white hover:bg-white/10"
             >
-              <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
+              <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
               1.5x
             </Button>
           </div>
@@ -198,7 +198,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
             label="Payment Amount"
             type="number"
             step="0.01"
-            icon={<CurrencyIcon currencyCode={currency.code} className="text-success-400" />}
+            icon={<CurrencyIcon currencycode={currency.code} className="text-success-400" />}
             {...register('amount', {
               required: 'Payment amount is required',
               min: { value: 0.01, message: 'Amount must be greater than 0' },

@@ -113,7 +113,7 @@ export const BillForm: React.FC<BillFormProps> = ({
         type="number"
         step="0.01"
         placeholder="e.g., 500"
-        icon={<CurrencyIcon currencyCode={currency.code} className="text-success-400" />}
+        icon={<CurrencyIcon currencycode={currency.code} className="text-success-400" />}
         {...register('amount', {
           required: 'Amount is required',
           min: { value: 0.01, message: 'Amount must be greater than 0' }

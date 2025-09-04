@@ -351,7 +351,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({
               label="Total Amount"
               type="number"
               step="0.01"
-              icon={<CurrencyIcon currencyCode={currency.code} className="text-error-400" />}
+              icon={<CurrencyIcon currencycode={currency.code} className="text-error-400" />}
               {...register('totalAmount', {
                 required: 'Total amount is required',
                 min: { value: 0.01, message: 'Amount must be greater than 0' }
@@ -364,7 +364,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({
               label="Remaining Amount"
               type="number"
               step="0.01"
-              icon={<CurrencyIcon currencyCode={currency.code} className="text-orange-400" />}
+              icon={<CurrencyIcon currencycode={currency.code} className="text-orange-400" />}
               {...register('remainingAmount', {
                 required: 'Remaining amount is required',
                 min: { value: 0, message: 'Amount cannot be negative' }
@@ -393,7 +393,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({
               label="Monthly Payment"
               type="number"
               step="0.01"
-              icon={<CurrencyIcon currencyCode={currency.code} className="text-blue-400" />}
+              icon={<CurrencyIcon currencycode={currency.code} className="text-blue-400" />}
               {...register('monthlyPayment', {
                 min: { value: 0.01, message: 'Payment must be greater than 0' }
               })}

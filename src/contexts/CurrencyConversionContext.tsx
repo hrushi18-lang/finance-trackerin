@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useInternationalization } from './InternationalizationContext';
 
 interface ExchangeRates {
-  [currencyCode: string]: number;
+  [currencycode: string]: number;
 }
 
 interface ConversionHistory {

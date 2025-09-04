@@ -124,7 +124,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
           label="Budget Amount"
           type="number"
           step="0.01"
-          icon={<CurrencyIcon currencyCode={currency.code} className="text-green-400" />}
+          icon={<CurrencyIcon currencycode={currency.code} className="text-green-400" />}
           {...register('amount', {
             required: 'Budget amount is required',
             min: { value: 0.01, message: 'Amount must be greater than 0' },

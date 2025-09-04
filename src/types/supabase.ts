@@ -44,7 +44,7 @@ export interface Database {
           platform: string | null
           account_number: string | null
           is_visible: boolean
-          currencyCode: string
+          currencycode: string
           created_at: string
           updated_at: string
         }
@@ -58,7 +58,7 @@ export interface Database {
           platform?: string | null
           account_number?: string | null
           is_visible?: boolean
-          currencyCode?: string
+          currencycode?: string
           created_at?: string
           updated_at?: string
         }
@@ -72,7 +72,7 @@ export interface Database {
           platform?: string | null
           account_number?: string | null
           is_visible?: boolean
-          currencyCode?: string
+          currencycode?: string
           created_at?: string
           updated_at?: string
         }

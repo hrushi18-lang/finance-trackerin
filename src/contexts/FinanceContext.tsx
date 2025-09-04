@@ -194,7 +194,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Use user's selected currency from onboarding/internationalization
     const savedCurrency = typeof window !== 'undefined' ? localStorage.getItem('finspire_currency') : null;
-    const defaultCurrency = accounts[0]?.currencyCode || savedCurrency || 'USD';
+    const defaultCurrency = accounts[0]?.currencycode || savedCurrency || 'USD';
 
     const { data, error } = await supabase
       .from('financial_accounts')
@@ -204,7 +204,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type: 'goals_vault',
         balance: 0,
         is_visible: true,
-        currencyCode: defaultCurrency
+        currencycode: defaultCurrency
       })
       .select()
       .single();
@@ -221,7 +221,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       type: data.type,
       balance: Number(data.balance),
       isVisible: data.is_visible,
-      currencyCode: data.currencyCode,
+              currencycode: data.currencycode,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     } as FinancialAccount;
@@ -400,7 +400,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       platform: account.platform,
       accountNumber: account.account_number,
       isVisible: account.is_visible,
-      currencyCode: account.currency,
+      currencycode: account.currencycode,
       createdAt: new Date(account.created_at),
       updatedAt: new Date(account.updated_at)
     }));
@@ -856,7 +856,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         platform: accountData.platform,
         account_number: accountData.accountNumber,
         is_visible: accountData.isVisible,
-        currencyCode: accountData.currencyCode
+                        currencycode: accountData.currencycode
       })
       .select()
       .single();
@@ -873,7 +873,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       platform: data.platform,
       accountNumber: data.account_number,
       isVisible: data.is_visible,
-      currencyCode: data.currencyCode,
+              currencycode: data.currencycode,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };
@@ -894,7 +894,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         platform: updates.platform,
         account_number: updates.accountNumber,
         is_visible: updates.isVisible,
-        currencyCode: updates.currencyCode
+                        currencycode: updates.currencycode
       })
       .eq('id', id)
       .eq('user_id', user.id);
@@ -1569,8 +1569,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         from_account_id: fromAccountId,
         to_account_id: toAccountId,
         amount: amount,
-        from_currency: fromAccount.currencyCode,
-        to_currency: toAccount.currencyCode,
+        from_currency: fromAccount.currencycode,
+        to_currency: toAccount.currencycode,
         exchange_rate: 1.0, // Simplified for now
         converted_amount: amount,
         description: description,

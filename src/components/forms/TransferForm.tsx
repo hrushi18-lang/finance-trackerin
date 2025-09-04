@@ -131,7 +131,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
         type="number"
         step="0.01"
         placeholder="0"
-        icon={<CurrencyIcon currencyCode={currency.code} className="text-primary-400" />}
+        icon={<CurrencyIcon currencycode={currency.code} className="text-primary-400" />}
         {...register('amount', {
           required: 'Amount is required',
           min: { value: 0.01, message: 'Amount must be greater than 0' },
