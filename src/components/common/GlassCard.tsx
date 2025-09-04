@@ -11,8 +11,8 @@ export const GlassCard: React.FC<GlassCardProps> = ({ children, className, hover
   return (
     <div
       className={clsx(
-        'backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl shadow-xl',
-        hover && 'hover:bg-white/20 hover:border-white/30 transition-all duration-300 hover:shadow-2xl hover:scale-105',
+        'backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-lg',
+        hover && 'hover:bg-white/10 hover:border-white/15 transition-all duration-300 hover:shadow-xl hover:scale-105',
         className
       )}
     >

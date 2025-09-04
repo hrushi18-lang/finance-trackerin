@@ -95,7 +95,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
           className="block w-full rounded-xl border-white/20 bg-black/20 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
         >
           <option value="">Select source account</option>
-          {accounts.map((account) => (
+          {accounts?.map((account) => (
             <option key={account.id} value={account.id} className="bg-black/90">
               {account.name} - {formatCurrency(account.balance)}
             </option>
@@ -114,7 +114,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
           className="block w-full rounded-xl border-white/20 bg-black/20 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
         >
           <option value="">Select destination account</option>
-          {accounts.filter(a => a.id !== fromAccountId).map((account) => (
+          {accounts?.filter(a => a.id !== fromAccountId).map((account) => (
             <option key={account.id} value={account.id} className="bg-black/90">
               {account.name} - {formatCurrency(account.balance)}
             </option>

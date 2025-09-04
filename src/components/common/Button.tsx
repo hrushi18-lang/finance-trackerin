@@ -24,7 +24,7 @@ export const Button: React.FC<ButtonProps> = ({
   const baseClasses = 'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
   
   const variants = {
-    primary: 'text-white shadow-lg hover:shadow-xl focus:ring-offset-2',
+    primary: 'text-white shadow-md hover:shadow-lg focus:ring-offset-2',
     secondary: 'shadow-sm hover:shadow-md focus:ring-offset-2',
     outline: 'border-2 focus:ring-offset-2',
     ghost: 'focus:ring-offset-2',

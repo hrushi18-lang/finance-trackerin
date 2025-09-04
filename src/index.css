@@ -92,8 +92,8 @@
   --shadow-xl: 0 20px 25px -5px rgba(15, 27, 10, 0.6), 0 10px 10px -5px rgba(15, 27, 10, 0.4);
   
   /* Glassmorphism Effects */
-  --neumorphic-light: 0 8px 32px rgba(15, 27, 10, 0.4), 0 0 0 1px rgba(74, 124, 89, 0.1);
-  --neumorphic-inset: inset 0 1px 0 rgba(232, 245, 232, 0.1), inset 0 -1px 0 rgba(15, 27, 10, 0.2);
+  --neumorphic-light: 0 4px 16px rgba(15, 27, 10, 0.3), 0 0 0 1px rgba(74, 124, 89, 0.1);
+  --neumorphic-inset: inset 0 1px 0 rgba(74, 124, 89, 0.1), inset 0 -1px 0 rgba(15, 27, 10, 0.2);
   
   /* Rainforest Modal Specific */
   --modal-shadow: 0 25px 50px -12px rgba(15, 27, 10, 0.7), 0 0 0 1px rgba(74, 124, 89, 0.2);
@@ -213,6 +213,7 @@ body {
   border: 1px solid rgba(74, 124, 89, 0.3);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(15, 27, 10, 0.3);
 }
 
 [data-theme="dark"] .card-elevated {
@@ -220,6 +221,7 @@ body {
   border: 1px solid rgba(74, 124, 89, 0.4);
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
+  box-shadow: 0 8px 24px rgba(15, 27, 10, 0.4);
 }
 
 .btn-primary {
@@ -397,6 +399,46 @@ body {
 [data-theme="dark"] .modal-input:focus {
   border-color: #4A7C59 !important; /* Fresh forest green focus */
   box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.2);
+}
+
+/* Dark mode font size reductions for cleaner look */
+[data-theme="dark"] {
+  font-size: 0.9rem;
+}
+
+[data-theme="dark"] h1 { font-size: 1.75rem; }
+[data-theme="dark"] h2 { font-size: 1.5rem; }
+[data-theme="dark"] h3 { font-size: 1.25rem; }
+[data-theme="dark"] h4 { font-size: 1.125rem; }
+[data-theme="dark"] h5 { font-size: 1rem; }
+[data-theme="dark"] h6 { font-size: 0.875rem; }
+
+[data-theme="dark"] .text-xs { font-size: 0.7rem; }
+[data-theme="dark"] .text-sm { font-size: 0.8rem; }
+[data-theme="dark"] .text-base { font-size: 0.9rem; }
+[data-theme="dark"] .text-lg { font-size: 1rem; }
+[data-theme="dark"] .text-xl { font-size: 1.125rem; }
+[data-theme="dark"] .text-2xl { font-size: 1.25rem; }
+[data-theme="dark"] .text-3xl { font-size: 1.5rem; }
+[data-theme="dark"] .text-4xl { font-size: 1.75rem; }
+[data-theme="dark"] .text-5xl { font-size: 2rem; }
+[data-theme="dark"] .text-6xl { font-size: 2.25rem; }
+
+/* Remove white shadows from dark mode buttons */
+[data-theme="dark"] .btn-primary {
+  box-shadow: 0 2px 8px rgba(15, 27, 10, 0.3);
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(15, 27, 10, 0.4);
+}
+
+[data-theme="dark"] .btn-secondary {
+  box-shadow: 0 1px 4px rgba(15, 27, 10, 0.2);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  box-shadow: 0 2px 8px rgba(15, 27, 10, 0.3);
 }
 
 .modal-button-primary {

@@ -44,7 +44,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
   React.useEffect(() => {
     if (bill && watchedAmount && watchedAccountId) {
       const paymentAmount = Number(watchedAmount) || 0;
-      const selectedAccount = accounts.find(a => a.id === watchedAccountId);
+      const selectedAccount = accounts?.find(a => a.id === watchedAccountId);
       
       if (paymentAmount > 0 && selectedAccount && !isNaN(paymentAmount)) {
         const currentBalance = Number(selectedAccount.balance) || 0;
@@ -63,7 +63,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
       setIsSubmitting(true);
       
       const amount = Number(data.amount) || 0;
-      const selectedAccount = accounts.find(a => a.id === data.accountId);
+      const selectedAccount = accounts?.find(a => a.id === data.accountId);
       
       if (amount <= 0) {
         throw new Error('Payment amount must be greater than 0');
@@ -144,7 +144,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
             className="w-full bg-black/40 border border-white/20 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
           >
             <option value="">Select an account</option>
-            {accounts.map((account) => (
+            {accounts?.map((account) => (
               <option key={account.id} value={account.id}>
                 {account.name} - {formatCurrency(account.balance)} ({account.type.replace('_', ' ')})
               </option>

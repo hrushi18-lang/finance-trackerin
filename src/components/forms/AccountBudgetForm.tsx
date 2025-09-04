@@ -88,7 +88,7 @@ export const AccountBudgetForm: React.FC<AccountBudgetFormProps> = ({
           className="modal-input w-full"
         >
           <option value="">Select an account</option>
-          {accounts.map(account => (
+          {accounts?.map(account => (
             <option key={account.id} value={account.id}>
               {account.name} ({account.type.replace('_', ' ').toUpperCase()})
             </option>
