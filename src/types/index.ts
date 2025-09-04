@@ -11,11 +11,11 @@ export interface FinancialAccount {
   name: string;
   type: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment' | 'goals_vault';
   balance: number;
-  institution?: string;
-  platform?: string;
-  accountNumber?: string;
-  isVisible: boolean;
-  currencycode: string;
+  institution: string | null;
+  platform: string | null;
+  accountNumber: string | null;
+  isVisible: boolean; // Renamed from is_visible
+  currency: string; // Renamed from currencycode
   userId: string;
   createdAt: Date;
   updatedAt: Date;
