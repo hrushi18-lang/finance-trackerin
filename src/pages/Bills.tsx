@@ -387,9 +387,9 @@ export const Bills: React.FC = () => {
         {selectedBill && (
           <BillPaymentForm
             bill={selectedBill}
+            accounts={accounts || []}
             onSubmit={handlePayBill}
             onCancel={() => setShowPaymentModal(false)}
-            isSubmitting={isSubmitting}
           />
         )}
       </Modal>
