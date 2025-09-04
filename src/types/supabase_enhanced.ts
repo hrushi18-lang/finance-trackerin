@@ -53,13 +53,13 @@ export interface Database {
           id: string
           user_id: string
           name: string
-          type: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment'
+          type: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment' | 'goals_vault'
           balance: number
           institution: string | null
           platform: string | null
           account_number: string | null
           is_visible: boolean
-          currency: string
+          currencyCode: string
           created_at: string
           updated_at: string
         }
@@ -67,13 +67,13 @@ export interface Database {
           id?: string
           user_id: string
           name: string
-          type: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment'
+          type: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment' | 'goals_vault'
           balance?: number
           institution?: string | null
           platform?: string | null
           account_number?: string | null
           is_visible?: boolean
-          currency?: string
+          currencyCode?: string
           created_at?: string
           updated_at?: string
         }
@@ -81,13 +81,13 @@ export interface Database {
           id?: string
           user_id?: string
           name?: string
-          type?: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment'
+          type?: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment' | 'goals_vault'
           balance?: number
           institution?: string | null
           platform?: string | null
           account_number?: string | null
           is_visible?: boolean
-          currency?: string
+          currencyCode?: string
           created_at?: string
           updated_at?: string
         }

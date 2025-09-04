@@ -106,7 +106,7 @@ class FinanceManager {
       platform: data.platform || null,
       account_number: data.account_number || null,
       is_visible: true,
-      currency: data.currency || 'USD'
+      currencyCode: data.currency || 'USD'
     };
 
     return await offlineStorage.create<FinancialAccount>('financial_accounts', accountData);
