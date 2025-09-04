@@ -15,7 +15,7 @@ export interface FinancialAccount {
   platform?: string;
   accountNumber?: string;
   isVisible: boolean;
-  currencyCode: string;
+  currency: string;
   userId: string;
   createdAt: Date;
   updatedAt: Date;
