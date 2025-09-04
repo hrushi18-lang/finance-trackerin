@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFinance } from '../contexts/FinanceContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { Input } from '../components/common/Input';
@@ -31,6 +32,7 @@ import { offlineStorage } from '../lib/offline-storage';
 export const Settings: React.FC = () => {
   const { user, signOut } = useAuth();
   const { syncData } = useFinance();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -39,7 +41,6 @@ export const Settings: React.FC = () => {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -192,16 +193,16 @@ export const Settings: React.FC = () => {
       title: 'Appearance',
       items: [
         {
-          icon: isDarkMode ? <Moon size={20} /> : <Sun size={20} />,
+          icon: theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />,
           title: 'Dark Mode',
-          subtitle: isDarkMode ? 'Dark theme enabled' : 'Light theme enabled',
-          onClick: () => setIsDarkMode(!isDarkMode),
+          subtitle: theme === 'dark' ? 'Dark theme enabled' : 'Light theme enabled',
+          onClick: toggleTheme,
           rightElement: (
             <div className={`w-12 h-6 rounded-full transition-colors ${
-              isDarkMode ? 'bg-gray-600' : 'bg-gray-300'
+              theme === 'dark' ? 'bg-gray-600' : 'bg-gray-300'
             }`}>
               <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                isDarkMode ? 'translate-x-6' : 'translate-x-0.5'
+                theme === 'dark' ? 'translate-x-6' : 'translate-x-0.5'
               } mt-0.5`} />
             </div>
           )
@@ -639,3 +640,5 @@ export const Settings: React.FC = () => {
     </div>
   );
 };
+
+export default Settings;

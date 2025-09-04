@@ -23,7 +23,7 @@ export interface FinancialAccount {
 
 export interface Transaction {
   id: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'payment' | 'contribution';
   amount: number;
   category: string;
   // description: string; // Removed as per schema
@@ -33,6 +33,7 @@ export interface Transaction {
   accountId?: string; // Linked to specific account
   affectsBalance: boolean; // Whether this affects account balance
   reason?: string; // Required when affectsBalance is false
+  status: 'completed' | 'pending' | 'scheduled' | 'cancelled'; // Transaction status
   // transferToAccountId?: string; // Removed as per schema
   transferToAccountId?: string; // For cross-account transfers
   // recurringTransactionId?: string; // Removed as per schema
@@ -44,7 +45,16 @@ export interface Transaction {
   exchangeRate?: number;
   isSplit?: boolean;
   splitGroupId?: string;
-  status: 'completed' | 'pending' | 'cancelled';
+  // Detail page linking fields
+  goal_id?: string; // Link to specific goal
+  budget_id?: string; // Link to specific budget
+  bill_id?: string; // Link to specific bill
+  liability_id?: string; // Link to specific liability
+  // Additional fields for detail pages
+  account_name?: string; // Account name for display
+  payment_method?: string; // Payment method used
+  payment_type?: string; // Type of payment (regular, extra, etc.)
+  interest_amount?: number; // Interest portion of payment
   createdAt?: Date;
   updatedAt?: Date;
 }

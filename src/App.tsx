@@ -7,6 +7,7 @@ import { FinanceProvider } from './contexts/FinanceContext';
 import { InternationalizationProvider } from './contexts/InternationalizationContext';
 import { CurrencyConversionProvider } from './contexts/CurrencyConversionContext';
 import { PersonalizationProvider } from './contexts/PersonalizationContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/common/Toast';
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { ErrorFallback } from './components/common/ErrorFallback';
@@ -23,20 +24,25 @@ import { conflictResolver } from './lib/conflict-resolver';
 import './styles/accessibility.css';
 
 // Lazy load pages for better performance
-const Auth = React.lazy(() => import('./pages/Auth').then(module => ({ default: module.Auth })));
-const Home = React.lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
-const Dashboard = React.lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
-const AddTransaction = React.lazy(() => import('./pages/AddTransaction').then(module => ({ default: module.AddTransaction })));
-const Transactions = React.lazy(() => import('./pages/Transactions').then(module => ({ default: module.Transactions })));
-const Analytics = React.lazy(() => import('./pages/Analytics').then(module => ({ default: module.Analytics })));
-const Calendar = React.lazy(() => import('./pages/Calendar').then(module => ({ default: module.Calendar })));
-const Goals = React.lazy(() => import('./pages/Goals').then(module => ({ default: module.Goals })));
-const Liabilities = React.lazy(() => import('./pages/Liabilities').then(module => ({ default: module.Liabilities })));
-const Budgets = React.lazy(() => import('./pages/Budgets').then(module => ({ default: module.Budgets })));
-const Overview = React.lazy(() => import('./pages/Overview').then(module => ({ default: module.Overview })));
-const Accounts = React.lazy(() => import('./pages/Accounts').then(module => ({ default: module.Accounts })));
-const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
-const Bills = React.lazy(() => import('./pages/Bills').then(module => ({ default: module.Bills })));
+const Auth = React.lazy(() => import('./pages/Auth'));
+const Home = React.lazy(() => import('./pages/Home'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const AddTransaction = React.lazy(() => import('./pages/AddTransaction'));
+const Transactions = React.lazy(() => import('./pages/Transactions'));
+const Analytics = React.lazy(() => import('./pages/Analytics'));
+const Calendar = React.lazy(() => import('./pages/Calendar'));
+const Goals = React.lazy(() => import('./pages/Goals'));
+const Liabilities = React.lazy(() => import('./pages/Liabilities'));
+const Budgets = React.lazy(() => import('./pages/Budgets'));
+const Overview = React.lazy(() => import('./pages/Overview'));
+const Accounts = React.lazy(() => import('./pages/Accounts'));
+const AccountDetail = React.lazy(() => import('./pages/AccountDetail'));
+const GoalDetail = React.lazy(() => import('./pages/GoalDetail'));
+const BudgetDetail = React.lazy(() => import('./pages/BudgetDetail'));
+const BillDetail = React.lazy(() => import('./pages/BillDetail'));
+const LiabilityDetail = React.lazy(() => import('./pages/LiabilityDetail'));
+const Settings = React.lazy(() => import('./pages/Settings'));
+const Bills = React.lazy(() => import('./pages/Bills'));
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -67,11 +73,12 @@ function App() {
     <ErrorBoundary fallback={<ErrorFallback />}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <AuthProvider>
-            <InternationalizationProvider>
-              <CurrencyConversionProvider>
-                <PersonalizationProvider>
-                  <FinanceProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <InternationalizationProvider>
+                <CurrencyConversionProvider>
+                  <PersonalizationProvider>
+                    <FinanceProvider>
                     <AppInitializer>
                       <Router>
                         <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
@@ -231,6 +238,56 @@ function App() {
                               />
                               
                               <Route 
+                                path="/accounts/:accountId" 
+                                element={
+                                  <ProtectedRoute>
+                                    <AccountDetail />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/goals/:goalId" 
+                                element={
+                                  <ProtectedRoute>
+                                    <GoalDetail />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/budgets/:budgetId" 
+                                element={
+                                  <ProtectedRoute>
+                                    <BudgetDetail />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/bills/:billId" 
+                                element={
+                                  <ProtectedRoute>
+                                    <BillDetail />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/liabilities/:liabilityId" 
+                                element={
+                                  <ProtectedRoute>
+                                    <LiabilityDetail />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
                                 path="/bills" 
                                 element={
                                   <ProtectedRoute>
@@ -259,11 +316,12 @@ function App() {
                       </Router>
                       <ReactQueryDevtools initialIsOpen={false} />
                     </AppInitializer>
-                  </FinanceProvider>
-                </PersonalizationProvider>
-              </CurrencyConversionProvider>
-            </InternationalizationProvider>
-          </AuthProvider>
+                    </FinanceProvider>
+                  </PersonalizationProvider>
+                </CurrencyConversionProvider>
+              </InternationalizationProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </ToastProvider>
       </QueryClientProvider>
     </ErrorBoundary>

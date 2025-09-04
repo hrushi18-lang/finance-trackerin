@@ -1,14 +1,39 @@
-# Mobile Deployment Guide for Finspire
+# Mobile Deployment Guide for FinTrack
 
-This guide provides step-by-step instructions for deploying the Finspire app to both the Apple App Store and Google Play Store.
+This guide provides step-by-step instructions for deploying the FinTrack app to both the Apple App Store and Google Play Store.
+
+## 🚀 Quick Start
+
+For a quick deployment setup, run:
+```bash
+npm run mobile:deploy
+```
+
+This will automatically:
+- Check prerequisites
+- Build the app
+- Set up mobile platforms
+- Generate necessary files
+- Open the appropriate IDE
 
 ## Prerequisites
 
-- Apple Developer Account ($99/year) for iOS deployment
-- Google Play Developer Account ($25 one-time fee) for Android deployment
-- Xcode installed (for iOS)
-- Android Studio installed (for Android)
-- Node.js and npm installed
+### Required Software
+- **Node.js** (v18 or higher) and npm
+- **Xcode** (latest version) for iOS development
+- **Android Studio** (latest version) for Android development
+- **Git** for version control
+
+### Required Accounts
+- **Apple Developer Account** ($99/year) for iOS deployment
+- **Google Play Developer Account** ($25 one-time fee) for Android deployment
+
+### Mobile-Specific Features
+- **Capacitor** - Already configured for native mobile deployment
+- **Mobile-optimized UI** - Responsive design with touch-friendly interfaces
+- **Native plugins** - Device access, haptics, preferences, and more
+- **Offline support** - Works without internet connection
+- **Push notifications** - Ready for implementation
 
 ## Building the App
 

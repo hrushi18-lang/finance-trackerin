@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Plus, Minus, Target, CreditCard, AlertCircle, Trash2, Link, Unlink } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Plus, Minus, Target, CreditCard, AlertCircle, Trash2, Link, Unlink, Clock, Calendar } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
@@ -33,6 +33,7 @@ interface SplitFormData {
 
 export const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currency, formatCurrency } = useInternationalization();
   const { 
     addTransaction, 
@@ -51,6 +52,9 @@ export const AddTransaction: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showLinkOptions, setShowLinkOptions] = useState(false);
+  
+  // Handle location state for historical and scheduled transactions
+  const { accountId, isHistorical, isScheduled } = location.state || {};
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<TransactionFormData>({
     defaultValues: {
@@ -60,6 +64,24 @@ export const AddTransaction: React.FC = () => {
       affectsBalance: true,
     },
   });
+
+  // Set default values based on state
+  useEffect(() => {
+    if (accountId) {
+      setValue('accountId', accountId);
+    }
+    if (isHistorical) {
+      // For historical transactions, set date to a past date
+      const pastDate = new Date();
+      pastDate.setMonth(pastDate.getMonth() - 1);
+      setValue('date', pastDate.toISOString().split('T')[0]);
+    } else if (isScheduled) {
+      // For scheduled transactions, set date to a future date
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7);
+      setValue('date', futureDate.toISOString().split('T')[0]);
+    }
+  }, [accountId, isHistorical, isScheduled, setValue]);
 
   const type = watch('type');
   const category = watch('category');
@@ -96,6 +118,9 @@ export const AddTransaction: React.FC = () => {
       setIsSubmitting(true);
       setError(null);
       
+      // For historical transactions, don't affect current balance
+      const affectsBalance = !isHistorical;
+      
       if (isSplitTransaction) {
         // For split transactions, create individual transactions for each split
         const totalSplitAmount = splits.reduce((sum, split) => sum + toNumber(split.amount), 0);
@@ -116,8 +141,8 @@ export const AddTransaction: React.FC = () => {
             category: split.category || data.category,
             date: new Date(data.date),
             accountId: data.accountId,
-            affectsBalance: data.affectsBalance,
-            status: 'completed' as const
+            affectsBalance: affectsBalance,
+            status: isScheduled ? 'scheduled' as const : 'completed' as const
           };
 
           await addTransaction(transactionData);
@@ -131,8 +156,8 @@ export const AddTransaction: React.FC = () => {
           category: data.category,
           date: new Date(data.date),
           accountId: data.accountId,
-          affectsBalance: data.affectsBalance,
-          status: 'completed' as const
+          affectsBalance: affectsBalance,
+          status: isScheduled ? 'scheduled' as const : 'completed' as const
         };
 
         // Submit the main transaction
@@ -231,6 +256,31 @@ export const AddTransaction: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
       <TopNavigation title="Add Transaction" showBack />
+      
+      {/* Transaction Type Indicator */}
+      {(isHistorical || isScheduled) && (
+        <div className="px-4 py-2">
+          <div className={`p-3 rounded-xl flex items-center space-x-2 ${
+            isHistorical ? 'bg-blue-50 border border-blue-200' : 'bg-green-50 border border-green-200'
+          }`}>
+            {isHistorical ? (
+              <>
+                <Clock size={16} className="text-blue-600" />
+                <span className="text-sm font-medium text-blue-800">
+                  Historical Transaction - Won't affect current balance
+                </span>
+              </>
+            ) : (
+              <>
+                <Calendar size={16} className="text-green-600" />
+                <span className="text-sm font-medium text-green-800">
+                  Scheduled Transaction - Will be processed on the selected date
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       
       <div className="px-4 py-4 sm:py-6 space-y-6">
         {/* Transaction Type Selector */}
@@ -609,3 +659,5 @@ export const AddTransaction: React.FC = () => {
     </div>
   );
 };
+
+export default AddTransaction;

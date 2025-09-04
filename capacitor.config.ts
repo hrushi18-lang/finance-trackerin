@@ -2,33 +2,48 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.fintrack.production',
-  appName: 'FinTrack',
+  appName: 'FinTrack - Personal Finance Manager',
   webDir: 'dist',
-  bundledWebRuntime: false,
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    iosScheme: 'https'
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 3000,
-      launchAutoHide: false,
-      backgroundColor: "#2b3316",
+      launchShowDuration: 2000,
+      launchAutoHide: true,
+      backgroundColor: "#1a1a1a",
       androidSplashResourceName: "splash",
       androidScaleType: "CENTER_CROP",
       showSpinner: true,
       androidSpinnerStyle: "large",
       iosSpinnerStyle: "large",
-      spinnerColor: "#4A5D23",
+      spinnerColor: "#10B981",
       splashFullScreen: true,
-      splashImmersive: true
+      splashImmersive: true,
+      launchFadeOutDuration: 300
     },
     StatusBar: {
       style: "DARK",
-      backgroundColor: "#2b3316"
+      backgroundColor: "#1a1a1a",
+      overlaysWebView: false
     },
     Preferences: {
       group: "FinTrackPrefs"
+    },
+    App: {
+      launchUrl: "https://fintrack.app"
     }
+  },
+  android: {
+    allowMixedContent: true,
+    captureInput: true,
+    webContentsDebuggingEnabled: false
+  },
+  ios: {
+    contentInset: "automatic",
+    scrollEnabled: true,
+    backgroundColor: "#1a1a1a"
   }
 };
 

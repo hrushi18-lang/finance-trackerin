@@ -42,6 +42,9 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
   const [error, setError] = useState<string | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   
+  const { currency } = useInternationalization();
+  const { accounts } = useFinance();
+  
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<LiabilityFormData>({
     defaultValues: initialData || {
       type: 'loan',
@@ -409,6 +412,51 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
         {watch('due_date') && new Date(watch('due_date')) < new Date() && (
           <div className="mt-2 p-2 bg-warning-500/20 border border-warning-500/30 rounded text-xs text-warning-400">
             ⚠️ Due date is in the past. This is okay for historical debts.
+          </div>
+        )}
+      </div>
+
+      {/* Account Selection */}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Default Payment Account
+          </label>
+          <select
+            {...register('defaultPaymentAccountId')}
+            className="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">Select an account for payments</option>
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name} - {currency.symbol}{account.balance.toFixed(2)}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">
+            Account to use for making payments on this liability
+          </p>
+        </div>
+
+        {addAsIncome && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Disbursement Account
+            </label>
+            <select
+              {...register('disbursementAccountId')}
+              className="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">Select an account to receive funds</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name} - {currency.symbol}{account.balance.toFixed(2)}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400 mt-1">
+              Account where the loan funds will be deposited
+            </p>
           </div>
         )}
       </div>

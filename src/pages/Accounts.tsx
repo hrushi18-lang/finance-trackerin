@@ -235,11 +235,12 @@ export const Accounts: React.FC = () => {
               {filteredAccounts.map((account) => (
                 <div
                   key={account.id}
-                  className="p-4 rounded-2xl"
+                  className="p-4 rounded-2xl cursor-pointer transition-all duration-200 hover:scale-105"
                   style={{
                     backgroundColor: 'var(--background-secondary)',
                     boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
                   }}
+                  onClick={() => navigate(`/accounts/${account.id}`)}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-3">
@@ -316,3 +317,5 @@ export const Accounts: React.FC = () => {
     </div>
   );
 };
+
+export default Accounts;

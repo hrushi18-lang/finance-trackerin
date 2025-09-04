@@ -18,8 +18,13 @@
     "build:mobile": "npm run build && npx cap sync",
     "mobile:setup": "npm run build && npx cap add ios && npx cap add android && npx cap sync",
     "mobile:build": "npm run build && npx cap copy",
+    "mobile:deploy": "node scripts/mobile-deploy.js",
+    "mobile:deploy:ios": "node scripts/mobile-deploy.js ios",
+    "mobile:deploy:android": "node scripts/mobile-deploy.js android",
     "android:dev": "npm run build && npx cap copy android && npx cap open android",
-    "ios:dev": "npm run build && npx cap copy ios && npx cap open ios"
+    "ios:dev": "npm run build && npx cap copy ios && npx cap open ios",
+    "android:build": "npm run build && npx cap sync android && npx cap open android",
+    "ios:build": "npm run build && npx cap sync ios && npx cap open ios"
   },
   "dependencies": {
     "@capacitor/android": "^5.7.8",

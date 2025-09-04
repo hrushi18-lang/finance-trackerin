@@ -433,3 +433,5 @@ export const Bills: React.FC = () => {
     </div>
   );
 };
+
+export default Bills;

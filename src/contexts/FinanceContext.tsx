@@ -87,6 +87,16 @@ interface FinanceContextType {
   getIncomeAnalysis: (transactions: Transaction[]) => Array<{ source: string; amount: number; percentage: number }>;
   getBudgetPerformance: () => Array<{ budget: string; spent: number; limit: number; percentage: number }>;
   
+  // Detail page helpers
+  getGoalTransactions: (goalId: string) => Transaction[];
+  getBudgetTransactions: (budgetId: string) => Transaction[];
+  getBillTransactions: (billId: string) => Transaction[];
+  getLiabilityTransactions: (liabilityId: string) => Transaction[];
+  getAccountContributions: (itemId: string, type: 'goal' | 'budget' | 'bill' | 'liability') => Array<{ account_name: string; amount: number }>;
+  getBudgetSpending: (budgetId: string) => Transaction[];
+  getBillPaymentHistory: (billId: string) => Transaction[];
+  getLiabilityPaymentHistory: (liabilityId: string) => Transaction[];
+  
   // Statistics
   stats: {
     totalIncome: number;
@@ -184,7 +194,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Use user's selected currency from onboarding/internationalization
     const savedCurrency = typeof window !== 'undefined' ? localStorage.getItem('finspire_currency') : null;
-    const defaultCurrency = accounts[0]?.currency || savedCurrency || 'USD';
+    const defaultCurrency = accounts[0]?.currencyCode || savedCurrency || 'USD';
 
     const { data, error } = await supabase
       .from('financial_accounts')
@@ -194,7 +204,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type: 'goals_vault',
         balance: 0,
         is_visible: true,
-        currency: defaultCurrency
+        currencyCode: defaultCurrency
       })
       .select()
       .single();
@@ -211,7 +221,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       type: data.type,
       balance: Number(data.balance),
       isVisible: data.is_visible,
-      currency: data.currency,
+      currencyCode: data.currency,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     } as FinancialAccount;
@@ -390,7 +400,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       platform: account.platform,
       accountNumber: account.account_number,
       isVisible: account.is_visible,
-      currency: account.currency,
+      currencyCode: account.currency,
       createdAt: new Date(account.created_at),
       updatedAt: new Date(account.updated_at)
     }));
@@ -846,7 +856,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         platform: accountData.platform,
         account_number: accountData.accountNumber,
         is_visible: accountData.isVisible,
-        currency: accountData.currency
+        currency: accountData.currencyCode
       })
       .select()
       .single();
@@ -863,7 +873,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       platform: data.platform,
       accountNumber: data.account_number,
       isVisible: data.is_visible,
-      currency: data.currency,
+      currencyCode: data.currency,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };
@@ -884,7 +894,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         platform: updates.platform,
         account_number: updates.accountNumber,
         is_visible: updates.isVisible,
-        currency: updates.currency
+        currency: updates.currencyCode
       })
       .eq('id', id)
       .eq('user_id', user.id);
@@ -1742,6 +1752,59 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  // Detail page helper methods
+  const getGoalTransactions = (goalId: string): Transaction[] => {
+    return transactions.filter(t => t.goal_id === goalId);
+  };
+
+  const getBudgetTransactions = (budgetId: string): Transaction[] => {
+    return transactions.filter(t => t.budget_id === budgetId);
+  };
+
+  const getBillTransactions = (billId: string): Transaction[] => {
+    return transactions.filter(t => t.bill_id === billId);
+  };
+
+  const getLiabilityTransactions = (liabilityId: string): Transaction[] => {
+    return transactions.filter(t => t.liability_id === liabilityId);
+  };
+
+  const getAccountContributions = (itemId: string, type: 'goal' | 'budget' | 'bill' | 'liability'): Array<{ account_name: string; amount: number }> => {
+    const filteredTransactions = transactions.filter(t => {
+      switch (type) {
+        case 'goal': return t.goal_id === itemId;
+        case 'budget': return t.budget_id === itemId;
+        case 'bill': return t.bill_id === itemId;
+        case 'liability': return t.liability_id === itemId;
+        default: return false;
+      }
+    });
+
+    const contributions = filteredTransactions.reduce((acc, trans) => {
+      const account = accounts.find(a => a.id === trans.accountId);
+      const accountName = account?.name || 'Unknown Account';
+      acc[accountName] = (acc[accountName] || 0) + trans.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(contributions).map(([account_name, amount]) => ({
+      account_name,
+      amount
+    }));
+  };
+
+  const getBudgetSpending = (budgetId: string): Transaction[] => {
+    return transactions.filter(t => t.budget_id === budgetId && t.type === 'expense');
+  };
+
+  const getBillPaymentHistory = (billId: string): Transaction[] => {
+    return transactions.filter(t => t.bill_id === billId && t.type === 'payment');
+  };
+
+  const getLiabilityPaymentHistory = (liabilityId: string): Transaction[] => {
+    return transactions.filter(t => t.liability_id === liabilityId && t.type === 'payment');
+  };
+
   // Calculate statistics
   const stats = {
     totalIncome: transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0),
@@ -1808,6 +1871,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     getSpendingPatterns,
     getIncomeAnalysis,
     getBudgetPerformance,
+    getGoalTransactions,
+    getBudgetTransactions,
+    getBillTransactions,
+    getLiabilityTransactions,
+    getAccountContributions,
+    getBudgetSpending,
+    getBillPaymentHistory,
+    getLiabilityPaymentHistory,
     stats
   };
 

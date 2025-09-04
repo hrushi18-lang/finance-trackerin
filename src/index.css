@@ -1,61 +1,128 @@
+/* Import mobile-specific styles */
+@import './styles/mobile.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Strict Design Language - Olive Green + Soft Beige */
+/* Modal Styling Guide - Light Theme (Neumorphism) */
 :root {
   /* Primary Colors */
   --primary: #3e5725;
   --primary-light: #5a7a3a;
   --primary-dark: #2d3f1a;
   
-  /* Background Colors */
-  --background: #fefcf8;
-  --background-secondary: #f5f5f0;
+  /* Light Theme Background Colors */
+  --background: #FDF6E3; /* Cream */
+  --background-secondary: #F2E9D9; /* Slightly darker cream */
   --background-tertiary: #f9f9f4;
   
-  /* Surface Colors */
-  --surface: #ffffff;
+  /* Light Theme Surface Colors */
+  --surface: #F2E9D9; /* Modal surface - slightly darker cream */
   --surface-elevated: #fafafa;
   --surface-pressed: #f0f0f0;
   
-  /* Text Colors */
-  --text-primary: #3e5725;
+  /* Light Theme Text Colors */
+  --text-primary: #000000; /* Black for high contrast */
   --text-secondary: #6b7280;
   --text-tertiary: #9ca3af;
   --text-inverse: #ffffff;
   
-  /* Accent Colors */
-  --accent: #3e5725;
-  --accent-light: #5a7a3a;
+  /* Light Theme Accent Colors */
+  --accent: #556B2F; /* Olive Green for highlights/CTAs */
+  --accent-light: #6C8A3A;
   --success: #3e5725;
   --error: #ef4444;
   --warning: #f59e0b;
   
-  /* Border Colors */
+  /* Light Theme Border Colors */
   --border: #e5e7eb;
   --border-light: #f3f4f6;
   --border-dark: #d1d5db;
   
-  /* Shadow Colors */
-  --shadow-sm: 0 1px 2px 0 rgba(62, 87, 37, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(62, 87, 37, 0.1), 0 2px 4px -1px rgba(62, 87, 37, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(62, 87, 37, 0.1), 0 4px 6px -2px rgba(62, 87, 37, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(62, 87, 37, 0.1), 0 10px 10px -5px rgba(62, 87, 37, 0.04);
+  /* Light Theme Shadow Colors */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   
-  /* Neumorphic Shadows */
-  --neumorphic-light: 8px 8px 16px rgba(255, 255, 255, 0.7), -8px -8px 16px rgba(62, 87, 37, 0.1);
-  --neumorphic-inset: inset 8px 8px 16px rgba(62, 87, 37, 0.1), inset -8px -8px 16px rgba(255, 255, 255, 0.7);
+  /* Light Theme Neumorphic Shadows */
+  --neumorphic-light: 8px 8px 16px rgba(255, 255, 255, 0.7), -8px -8px 16px rgba(0, 0, 0, 0.1);
+  --neumorphic-inset: inset 8px 8px 16px rgba(0, 0, 0, 0.1), inset -8px -8px 16px rgba(255, 255, 255, 0.7);
+  
+  /* Modal Specific Shadows */
+  --modal-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --modal-backdrop: rgba(0, 0, 0, 0.4);
+}
+
+/* Dark Theme (Rainforest Glassmorphism) */
+[data-theme="dark"] {
+  /* Rainforest Background Colors */
+  --background: #0F1B0A; /* Deep forest green */
+  --background-secondary: #1A2E12; /* Slightly lighter forest */
+  --background-tertiary: #0D1508; /* Darker forest */
+  
+  /* Glassmorphism Surface Colors */
+  --surface: rgba(34, 68, 20, 0.4); /* Semi-transparent forest glass */
+  --surface-elevated: rgba(45, 85, 25, 0.5); /* Elevated forest glass */
+  --surface-pressed: rgba(25, 50, 15, 0.3); /* Pressed forest glass */
+  
+  /* Rainforest Text Colors */
+  --text-primary: #E8F5E8; /* Soft forest cream */
+  --text-secondary: #B8D4B8; /* Muted forest green */
+  --text-tertiary: #8FA68F; /* Darker forest green */
+  --text-inverse: #0F1B0A;
+  
+  /* Rainforest Accent Colors */
+  --accent: #4A7C59; /* Fresh forest green */
+  --accent-light: #5A8C69; /* Lighter forest green */
+  --success: #4A7C59; /* Forest success */
+  --error: #D2691E; /* Warm amber for errors */
+  --warning: #DAA520; /* Golden warning */
+  
+  /* Glassmorphism Border Colors */
+  --border: rgba(74, 124, 89, 0.3); /* Forest glass borders */
+  --border-light: rgba(74, 124, 89, 0.2);
+  --border-dark: rgba(74, 124, 89, 0.4);
+  
+  /* Rainforest Shadow Colors */
+  --shadow-sm: 0 1px 3px 0 rgba(15, 27, 10, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(15, 27, 10, 0.5), 0 2px 4px -1px rgba(15, 27, 10, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 27, 10, 0.5), 0 4px 6px -2px rgba(15, 27, 10, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 27, 10, 0.6), 0 10px 10px -5px rgba(15, 27, 10, 0.4);
+  
+  /* Glassmorphism Effects */
+  --neumorphic-light: 0 8px 32px rgba(15, 27, 10, 0.4), 0 0 0 1px rgba(74, 124, 89, 0.1);
+  --neumorphic-inset: inset 0 1px 0 rgba(232, 245, 232, 0.1), inset 0 -1px 0 rgba(15, 27, 10, 0.2);
+  
+  /* Rainforest Modal Specific */
+  --modal-shadow: 0 25px 50px -12px rgba(15, 27, 10, 0.7), 0 0 0 1px rgba(74, 124, 89, 0.2);
+  --modal-backdrop: rgba(15, 27, 10, 0.8);
 }
 
 /* Global Background */
 body {
-  background: linear-gradient(135deg, #fefcf8 0%, #f5f5f0 50%, #f9f9f4 100%);
+  background: var(--background);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Typography Classes */
+/* Dark theme body background with rainforest gradient */
+[data-theme="dark"] body {
+  background: linear-gradient(135deg, #0F1B0A 0%, #1A2E12 25%, #0D1508 50%, #0F1B0A 75%, #1A2E12 100%);
+  background-attachment: fixed;
+  background-size: 400% 400%;
+  animation: rainforestFlow 20s ease-in-out infinite;
+}
+
+/* Rainforest flow animation */
+@keyframes rainforestFlow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Typography Classes - Consistent Font System */
 .font-heading {
   font-family: 'Archivo Black', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 900;
@@ -69,14 +136,42 @@ body {
   color: var(--text-primary);
 }
 
+.font-titles {
+  font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.font-description {
+  font-family: 'Playfair Display', serif;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
 .font-body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--text-secondary);
 }
 
-.font-serif {
-  font-family: 'Playfair Display', serif;
-  color: var(--text-primary);
+/* Dark theme typography adjustments */
+[data-theme="dark"] .font-heading {
+  color: #E8F5E8; /* Soft forest cream */
+}
+
+[data-theme="dark"] .font-numbers {
+  color: #E8F5E8; /* Soft forest cream */
+}
+
+[data-theme="dark"] .font-titles {
+  color: #E8F5E8; /* Soft forest cream */
+}
+
+[data-theme="dark"] .font-description {
+  color: #B8D4B8; /* Muted forest green */
+}
+
+[data-theme="dark"] .font-body {
+  color: #B8D4B8; /* Muted forest green */
 }
 
 /* Design System Classes */
@@ -112,6 +207,21 @@ body {
   border: 1px solid var(--border);
 }
 
+/* Dark theme glassmorphism cards */
+[data-theme="dark"] .card {
+  background: rgba(34, 68, 20, 0.4);
+  border: 1px solid rgba(74, 124, 89, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .card-elevated {
+  background: rgba(45, 85, 25, 0.5);
+  border: 1px solid rgba(74, 124, 89, 0.4);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+}
+
 .btn-primary {
   background: var(--primary);
   color: var(--text-inverse);
@@ -144,6 +254,207 @@ body {
   background: var(--surface-elevated);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
+}
+
+/* Modal Styling System */
+.modal-backdrop {
+  background: var(--modal-backdrop);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.modal-container {
+  background: #F2E9D9 !important; /* Force cream background */
+  border-radius: 1.5rem;
+  box-shadow: var(--neumorphic-light);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* Dark Theme Modal (Rainforest Glassmorphism) */
+[data-theme="dark"] .modal-container {
+  background: rgba(34, 68, 20, 0.4) !important; /* Forest glass */
+  border: 1px solid rgba(74, 124, 89, 0.3) !important; /* Forest borders */
+  box-shadow: var(--neumorphic-light);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--border);
+  padding: 1.5rem;
+}
+
+.modal-title {
+  font-family: 'Archivo Black', sans-serif;
+  font-weight: 900;
+  font-size: 1.25rem;
+  color: #000000 !important; /* Force black text for contrast */
+  margin: 0;
+}
+
+/* Dark theme modal title */
+[data-theme="dark"] .modal-title {
+  color: #E8F5E8 !important; /* Soft forest cream */
+}
+
+.modal-content {
+  padding: 1.5rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  color: #000000 !important; /* Force black text for all modal content */
+}
+
+/* Ensure all text in modals is black (light theme) */
+.modal-content * {
+  color: #000000 !important;
+}
+
+/* Exception for secondary text (light theme) */
+.modal-content .text-gray-500,
+.modal-content .text-gray-400,
+.modal-content .text-gray-600 {
+  color: #6b7280 !important;
+}
+
+/* Exception for error text (light theme) */
+.modal-content .text-red-600 {
+  color: #ef4444 !important;
+}
+
+/* Dark theme modal text colors */
+[data-theme="dark"] .modal-content * {
+  color: #E8F5E8 !important; /* Soft forest cream */
+}
+
+[data-theme="dark"] .modal-content .text-gray-500,
+[data-theme="dark"] .modal-content .text-gray-400,
+[data-theme="dark"] .modal-content .text-gray-600 {
+  color: #B8D4B8 !important; /* Muted forest green */
+}
+
+[data-theme="dark"] .modal-content .text-red-600 {
+  color: #D2691E !important; /* Warm amber */
+}
+
+.modal-close-button {
+  background: transparent;
+  border: none;
+  color: #6b7280 !important; /* Force gray color */
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.modal-close-button:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #000000 !important; /* Force black on hover */
+}
+
+/* Dark theme close button */
+[data-theme="dark"] .modal-close-button {
+  color: #B8D4B8 !important; /* Muted forest green */
+}
+
+[data-theme="dark"] .modal-close-button:hover {
+  background: rgba(74, 124, 89, 0.2);
+  color: #E8F5E8 !important; /* Soft forest cream on hover */
+}
+
+/* Modal Form Elements */
+.modal-input {
+  background: #ffffff !important; /* Force white background for inputs */
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: #000000 !important; /* Force black text */
+  font-family: 'Archivo', sans-serif;
+  transition: all 0.2s ease;
+}
+
+.modal-input::placeholder {
+  color: #9ca3af !important; /* Force gray placeholder */
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: #556B2F !important; /* Force olive green focus */
+  box-shadow: 0 0 0 3px rgba(85, 107, 47, 0.1);
+}
+
+/* Dark theme form elements */
+[data-theme="dark"] .modal-input {
+  background: rgba(45, 85, 25, 0.3) !important; /* Forest glass input */
+  border: 1px solid rgba(74, 124, 89, 0.4) !important; /* Forest borders */
+  color: #E8F5E8 !important; /* Soft forest cream text */
+}
+
+[data-theme="dark"] .modal-input::placeholder {
+  color: #8FA68F !important; /* Darker forest green placeholder */
+}
+
+[data-theme="dark"] .modal-input:focus {
+  border-color: #4A7C59 !important; /* Fresh forest green focus */
+  box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.2);
+}
+
+.modal-button-primary {
+  background: #556B2F !important; /* Force olive green */
+  color: #ffffff !important; /* Force white text */
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  font-family: 'Archivo', sans-serif;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.modal-button-primary:hover {
+  background: #6C8A3A !important; /* Force lighter olive */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.modal-button-secondary {
+  background: #ffffff !important; /* Force white background */
+  color: #000000 !important; /* Force black text */
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  font-family: 'Archivo', sans-serif;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.modal-button-secondary:hover {
+  background: #f9f9f9 !important; /* Force light gray hover */
+  transform: translateY(-1px);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Dark theme buttons */
+[data-theme="dark"] .modal-button-primary {
+  background: #4A7C59 !important; /* Fresh forest green */
+  color: #E8F5E8 !important; /* Soft forest cream text */
+}
+
+[data-theme="dark"] .modal-button-primary:hover {
+  background: #5A8C69 !important; /* Lighter forest green */
+  box-shadow: 0 4px 6px -1px rgba(15, 27, 10, 0.5);
+}
+
+[data-theme="dark"] .modal-button-secondary {
+  background: rgba(45, 85, 25, 0.3) !important; /* Forest glass */
+  color: #E8F5E8 !important; /* Soft forest cream text */
+  border: 1px solid rgba(74, 124, 89, 0.4) !important; /* Forest borders */
+}
+
+[data-theme="dark"] .modal-button-secondary:hover {
+  background: rgba(45, 85, 25, 0.5) !important; /* Darker forest glass */
+  box-shadow: 0 1px 3px 0 rgba(15, 27, 10, 0.4);
 }
 
 /* Animation Classes */

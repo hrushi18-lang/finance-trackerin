@@ -1,0 +1,50 @@
+[plugin:vite:esbuild] Transform failed with 1 error:
+C:/Users/hrush/vjf/finance-trackerin/src/components/analytics/ProgressBar.tsx:79:9: ERROR: Multiple exports with the same name "ProgressBar"
+C:/Users/hrush/vjf/finance-trackerin/src/components/analytics/ProgressBar.tsx:79:9
+Multiple exports with the same name "ProgressBar"
+77 |  };_c = ProgressBar;
+78 |  
+79 |  export { ProgressBar };var _c;$RefreshReg$(_c, "ProgressBar");
+   |           ^
+80 |  if (import.meta.hot && !inWebWorker) {
+81 |    window.$RefreshReg$ = prevRefreshReg;
+    at failureErrorWithLog (C:\Users\hrush\vjf\finance-trackerin\node_modules\esbuild\lib\main.js:1472:15)
+    at C:\Users\hrush\vjf\finance-trackerin\node_modules\esbuild\lib\main.js:755:50
+    at responseCallbacks.<computed> (C:\Users\hrush\vjf\finance-trackerin\node_modules\esbuild\lib\main.js:622:9)
+    at handleIncomingPacket (C:\Users\hrush\vjf\finance-trackerin\node_modules\esbuild\lib\main.js:677:12)
+    at Socket.readFromStdout (C:\Users\hrush\vjf\finance-trackerin\node_modules\esbuild\lib\main.js:600:7)
+    at Socket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23
+Click outside, press Esc key, or fix the code to dismiss.
+You can also disable this overlay by setting server.hmr.overlay to false in vite.config.ts.require_relative '../../node_modules/@capacitor/ios/scripts/pods_helpers'
+
+platform :ios, '13.0'
+use_frameworks!
+
+# workaround to avoid Xcode caching of Pods that requires
+# Product -> Clean Build Folder after new Cordova plugins installed
+# Requires CocoaPods 1.6 or newer
+install! 'cocoapods', :disable_input_output_paths => true
+
+def capacitor_pods
+  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
+  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
+  pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
+  pod 'CapacitorDevice', :path => '../../node_modules/@capacitor/device'
+  pod 'CapacitorHaptics', :path => '../../node_modules/@capacitor/haptics'
+  pod 'CapacitorPreferences', :path => '../../node_modules/@capacitor/preferences'
+  pod 'CapacitorSplashScreen', :path => '../../node_modules/@capacitor/splash-screen'
+  pod 'CapacitorStatusBar', :path => '../../node_modules/@capacitor/status-bar'
+end
+
+target 'App' do
+  capacitor_pods
+  # Add your Pods here
+end
+
+post_install do |installer|
+  assertDeploymentTarget(installer)
+end

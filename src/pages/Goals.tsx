@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Target, Calendar, Plus, ArrowUpDown, TrendingUp, Edit3, Trash2, AlertCircle, CheckCircle, PiggyBank, TrendingDown } from 'lucide-react';
+import { Target, Calendar, Plus, ArrowUpDown, TrendingUp, Edit3, Trash2, AlertCircle, CheckCircle, PiggyBank, TrendingDown, Eye } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { calculatePercentage, sanitizeFinancialData } from '../utils/validation';
 import { Modal } from '../components/common/Modal';
 import { GoalForm } from '../components/forms/GoalForm';
@@ -14,6 +15,7 @@ import { ProgressBar } from '../components/analytics/ProgressBar';
 
 export const Goals: React.FC = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { goals, addGoal, updateGoal, deleteGoal, addTransaction, accounts, transactions, fundGoalFromAccount, withdrawGoalToAccount } = useFinance();
   const { formatCurrency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
@@ -364,6 +366,13 @@ export const Goals: React.FC = () => {
                   
                   <div className="flex items-center gap-1">
                     <button
+                      onClick={() => navigate(`/goals/${goal.id}`)}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      title="View Details"
+                    >
+                      <Eye size={14} className="text-gray-600" />
+                    </button>
+                    <button
                       onClick={() => {
                         setSelectedGoalId(goal.id);
                         setShowTransactionModal(true);
@@ -598,3 +607,5 @@ export const Goals: React.FC = () => {
     </div>
   );
 };
+
+export default Goals;
