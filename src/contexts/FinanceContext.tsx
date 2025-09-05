@@ -72,6 +72,7 @@ interface FinanceContextType {
   getGoalsVaultAccount: () => FinancialAccount | undefined;
   ensureGoalsVaultAccount: () => Promise<void>;
   createGoalsVaultAccount: (name?: string, currencyCode?: string) => Promise<FinancialAccount>;
+  cleanupDuplicateGoalsVaults: () => Promise<void>;
   // High-level flows
   fundGoalFromAccount: (fromAccountId: string, goalId: string, amount: number, description?: string) => Promise<void>;
   contributeToGoal: (goalId: string, amount: number, sourceAccountId?: string, description?: string) => Promise<void>;
@@ -165,8 +166,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         loadTransactionSplits(),
         loadFinancialInsights()
       ]);
-      // Ensure Goals Vault exists after accounts load
-      await ensureGoalsVaultAccount();
+      // Clean up any duplicate Goals Vault accounts
+      await cleanupDuplicateGoalsVaults();
     } catch (error) {
       console.error('Error loading data:', error);
       // Add more specific error handling
@@ -179,92 +180,104 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // Add a flag to prevent multiple simultaneous vault creation attempts
+  const [isCreatingVault, setIsCreatingVault] = useState(false);
+
   const ensureGoalsVaultAccount = async () => {
     if (!user) return;
+    
+    // Prevent multiple simultaneous calls
+    if (isCreatingVault) return;
     
     // First check if Goals Vault already exists in current accounts
     const existing = accounts.find(a => a.type === 'goals_vault');
     if (existing) return;
 
-    // Check if Goals Vault exists in database to avoid duplicates
-    const { data: existingVault, error: checkError } = await supabase
-      .from('financial_accounts')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('type', 'goals_vault')
-      .single();
+    setIsCreatingVault(true);
 
-    if (existingVault && !checkError) {
-      // Goals Vault exists in database, add it to local state
-      const vaultAccount: FinancialAccount = {
-        id: existingVault.id,
-        userId: existingVault.user_id,
-        name: existingVault.name,
-        type: existingVault.type,
-        balance: Number(existingVault.balance),
-        isVisible: existingVault.is_visible,
-        currencyCode: existingVault.currencycode,
-        institution: existingVault.institution,
-        platform: existingVault.platform,
-        accountNumber: existingVault.account_number,
-        createdAt: new Date(existingVault.created_at),
-        updatedAt: new Date(existingVault.updated_at)
-      } as FinancialAccount;
-
-      setAccounts(prev => {
-        // Check if it's already in the list to avoid duplicates
-        const alreadyExists = prev.find(a => a.id === vaultAccount.id);
-        if (alreadyExists) return prev;
-        return [vaultAccount, ...prev];
-      });
-      return;
-    }
-
-    // Only create if it doesn't exist in database
-    if (checkError && checkError.code === 'PGRST116') {
-      // Use user's selected currency from onboarding/internationalization
-      const savedCurrency = typeof window !== 'undefined' ? localStorage.getItem('finspire_currency') : null;
-      const defaultCurrency = accounts[0]?.currencyCode || savedCurrency || 'USD';
-
-      const { data, error } = await supabase
+    try {
+      // Check if Goals Vault exists in database to avoid duplicates
+      const { data: existingVault, error: checkError } = await supabase
         .from('financial_accounts')
-        .insert({
-          user_id: user.id,
-          name: 'Goals Vault',
-          type: 'goals_vault',
-          balance: 0,
-          is_visible: true,
-          currencycode: defaultCurrency
-        })
-        .select()
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('type', 'goals_vault')
         .single();
 
-      if (error) {
-        console.error('Failed to create Goals Vault account:', error);
+      if (existingVault && !checkError) {
+        // Goals Vault exists in database, add it to local state
+        const vaultAccount: FinancialAccount = {
+          id: existingVault.id,
+          userId: existingVault.user_id,
+          name: existingVault.name,
+          type: existingVault.type,
+          balance: Number(existingVault.balance),
+          isVisible: existingVault.is_visible,
+          currencyCode: existingVault.currencycode,
+          institution: existingVault.institution,
+          platform: existingVault.platform,
+          accountNumber: existingVault.account_number,
+          createdAt: new Date(existingVault.created_at),
+          updatedAt: new Date(existingVault.updated_at)
+        } as FinancialAccount;
+
+        setAccounts(prev => {
+          // Check if it's already in the list to avoid duplicates
+          const alreadyExists = prev.find(a => a.id === vaultAccount.id);
+          if (alreadyExists) return prev;
+          return [vaultAccount, ...prev];
+        });
         return;
       }
 
-      const newAccount: FinancialAccount = {
-        id: data.id,
-        userId: data.user_id,
-        name: data.name,
-        type: data.type,
-        balance: Number(data.balance),
-        isVisible: data.is_visible,
-        currencyCode: data.currencycode,
-        institution: data.institution,
-        platform: data.platform,
-        accountNumber: data.account_number,
-        createdAt: new Date(data.created_at),
-        updatedAt: new Date(data.updated_at)
-      } as FinancialAccount;
+      // Only create if it doesn't exist in database
+      if (checkError && checkError.code === 'PGRST116') {
+        // Use user's selected currency from onboarding/internationalization
+        const savedCurrency = typeof window !== 'undefined' ? localStorage.getItem('finspire_currency') : null;
+        const defaultCurrency = accounts[0]?.currencyCode || savedCurrency || 'USD';
 
-      setAccounts(prev => {
-        // Check if it's already in the list to avoid duplicates
-        const alreadyExists = prev.find(a => a.id === newAccount.id);
-        if (alreadyExists) return prev;
-        return [newAccount, ...prev];
-      });
+        const { data, error } = await supabase
+          .from('financial_accounts')
+          .insert({
+            user_id: user.id,
+            name: 'Goals Vault',
+            type: 'goals_vault',
+            balance: 0,
+            is_visible: true,
+            currencycode: defaultCurrency
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Failed to create Goals Vault account:', error);
+          return;
+        }
+
+        const newAccount: FinancialAccount = {
+          id: data.id,
+          userId: data.user_id,
+          name: data.name,
+          type: data.type,
+          balance: Number(data.balance),
+          isVisible: data.is_visible,
+          currencyCode: data.currencycode,
+          institution: data.institution,
+          platform: data.platform,
+          accountNumber: data.account_number,
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at)
+        } as FinancialAccount;
+
+        setAccounts(prev => {
+          // Check if it's already in the list to avoid duplicates
+          const alreadyExists = prev.find(a => a.id === newAccount.id);
+          if (alreadyExists) return prev;
+          return [newAccount, ...prev];
+        });
+      }
+    } finally {
+      setIsCreatingVault(false);
     }
   };
 
@@ -314,6 +327,50 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setAccounts(prev => [newAccount, ...prev]);
     return newAccount;
+  };
+
+  const cleanupDuplicateGoalsVaults = async () => {
+    if (!user) return;
+
+    try {
+      // Get all Goals Vault accounts from database
+      const { data: vaults, error } = await supabase
+        .from('financial_accounts')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('type', 'goals_vault')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching Goals Vault accounts:', error);
+        return;
+      }
+
+      if (vaults && vaults.length > 1) {
+        console.log(`Found ${vaults.length} Goals Vault accounts, cleaning up...`);
+        
+        // Keep the first one (oldest), delete the rest
+        const vaultsToDelete = vaults.slice(1);
+        
+        for (const vault of vaultsToDelete) {
+          const { error: deleteError } = await supabase
+            .from('financial_accounts')
+            .delete()
+            .eq('id', vault.id);
+
+          if (deleteError) {
+            console.error(`Error deleting duplicate vault ${vault.id}:`, deleteError);
+          } else {
+            console.log(`Deleted duplicate Goals Vault: ${vault.name} (${vault.id})`);
+          }
+        }
+
+        // Reload accounts to reflect changes
+        await loadAccounts();
+      }
+    } catch (error) {
+      console.error('Error cleaning up duplicate Goals Vault accounts:', error);
+    }
   };
 
   const fundGoalFromAccount = async (fromAccountId: string, goalId: string, amount: number, description?: string) => {
@@ -1966,6 +2023,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     getGoalsVaultAccount,
     ensureGoalsVaultAccount,
     createGoalsVaultAccount,
+    cleanupDuplicateGoalsVaults,
     fundGoalFromAccount,
     contributeToGoal,
     withdrawGoalToAccount,

@@ -10,7 +10,7 @@ interface GoalsVaultManagerProps {
 }
 
 export const GoalsVaultManager: React.FC<GoalsVaultManagerProps> = ({ onClose }) => {
-  const { accounts, getGoalsVaultAccount, createGoalsVaultAccount, ensureGoalsVaultAccount } = useFinance();
+  const { accounts, getGoalsVaultAccount, createGoalsVaultAccount, ensureGoalsVaultAccount, cleanupDuplicateGoalsVaults } = useFinance();
   const [isCreating, setIsCreating] = useState(false);
   const [vaultName, setVaultName] = useState('Goals Vault');
   const [currencyCode, setCurrencyCode] = useState('USD');
@@ -48,6 +48,20 @@ export const GoalsVaultManager: React.FC<GoalsVaultManagerProps> = ({ onClose })
       await ensureGoalsVaultAccount();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to ensure Goals Vault');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCleanupDuplicates = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await cleanupDuplicateGoalsVaults();
+      setError('Duplicate Goals Vault accounts have been cleaned up!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cleanup duplicates');
     } finally {
       setIsLoading(false);
     }
@@ -130,21 +144,31 @@ export const GoalsVaultManager: React.FC<GoalsVaultManagerProps> = ({ onClose })
             You can create one now or let the system create it automatically when needed.
           </p>
           
-          <div className="flex space-x-3">
+          <div className="space-y-3">
+            <div className="flex space-x-3">
+              <Button
+                onClick={() => setIsCreating(true)}
+                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Goals Vault
+              </Button>
+              <Button
+                onClick={handleEnsureVault}
+                variant="secondary"
+                disabled={isLoading}
+                className="flex-1"
+              >
+                {isLoading ? 'Creating...' : 'Auto Create'}
+              </Button>
+            </div>
             <Button
-              onClick={() => setIsCreating(true)}
-              className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Goals Vault
-            </Button>
-            <Button
-              onClick={handleEnsureVault}
+              onClick={handleCleanupDuplicates}
               variant="secondary"
               disabled={isLoading}
-              className="flex-1"
+              className="w-full bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
             >
-              {isLoading ? 'Creating...' : 'Auto Create'}
+              {isLoading ? 'Cleaning...' : 'Clean Up Duplicates'}
             </Button>
           </div>
         </div>
