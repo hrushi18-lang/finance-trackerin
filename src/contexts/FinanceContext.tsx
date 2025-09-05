@@ -71,8 +71,10 @@ interface FinanceContextType {
   // System helpers
   getGoalsVaultAccount: () => FinancialAccount | undefined;
   ensureGoalsVaultAccount: () => Promise<void>;
+  createGoalsVaultAccount: (name?: string, currencyCode?: string) => Promise<FinancialAccount>;
   // High-level flows
   fundGoalFromAccount: (fromAccountId: string, goalId: string, amount: number, description?: string) => Promise<void>;
+  contributeToGoal: (goalId: string, amount: number, sourceAccountId?: string, description?: string) => Promise<void>;
   withdrawGoalToAccount: (toAccountId: string, goalId: string, amount: number, description?: string) => Promise<void>;
   payBillFromAccount: (accountId: string, billId: string, amount?: number, description?: string) => Promise<void>;
   repayLiabilityFromAccount: (accountId: string, liabilityId: string, amount: number, description?: string) => Promise<void>;
@@ -179,29 +181,120 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const ensureGoalsVaultAccount = async () => {
     if (!user) return;
+    
+    // First check if Goals Vault already exists in current accounts
     const existing = accounts.find(a => a.type === 'goals_vault');
     if (existing) return;
 
-    // Use user's selected currency from onboarding/internationalization
-    const savedCurrency = typeof window !== 'undefined' ? localStorage.getItem('finspire_currency') : null;
-    const defaultCurrency = accounts[0]?.currencyCode || savedCurrency || 'USD';
+    // Check if Goals Vault exists in database to avoid duplicates
+    const { data: existingVault, error: checkError } = await supabase
+      .from('financial_accounts')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('type', 'goals_vault')
+      .single();
+
+    if (existingVault && !checkError) {
+      // Goals Vault exists in database, add it to local state
+      const vaultAccount: FinancialAccount = {
+        id: existingVault.id,
+        userId: existingVault.user_id,
+        name: existingVault.name,
+        type: existingVault.type,
+        balance: Number(existingVault.balance),
+        isVisible: existingVault.is_visible,
+        currencyCode: existingVault.currencycode,
+        institution: existingVault.institution,
+        platform: existingVault.platform,
+        accountNumber: existingVault.account_number,
+        createdAt: new Date(existingVault.created_at),
+        updatedAt: new Date(existingVault.updated_at)
+      } as FinancialAccount;
+
+      setAccounts(prev => {
+        // Check if it's already in the list to avoid duplicates
+        const alreadyExists = prev.find(a => a.id === vaultAccount.id);
+        if (alreadyExists) return prev;
+        return [vaultAccount, ...prev];
+      });
+      return;
+    }
+
+    // Only create if it doesn't exist in database
+    if (checkError && checkError.code === 'PGRST116') {
+      // Use user's selected currency from onboarding/internationalization
+      const savedCurrency = typeof window !== 'undefined' ? localStorage.getItem('finspire_currency') : null;
+      const defaultCurrency = accounts[0]?.currencyCode || savedCurrency || 'USD';
+
+      const { data, error } = await supabase
+        .from('financial_accounts')
+        .insert({
+          user_id: user.id,
+          name: 'Goals Vault',
+          type: 'goals_vault',
+          balance: 0,
+          is_visible: true,
+          currencycode: defaultCurrency
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to create Goals Vault account:', error);
+        return;
+      }
+
+      const newAccount: FinancialAccount = {
+        id: data.id,
+        userId: data.user_id,
+        name: data.name,
+        type: data.type,
+        balance: Number(data.balance),
+        isVisible: data.is_visible,
+        currencyCode: data.currencycode,
+        institution: data.institution,
+        platform: data.platform,
+        accountNumber: data.account_number,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      } as FinancialAccount;
+
+      setAccounts(prev => {
+        // Check if it's already in the list to avoid duplicates
+        const alreadyExists = prev.find(a => a.id === newAccount.id);
+        if (alreadyExists) return prev;
+        return [newAccount, ...prev];
+      });
+    }
+  };
+
+  const getGoalsVaultAccount = () => accounts.find(a => a.type === 'goals_vault');
+
+  const createGoalsVaultAccount = async (name: string = 'Goals Vault', currencyCode: string = 'USD') => {
+    if (!user) throw new Error('User not authenticated');
+    
+    // Check if Goals Vault already exists
+    const existing = accounts.find(a => a.type === 'goals_vault');
+    if (existing) {
+      throw new Error('Goals Vault already exists');
+    }
 
     const { data, error } = await supabase
       .from('financial_accounts')
       .insert({
         user_id: user.id,
-        name: 'Goals Vault',
+        name: name,
         type: 'goals_vault',
         balance: 0,
         is_visible: true,
-        currencycode: defaultCurrency
+        currencycode: currencyCode
       })
       .select()
       .single();
 
     if (error) {
       console.error('Failed to create Goals Vault account:', error);
-      return;
+      throw error;
     }
 
     const newAccount: FinancialAccount = {
@@ -212,14 +305,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       balance: Number(data.balance),
       isVisible: data.is_visible,
       currencyCode: data.currencycode,
+      institution: data.institution,
+      platform: data.platform,
+      accountNumber: data.account_number,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     } as FinancialAccount;
 
     setAccounts(prev => [newAccount, ...prev]);
+    return newAccount;
   };
-
-  const getGoalsVaultAccount = () => accounts.find(a => a.type === 'goals_vault');
 
   const fundGoalFromAccount = async (fromAccountId: string, goalId: string, amount: number, description?: string) => {
     if (!user) throw new Error('User not authenticated');
@@ -235,6 +330,48 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (goal) {
       const newAmount = Math.min(Number(goal.currentAmount || 0) + Number(amount || 0), Number(goal.targetAmount || 0));
       await updateGoal(goalId, { currentAmount: newAmount });
+    }
+  };
+
+  const contributeToGoal = async (goalId: string, amount: number, sourceAccountId?: string, description?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) throw new Error('Goal not found');
+
+    // If no source account specified, use Goals Vault
+    if (!sourceAccountId) {
+      await ensureGoalsVaultAccount();
+      const vault = getGoalsVaultAccount();
+      if (!vault) throw new Error('Goals Vault not available');
+      sourceAccountId = vault.id;
+    }
+
+    // Create transaction for the contribution
+    const transaction = {
+      type: 'expense' as const,
+      amount: amount,
+      category: 'Savings',
+      description: description || `Contribution to ${goal.title}`,
+      date: new Date(),
+      userId: user.id,
+      accountId: sourceAccountId,
+      affectsBalance: true,
+      status: 'completed' as const
+    };
+
+    await addTransaction(transaction);
+
+    // Update goal current amount
+    const newAmount = Math.min(Number(goal.currentAmount || 0) + Number(amount || 0), Number(goal.targetAmount || 0));
+    await updateGoal(goalId, { currentAmount: newAmount });
+
+    // If goal is linked to Goals Vault, transfer funds there
+    if (goal.accountId) {
+      const vault = getGoalsVaultAccount();
+      if (vault && sourceAccountId !== vault.id) {
+        await transferBetweenAccounts(sourceAccountId, vault.id, amount, `Goal: ${goal.title}`);
+      }
     }
   };
 
@@ -1828,7 +1965,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     transferBetweenAccounts,
     getGoalsVaultAccount,
     ensureGoalsVaultAccount,
+    createGoalsVaultAccount,
     fundGoalFromAccount,
+    contributeToGoal,
     withdrawGoalToAccount,
     payBillFromAccount,
     repayLiabilityFromAccount,
