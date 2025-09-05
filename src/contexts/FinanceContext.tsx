@@ -73,6 +73,14 @@ interface FinanceContextType {
   ensureGoalsVaultAccount: () => Promise<void>;
   createGoalsVaultAccount: (name?: string, currencyCode?: string) => Promise<FinancialAccount>;
   cleanupDuplicateGoalsVaults: () => Promise<void>;
+  
+  // Goal completion and management
+  handleGoalCompletion: (goalId: string) => Promise<any>;
+  handleGoalWithdrawal: (goalId: string, amount: number, destinationAccountId: string, reason?: string, notes?: string) => Promise<any>;
+  extendGoal: (goalId: string, newTargetAmount: number, reason?: string) => Promise<any>;
+  customizeGoal: (goalId: string, newTargetAmount: number, newTitle?: string, newDescription?: string, reason?: string) => Promise<any>;
+  archiveGoal: (goalId: string, reason?: string) => Promise<any>;
+  deleteGoal: (goalId: string, reason?: string) => Promise<any>;
   // High-level flows
   fundGoalFromAccount: (fromAccountId: string, goalId: string, amount: number, description?: string) => Promise<void>;
   contributeToGoal: (goalId: string, amount: number, sourceAccountId?: string, description?: string) => Promise<void>;
@@ -182,18 +190,26 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Add a flag to prevent multiple simultaneous vault creation attempts
   const [isCreatingVault, setIsCreatingVault] = useState(false);
+  const [vaultChecked, setVaultChecked] = useState(false);
 
   const ensureGoalsVaultAccount = async () => {
     if (!user) return;
     
-    // Prevent multiple simultaneous calls
-    if (isCreatingVault) return;
+    // Prevent multiple calls if already checked
+    if (vaultChecked) return;
     
     // First check if Goals Vault already exists in current accounts
     const existing = accounts.find(a => a.type === 'goals_vault');
-    if (existing) return;
+    if (existing) {
+      setVaultChecked(true);
+      return;
+    }
 
+    // Prevent multiple simultaneous calls
+    if (isCreatingVault) return;
+    
     setIsCreatingVault(true);
+    setVaultChecked(true);
 
     try {
       // Check if Goals Vault exists in database to avoid duplicates
@@ -292,6 +308,39 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error('Goals Vault already exists');
     }
 
+    // Check database for existing Goals Vault
+    const { data: existingVault, error: checkError } = await supabase
+      .from('financial_accounts')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('type', 'goals_vault')
+      .single();
+
+    if (existingVault && !checkError) {
+      // Goals Vault exists in database, add it to local state
+      const vaultAccount: FinancialAccount = {
+        id: existingVault.id,
+        userId: existingVault.user_id,
+        name: existingVault.name,
+        type: existingVault.type,
+        balance: Number(existingVault.balance),
+        isVisible: existingVault.is_visible,
+        currencyCode: existingVault.currencycode,
+        institution: existingVault.institution,
+        platform: existingVault.platform,
+        accountNumber: existingVault.account_number,
+        createdAt: new Date(existingVault.created_at),
+        updatedAt: new Date(existingVault.updated_at)
+      } as FinancialAccount;
+
+      setAccounts(prev => {
+        const alreadyExists = prev.find(a => a.id === vaultAccount.id);
+        if (alreadyExists) return prev;
+        return [vaultAccount, ...prev];
+      });
+      return vaultAccount;
+    }
+
     const { data, error } = await supabase
       .from('financial_accounts')
       .insert({
@@ -375,7 +424,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const fundGoalFromAccount = async (fromAccountId: string, goalId: string, amount: number, description?: string) => {
     if (!user) throw new Error('User not authenticated');
-    await ensureGoalsVaultAccount();
     const vault = getGoalsVaultAccount();
     if (!vault) throw new Error('Goals Vault not available');
 
@@ -398,9 +446,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // If no source account specified, use Goals Vault
     if (!sourceAccountId) {
-      await ensureGoalsVaultAccount();
       const vault = getGoalsVaultAccount();
-      if (!vault) throw new Error('Goals Vault not available');
+      if (!vault) throw new Error('Goals Vault not available. Please create one first.');
       sourceAccountId = vault.id;
     }
 
@@ -659,7 +706,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       priority: goal.priority || 'medium',
       status: goal.status || 'active',
       createdAt: new Date(goal.created_at),
-      updatedAt: new Date(goal.updated_at)
+      updatedAt: new Date(goal.updated_at),
+      // New completion and management fields
+      completionDate: goal.completion_date ? new Date(goal.completion_date) : undefined,
+      withdrawalDate: goal.withdrawal_date ? new Date(goal.withdrawal_date) : undefined,
+      withdrawalAmount: Number(goal.withdrawal_amount || 0),
+      isWithdrawn: goal.is_withdrawn || false,
+      completionAction: goal.completion_action || 'waiting',
+      originalTargetAmount: goal.original_target_amount ? Number(goal.original_target_amount) : undefined,
+      extendedTargetAmount: goal.extended_target_amount ? Number(goal.extended_target_amount) : undefined,
+      completionNotes: goal.completion_notes
     }));
 
     setGoals(mappedGoals);
@@ -1327,6 +1383,121 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (error) throw error;
 
     setGoals(prev => prev.filter(goal => goal.id !== id));
+  };
+
+  // Goal completion and management functions
+  const handleGoalCompletion = async (goalId: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    const { data, error } = await supabase.rpc('handle_goal_completion', {
+      p_goal_id: goalId
+    });
+
+    if (error) {
+      console.error('Error handling goal completion:', error);
+      throw error;
+    }
+
+    // Reload goals to get updated status
+    await loadGoals();
+    return data;
+  };
+
+  const handleGoalWithdrawal = async (goalId: string, amount: number, destinationAccountId: string, reason?: string, notes?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    const { data, error } = await supabase.rpc('handle_goal_withdrawal', {
+      p_goal_id: goalId,
+      p_withdrawal_amount: amount,
+      p_destination_account_id: destinationAccountId,
+      p_withdrawal_reason: reason,
+      p_notes: notes
+    });
+
+    if (error) {
+      console.error('Error handling goal withdrawal:', error);
+      throw error;
+    }
+
+    // Reload goals and accounts to get updated balances
+    await Promise.all([loadGoals(), loadAccounts()]);
+    return data;
+  };
+
+  const extendGoal = async (goalId: string, newTargetAmount: number, reason?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    const { data, error } = await supabase.rpc('extend_goal', {
+      p_goal_id: goalId,
+      p_new_target_amount: newTargetAmount,
+      p_extension_reason: reason
+    });
+
+    if (error) {
+      console.error('Error extending goal:', error);
+      throw error;
+    }
+
+    // Reload goals to get updated target amount
+    await loadGoals();
+    return data;
+  };
+
+  const customizeGoal = async (goalId: string, newTargetAmount: number, newTitle?: string, newDescription?: string, reason?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    const { data, error } = await supabase.rpc('customize_goal', {
+      p_goal_id: goalId,
+      p_new_target_amount: newTargetAmount,
+      p_new_title: newTitle,
+      p_new_description: newDescription,
+      p_customization_reason: reason
+    });
+
+    if (error) {
+      console.error('Error customizing goal:', error);
+      throw error;
+    }
+
+    // Reload goals to get updated details
+    await loadGoals();
+    return data;
+  };
+
+  const archiveGoal = async (goalId: string, reason?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    const { data, error } = await supabase.rpc('archive_goal', {
+      p_goal_id: goalId,
+      p_archive_reason: reason
+    });
+
+    if (error) {
+      console.error('Error archiving goal:', error);
+      throw error;
+    }
+
+    // Reload goals to get updated status
+    await loadGoals();
+    return data;
+  };
+
+  const deleteGoalSoft = async (goalId: string, reason?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    const { data, error } = await supabase.rpc('delete_goal', {
+      p_goal_id: goalId,
+      p_delete_reason: reason
+    });
+
+    if (error) {
+      console.error('Error deleting goal:', error);
+      throw error;
+    }
+
+    // Reload goals to get updated status
+    await loadGoals();
+    return data;
   };
 
   const addLiability = async (liabilityData: Omit<EnhancedLiability, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
@@ -2024,6 +2195,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ensureGoalsVaultAccount,
     createGoalsVaultAccount,
     cleanupDuplicateGoalsVaults,
+    handleGoalCompletion,
+    handleGoalWithdrawal,
+    extendGoal,
+    customizeGoal,
+    archiveGoal,
+    deleteGoalSoft,
     fundGoalFromAccount,
     contributeToGoal,
     withdrawGoalToAccount,

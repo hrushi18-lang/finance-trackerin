@@ -46,6 +46,7 @@
     "i18next": "^25.2.1",
     "i18next-browser-languagedetector": "^8.2.0",
     "i18next-http-backend": "^3.0.2",
+    "isomorphic-dompurify": "^2.26.0",
     "lucide-react": "^0.344.0",
     "ogl": "^1.0.3",
     "openai": "^4.28.0",

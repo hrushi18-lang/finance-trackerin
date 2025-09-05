@@ -185,7 +185,7 @@ export const Home: React.FC = () => {
         {/* Greeting Section */}
         <div className="text-left slide-in-up">
           <h2 className="text-2xl font-heading">
-            Hello, {user?.user_metadata?.full_name || 'Hrushi'} 👋
+            Hello, {user?.name || 'Hrushi'} 👋
           </h2>
         </div>
 
@@ -194,13 +194,13 @@ export const Home: React.FC = () => {
           <div className="text-center">
             <p className="text-sm font-body mb-3">Net Worth</p>
             <div className="mb-3">
-              <span className="text-4xl font-serif font-bold" style={{ color: 'var(--primary)' }}>
+              <span className="text-4xl font-numbers" style={{ color: 'var(--primary)' }}>
                 {hideBalance ? '••••••' : formatCurrency(netWorth)}
               </span>
             </div>
             <div className="flex items-center justify-center space-x-2">
               <TrendingUp size={16} style={{ color: 'var(--success)' }} />
-              <span className="text-sm font-medium" style={{ color: 'var(--success)' }}>
+              <span className="text-sm font-serif-light" style={{ color: 'var(--success)' }}>
                 +{hideBalance ? '••' : formatCurrency(netWorthChange.amount)} ({netWorthChange.percentage}%)
               </span>
             </div>

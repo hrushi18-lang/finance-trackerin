@@ -108,6 +108,15 @@ export interface Goal {
   status: 'active' | 'paused' | 'completed' | 'cancelled';
   createdAt: Date;
   updatedAt: Date;
+  // New completion and management fields
+  completionDate?: Date;
+  withdrawalDate?: Date;
+  withdrawalAmount: number;
+  isWithdrawn: boolean;
+  completionAction: 'waiting' | 'withdrawn' | 'extended' | 'customized' | 'archived' | 'deleted';
+  originalTargetAmount?: number;
+  extendedTargetAmount?: number;
+  completionNotes?: string;
 }
 
 export interface Liability {

@@ -7,6 +7,7 @@ import { FinanceProvider } from './contexts/FinanceContext';
 import { InternationalizationProvider } from './contexts/InternationalizationContext';
 import { CurrencyConversionProvider } from './contexts/CurrencyConversionContext';
 import { PersonalizationProvider } from './contexts/PersonalizationContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/common/Toast';
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { ErrorFallback } from './components/common/ErrorFallback';
@@ -38,6 +39,7 @@ const CreateBill = React.lazy(() => import('./pages/CreateBill').then(module => 
 const GoalDetail = React.lazy(() => import('./pages/GoalDetail').then(module => ({ default: module.GoalDetail })));
 const BillDetail = React.lazy(() => import('./pages/BillDetail').then(module => ({ default: module.BillDetail })));
 const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
+const ThemeSettings = React.lazy(() => import('./pages/ThemeSettings').then(module => ({ default: module.ThemeSettings })));
 const Bills = React.lazy(() => import('./pages/Bills').then(module => ({ default: module.Bills })));
 
 // Create a client with optimized settings
@@ -69,11 +71,12 @@ function App() {
     <ErrorBoundary fallback={<ErrorFallback />}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <AuthProvider>
-            <InternationalizationProvider>
-              <CurrencyConversionProvider>
-                <PersonalizationProvider>
-                  <FinanceProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <InternationalizationProvider>
+                <CurrencyConversionProvider>
+                  <PersonalizationProvider>
+                    <FinanceProvider>
                     <AppInitializer>
                       <Router>
                         <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
@@ -302,6 +305,15 @@ function App() {
                                 } 
                               />
                               
+                              <Route 
+                                path="/theme-settings" 
+                                element={
+                                  <ProtectedRoute>
+                                    <ThemeSettings />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
                               {/* Catch all route */}
                               <Route path="*" element={<Navigate to="/" replace />} />
                               </Routes>
@@ -311,11 +323,12 @@ function App() {
                       </Router>
                       <ReactQueryDevtools initialIsOpen={false} />
                     </AppInitializer>
-                  </FinanceProvider>
-                </PersonalizationProvider>
-              </CurrencyConversionProvider>
-            </InternationalizationProvider>
-          </AuthProvider>
+                    </FinanceProvider>
+                  </PersonalizationProvider>
+                </CurrencyConversionProvider>
+              </InternationalizationProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </ToastProvider>
       </QueryClientProvider>
     </ErrorBoundary>

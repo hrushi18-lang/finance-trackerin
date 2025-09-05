@@ -1,9 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+export type Theme = 'cool-blue' | 'olive';
+
 interface ThemeContextType {
-  theme: 'light' | 'dark';
-  toggleTheme: () => void;
-  setTheme: (theme: 'light' | 'dark') => void;
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -21,43 +24,57 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setThemeState] = useState<'light' | 'dark'>('light');
+  const [theme, setThemeState] = useState<Theme>('cool-blue');
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Load theme from localStorage on mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem('finspire_theme') as 'light' | 'dark' | null;
-    if (savedTheme) {
+    const savedTheme = localStorage.getItem('fintrack-theme') as Theme;
+    const savedDarkMode = localStorage.getItem('fintrack-dark-mode') === 'true';
+    
+    if (savedTheme && ['cool-blue', 'olive'].includes(savedTheme)) {
       setThemeState(savedTheme);
-    } else {
-      // Check system preference
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setThemeState(prefersDark ? 'dark' : 'light');
     }
+    
+    setIsDarkMode(savedDarkMode);
   }, []);
 
   // Apply theme to document
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('finspire_theme', theme);
-  }, [theme]);
+    const root = document.documentElement;
+    
+    // Set theme data attribute
+    if (theme === 'olive') {
+      root.setAttribute('data-theme', 'olive');
+    } else {
+      root.removeAttribute('data-theme');
+    }
+    
+    // Set dark mode class
+    if (isDarkMode) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [theme, isDarkMode]);
 
-  const toggleTheme = () => {
-    setThemeState(prev => prev === 'light' ? 'dark' : 'light');
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+    localStorage.setItem('fintrack-theme', newTheme);
   };
 
-  const setTheme = (newTheme: 'light' | 'dark') => {
-    setThemeState(newTheme);
+  const toggleDarkMode = () => {
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    localStorage.setItem('fintrack-dark-mode', newDarkMode.toString());
   };
 
   const value = {
     theme,
-    toggleTheme,
     setTheme,
+    isDarkMode,
+    toggleDarkMode,
   };
 
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
