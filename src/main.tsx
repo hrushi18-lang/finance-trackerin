@@ -9,7 +9,6 @@ import { LoadingScreen } from './components/common/LoadingScreen.tsx';
 import { ErrorFallback } from './components/common/ErrorFallback.tsx';
 import { ErrorBoundary } from './components/common/ErrorBoundary.tsx';
 import { OfflineNotice } from './components/common/OfflineNotice.tsx';
-import { MobileSplashScreen } from './components/common/MobileSplashScreen.tsx';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar } from '@capacitor/status-bar';
@@ -53,12 +52,10 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary fallback={<ErrorFallback />}>
-        <MobileSplashScreen>
-          <Suspense fallback={<LoadingScreen message="Loading translations..." />}>
-            <App />
-            <OfflineNotice />
-          </Suspense>
-        </MobileSplashScreen>
+        <Suspense fallback={<LoadingScreen message="Loading translations..." />}>
+          <App />
+          <OfflineNotice />
+        </Suspense>
       </ErrorBoundary>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

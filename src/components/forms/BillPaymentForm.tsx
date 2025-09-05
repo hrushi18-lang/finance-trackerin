@@ -44,7 +44,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
   React.useEffect(() => {
     if (bill && watchedAmount && watchedAccountId) {
       const paymentAmount = Number(watchedAmount) || 0;
-      const selectedAccount = accounts?.find(a => a.id === watchedAccountId);
+      const selectedAccount = accounts.find(a => a.id === watchedAccountId);
       
       if (paymentAmount > 0 && selectedAccount && !isNaN(paymentAmount)) {
         const currentBalance = Number(selectedAccount.balance) || 0;
@@ -63,7 +63,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
       setIsSubmitting(true);
       
       const amount = Number(data.amount) || 0;
-      const selectedAccount = accounts?.find(a => a.id === data.accountId);
+      const selectedAccount = accounts.find(a => a.id === data.accountId);
       
       if (amount <= 0) {
         throw new Error('Payment amount must be greater than 0');
@@ -122,7 +122,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
           <div className="bg-black/20 p-3 rounded-lg">
             <span className="text-gray-400">Amount:</span>
             <span className="font-medium ml-2 text-white">
-              <CurrencyIcon currencycode={currency.code} size={14} className="inline mr-1" />
+              <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
               {formatCurrency(bill.amount)}
             </span>
           </div>
@@ -144,7 +144,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
             className="w-full bg-black/40 border border-white/20 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
           >
             <option value="">Select an account</option>
-            {accounts?.map((account) => (
+            {accounts.map((account) => (
               <option key={account.id} value={account.id}>
                 {account.name} - {formatCurrency(account.balance)} ({account.type.replace('_', ' ')})
               </option>
@@ -186,7 +186,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
               onClick={() => handleQuickAmount(bill.amount * 1.5)}
               className="border-white/20 text-white hover:bg-white/10"
             >
-              <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
+              <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
               1.5x
             </Button>
           </div>
@@ -198,7 +198,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
             label="Payment Amount"
             type="number"
             step="0.01"
-            icon={<CurrencyIcon currencycode={currency.code} className="text-success-400" />}
+            icon={<CurrencyIcon currencyCode={currency.code} className="text-success-400" />}
             {...register('amount', {
               required: 'Payment amount is required',
               min: { value: 0.01, message: 'Amount must be greater than 0' },

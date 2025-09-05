@@ -1,10 +1,8 @@
 import React from 'react';
 
 interface ProgressBarProps {
-  current?: number;
-  target?: number;
-  value?: number;
-  max?: number;
+  current: number;
+  target: number;
   size?: 'sm' | 'md' | 'lg';
   showPercentage?: boolean;
   showValues?: boolean;
@@ -15,17 +13,13 @@ interface ProgressBarProps {
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   current,
   target,
-  value,
-  max,
   size = 'md',
   showPercentage = true,
   showValues = true,
   color,
   className = ''
 }) => {
-  const currentValue = current ?? value ?? 0;
-  const targetValue = target ?? max ?? 100;
-  const percentage = Math.min((currentValue / targetValue) * 100, 100);
+  const percentage = Math.min((current / target) * 100, 100);
   
   const sizeClasses = {
     sm: 'h-2',
@@ -61,7 +55,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         <div className="flex items-center space-x-2">
           {showValues && (
             <span className="text-sm font-numbers" style={{ color: 'var(--text-primary)' }}>
-              {currentValue.toLocaleString()} / {targetValue.toLocaleString()}
+              {current.toLocaleString()} / {target.toLocaleString()}
             </span>
           )}
         </div>
@@ -75,4 +69,3 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     </div>
   );
 };
-

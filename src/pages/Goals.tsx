@@ -14,8 +14,8 @@ import { Goal } from '../types';
 import { ProgressBar } from '../components/analytics/ProgressBar';
 
 export const Goals: React.FC = () => {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { goals, addGoal, updateGoal, deleteGoal, addTransaction, accounts, transactions, fundGoalFromAccount, withdrawGoalToAccount } = useFinance();
   const { formatCurrency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
@@ -261,7 +261,7 @@ export const Goals: React.FC = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-heading">Financial Goals</h1>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => navigate('/goals/create')}
             className="btn-primary flex items-center space-x-2 px-4 py-2"
           >
             <Plus size={16} />
@@ -607,5 +607,3 @@ export const Goals: React.FC = () => {
     </div>
   );
 };
-
-export default Goals;

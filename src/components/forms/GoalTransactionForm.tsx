@@ -107,14 +107,14 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
           <div className="bg-black/30 p-3 rounded-lg">
             <span className="text-gray-400">Current:</span>
             <span className="font-medium ml-2 text-white">
-              <CurrencyIcon currencycode={currency.code} size={14} className="inline mr-1" />
+              <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
               {goal.currentAmount.toLocaleString()}
             </span>
           </div>
           <div className="bg-black/30 p-3 rounded-lg">
             <span className="text-gray-400">Target:</span>
             <span className="font-medium ml-2 text-white">
-              <CurrencyIcon currencycode={currency.code} size={14} className="inline mr-1" />
+              <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
               {goal.targetAmount.toLocaleString()}
             </span>
           </div>
@@ -123,7 +123,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
           <div className="mt-3 p-3 bg-black/30 rounded-lg border border-white/10">
             <span className="text-gray-400 text-sm">Emergency Fund Available:</span>
             <span className="font-medium ml-2 text-sm text-success-400">
-              <CurrencyIcon currencycode={currency.code} size={14} className="inline mr-1" />
+              <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
               {emergencyFundBalance.toLocaleString()}
             </span>
           </div>
@@ -244,7 +244,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
               }`}>
                 <div className="flex items-center space-x-3">
                   <CurrencyIcon 
-                    currencycode={currency.code} 
+                    currencyCode={currency.code} 
                     size={18} 
                     className={watchedSource === 'manual' ? 'text-primary-400' : 'text-gray-400'} 
                   />
@@ -305,7 +305,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
               className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
             >
               <option value="">Choose your account...</option>
-              {accounts?.map((account) => (
+              {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.name} ({account.type.replace('_', ' ')}) - {account.balance.toLocaleString()}
                 </option>
@@ -341,7 +341,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
                   onClick={() => handleQuickAmount(100)}
                   className="border-white/20 text-white hover:bg-white/10"
                 >
-                  <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
+                  <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
                   100
                 </Button>
                 <Button
@@ -351,7 +351,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
                   onClick={() => handleQuickAmount(500)}
                   className="border-white/20 text-white hover:bg-white/10"
                 >
-                  <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
+                  <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
                   500
                 </Button>
                 <Button
@@ -361,7 +361,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
                   onClick={() => handleQuickAmount(1000)}
                   className="border-white/20 text-white hover:bg-white/10"
                 >
-                  <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
+                  <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
                   1K
                 </Button>
                 <Button
@@ -371,7 +371,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
                   onClick={() => handleQuickAmount(5000)}
                   className="border-white/20 text-white hover:bg-white/10"
                 >
-                  <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
+                  <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
                   5K
                 </Button>
               </>
@@ -385,7 +385,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
                   disabled={goal.currentAmount < 100}
                   className="border-white/20 text-white hover:bg-white/10 disabled:opacity-50"
                 >
-                  <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
+                  <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
                   100
                 </Button>
                 <Button
@@ -396,7 +396,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
                   disabled={goal.currentAmount < 500}
                   className="border-white/20 text-white hover:bg-white/10 disabled:opacity-50"
                 >
-                  <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
+                  <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
                   500
                 </Button>
                 <Button
@@ -407,7 +407,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
                   disabled={goal.currentAmount < 1000}
                   className="border-white/20 text-white hover:bg-white/10 disabled:opacity-50"
                 >
-                  <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
+                  <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
                   1K
                 </Button>
                 <Button
@@ -431,7 +431,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
             label="Amount"
             type="number"
             step="0.01"
-            icon={<CurrencyIcon currencycode={currency.code} className={transactionType === 'add' ? 'text-success-400' : 'text-warning-400'} />}
+            icon={<CurrencyIcon currencyCode={currency.code} className={transactionType === 'add' ? 'text-success-400' : 'text-warning-400'} />}
             {...register('amount', {
               required: 'Amount is required',
               min: { value: 0.01, message: 'Amount must be greater than 0' },
@@ -475,8 +475,8 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
               <p>
                 <span className="text-gray-300">Goal Balance:</span>
                 <span className="ml-2 text-white">
-                  <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
-                  {goal.currentAmount.toLocaleString()} → <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
+                  <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
+                  {goal.currentAmount.toLocaleString()} → <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
                   {transactionType === 'add' 
                     ? (goal.currentAmount + watchedAmount).toLocaleString()
                     : (goal.currentAmount - watchedAmount).toLocaleString()
@@ -487,8 +487,8 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
                 <p>
                   <span className="text-gray-300">Emergency Fund:</span>
                   <span className="ml-2 text-white">
-                    <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
-                    {emergencyFundBalance.toLocaleString()} → <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
+                    <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
+                    {emergencyFundBalance.toLocaleString()} → <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
                     {transactionType === 'add' 
                       ? (emergencyFundBalance - watchedAmount).toLocaleString()
                       : (emergencyFundBalance + watchedAmount).toLocaleString()
@@ -501,7 +501,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
                   <span className="text-gray-300">Account Balance Impact:</span>
                   <span className={`ml-2 font-medium ${deductFromBalance ? 'text-error-400' : 'text-success-400'}`}>
                     {deductFromBalance ? 
-                      <>-<CurrencyIcon currencycode={currency.code} size={12} className="inline mx-1 text-error-400" />{watchedAmount.toLocaleString()}</> : 
+                      <>-<CurrencyIcon currencyCode={currency.code} size={12} className="inline mx-1 text-error-400" />{watchedAmount.toLocaleString()}</> : 
                       'No change'
                     }
                   </span>

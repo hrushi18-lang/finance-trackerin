@@ -319,7 +319,7 @@ export const AddTransaction: React.FC = () => {
                 Amount
               </label>
               <div className="relative">
-                <CurrencyIcon currencycode={currency.code} size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-forest-400" />
+                <CurrencyIcon currencyCode={currency.code} size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-forest-400" />
                 <Input
                   {...register('amount', { required: 'Amount is required' })}
                   type="number"
@@ -659,5 +659,3 @@ export const AddTransaction: React.FC = () => {
     </div>
   );
 };
-
-export default AddTransaction;

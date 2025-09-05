@@ -183,7 +183,7 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
           type="number"
           step="0.01"
           placeholder="e.g., 500"
-          icon={<CurrencyIcon currencycode={currency.code} className="text-success-400" />}
+          icon={<CurrencyIcon currencyCode={currency.code} className="text-success-400" />}
           {...register('amount', {
             required: 'Amount is required',
             min: { value: 0.01, message: 'Amount must be greater than 0' }
@@ -198,7 +198,7 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
             type="number"
             step="0.01"
             placeholder="Average amount"
-            icon={<CurrencyIcon currencycode={currency.code} className="text-warning-400" />}
+            icon={<CurrencyIcon currencyCode={currency.code} className="text-warning-400" />}
             {...register('estimatedAmount')}
             className="bg-black/20 border-white/20 text-white"
           />

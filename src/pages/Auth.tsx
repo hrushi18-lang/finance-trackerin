@@ -71,5 +71,3 @@ export const Auth: React.FC = () => {
     </div>
   );
 };
-
-export default Auth;

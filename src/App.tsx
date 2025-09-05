@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -7,7 +7,6 @@ import { FinanceProvider } from './contexts/FinanceContext';
 import { InternationalizationProvider } from './contexts/InternationalizationContext';
 import { CurrencyConversionProvider } from './contexts/CurrencyConversionContext';
 import { PersonalizationProvider } from './contexts/PersonalizationContext';
-import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/common/Toast';
 import { LoadingScreen } from './components/common/LoadingScreen';
 import { ErrorFallback } from './components/common/ErrorFallback';
@@ -18,38 +17,35 @@ import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
 import { SyncStatus } from './components/sync/SyncStatus';
 import { AppInitializer } from './components/AppInitializer';
 import { AccessibilityEnhancements, useKeyboardNavigation } from './components/common/AccessibilityEnhancements';
-import { syncManager } from './lib/sync-manager';
-import { offlinePersistence } from './lib/offline-persistence';
-import { conflictResolver } from './lib/conflict-resolver';
 import './styles/accessibility.css';
 
 // Lazy load pages for better performance
-const Auth = React.lazy(() => import('./pages/Auth'));
-const Home = React.lazy(() => import('./pages/Home'));
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const AddTransaction = React.lazy(() => import('./pages/AddTransaction'));
-const Transactions = React.lazy(() => import('./pages/Transactions'));
-const Analytics = React.lazy(() => import('./pages/Analytics'));
-const Calendar = React.lazy(() => import('./pages/Calendar'));
-const Goals = React.lazy(() => import('./pages/Goals'));
-const Liabilities = React.lazy(() => import('./pages/Liabilities'));
-const Budgets = React.lazy(() => import('./pages/Budgets'));
-const Overview = React.lazy(() => import('./pages/Overview'));
-const Accounts = React.lazy(() => import('./pages/Accounts'));
-const AccountDetail = React.lazy(() => import('./pages/AccountDetail'));
-const GoalDetail = React.lazy(() => import('./pages/GoalDetail'));
-const BudgetDetail = React.lazy(() => import('./pages/BudgetDetail'));
-const BillDetail = React.lazy(() => import('./pages/BillDetail'));
-const LiabilityDetail = React.lazy(() => import('./pages/LiabilityDetail'));
-const Settings = React.lazy(() => import('./pages/Settings'));
-const Bills = React.lazy(() => import('./pages/Bills'));
+const Auth = React.lazy(() => import('./pages/Auth').then(module => ({ default: module.Auth })));
+const Home = React.lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
+const Dashboard = React.lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
+const AddTransaction = React.lazy(() => import('./pages/AddTransaction').then(module => ({ default: module.AddTransaction })));
+const Transactions = React.lazy(() => import('./pages/Transactions').then(module => ({ default: module.Transactions })));
+const Analytics = React.lazy(() => import('./pages/Analytics').then(module => ({ default: module.Analytics })));
+const Calendar = React.lazy(() => import('./pages/Calendar').then(module => ({ default: module.Calendar })));
+const Goals = React.lazy(() => import('./pages/Goals').then(module => ({ default: module.Goals })));
+const Liabilities = React.lazy(() => import('./pages/Liabilities').then(module => ({ default: module.Liabilities })));
+const Budgets = React.lazy(() => import('./pages/Budgets').then(module => ({ default: module.Budgets })));
+const Overview = React.lazy(() => import('./pages/Overview').then(module => ({ default: module.Overview })));
+const Accounts = React.lazy(() => import('./pages/Accounts').then(module => ({ default: module.Accounts })));
+const AccountDetail = React.lazy(() => import('./pages/AccountDetail').then(module => ({ default: module.AccountDetail })));
+const CreateGoal = React.lazy(() => import('./pages/CreateGoal').then(module => ({ default: module.CreateGoal })));
+const CreateBill = React.lazy(() => import('./pages/CreateBill').then(module => ({ default: module.CreateBill })));
+const GoalDetail = React.lazy(() => import('./pages/GoalDetail').then(module => ({ default: module.GoalDetail })));
+const BillDetail = React.lazy(() => import('./pages/BillDetail').then(module => ({ default: module.BillDetail })));
+const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
+const Bills = React.lazy(() => import('./pages/Bills').then(module => ({ default: module.Bills })));
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
       retry: (failureCount, error: any) => {
         if (error?.code === 'PGRST301' || error?.message?.includes('JWT')) {
           return false;
@@ -73,12 +69,11 @@ function App() {
     <ErrorBoundary fallback={<ErrorFallback />}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <ThemeProvider>
-            <AuthProvider>
-              <InternationalizationProvider>
-                <CurrencyConversionProvider>
-                  <PersonalizationProvider>
-                    <FinanceProvider>
+          <AuthProvider>
+            <InternationalizationProvider>
+              <CurrencyConversionProvider>
+                <PersonalizationProvider>
+                  <FinanceProvider>
                     <AppInitializer>
                       <Router>
                         <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
@@ -103,7 +98,7 @@ function App() {
                               <Route 
                                 path="/onboarding" 
                                 element={
-                                  <ProtectedRoute requiresAuth={true}>
+                                  <ProtectedRoute>
                                     <OnboardingFlow 
                                       onComplete={() => {
                                         // Always redirect to dashboard after onboarding
@@ -120,7 +115,7 @@ function App() {
                               <Route 
                                 path="/" 
                                 element={
-                                  <ProtectedRoute requiresAuth={true}>
+                                  <ProtectedRoute>
                                     <Dashboard />
                                     <BottomNavigation />
                                   </ProtectedRoute>
@@ -130,7 +125,7 @@ function App() {
                               <Route 
                                 path="/dashboard" 
                                 element={
-                                  <ProtectedRoute requiresAuth={true}>
+                                  <ProtectedRoute>
                                     <Dashboard />
                                     <BottomNavigation />
                                   </ProtectedRoute>
@@ -208,6 +203,26 @@ function App() {
                               />
                               
                               <Route 
+                                path="/goals/create" 
+                                element={
+                                  <ProtectedRoute>
+                                    <CreateGoal />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/goals/:goalId" 
+                                element={
+                                  <ProtectedRoute>
+                                    <GoalDetail />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
                                 path="/liabilities" 
                                 element={
                                   <ProtectedRoute>
@@ -248,20 +263,20 @@ function App() {
                               />
                               
                               <Route 
-                                path="/goals/:goalId" 
+                                path="/bills" 
                                 element={
                                   <ProtectedRoute>
-                                    <GoalDetail />
+                                    <Bills />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
                               />
                               
                               <Route 
-                                path="/budgets/:budgetId" 
+                                path="/bills/create" 
                                 element={
                                   <ProtectedRoute>
-                                    <BudgetDetail />
+                                    <CreateBill />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
@@ -272,26 +287,6 @@ function App() {
                                 element={
                                   <ProtectedRoute>
                                     <BillDetail />
-                                    <BottomNavigation />
-                                  </ProtectedRoute>
-                                } 
-                              />
-                              
-                              <Route 
-                                path="/liabilities/:liabilityId" 
-                                element={
-                                  <ProtectedRoute>
-                                    <LiabilityDetail />
-                                    <BottomNavigation />
-                                  </ProtectedRoute>
-                                } 
-                              />
-                              
-                              <Route 
-                                path="/bills" 
-                                element={
-                                  <ProtectedRoute>
-                                    <Bills />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
@@ -316,12 +311,11 @@ function App() {
                       </Router>
                       <ReactQueryDevtools initialIsOpen={false} />
                     </AppInitializer>
-                    </FinanceProvider>
-                  </PersonalizationProvider>
-                </CurrencyConversionProvider>
-              </InternationalizationProvider>
-            </AuthProvider>
-          </ThemeProvider>
+                  </FinanceProvider>
+                </PersonalizationProvider>
+              </CurrencyConversionProvider>
+            </InternationalizationProvider>
+          </AuthProvider>
         </ToastProvider>
       </QueryClientProvider>
     </ErrorBoundary>

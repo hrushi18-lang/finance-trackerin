@@ -21,7 +21,6 @@ import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
-import { MockTransactionForm } from '../components/forms/MockTransactionForm';
 
 export const AccountDetail: React.FC = () => {
   const { accountId } = useParams<{ accountId: string }>();
@@ -35,7 +34,6 @@ export const AccountDetail: React.FC = () => {
   const { formatCurrency } = useInternationalization();
   
   const [showAddTransaction, setShowAddTransaction] = useState(false);
-  const [showMockTransaction, setShowMockTransaction] = useState(false);
   const [showHistoricalTransaction, setShowHistoricalTransaction] = useState(false);
   const [showSchedulePayment, setShowSchedulePayment] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -358,24 +356,14 @@ export const AccountDetail: React.FC = () => {
                   }
                 </p>
                 {!searchTerm && (
-                  <div className="flex space-x-3">
-                    <Button
-                      variant="primary"
-                      onClick={() => setShowAddTransaction(true)}
-                      className="flex items-center space-x-2 flex-1"
-                    >
-                      <Plus size={16} />
-                      <span>Add Transaction</span>
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setShowMockTransaction(true)}
-                      className="flex items-center space-x-2 flex-1"
-                    >
-                      <QrCode size={16} />
-                      <span>Mock Transaction</span>
-                    </Button>
-                  </div>
+                  <Button
+                    variant="primary"
+                    onClick={() => setShowAddTransaction(true)}
+                    className="flex items-center space-x-2 mx-auto"
+                  >
+                    <Plus size={16} />
+                    <span>Add Transaction</span>
+                  </Button>
                 )}
               </div>
             ) : (
@@ -483,35 +471,6 @@ export const AccountDetail: React.FC = () => {
           </Button>
         </div>
       </Modal>
-
-      {/* Mock Transaction Modal */}
-      <Modal
-        isOpen={showMockTransaction}
-        onClose={() => setShowMockTransaction(false)}
-        title="Create Mock Transaction"
-      >
-        {account && (
-          <MockTransactionForm
-            onSubmit={async (data) => {
-              try {
-                await addTransaction({
-                  ...data,
-                  accountId: account.id,
-                  affectsBalance: data.affectsBalance,
-                  status: 'completed'
-                });
-                setShowMockTransaction(false);
-              } catch (error) {
-                console.error('Error adding mock transaction:', error);
-              }
-            }}
-            onCancel={() => setShowMockTransaction(false)}
-            accountId={account.id}
-          />
-        )}
-      </Modal>
     </div>
   );
 };
-
-export default AccountDetail;

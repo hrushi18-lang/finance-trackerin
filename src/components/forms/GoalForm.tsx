@@ -147,7 +147,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
           label="Target Amount"
           type="number"
           step="0.01"
-          icon={<CurrencyIcon currencycode={currency.code} className="text-green-400" />}
+          icon={<CurrencyIcon currencyCode={currency.code} className="text-green-400" />}
           {...register('targetAmount', {
             required: 'Target amount is required',
             min: { value: 1, message: 'Target amount must be greater than 0' },
@@ -163,7 +163,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
           label="Current Amount"
           type="number"
           step="0.01"
-          icon={<CurrencyIcon currencycode={currency.code} className="text-yellow-400" />}
+          icon={<CurrencyIcon currencyCode={currency.code} className="text-yellow-400" />}
           {...register('currentAmount', {
             min: { value: 0, message: 'Current amount cannot be negative' },
           })}

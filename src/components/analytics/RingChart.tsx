@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 
 interface RingChartData {
-  label?: string;
-  name?: string;
+  label: string;
   value: number;
   color: string;
 }
@@ -129,7 +128,7 @@ export const RingChart: React.FC<RingChartProps> = ({
                   style={{ backgroundColor: segment.color }}
                 />
                 <span className="text-sm font-body" style={{ color: 'var(--text-primary)' }}>
-                  {segment.label || segment.name}
+                  {segment.label}
                 </span>
               </div>
               <div className="text-sm font-numbers" style={{ color: 'var(--text-secondary)' }}>
@@ -142,4 +141,3 @@ export const RingChart: React.FC<RingChartProps> = ({
     </div>
   );
 };
-

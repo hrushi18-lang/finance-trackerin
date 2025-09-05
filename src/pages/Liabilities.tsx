@@ -483,5 +483,3 @@ export const Liabilities: React.FC = () => {
     </div>
   );
 };
-
-export default Liabilities;

@@ -168,18 +168,18 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className={cn(
-        'w-full bg-forest-900 border border-forest-600/30 rounded-2xl shadow-xl max-h-[90vh] overflow-hidden',
+        'w-full bg-forest-900 border border-forest-600/30 rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden',
         sizeClasses[size],
         className
       )}>
         {title && (
           <div className="flex items-center justify-between p-6 border-b border-forest-600/30">
-            <h2 className="text-lg font-heading font-semibold text-white">{title}</h2>
+            <h2 className="text-xl font-heading font-semibold text-white">{title}</h2>
             <button
               onClick={onClose}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             >
-              <span className="text-gray-400 text-lg">×</span>
+              <span className="text-gray-400 text-xl">×</span>
             </button>
           </div>
         )}

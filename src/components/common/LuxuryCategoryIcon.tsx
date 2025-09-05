@@ -121,21 +121,29 @@ const LUXURY_ICON_MAP: Record<string, React.ComponentType<any>> = {
   'Other Bill': FileText,
   
   // Goals - Elegant Purple Tones
+  'Emergency Fund': AlertTriangle,
   'Vacation': Plane,
+  'Education': BookOpen,
   'Home Purchase': Home,
   'Car Purchase': Car,
   'Wedding': Heart,
   'Retirement': Clock,
+  'Investment': TrendingUp,
   'Debt Payoff': CreditCard,
+  'Business': Building2,
   'Health': Heart,
   'Technology': Laptop,
   'Furniture': Sofa,
+  'Travel': Plane,
+  'Gift': Gift,
   'Other Goal': Target,
   
   // Liabilities - Warning Red Tones
   'Personal Loan': Banknote,
   'Student Loan': GraduationCap,
   'Auto Loan': Car,
+  'Mortgage': Building2,
+  'Credit Card': CreditCard,
   'Buy Now Pay Later': ShoppingCart,
   'Installment Plan': Calendar,
   'Medical Debt': Heart,
@@ -144,15 +152,33 @@ const LUXURY_ICON_MAP: Record<string, React.ComponentType<any>> = {
   'Other Debt': CreditCard,
   
   // Budgets - Balanced Teal Tones
+  'Food & Dining': Utensils,
+  'Transportation': Car,
+  'Housing': Home,
+  'Utilities': Zap,
+  'Healthcare': Heart,
+  'Entertainment': Film,
+  'Shopping': ShoppingBag,
+  'Education': BookOpen,
+  'Travel': Plane,
+  'Insurance': Shield,
+  'Personal Care': User,
+  'Subscriptions': Calendar,
+  'Gifts & Donations': Gift,
+  'Emergency Fund': AlertTriangle,
   'Savings': PiggyBank,
+  'Debt Payment': CreditCard,
   'Other Budget': PieChart,
   
   // Accounts - Trustworthy Teal Tones
   'Primary Banking': Building2,
+  'Savings': PiggyBank,
+  'Investment': TrendingUp,
   'Credit': CreditCard,
   'Digital Wallet': Smartphone,
   'Cash': Banknote,
   'Goals Vault': Target,
+  'Business': Building2,
   'Joint': Users,
   'Other Account': Wallet
 };
@@ -215,10 +241,10 @@ const getCategoryType = (category: string): keyof typeof LUXURY_COLORS => {
   const incomeCategories = ['Salary', 'Freelance', 'Business Income', 'Investment Returns', 'Rental Income', 'Gift Received', 'Refund', 'Cashback', 'Interest Earned', 'Dividend', 'Other Income'];
   const expenseCategories = ['Food & Dining', 'Transportation', 'Housing', 'Utilities', 'Healthcare', 'Entertainment', 'Shopping', 'Education', 'Travel', 'Insurance', 'Taxes', 'Personal Care', 'Subscriptions', 'Gifts & Donations', 'Emergency Fund', 'Goal Funding', 'Bill Payment', 'Debt Payment', 'Transfer', 'Other Expense'];
   const billCategories = ['Electricity', 'Water', 'Gas', 'Internet', 'Phone', 'Cable/TV', 'Rent', 'Mortgage', 'Credit Card', 'Loan Payment', 'Subscription', 'Membership', 'Tax', 'Medical', 'Other Bill'];
-  const goalCategories = ['Vacation', 'Home Purchase', 'Car Purchase', 'Wedding', 'Retirement', 'Debt Payoff', 'Health', 'Technology', 'Furniture', 'Other Goal'];
-  const liabilityCategories = ['Personal Loan', 'Student Loan', 'Auto Loan', 'Buy Now Pay Later', 'Installment Plan', 'Medical Debt', 'Tax Debt', 'Business Loan', 'Other Debt'];
-  const budgetCategories = ['Savings', 'Other Budget'];
-  const accountCategories = ['Primary Banking', 'Credit', 'Digital Wallet', 'Cash', 'Goals Vault', 'Joint', 'Other Account'];
+  const goalCategories = ['Emergency Fund', 'Vacation', 'Education', 'Home Purchase', 'Car Purchase', 'Wedding', 'Retirement', 'Investment', 'Debt Payoff', 'Business', 'Health', 'Technology', 'Furniture', 'Travel', 'Gift', 'Other Goal'];
+  const liabilityCategories = ['Personal Loan', 'Student Loan', 'Auto Loan', 'Mortgage', 'Credit Card', 'Buy Now Pay Later', 'Installment Plan', 'Medical Debt', 'Tax Debt', 'Business Loan', 'Other Debt'];
+  const budgetCategories = ['Food & Dining', 'Transportation', 'Housing', 'Utilities', 'Healthcare', 'Entertainment', 'Shopping', 'Education', 'Travel', 'Insurance', 'Personal Care', 'Subscriptions', 'Gifts & Donations', 'Emergency Fund', 'Savings', 'Debt Payment', 'Other Budget'];
+  const accountCategories = ['Primary Banking', 'Savings', 'Investment', 'Credit', 'Digital Wallet', 'Cash', 'Goals Vault', 'Business', 'Joint', 'Other Account'];
 
   if (incomeCategories.includes(category)) return 'income';
   if (expenseCategories.includes(category)) return 'expense';

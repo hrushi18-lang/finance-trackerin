@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Calendar, Bell, Plus, Edit3, Trash2, AlertTriangle, CheckCircle, Clock, CreditCard, Zap, Play, Pause, Target, DollarSign, AlertCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { Calendar, Bell, Plus, Edit3, Trash2, AlertTriangle, CheckCircle, Clock, CreditCard, Zap, Play, Pause, Target, DollarSign, AlertCircle, TrendingUp, TrendingDown, Eye } from 'lucide-react';
 import { format, differenceInDays, addDays, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { Modal } from '../components/common/Modal';
 import { EnhancedBillForm } from '../components/forms/EnhancedBillForm';
 import { BillPaymentForm } from '../components/forms/BillPaymentForm';
@@ -10,6 +11,7 @@ import { useInternationalization } from '../contexts/InternationalizationContext
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 
 export const Bills: React.FC = () => {
+  const navigate = useNavigate();
   const { bills, addBill, updateBill, deleteBill, addTransaction, accounts, liabilities, transactions, payBillFromAccount, updateLiability } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
@@ -152,7 +154,7 @@ export const Bills: React.FC = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-heading">Bills & Payments</h1>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => navigate('/bills/create')}
             className="btn-primary flex items-center space-x-2 px-4 py-2"
           >
             <Plus size={16} />
@@ -247,6 +249,13 @@ export const Bills: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => navigate(`/bills/${bill.id}`)}
+                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+                          title="View Details"
+                        >
+                          <Eye size={14} />
+                        </button>
                         <button
                           onClick={() => {
                             setSelectedBill(bill);
@@ -387,9 +396,10 @@ export const Bills: React.FC = () => {
         {selectedBill && (
           <BillPaymentForm
             bill={selectedBill}
-            accounts={accounts || []}
+            accounts={accounts}
             onSubmit={handlePayBill}
             onCancel={() => setShowPaymentModal(false)}
+            isSubmitting={isSubmitting}
           />
         )}
       </Modal>
@@ -433,5 +443,3 @@ export const Bills: React.FC = () => {
     </div>
   );
 };
-
-export default Bills;

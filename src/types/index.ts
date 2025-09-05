@@ -15,7 +15,7 @@ export interface FinancialAccount {
   platform?: string;
   accountNumber?: string;
   isVisible: boolean;
-  currencycode: string;
+  currencyCode: string;
   userId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -23,7 +23,7 @@ export interface FinancialAccount {
 
 export interface Transaction {
   id: string;
-  type: 'income' | 'expense' | 'payment' | 'contribution';
+  type: 'income' | 'expense';
   amount: number;
   category: string;
   // description: string; // Removed as per schema
@@ -45,16 +45,6 @@ export interface Transaction {
   exchangeRate?: number;
   isSplit?: boolean;
   splitGroupId?: string;
-  // Detail page linking fields
-  goal_id?: string; // Link to specific goal
-  budget_id?: string; // Link to specific budget
-  bill_id?: string; // Link to specific bill
-  liability_id?: string; // Link to specific liability
-  // Additional fields for detail pages
-  account_name?: string; // Account name for display
-  payment_method?: string; // Payment method used
-  payment_type?: string; // Type of payment (regular, extra, etc.)
-  interest_amount?: number; // Interest portion of payment
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -108,6 +98,14 @@ export interface Goal {
   targetDate: Date;
   category: string;
   accountId?: string;
+  goalType: 'account_specific' | 'category_based' | 'general_savings';
+  targetCategory?: string; // For category-based goals
+  periodType: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
+  customPeriodDays?: number; // For custom periods
+  isRecurring: boolean;
+  recurringFrequency?: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  priority: 'low' | 'medium' | 'high';
+  status: 'active' | 'paused' | 'completed' | 'cancelled';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -199,6 +197,14 @@ export interface Bill { // Renamed from Bill to EnhancedBill
   reminderDaysBefore: number; // Renamed from reminder_days_before to reminderDaysBefore
   sendDueDateReminder: boolean; // Renamed from send_due_date_reminder to sendDueDateReminder
   sendOverdueReminder: boolean; // Renamed from send_overdue_reminder to sendOverdueReminder
+  // Enhanced fields
+  billCategory: 'account_specific' | 'category_based' | 'general_expense';
+  targetCategory?: string; // For category-based bills
+  isRecurring: boolean;
+  paymentMethod?: string;
+  notes?: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'active' | 'paused' | 'completed' | 'cancelled';
   createdAt: Date;
   updatedAt: Date;
 }

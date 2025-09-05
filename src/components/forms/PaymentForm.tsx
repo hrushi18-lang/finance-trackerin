@@ -115,7 +115,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
       {/* Header with Info */}
       <div className="bg-gradient-to-r from-warning-500/20 to-error-500/20 rounded-xl p-4 mb-6 border border-warning-500/30">
         <h3 className="text-lg font-semibold text-white mb-2 flex items-center">
-          <CurrencyIcon currencycode={currency.code} size={20} className="mr-2 text-warning-400" />
+          <CurrencyIcon currencyCode={currency.code} size={20} className="mr-2 text-warning-400" />
           Make a Payment
         </h3>
         <p className="text-gray-300 text-sm">
@@ -130,14 +130,14 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
           <div className="bg-black/20 p-3 rounded-lg">
             <span className="text-gray-400">Remaining:</span>
             <span className="font-medium ml-2 text-white">
-              <CurrencyIcon currencycode={currency.code} size={14} className="inline mr-1" />
+              <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
               {remainingAmount.toLocaleString()}
             </span>
           </div>
           <div className="bg-black/20 p-3 rounded-lg">
             <span className="text-gray-400">Monthly:</span>
             <span className="font-medium ml-2 text-white">
-              <CurrencyIcon currencycode={currency.code} size={14} className="inline mr-1" />
+              <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
               {monthlyPayment.toLocaleString()}
             </span>
           </div>
@@ -176,7 +176,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
               onClick={() => handleQuickAmount(Math.min(remainingAmount, 1000))}
               className="border-white/20 text-white hover:bg-white/10"
             >
-              <CurrencyIcon currencycode={currency.code} size={12} className="inline mr-1" />
+              <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
               1,000
             </Button>
           </div>
@@ -188,7 +188,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
             label="Payment Amount"
             type="number"
             step="0.01"
-            icon={<CurrencyIcon currencycode={currency.code} className="text-success-400" />}
+            icon={<CurrencyIcon currencyCode={currency.code} className="text-success-400" />}
             {...register('amount', {
               required: 'Payment amount is required',
               min: { value: 0.01, message: 'Amount must be greater than 0' },
@@ -214,7 +214,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
               className="w-full bg-black/40 border border-white/20 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             >
               <option value="">Select an account</option>
-              {accounts?.map((account) => (
+              {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.name} - {formatCurrency(account.balance)} ({account.type.replace('_', ' ')})
                 </option>

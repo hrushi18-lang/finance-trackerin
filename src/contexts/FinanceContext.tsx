@@ -87,16 +87,6 @@ interface FinanceContextType {
   getIncomeAnalysis: (transactions: Transaction[]) => Array<{ source: string; amount: number; percentage: number }>;
   getBudgetPerformance: () => Array<{ budget: string; spent: number; limit: number; percentage: number }>;
   
-  // Detail page helpers
-  getGoalTransactions: (goalId: string) => Transaction[];
-  getBudgetTransactions: (budgetId: string) => Transaction[];
-  getBillTransactions: (billId: string) => Transaction[];
-  getLiabilityTransactions: (liabilityId: string) => Transaction[];
-  getAccountContributions: (itemId: string, type: 'goal' | 'budget' | 'bill' | 'liability') => Array<{ account_name: string; amount: number }>;
-  getBudgetSpending: (budgetId: string) => Transaction[];
-  getBillPaymentHistory: (billId: string) => Transaction[];
-  getLiabilityPaymentHistory: (liabilityId: string) => Transaction[];
-  
   // Statistics
   stats: {
     totalIncome: number;
@@ -194,7 +184,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Use user's selected currency from onboarding/internationalization
     const savedCurrency = typeof window !== 'undefined' ? localStorage.getItem('finspire_currency') : null;
-    const defaultCurrency = accounts[0]?.currencycode || savedCurrency || 'USD';
+    const defaultCurrency = accounts[0]?.currencyCode || savedCurrency || 'USD';
 
     const { data, error } = await supabase
       .from('financial_accounts')
@@ -221,7 +211,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       type: data.type,
       balance: Number(data.balance),
       isVisible: data.is_visible,
-              currencycode: data.currencycode,
+      currencyCode: data.currencycode,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     } as FinancialAccount;
@@ -400,7 +390,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       platform: account.platform,
       accountNumber: account.account_number,
       isVisible: account.is_visible,
-      currencycode: account.currencycode,
+      currencyCode: account.currencycode,
       createdAt: new Date(account.created_at),
       updatedAt: new Date(account.updated_at)
     }));
@@ -465,6 +455,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       currentAmount: Number(goal.current_amount || 0),
       targetDate: new Date(goal.target_date),
       category: goal.category,
+      accountId: goal.account_id,
+      goalType: goal.goal_type || 'general_savings',
+      targetCategory: goal.target_category,
+      periodType: goal.period_type || 'monthly',
+      customPeriodDays: goal.custom_period_days,
+      isRecurring: goal.is_recurring || false,
+      recurringFrequency: goal.recurring_frequency,
+      priority: goal.priority || 'medium',
+      status: goal.status || 'active',
       createdAt: new Date(goal.created_at),
       updatedAt: new Date(goal.updated_at)
     }));
@@ -585,6 +584,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       reminderDaysBefore: bill.reminder_days_before,
       sendDueDateReminder: bill.send_due_date_reminder,
       sendOverdueReminder: bill.send_overdue_reminder,
+      billCategory: bill.bill_category || 'general_expense',
+      targetCategory: bill.target_category,
+      isRecurring: bill.is_recurring || false,
+      paymentMethod: bill.payment_method,
+      notes: bill.notes,
+      priority: bill.priority || 'medium',
+      status: bill.status || 'active',
       createdAt: new Date(bill.created_at),
       updatedAt: new Date(bill.updated_at)
     }));
@@ -856,7 +862,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         platform: accountData.platform,
         account_number: accountData.accountNumber,
         is_visible: accountData.isVisible,
-                        currencycode: accountData.currencycode
+        currencycode: accountData.currencyCode
       })
       .select()
       .single();
@@ -873,7 +879,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       platform: data.platform,
       accountNumber: data.account_number,
       isVisible: data.is_visible,
-              currencycode: data.currencycode,
+      currencyCode: data.currencycode,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };
@@ -894,7 +900,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         platform: updates.platform,
         account_number: updates.accountNumber,
         is_visible: updates.isVisible,
-                        currencycode: updates.currencycode
+        currencycode: updates.currencyCode
       })
       .eq('id', id)
       .eq('user_id', user.id);
@@ -1076,6 +1082,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       currentAmount: Number(data.current_amount || 0),
       targetDate: new Date(data.target_date),
       category: data.category,
+      accountId: data.account_id,
+      goalType: data.goal_type || 'general_savings',
+      targetCategory: data.target_category,
+      periodType: data.period_type || 'monthly',
+      customPeriodDays: data.custom_period_days,
+      isRecurring: data.is_recurring || false,
+      recurringFrequency: data.recurring_frequency,
+      priority: data.priority || 'medium',
+      status: data.status || 'active',
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };
@@ -1367,6 +1382,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       reminderDaysBefore: data.reminder_days_before,
       sendDueDateReminder: data.send_due_date_reminder,
       sendOverdueReminder: data.send_overdue_reminder,
+      billCategory: data.bill_category || 'general_expense',
+      targetCategory: data.target_category,
+      isRecurring: data.is_recurring || false,
+      paymentMethod: data.payment_method,
+      notes: data.notes,
+      priority: data.priority || 'medium',
+      status: data.status || 'active',
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };
@@ -1569,8 +1591,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         from_account_id: fromAccountId,
         to_account_id: toAccountId,
         amount: amount,
-        from_currency: fromAccount.currencycode,
-        to_currency: toAccount.currencycode,
+        from_currency: fromAccount.currencyCode,
+        to_currency: toAccount.currencyCode,
         exchange_rate: 1.0, // Simplified for now
         converted_amount: amount,
         description: description,
@@ -1752,59 +1774,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  // Detail page helper methods
-  const getGoalTransactions = (goalId: string): Transaction[] => {
-    return transactions.filter(t => t.goal_id === goalId);
-  };
-
-  const getBudgetTransactions = (budgetId: string): Transaction[] => {
-    return transactions.filter(t => t.budget_id === budgetId);
-  };
-
-  const getBillTransactions = (billId: string): Transaction[] => {
-    return transactions.filter(t => t.bill_id === billId);
-  };
-
-  const getLiabilityTransactions = (liabilityId: string): Transaction[] => {
-    return transactions.filter(t => t.liability_id === liabilityId);
-  };
-
-  const getAccountContributions = (itemId: string, type: 'goal' | 'budget' | 'bill' | 'liability'): Array<{ account_name: string; amount: number }> => {
-    const filteredTransactions = transactions.filter(t => {
-      switch (type) {
-        case 'goal': return t.goal_id === itemId;
-        case 'budget': return t.budget_id === itemId;
-        case 'bill': return t.bill_id === itemId;
-        case 'liability': return t.liability_id === itemId;
-        default: return false;
-      }
-    });
-
-    const contributions = filteredTransactions.reduce((acc, trans) => {
-      const account = accounts.find(a => a.id === trans.accountId);
-      const accountName = account?.name || 'Unknown Account';
-      acc[accountName] = (acc[accountName] || 0) + trans.amount;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return Object.entries(contributions).map(([account_name, amount]) => ({
-      account_name,
-      amount
-    }));
-  };
-
-  const getBudgetSpending = (budgetId: string): Transaction[] => {
-    return transactions.filter(t => t.budget_id === budgetId && t.type === 'expense');
-  };
-
-  const getBillPaymentHistory = (billId: string): Transaction[] => {
-    return transactions.filter(t => t.bill_id === billId && t.type === 'payment');
-  };
-
-  const getLiabilityPaymentHistory = (liabilityId: string): Transaction[] => {
-    return transactions.filter(t => t.liability_id === liabilityId && t.type === 'payment');
-  };
-
   // Calculate statistics
   const stats = {
     totalIncome: transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0),
@@ -1871,14 +1840,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     getSpendingPatterns,
     getIncomeAnalysis,
     getBudgetPerformance,
-    getGoalTransactions,
-    getBudgetTransactions,
-    getBillTransactions,
-    getLiabilityTransactions,
-    getAccountContributions,
-    getBudgetSpending,
-    getBillPaymentHistory,
-    getLiabilityPaymentHistory,
     stats
   };
 

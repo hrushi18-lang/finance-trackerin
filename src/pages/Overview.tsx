@@ -710,5 +710,3 @@ export const Overview: React.FC = () => {
     </div>
   );
 };
-
-export default Overview;
