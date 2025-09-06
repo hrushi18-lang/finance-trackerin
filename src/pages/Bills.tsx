@@ -10,7 +10,7 @@ import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 
-export const Bills: React.FC = () => {
+const Bills: React.FC = () => {
   const navigate = useNavigate();
   const { bills, addBill, updateBill, deleteBill, addTransaction, accounts, liabilities, transactions, payBillFromAccount, updateLiability } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
@@ -443,3 +443,5 @@ export const Bills: React.FC = () => {
     </div>
   );
 };
+
+export default Bills;

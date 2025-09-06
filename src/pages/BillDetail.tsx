@@ -21,7 +21,7 @@ import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 
-export const BillDetail: React.FC = () => {
+const BillDetail: React.FC = () => {
   const { billId } = useParams<{ billId: string }>();
   const navigate = useNavigate();
   const { 
@@ -30,6 +30,7 @@ export const BillDetail: React.FC = () => {
     accounts,
     updateBill,
     addTransaction,
+    getBillTransactions,
     isLoading 
   } = useFinance();
   const { formatCurrency } = useInternationalization();
@@ -47,11 +48,8 @@ export const BillDetail: React.FC = () => {
   // Get transactions related to this bill
   const billTransactions = useMemo(() => {
     if (!bill) return [];
-    return transactions.filter(t => 
-      t.linkedBillId === bill.id || 
-      (bill.billCategory === 'account_specific' && t.accountId === bill.accountId && t.type === 'expense' && t.category === bill.category)
-    );
-  }, [transactions, bill]);
+    return getBillTransactions(bill.id);
+  }, [bill, getBillTransactions]);
 
   // Calculate bill analytics
   const billAnalytics = useMemo(() => {
@@ -82,8 +80,8 @@ export const BillDetail: React.FC = () => {
 
   // Get account info for account-specific bills
   const account = useMemo(() => {
-    if (!bill || bill.billCategory !== 'account_specific' || !bill.accountId) return null;
-    return accounts.find(a => a.id === bill.accountId);
+    if (!bill || bill.billCategory !== 'account_specific' || !bill.defaultAccountId) return null;
+    return accounts.find(a => a.id === bill.defaultAccountId);
   }, [bill, accounts]);
 
   const handlePayBill = async () => {
@@ -546,3 +544,5 @@ export const BillDetail: React.FC = () => {
     </div>
   );
 };
+
+export default BillDetail;

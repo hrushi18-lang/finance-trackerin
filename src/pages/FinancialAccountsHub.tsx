@@ -12,7 +12,7 @@ import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { FinancialAccount, Transaction } from '../types';
 import { AccountCard } from '../components/accounts/AccountCard';
 
-export const FinancialAccountsHub: React.FC = () => {
+const FinancialAccountsHub: React.FC = () => {
   const { 
     accounts, 
     addAccount, 
@@ -413,3 +413,5 @@ export const FinancialAccountsHub: React.FC = () => {
     </div>
   );
 };
+
+export default FinancialAccountsHub;

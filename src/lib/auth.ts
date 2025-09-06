@@ -124,7 +124,20 @@ class AuthManager {
         .insert(profile);
 
       if (error) {
-        console.warn('Failed to create profile in Supabase:', error);
+        // If profile already exists (409), try to update it instead
+        if (error.code === '23505' || error.message.includes('duplicate key')) {
+          console.log('Profile already exists, updating instead...');
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update(profile)
+            .eq('id', profile.id);
+          
+          if (updateError) {
+            console.warn('Failed to update profile in Supabase:', updateError);
+          }
+        } else {
+          console.warn('Failed to create profile in Supabase:', error);
+        }
       }
     } catch (error) {
       console.warn('Error creating profile in Supabase:', error);

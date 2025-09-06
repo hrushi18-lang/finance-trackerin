@@ -30,7 +30,7 @@ import { useNavigate } from 'react-router-dom';
 import { financeManager } from '../lib/finance-manager';
 import { offlineStorage } from '../lib/offline-storage';
 
-export const Settings: React.FC = () => {
+const Settings: React.FC = () => {
   const { user, signOut } = useAuth();
   const { syncData } = useFinance();
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -647,3 +647,5 @@ export const Settings: React.FC = () => {
     </div>
   );
 };
+
+export default Settings;

@@ -14,7 +14,7 @@ import { useInternationalization } from '../contexts/InternationalizationContext
 import { Goal } from '../types';
 import { ProgressBar } from '../components/analytics/ProgressBar';
 
-export const Goals: React.FC = () => {
+const Goals: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { goals, addGoal, updateGoal, deleteGoal, addTransaction, accounts, transactions, fundGoalFromAccount, contributeToGoal, withdrawGoalToAccount, handleGoalCompletion } = useFinance();
@@ -661,3 +661,5 @@ export const Goals: React.FC = () => {
     </div>
   );
 };
+
+export default Goals;

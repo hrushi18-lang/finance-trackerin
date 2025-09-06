@@ -10,7 +10,7 @@ import { useInternationalization } from '../contexts/InternationalizationContext
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { DebtStrategyTool } from '../components/liabilities/DebtStrategyTool';
 
-export const Liabilities: React.FC = () => {
+const Liabilities: React.FC = () => {
   const { liabilities, addLiability, updateLiability, deleteLiability, addTransaction, accounts, repayLiabilityFromAccount } = useFinance();
   const { currency, formatCurrency } = useInternationalization();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,7 +35,6 @@ export const Liabilities: React.FC = () => {
         name: liability.name,
         liabilityType: liability.liabilityType,
         description: liability.description,
-        totalAmount: liability.totalAmount,
         remainingAmount: liability.remainingAmount,
         interestRate: liability.interestRate,
         monthlyPayment: liability.monthlyPayment || liability.minimumPayment || 0,
@@ -483,3 +482,5 @@ export const Liabilities: React.FC = () => {
     </div>
   );
 };
+
+export default Liabilities;

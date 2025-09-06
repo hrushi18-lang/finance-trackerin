@@ -16,7 +16,7 @@ import { Modal } from '../components/common/Modal';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { format } from 'date-fns';
 
-export const Profile: React.FC = () => {
+const Profile: React.FC = () => {
   const { user, logout } = useAuth();
   const { accounts, goals, budgets, liabilities, recurringTransactions } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
@@ -590,3 +590,5 @@ export const Profile: React.FC = () => {
     </div>
   );
 };
+
+export default Profile;

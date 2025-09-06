@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -20,27 +20,27 @@ import { AppInitializer } from './components/AppInitializer';
 import { AccessibilityEnhancements, useKeyboardNavigation } from './components/common/AccessibilityEnhancements';
 import './styles/accessibility.css';
 
-// Lazy load pages for better performance
-const Auth = React.lazy(() => import('./pages/Auth').then(module => ({ default: module.Auth })));
-const Home = React.lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
-const Dashboard = React.lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
-const AddTransaction = React.lazy(() => import('./pages/AddTransaction').then(module => ({ default: module.AddTransaction })));
-const Transactions = React.lazy(() => import('./pages/Transactions').then(module => ({ default: module.Transactions })));
-const Analytics = React.lazy(() => import('./pages/Analytics').then(module => ({ default: module.Analytics })));
-const Calendar = React.lazy(() => import('./pages/Calendar').then(module => ({ default: module.Calendar })));
-const Goals = React.lazy(() => import('./pages/Goals').then(module => ({ default: module.Goals })));
-const Liabilities = React.lazy(() => import('./pages/Liabilities').then(module => ({ default: module.Liabilities })));
-const Budgets = React.lazy(() => import('./pages/Budgets').then(module => ({ default: module.Budgets })));
-const Overview = React.lazy(() => import('./pages/Overview').then(module => ({ default: module.Overview })));
-const Accounts = React.lazy(() => import('./pages/Accounts').then(module => ({ default: module.Accounts })));
-const AccountDetail = React.lazy(() => import('./pages/AccountDetail').then(module => ({ default: module.AccountDetail })));
-const CreateGoal = React.lazy(() => import('./pages/CreateGoal').then(module => ({ default: module.CreateGoal })));
-const CreateBill = React.lazy(() => import('./pages/CreateBill').then(module => ({ default: module.CreateBill })));
-const GoalDetail = React.lazy(() => import('./pages/GoalDetail').then(module => ({ default: module.GoalDetail })));
-const BillDetail = React.lazy(() => import('./pages/BillDetail').then(module => ({ default: module.BillDetail })));
-const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
-const ThemeSettings = React.lazy(() => import('./pages/ThemeSettings').then(module => ({ default: module.ThemeSettings })));
-const Bills = React.lazy(() => import('./pages/Bills').then(module => ({ default: module.Bills })));
+// Import pages directly to avoid lazy loading issues
+import Auth from './pages/Auth';
+import Home from './pages/Home';
+import Dashboard from './pages/Dashboard';
+import AddTransaction from './pages/AddTransaction';
+import Transactions from './pages/Transactions';
+import Analytics from './pages/Analytics';
+import Calendar from './pages/Calendar';
+import Goals from './pages/Goals';
+import Liabilities from './pages/Liabilities';
+import Budgets from './pages/Budgets';
+import Overview from './pages/Overview';
+import Accounts from './pages/Accounts';
+import AccountDetail from './pages/AccountDetail';
+import CreateGoal from './pages/CreateGoal';
+import CreateBill from './pages/CreateBill';
+import GoalDetail from './pages/GoalDetail';
+import BillDetail from './pages/BillDetail';
+import Settings from './pages/Settings';
+import ThemeSettings from './pages/ThemeSettings';
+import Bills from './pages/Bills';
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -92,8 +92,7 @@ function App() {
 
                           {/* Main Content */}
                           <div className="relative z-10">
-                            <Suspense fallback={<LoadingScreen message="Loading your financial dashboard..." />}>
-                              <Routes>
+                            <Routes>
                               {/* Public Routes */}
                               <Route path="/auth" element={<Auth />} />
                               
@@ -317,7 +316,6 @@ function App() {
                               {/* Catch all route */}
                               <Route path="*" element={<Navigate to="/" replace />} />
                               </Routes>
-                            </Suspense>
                           </div>
                         </div>
                       </Router>

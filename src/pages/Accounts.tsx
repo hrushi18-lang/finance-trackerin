@@ -10,7 +10,7 @@ import { useInternationalization } from '../contexts/InternationalizationContext
 import { useNavigate } from 'react-router-dom';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 
-export const Accounts: React.FC = () => {
+const Accounts: React.FC = () => {
   const navigate = useNavigate();
   const { 
     accounts, 
@@ -321,3 +321,5 @@ export const Accounts: React.FC = () => {
     </div>
   );
 };
+
+export default Accounts;

@@ -135,37 +135,6 @@ export interface Liability {
   accountId?: string;
 }
 
-export interface EnhancedLiability {
-  id: string;
-  userId: string;
-  name: string;
-  liabilityType: 'personal_loan' | 'student_loan' | 'auto_loan' | 'mortgage' | 'credit_card' | 'bnpl' | 'installment' | 'other';
-  description?: string;
-  totalAmount: number;
-  remainingAmount: number;
-  interestRate: number;
-  monthlyPayment?: number;
-  minimumPayment?: number;
-  paymentDay: number;
-  loanTermMonths?: number;
-  remainingTermMonths?: number;
-  startDate: Date;
-  dueDate?: Date;
-  nextPaymentDate?: Date;
-  linkedAssetId?: string;
-  isSecured: boolean;
-  disbursementAccountId?: string;
-  defaultPaymentAccountId?: string;
-  providesFunds: boolean;
-  affectsCreditScore: boolean;
-  status: 'active' | 'paid_off' | 'defaulted' | 'restructured' | 'closed';
-  isActive: boolean;
-  // autoGenerateBills: boolean; // Removed as per schema
-  autoGenerateBills: boolean;
-  billGenerationDay: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export interface Asset {
   id: string;
@@ -276,36 +245,8 @@ export interface NotificationItem {
   updatedAt: Date;
 }
 
-export interface EnhancedLiability {
-  id: string;
-  userId: string;
-  name: string;
-  liabilityType: 'personal_loan' | 'student_loan' | 'auto_loan' | 'mortgage' | 'credit_card' | 'bnpl' | 'installment' | 'other';
-  description?: string;
-  totalAmount: number;
-  remainingAmount: number;
-  interestRate: number;
-  monthlyPayment?: number;
-  minimumPayment?: number;
-  paymentDay: number;
-  loanTermMonths?: number;
-  remainingTermMonths?: number;
-  startDate: Date;
-  dueDate?: Date;
-  nextPaymentDate?: Date;
-  linkedAssetId?: string;
-  isSecured: boolean;
-  disbursementAccountId?: string;
-  defaultPaymentAccountId?: string;
-  providesFunds: boolean;
-  affectsCreditScore: boolean;
-  status: 'active' | 'paid_off' | 'defaulted' | 'restructured' | 'closed';
-  isActive: boolean;
-  autoGenerateBills: boolean;
-  billGenerationDay: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Export enhanced liability types
+export * from './enhanced_liabilities';
 
 export interface Asset {
   id: string;

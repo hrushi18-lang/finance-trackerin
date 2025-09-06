@@ -22,13 +22,14 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
 
-export const AccountDetail: React.FC = () => {
+const AccountDetail: React.FC = () => {
   const { accountId } = useParams<{ accountId: string }>();
   const navigate = useNavigate();
   const { 
     accounts, 
     transactions, 
     addTransaction,
+    getAccountTransactions,
     isLoading 
   } = useFinance();
   const { formatCurrency } = useInternationalization();
@@ -47,8 +48,8 @@ export const AccountDetail: React.FC = () => {
   // Get transactions for this account
   const accountTransactions = useMemo(() => {
     if (!account) return [];
-    return transactions.filter(t => t.account_id === account.id);
-  }, [transactions, account]);
+    return getAccountTransactions(account.id);
+  }, [account, getAccountTransactions]);
 
   // Filter transactions based on search
   const filteredTransactions = useMemo(() => {
@@ -474,3 +475,5 @@ export const AccountDetail: React.FC = () => {
     </div>
   );
 };
+
+export default AccountDetail;

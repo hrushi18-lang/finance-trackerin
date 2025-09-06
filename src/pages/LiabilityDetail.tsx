@@ -27,8 +27,7 @@ const LiabilityDetail: React.FC<LiabilityDetailProps> = () => {
     updateLiability, 
     deleteLiability, 
     addTransaction,
-    getLiabilityTransactions,
-    getLiabilityPaymentHistory
+    getLiabilityTransactions
   } = useFinance();
 
   const [liability, setLiability] = useState<any>(null);
@@ -43,18 +42,17 @@ const LiabilityDetail: React.FC<LiabilityDetailProps> = () => {
       const foundLiability = liabilities.find(l => l.id === id);
       if (foundLiability) {
         setLiability(foundLiability);
-        setSelectedAccount(foundLiability.account_id || '');
+        setSelectedAccount(foundLiability.defaultPaymentAccountId || '');
         
         // Get liability-specific transactions
         const liabilityTrans = getLiabilityTransactions(id);
         setLiabilityTransactions(liabilityTrans);
         
-        // Get payment history
-        const history = getLiabilityPaymentHistory(id);
-        setPaymentHistory(history);
+        // Get payment history (same as transactions for now)
+        setPaymentHistory(liabilityTrans);
       }
     }
-  }, [id, liabilities, getLiabilityTransactions, getLiabilityPaymentHistory]);
+  }, [id, liabilities, getLiabilityTransactions]);
 
   const handleEditLiability = (updatedLiability: any) => {
     updateLiability(updatedLiability);
@@ -69,19 +67,24 @@ const LiabilityDetail: React.FC<LiabilityDetailProps> = () => {
     }
   };
 
-  const handleAddPayment = (transaction: any) => {
-    const newTransaction = {
-      ...transaction,
-      liability_id: liability?.id,
-      account_id: selectedAccount,
-      type: 'payment'
-    };
-    addTransaction(newTransaction);
-    setIsPaymentModalOpen(false);
-    
-    // Refresh data
-    const liabilityTrans = getLiabilityTransactions(liability?.id);
-    setLiabilityTransactions(liabilityTrans);
+  const handleAddPayment = async (transaction: any) => {
+    try {
+      const newTransaction = {
+        ...transaction,
+        type: 'expense',
+        accountId: selectedAccount,
+        description: `Payment for ${liability?.name}: ${transaction.description || 'Liability Payment'}`,
+        category: 'Liability Payment'
+      };
+      await addTransaction(newTransaction);
+      setIsPaymentModalOpen(false);
+      
+      // Refresh data
+      const liabilityTrans = getLiabilityTransactions(liability?.id || '');
+      setLiabilityTransactions(liabilityTrans);
+    } catch (error) {
+      console.error('Error adding payment:', error);
+    }
   };
 
   if (!liability) {

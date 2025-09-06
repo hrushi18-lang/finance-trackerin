@@ -25,7 +25,7 @@ interface GoalFormData {
   priority: 'low' | 'medium' | 'high';
 }
 
-export const CreateGoal: React.FC = () => {
+const CreateGoal: React.FC = () => {
   const navigate = useNavigate();
   const { formatCurrency } = useInternationalization();
   const { addGoal, accounts } = useFinance();
@@ -468,3 +468,5 @@ export const CreateGoal: React.FC = () => {
     </div>
   );
 };
+
+export default CreateGoal;

@@ -29,7 +29,7 @@ interface BillFormData {
   reminderDaysBefore: number;
 }
 
-export const CreateBill: React.FC = () => {
+const CreateBill: React.FC = () => {
   const navigate = useNavigate();
   const { formatCurrency } = useInternationalization();
   const { addBill, accounts } = useFinance();
@@ -510,3 +510,5 @@ export const CreateBill: React.FC = () => {
     </div>
   );
 };
+
+export default CreateBill;

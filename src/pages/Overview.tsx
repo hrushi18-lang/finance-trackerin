@@ -29,7 +29,7 @@ import { useInternationalization } from '../contexts/InternationalizationContext
 import { format } from 'date-fns';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 
-export const Overview: React.FC = () => {
+const Overview: React.FC = () => {
   const navigate = useNavigate();
   const { 
     accounts, 
@@ -710,3 +710,5 @@ export const Overview: React.FC = () => {
     </div>
   );
 };
+
+export default Overview;

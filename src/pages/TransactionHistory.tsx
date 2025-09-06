@@ -11,7 +11,7 @@ import { useInternationalization } from '../contexts/InternationalizationContext
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { Transaction } from '../types';
 
-export const TransactionHistory: React.FC = () => {
+const TransactionHistory: React.FC = () => {
   const { transactions, updateTransaction, deleteTransaction } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
   const [searchResults, setSearchResults] = useState(transactions);
@@ -464,3 +464,5 @@ export const TransactionHistory: React.FC = () => {
     </div>
   );
 };
+
+export default TransactionHistory;

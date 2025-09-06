@@ -27,7 +27,7 @@ import { format } from 'date-fns';
 import { RingChart } from '../components/analytics/RingChart';
 import { ChartPopup } from '../components/analytics/ChartPopup';
 
-export const Home: React.FC = () => {
+const Home: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { formatCurrency, currency } = useInternationalization();
@@ -450,3 +450,5 @@ export const Home: React.FC = () => {
     </div>
   );
 };
+
+export default Home;

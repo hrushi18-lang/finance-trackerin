@@ -98,6 +98,12 @@ interface FinanceContextType {
   getIncomeAnalysis: (transactions: Transaction[]) => Array<{ source: string; amount: number; percentage: number }>;
   getBudgetPerformance: () => Array<{ budget: string; spent: number; limit: number; percentage: number }>;
   
+  // Transaction filtering helpers
+  getAccountTransactions: (accountId: string) => Transaction[];
+  getGoalTransactions: (goalId: string) => Transaction[];
+  getBillTransactions: (billId: string) => Transaction[];
+  getLiabilityTransactions: (liabilityId: string) => Transaction[];
+  
   // Statistics
   stats: {
     totalIncome: number;
@@ -1179,25 +1185,51 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addTransaction = async (transactionData: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
+    // Validate required fields
+    if (!transactionData.type || !transactionData.amount || !transactionData.accountId) {
+      throw new Error('Missing required transaction fields');
+    }
+
+    // Check for sufficient funds for expense transactions
+    if (transactionData.type === 'expense' && transactionData.affectsBalance !== false) {
+      const account = accounts.find(acc => acc.id === transactionData.accountId);
+      if (account) {
+        // Allow negative balances for credit cards and investment accounts
+        if (account.type !== 'credit_card' && account.type !== 'investment') {
+          if (account.balance < transactionData.amount) {
+            throw new Error(`Insufficient funds. Account balance (${account.balance.toFixed(2)}) is less than transaction amount (${transactionData.amount.toFixed(2)})`);
+          }
+        }
+      }
+    }
+
+    // Ensure date is properly formatted
+    const dateString = transactionData.date instanceof Date 
+      ? transactionData.date.toISOString().split('T')[0]
+      : new Date(transactionData.date).toISOString().split('T')[0];
+
     const { data, error } = await supabase
       .from('transactions')
       .insert({
         user_id: user.id,
         type: transactionData.type,
         amount: transactionData.amount,
-        category: transactionData.category,
-        description: transactionData.description,
-        date: transactionData.date.toISOString().split('T')[0],
+        category: transactionData.category || 'Uncategorized',
+        description: transactionData.description || '',
+        date: dateString,
         account_id: transactionData.accountId,
-        affects_balance: transactionData.affectsBalance,
-        reason: transactionData.reason,
-        transfer_to_account_id: transactionData.transferToAccountId,
+        affects_balance: transactionData.affectsBalance ?? true,
+        reason: transactionData.reason || null,
+        transfer_to_account_id: transactionData.transferToAccountId || null,
         status: transactionData.status || 'completed'
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase transaction insert error:', error);
+      throw new Error(`Failed to create transaction: ${error.message}`);
+    }
 
     const newTransaction: Transaction = {
       id: data.id,
@@ -2139,6 +2171,57 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  // Transaction filtering helpers
+  const getAccountTransactions = (accountId: string) => {
+    return transactions.filter(t => t.accountId === accountId);
+  };
+
+  const getGoalTransactions = (goalId: string) => {
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) return [];
+    
+    return transactions.filter(t => {
+      // Filter by account if goal is account-specific
+      if (goal.goalType === 'account_specific' && goal.accountId) {
+        return t.accountId === goal.accountId && t.type === 'income' && t.category === 'Goal Contribution';
+      }
+      // Filter by category for category-based goals
+      if (goal.goalType === 'category_based' && goal.targetCategory) {
+        return t.type === 'income' && t.category === goal.targetCategory;
+      }
+      // For general savings goals, look for goal-related transactions
+      return t.type === 'income' && t.description.toLowerCase().includes(goal.title.toLowerCase());
+    });
+  };
+
+  const getBillTransactions = (billId: string) => {
+    const bill = bills.find(b => b.id === billId);
+    if (!bill) return [];
+    
+    return transactions.filter(t => {
+      // Filter by account if bill is account-specific
+      if (bill.billCategory === 'account_specific' && bill.defaultAccountId) {
+        return t.accountId === bill.defaultAccountId && t.type === 'expense' && t.category === bill.category;
+      }
+      // Filter by category for category-based bills
+      if (bill.billCategory === 'category_based' && bill.targetCategory) {
+        return t.type === 'expense' && t.category === bill.targetCategory;
+      }
+      // For general expense bills, look for bill-related transactions
+      return t.type === 'expense' && t.description.toLowerCase().includes(bill.title.toLowerCase());
+    });
+  };
+
+  const getLiabilityTransactions = (liabilityId: string) => {
+    const liability = liabilities.find(l => l.id === liabilityId);
+    if (!liability) return [];
+    
+    return transactions.filter(t => 
+      t.type === 'expense' && 
+      t.description.toLowerCase().includes(liability.name.toLowerCase())
+    );
+  };
+
   // Calculate statistics
   const stats = {
     totalIncome: transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0),
@@ -2214,6 +2297,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     getSpendingPatterns,
     getIncomeAnalysis,
     getBudgetPerformance,
+    getAccountTransactions,
+    getGoalTransactions,
+    getBillTransactions,
+    getLiabilityTransactions,
     stats
   };
 

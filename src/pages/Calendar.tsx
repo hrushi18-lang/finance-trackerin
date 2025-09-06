@@ -53,7 +53,7 @@ interface CalendarEvent {
   paidDate?: Date;
 }
 
-export const Calendar: React.FC = () => {
+const Calendar: React.FC = () => {
   const { 
     transactions, 
     goals, 
@@ -795,3 +795,5 @@ export const Calendar: React.FC = () => {
     </div>
   );
 };
+
+export default Calendar;

@@ -4,7 +4,7 @@ import { Button } from '../components/common/Button';
 import { ArrowLeft, Check, Palette, Moon, Sun } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export const ThemeSettings: React.FC = () => {
+const ThemeSettings: React.FC = () => {
   const { theme, setTheme, isDarkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   const [selectedTheme, setSelectedTheme] = useState<Theme>(theme);
@@ -12,7 +12,7 @@ export const ThemeSettings: React.FC = () => {
   const themes = [
     {
       id: 'cool-blue' as Theme,
-      name: 'Cool Blue',
+      name: 'Light Theme',
       description: 'Modern blue with neumorphic design',
       preview: {
         background: '#f8fafc',
@@ -23,8 +23,8 @@ export const ThemeSettings: React.FC = () => {
     },
     {
       id: 'olive' as Theme,
-      name: 'Olive Green',
-      description: 'Classic olive with warm tones',
+      name: 'Dark Theme',
+      description: 'Olive green dark mode',
       preview: {
         background: '#fefcf8',
         primary: '#3e5725',
@@ -205,3 +205,5 @@ export const ThemeSettings: React.FC = () => {
     </div>
   );
 };
+
+export default ThemeSettings;

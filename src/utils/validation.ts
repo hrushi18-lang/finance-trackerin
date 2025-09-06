@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { sanitizeInput, validateAmount, validateEmail, validateCurrency } from './security';
+import { sanitizeInput, validateAmount, validateEmail, validateCurrency, sanitizeFinancialData } from './security';
 
 // Enhanced validation schemas
 export const userSchema = z.object({
@@ -297,6 +297,24 @@ export const validatePagination = (page: number, pageSize: number): { valid: boo
   return { valid: true };
 };
 
+// Utility functions
+export const toNumber = (value: any): number => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+};
+
+export const calculatePercentage = (current: number, target: number): number => {
+  if (target === 0) return 0;
+  return Math.min((current / target) * 100, 100);
+};
+
+// Re-export security functions as named exports
+export { sanitizeFinancialData } from './security';
+
 // Export all validation functions
 export default {
   // Schemas
@@ -324,5 +342,8 @@ export default {
   validateCurrencyConversion,
   validateFileUpload,
   validateSearchQuery,
-  validatePagination
+  validatePagination,
+  
+  // Re-export security functions
+  sanitizeFinancialData
 };
