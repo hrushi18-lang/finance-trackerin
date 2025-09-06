@@ -183,6 +183,8 @@ export interface Bill { // Renamed from Bill to EnhancedBill
   notes?: string;
   priority: 'low' | 'medium' | 'high';
   status: 'active' | 'paused' | 'completed' | 'cancelled';
+  activityScope: 'general' | 'account_specific' | 'category_based';
+  accountIds: string[];
   createdAt: Date;
   updatedAt: Date;
 }

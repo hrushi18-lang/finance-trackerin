@@ -178,7 +178,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         loadBillReminders(),
         loadDebtPayments(),
         loadTransactionSplits(),
-        loadFinancialInsights()
+        loadFinancialInsights(),
+        loadCalendarEvents()
       ]);
       // Clean up any duplicate Goals Vault accounts
       await cleanupDuplicateGoalsVaults();
@@ -741,38 +742,55 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    const mappedLiabilities: EnhancedLiability[] = (data || []).map(liability => ({
-      id: liability.id,
-      userId: liability.user_id,
-      name: liability.name,
-      liabilityType: liability.liability_type,
-      description: liability.description,
-      totalAmount: Number(liability.total_amount),
-      remainingAmount: Number(liability.remaining_amount),
-      interestRate: Number(liability.interest_rate || 0),
-      monthlyPayment: Number(liability.monthly_payment || 0),
-      minimumPayment: Number(liability.minimum_payment || 0),
-      paymentDay: liability.payment_day,
-      loanTermMonths: liability.loan_term_months,
-      remainingTermMonths: liability.remaining_term_months,
-      startDate: new Date(liability.start_date),
-      dueDate: liability.due_date ? new Date(liability.due_date) : undefined,
-      nextPaymentDate: liability.next_payment_date ? new Date(liability.next_payment_date) : undefined,
-      linkedAssetId: liability.linked_asset_id,
-      isSecured: liability.is_secured,
-      disbursementAccountId: liability.disbursement_account_id,
-      defaultPaymentAccountId: liability.default_payment_account_id,
-      providesFunds: liability.provides_funds,
-      affectsCreditScore: liability.affects_credit_score,
-      status: liability.status,
-      isActive: liability.is_active,
-      autoGenerateBills: liability.auto_generate_bills,
-      billGenerationDay: liability.bill_generation_day,
-      createdAt: new Date(liability.created_at),
-      updatedAt: new Date(liability.updated_at)
+    // Load account links for each liability
+    const liabilitiesWithAccounts = await Promise.all((data || []).map(async (liability) => {
+      const { data: accountLinks } = await supabase
+        .from('activity_account_links')
+        .select('account_id, is_primary')
+        .eq('activity_type', 'liability')
+        .eq('activity_id', liability.id)
+        .eq('user_id', user.id);
+
+      const accountIds = accountLinks?.map(link => link.account_id) || [];
+      const targetCategory = liability.target_category;
+
+      return {
+        id: liability.id,
+        userId: liability.user_id,
+        name: liability.name,
+        liabilityType: liability.liability_type,
+        description: liability.description,
+        totalAmount: Number(liability.total_amount),
+        remainingAmount: Number(liability.remaining_amount),
+        interestRate: Number(liability.interest_rate || 0),
+        monthlyPayment: Number(liability.monthly_payment || 0),
+        minimumPayment: Number(liability.minimum_payment || 0),
+        paymentDay: liability.payment_day,
+        loanTermMonths: liability.loan_term_months,
+        remainingTermMonths: liability.remaining_term_months,
+        startDate: new Date(liability.start_date),
+        dueDate: liability.due_date ? new Date(liability.due_date) : undefined,
+        nextPaymentDate: liability.next_payment_date ? new Date(liability.next_payment_date) : undefined,
+        linkedAssetId: liability.linked_asset_id,
+        isSecured: liability.is_secured,
+        disbursementAccountId: liability.disbursement_account_id,
+        defaultPaymentAccountId: liability.default_payment_account_id,
+        providesFunds: liability.provides_funds,
+        affectsCreditScore: liability.affects_credit_score,
+        status: liability.status,
+        isActive: liability.is_active,
+        autoGenerateBills: liability.auto_generate_bills,
+        billGenerationDay: liability.bill_generation_day,
+        activityScope: liability.activity_scope || 'general',
+        accountIds: accountIds,
+        targetCategory: targetCategory,
+        priority: liability.priority || 'medium',
+        createdAt: new Date(liability.created_at),
+        updatedAt: new Date(liability.updated_at)
+      };
     }));
 
-    setLiabilities(mappedLiabilities);
+    setLiabilities(liabilitiesWithAccounts);
   };
 
   const loadBudgets = async () => {
@@ -1101,6 +1119,25 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }));
 
     setFinancialInsights(mappedInsights);
+  };
+
+  const loadCalendarEvents = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('event_date', { ascending: true });
+
+    if (error) {
+      console.error('Error loading calendar events:', error);
+      return;
+    }
+
+    // Calendar events are handled by the calendar component
+    // This method is here for consistency and future use
+    console.log('Calendar events loaded:', data?.length || 0);
   };
 
   // CRUD Operations
@@ -1550,7 +1587,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         payment_day: liabilityData.paymentDay,
         loan_term_months: liabilityData.loanTermMonths,
         remaining_term_months: liabilityData.remainingTermMonths,
-        start_date: liabilityData.startDate.toISOString().split('T')[0],
+        start_date: liabilityData.startDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
         due_date: liabilityData.dueDate?.toISOString().split('T')[0],
         next_payment_date: liabilityData.nextPaymentDate?.toISOString().split('T')[0],
         linked_asset_id: liabilityData.linkedAssetId,
@@ -1596,11 +1633,144 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       isActive: data.is_active,
       autoGenerateBills: data.auto_generate_bills,
       billGenerationDay: data.bill_generation_day,
+      activityScope: liabilityData.activityScope || 'general',
+      accountIds: liabilityData.accountIds || [],
+      targetCategory: liabilityData.targetCategory,
+      priority: liabilityData.priority || 'medium',
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };
 
     setLiabilities(prev => [newLiability, ...prev]);
+
+    // Create activity account links if account-specific
+    if (liabilityData.activityScope === 'account_specific' && liabilityData.accountIds && liabilityData.accountIds.length > 0) {
+      const accountLinks = liabilityData.accountIds.map((accountId, index) => ({
+        activity_type: 'liability',
+        activity_id: data.id,
+        account_id: accountId,
+        user_id: user.id,
+        is_primary: index === 0
+      }));
+
+      await supabase
+        .from('activity_account_links')
+        .insert(accountLinks);
+    }
+
+    // Auto-generate bills if enabled
+    if (liabilityData.autoGenerateBills && liabilityData.monthlyPayment && liabilityData.monthlyPayment > 0) {
+      await createLiabilityBills(data.id, liabilityData, user.id);
+    }
+
+    // Create calendar events for liability payments
+    await createLiabilityCalendarEvents(data.id, liabilityData, user.id);
+  };
+
+  // Helper function to create bills for liability
+  const createLiabilityBills = async (liabilityId: string, liabilityData: any, userId: string) => {
+    try {
+      const billInsertData = {
+        user_id: userId,
+        title: `${liabilityData.name} Payment`,
+        description: `Monthly payment for ${liabilityData.name}`,
+        category: 'Debt Payment',
+        bill_type: 'fixed',
+        amount: liabilityData.monthlyPayment,
+        frequency: 'monthly',
+        due_date: new Date().toISOString().split('T')[0],
+        next_due_date: new Date().toISOString().split('T')[0],
+        default_account_id: liabilityData.defaultPaymentAccountId,
+        auto_pay: false,
+        linked_liability_id: liabilityId,
+        is_emi: true,
+        is_active: true,
+        is_essential: true,
+        reminder_days_before: 3,
+        send_due_date_reminder: true,
+        send_overdue_reminder: true,
+        activity_scope: liabilityData.activityScope || 'general',
+        target_category: liabilityData.targetCategory || 'debt_payment',
+        linked_accounts_count: liabilityData.accountIds?.length || 0,
+        priority: liabilityData.priority || 'high',
+        status: 'active'
+      };
+
+      const { data: billData, error: billError } = await supabase
+        .from('bills')
+        .insert(billInsertData)
+        .select()
+        .single();
+
+      if (billError) {
+        console.error('Error creating liability bill:', billError);
+        return;
+      }
+
+      // Create activity account links for the bill if account-specific
+      if (liabilityData.activityScope === 'account_specific' && liabilityData.accountIds && liabilityData.accountIds.length > 0) {
+        const accountLinks = liabilityData.accountIds.map((accountId: string, index: number) => ({
+          activity_type: 'bill',
+          activity_id: billData.id,
+          account_id: accountId,
+          user_id: userId,
+          is_primary: index === 0
+        }));
+
+        await supabase
+          .from('activity_account_links')
+          .insert(accountLinks);
+      }
+
+      // Reload bills to update the UI
+      await loadBills();
+    } catch (error) {
+      console.error('Error creating liability bills:', error);
+    }
+  };
+
+  // Helper function to create calendar events for liability
+  const createLiabilityCalendarEvents = async (liabilityId: string, liabilityData: any, userId: string) => {
+    try {
+      if (!liabilityData.monthlyPayment || liabilityData.monthlyPayment <= 0) return;
+
+      const startDate = new Date(liabilityData.startDate || new Date());
+      const paymentDay = liabilityData.paymentDay || 1;
+      
+      // Create events for the next 12 months
+      for (let i = 0; i < 12; i++) {
+        const eventDate = new Date(startDate);
+        eventDate.setMonth(eventDate.getMonth() + i);
+        eventDate.setDate(paymentDay);
+        
+        // Skip if the date is in the past
+        if (eventDate < new Date()) continue;
+
+        const eventData = {
+          user_id: userId,
+          event_type: 'debt_payment',
+          title: `${liabilityData.name} Payment Due`,
+          description: `Monthly payment of $${liabilityData.monthlyPayment} for ${liabilityData.name}`,
+          event_date: eventDate.toISOString().split('T')[0],
+          is_all_day: true,
+          is_recurring: true,
+          recurring_pattern: 'monthly',
+          source_id: liabilityId,
+          source_type: 'liability',
+          priority: liabilityData.priority || 'high',
+          is_completed: false
+        };
+
+        await supabase
+          .from('calendar_events')
+          .insert(eventData);
+      }
+
+      // Reload calendar events to update the UI
+      await loadCalendarEvents();
+    } catch (error) {
+      console.error('Error creating liability calendar events:', error);
+    }
   };
 
   const updateLiability = async (id: string, updates: Partial<EnhancedLiability>) => {
@@ -1749,7 +1919,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         is_essential: billData.isEssential,
         reminder_days_before: billData.reminderDaysBefore,
         send_due_date_reminder: billData.sendDueDateReminder,
-        send_overdue_reminder: billData.sendOverdueReminder
+        send_overdue_reminder: billData.sendOverdueReminder,
+        activity_scope: billData.activityScope || 'general',
+        target_category: billData.targetCategory,
+        linked_accounts_count: billData.accountIds?.length || 0
       })
       .select()
       .single();
@@ -1786,11 +1959,28 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       notes: data.notes,
       priority: data.priority || 'medium',
       status: data.status || 'active',
+      activityScope: data.activity_scope || 'general',
+      accountIds: billData.accountIds || [],
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };
 
     setBills(prev => [newBill, ...prev]);
+
+    // Create activity account links if account-specific
+    if (billData.activityScope === 'account_specific' && billData.accountIds && billData.accountIds.length > 0) {
+      const accountLinks = billData.accountIds.map((accountId, index) => ({
+        activity_type: 'bill',
+        activity_id: data.id,
+        account_id: accountId,
+        user_id: user.id,
+        is_primary: index === 0
+      }));
+
+      await supabase
+        .from('activity_account_links')
+        .insert(accountLinks);
+    }
   };
 
   const updateBill = async (id: string, updates: Partial<Bill>) => {

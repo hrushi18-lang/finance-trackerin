@@ -29,6 +29,14 @@ export interface EnhancedLiability {
   isSecured: boolean;
   providesFunds: boolean;
   accountId?: string;
+  disbursementAccountId?: string;
+  defaultPaymentAccountId?: string;
+  autoGenerateBills: boolean;
+  billGenerationDay: number;
+  activityScope: 'general' | 'account_specific' | 'category_based';
+  accountIds: string[];
+  targetCategory?: string;
+  priority: 'low' | 'medium' | 'high';
   createdAt: Date;
   updatedAt: Date;
 }
