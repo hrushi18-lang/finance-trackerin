@@ -20,6 +20,7 @@ import { format, isAfter, isBefore, differenceInDays, addDays } from 'date-fns';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
+import { FlexibleBillPaymentForm } from '../components/forms/FlexibleBillPaymentForm';
 
 const BillDetail: React.FC = () => {
   const { billId } = useParams<{ billId: string }>();
@@ -31,14 +32,14 @@ const BillDetail: React.FC = () => {
     updateBill,
     addTransaction,
     getBillTransactions,
+    payBillFlexible,
+    getBillPaymentHistory,
     isLoading 
   } = useFinance();
   const { formatCurrency } = useInternationalization();
   
   const [showPayBill, setShowPayBill] = useState(false);
   const [showEditBill, setShowEditBill] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [selectedAccount, setSelectedAccount] = useState('');
 
   // Find the current bill
   const bill = useMemo(() => {
@@ -84,56 +85,17 @@ const BillDetail: React.FC = () => {
     return accounts.find(a => a.id === bill.defaultAccountId);
   }, [bill, accounts]);
 
-  const handlePayBill = async () => {
-    if (!bill || !paymentAmount || !selectedAccount) return;
+  const handlePayBill = async (paymentData: {
+    amount: number;
+    accountId: string;
+    description: string;
+    paymentType: 'full' | 'partial' | 'extra' | 'skip';
+    skipReason?: string;
+  }) => {
+    if (!bill) return;
 
     try {
-      const amount = parseFloat(paymentAmount);
-      if (isNaN(amount) || amount <= 0) return;
-
-      // Add payment transaction
-      await addTransaction({
-        type: 'expense',
-        amount: amount,
-        description: `Payment for ${bill.title}`,
-        category: bill.category,
-        date: new Date(),
-        accountId: selectedAccount,
-        affectsBalance: true,
-        status: 'completed',
-        linkedBillId: bill.id
-      });
-
-      // Update bill
-      const nextDueDate = new Date(bill.nextDueDate);
-      switch (bill.frequency) {
-        case 'weekly':
-          nextDueDate.setDate(nextDueDate.getDate() + 7);
-          break;
-        case 'bi_weekly':
-          nextDueDate.setDate(nextDueDate.getDate() + 14);
-          break;
-        case 'monthly':
-          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-          break;
-        case 'quarterly':
-          nextDueDate.setMonth(nextDueDate.getMonth() + 3);
-          break;
-        case 'semi_annual':
-          nextDueDate.setMonth(nextDueDate.getMonth() + 6);
-          break;
-        case 'annual':
-          nextDueDate.setFullYear(nextDueDate.getFullYear() + 1);
-          break;
-      }
-
-      await updateBill(bill.id, {
-        lastPaidDate: new Date(),
-        nextDueDate: nextDueDate
-      });
-
-      setPaymentAmount('');
-      setSelectedAccount('');
+      await payBillFlexible(bill.id, paymentData);
       setShowPayBill(false);
     } catch (error) {
       console.error('Error paying bill:', error);
@@ -490,56 +452,14 @@ const BillDetail: React.FC = () => {
         isOpen={showPayBill}
         onClose={() => setShowPayBill(false)}
         title="Pay Bill"
+        size="lg"
       >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-              Amount
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={paymentAmount}
-              onChange={(e) => setPaymentAmount(e.target.value)}
-              className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder={bill.amount.toString()}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-              Payment Account
-            </label>
-            <select
-              value={selectedAccount}
-              onChange={(e) => setSelectedAccount(e.target.value)}
-              className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select an account</option>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name} - {formatCurrency(account.balance || 0)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex space-x-4">
-            <Button
-              onClick={() => setShowPayBill(false)}
-              variant="outline"
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handlePayBill}
-              className="flex-1"
-              disabled={!paymentAmount || !selectedAccount || parseFloat(paymentAmount) <= 0}
-            >
-              Pay Bill
-            </Button>
-          </div>
-        </div>
+        <FlexibleBillPaymentForm
+          bill={bill}
+          accounts={accounts}
+          onSubmit={handlePayBill}
+          onCancel={() => setShowPayBill(false)}
+        />
       </Modal>
     </div>
   );

@@ -88,6 +88,15 @@ interface FinanceContextType {
   payBillFromAccount: (accountId: string, billId: string, amount?: number, description?: string) => Promise<void>;
   repayLiabilityFromAccount: (accountId: string, liabilityId: string, amount: number, description?: string) => Promise<void>;
   markBillAsPaid: (billId: string, paidDate?: Date) => Promise<void>;
+  payBillFlexible: (billId: string, paymentData: {
+    amount: number;
+    accountId: string;
+    description?: string;
+    paymentType: 'full' | 'partial' | 'extra' | 'skip';
+    skipReason?: string;
+  }) => Promise<void>;
+  skipBillPayment: (billId: string, reason?: string) => Promise<void>;
+  getBillPaymentHistory: (billId: string) => Promise<any[]>;
   markRecurringTransactionAsPaid: (recurringTransactionId: string, paidDate?: Date) => Promise<void>;
   
   // Analytics functions
@@ -571,6 +580,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       nextDueDate: nextDueDate 
     });
 
+    // If this bill is linked to a liability (EMI), update the liability
+    if (bill.linkedLiabilityId) {
+      const liability = liabilities.find(l => l.id === bill.linkedLiabilityId);
+      if (liability) {
+        const paymentAmount = Number(bill.amount) || 0;
+        const currentRemaining = Number(liability.remainingAmount) || 0;
+        const newRemaining = Math.max(0, currentRemaining - paymentAmount);
+        
+        await updateLiability(bill.linkedLiabilityId, {
+          remainingAmount: newRemaining,
+          status: newRemaining === 0 ? 'paid_off' : liability.status
+        });
+      }
+    }
+
     // Also update recurring transaction if it exists
     const recurringBill = recurringTransactions.find(rt => rt.description === bill.title && rt.type === 'expense');
     if (recurringBill) {
@@ -580,6 +604,181 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         nextDueDate: nextDueDate 
       });
     }
+  };
+
+  // Enhanced flexible bill payment system
+  const payBillFlexible = async (
+    billId: string, 
+    paymentData: {
+      amount: number;
+      accountId: string;
+      description?: string;
+      paymentType: 'full' | 'partial' | 'extra' | 'skip';
+      skipReason?: string;
+    }
+  ) => {
+    if (!user) throw new Error('User not authenticated');
+    const bill = bills.find(b => b.id === billId);
+    if (!bill) throw new Error('Bill not found');
+
+    const paymentDate = new Date();
+    const billAmount = Number(bill.amount) || 0;
+    const paymentAmount = Number(paymentData.amount) || 0;
+
+    // Handle skip payment
+    if (paymentData.paymentType === 'skip') {
+      await skipBillPayment(billId, paymentData.skipReason || 'Skipped by user');
+      return;
+    }
+
+    // Create transaction for the payment
+    if (paymentAmount > 0) {
+      await addTransaction({
+        type: 'expense',
+        amount: paymentAmount,
+        category: bill.category || 'Bills',
+        description: paymentData.description || `Bill Payment: ${bill.title}`,
+        date: paymentDate,
+        accountId: paymentData.accountId,
+        affectsBalance: true,
+        status: 'completed',
+        linkedBillId: billId
+      });
+    }
+
+    // Create bill instance record
+    const billInstance = {
+      bill_id: billId,
+      user_id: user.id,
+      due_date: bill.nextDueDate,
+      amount: billAmount,
+      actual_amount: paymentAmount,
+      status: 'paid', // All payments are marked as 'paid' in bill_instances
+      payment_method: 'manual',
+      paid_date: paymentDate,
+      paid_from_account_id: paymentData.accountId,
+      failure_reason: paymentData.paymentType === 'partial' ? 'Partial payment made' : undefined
+    };
+
+    // Insert bill instance
+    const { error: instanceError } = await supabase
+      .from('bill_instances')
+      .insert(billInstance);
+
+    if (instanceError) {
+      console.error('Error creating bill instance:', instanceError);
+    }
+
+    // Update bill based on payment type
+    let nextDueDate = new Date(bill.nextDueDate);
+    let billStatus = bill.status;
+
+    switch (paymentData.paymentType) {
+      case 'full':
+        // Full payment - advance to next due date
+        nextDueDate.setDate(nextDueDate.getDate() + (bill.frequency === 'weekly' ? 7 : bill.frequency === 'bi_weekly' ? 14 : bill.frequency === 'monthly' ? 30 : bill.frequency === 'quarterly' ? 90 : bill.frequency === 'semi_annual' ? 180 : bill.frequency === 'annual' ? 365 : 30));
+        break;
+      
+      case 'partial':
+        // Partial payment - keep same due date but mark as partially paid
+        billStatus = 'active'; // Keep active for next payment
+        break;
+      
+      case 'extra':
+        // Extra payment - advance to next due date
+        nextDueDate.setDate(nextDueDate.getDate() + (bill.frequency === 'weekly' ? 7 : bill.frequency === 'bi_weekly' ? 14 : bill.frequency === 'monthly' ? 30 : bill.frequency === 'quarterly' ? 90 : bill.frequency === 'semi_annual' ? 180 : bill.frequency === 'annual' ? 365 : 30));
+        break;
+    }
+
+    // Update bill
+    await updateBill(billId, {
+      lastPaidDate: paymentDate,
+      nextDueDate: nextDueDate,
+      status: billStatus
+    });
+
+    // If this bill is linked to a liability (EMI), update the liability
+    if (bill.linkedLiabilityId) {
+      const liability = liabilities.find(l => l.id === bill.linkedLiabilityId);
+      if (liability) {
+        const currentRemaining = Number(liability.remainingAmount) || 0;
+        const newRemaining = Math.max(0, currentRemaining - paymentAmount);
+        
+        await updateLiability(bill.linkedLiabilityId, {
+          remainingAmount: newRemaining,
+          status: newRemaining === 0 ? 'paid_off' : liability.status
+        });
+      }
+    }
+
+    // Update recurring transaction if it exists
+    const recurringBill = recurringTransactions.find(rt => rt.description === bill.title && rt.type === 'expense');
+    if (recurringBill) {
+      await updateRecurringTransaction(recurringBill.id, {
+        isPaid: paymentData.paymentType === 'full' || paymentData.paymentType === 'extra',
+        paidDate: paymentDate,
+        nextDueDate: nextDueDate
+      });
+    }
+  };
+
+  // Skip bill payment
+  const skipBillPayment = async (billId: string, reason?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    const bill = bills.find(b => b.id === billId);
+    if (!bill) throw new Error('Bill not found');
+
+    const skipDate = new Date();
+
+    // Create bill instance record for skipped payment
+    const billInstance = {
+      bill_id: billId,
+      user_id: user.id,
+      due_date: bill.nextDueDate,
+      amount: bill.amount,
+      actual_amount: 0,
+      status: 'skipped',
+      payment_method: 'manual',
+      paid_date: skipDate,
+      failure_reason: reason || 'Skipped by user'
+    };
+
+    // Insert bill instance
+    const { error: instanceError } = await supabase
+      .from('bill_instances')
+      .insert(billInstance);
+
+    if (instanceError) {
+      console.error('Error creating bill instance:', instanceError);
+    }
+
+    // Update bill - advance to next due date
+    const nextDueDate = new Date(bill.nextDueDate);
+    nextDueDate.setDate(nextDueDate.getDate() + (bill.frequency === 'weekly' ? 7 : bill.frequency === 'bi_weekly' ? 14 : bill.frequency === 'monthly' ? 30 : bill.frequency === 'quarterly' ? 90 : bill.frequency === 'semi_annual' ? 180 : bill.frequency === 'annual' ? 365 : 30));
+
+    await updateBill(billId, {
+      nextDueDate: nextDueDate,
+      status: 'active' // Keep active for next payment
+    });
+  };
+
+  // Get bill payment history
+  const getBillPaymentHistory = async (billId: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    const { data, error } = await supabase
+      .from('bill_instances')
+      .select('*')
+      .eq('bill_id', billId)
+      .eq('user_id', user.id)
+      .order('due_date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching bill payment history:', error);
+      return [];
+    }
+
+    return data || [];
   };
 
   const markRecurringTransactionAsPaid = async (recurringTransactionId: string, paidDate?: Date) => {
@@ -640,7 +839,54 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       isVisible: account.is_visible,
       currencyCode: account.currencycode,
       createdAt: new Date(account.created_at),
-      updatedAt: new Date(account.updated_at)
+      updatedAt: new Date(account.updated_at),
+      
+      // Enhanced fields
+      routingNumber: account.routing_number,
+      cardLastFour: account.card_last_four,
+      cardType: account.card_type,
+      spendingLimit: account.spending_limit ? Number(account.spending_limit) : undefined,
+      monthlyLimit: account.monthly_limit ? Number(account.monthly_limit) : undefined,
+      dailyLimit: account.daily_limit ? Number(account.daily_limit) : undefined,
+      isPrimary: account.is_primary,
+      notes: account.notes,
+      accountTypeCustom: account.account_type_custom,
+      isLiability: account.is_liability,
+      outstandingBalance: account.outstanding_balance ? Number(account.outstanding_balance) : undefined,
+      creditLimit: account.credit_limit ? Number(account.credit_limit) : undefined,
+      minimumDue: account.minimum_due ? Number(account.minimum_due) : undefined,
+      dueDate: account.due_date ? new Date(account.due_date) : undefined,
+      interestRate: account.interest_rate ? Number(account.interest_rate) : undefined,
+      isBalanceHidden: account.is_balance_hidden,
+      linkedBankAccountId: account.linked_bank_account_id,
+      autoSync: account.auto_sync,
+      lastSyncedAt: account.last_synced_at ? new Date(account.last_synced_at) : undefined,
+      exchangeRate: account.exchange_rate ? Number(account.exchange_rate) : undefined,
+      homeCurrency: account.home_currency,
+      currency: account.currency,
+      subtypeId: account.subtype_id,
+      status: account.status,
+      accountNumberMasked: account.account_number_masked,
+      lastActivityDate: account.last_activity_date ? new Date(account.last_activity_date) : undefined,
+      accountHolderName: account.account_holder_name,
+      jointAccount: account.joint_account,
+      accountAgeDays: account.account_age_days,
+      riskLevel: account.risk_level,
+      interestEarnedYtd: account.interest_earned_ytd ? Number(account.interest_earned_ytd) : undefined,
+      feesPaidYtd: account.fees_paid_ytd ? Number(account.fees_paid_ytd) : undefined,
+      averageMonthlyBalance: account.average_monthly_balance ? Number(account.average_monthly_balance) : undefined,
+      accountHealthScore: account.account_health_score ? Number(account.account_health_score) : undefined,
+      autoCategorize: account.auto_categorize,
+      requireApproval: account.require_approval,
+      maxDailyTransactions: account.max_daily_transactions,
+      maxDailyAmount: account.max_daily_amount ? Number(account.max_daily_amount) : undefined,
+      twoFactorEnabled: account.two_factor_enabled,
+      biometricEnabled: account.biometric_enabled,
+      accountNotes: account.account_notes,
+      externalAccountId: account.external_account_id,
+      institutionLogoUrl: account.institution_logo_url,
+      accountColor: account.account_color,
+      sortOrder: account.sort_order
     }));
 
     setAccounts(mappedAccounts);
@@ -865,6 +1111,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       notes: bill.notes,
       priority: bill.priority || 'medium',
       status: bill.status || 'active',
+      activityScope: bill.activity_scope || 'general',
+      accountIds: [], // Will be loaded separately from activity_account_links
+      linkedAccountsCount: bill.linked_accounts_count || 0,
       createdAt: new Date(bill.created_at),
       updatedAt: new Date(bill.updated_at)
     }));
@@ -1155,7 +1404,54 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         platform: accountData.platform,
         account_number: accountData.accountNumber,
         is_visible: accountData.isVisible,
-        currencycode: accountData.currencyCode
+        currencycode: accountData.currencyCode,
+        
+        // Enhanced fields
+        routing_number: accountData.routingNumber,
+        card_last_four: accountData.cardLastFour,
+        card_type: accountData.cardType,
+        spending_limit: accountData.spendingLimit,
+        monthly_limit: accountData.monthlyLimit,
+        daily_limit: accountData.dailyLimit,
+        is_primary: accountData.isPrimary,
+        notes: accountData.notes,
+        account_type_custom: accountData.accountTypeCustom,
+        is_liability: accountData.isLiability,
+        outstanding_balance: accountData.outstandingBalance,
+        credit_limit: accountData.creditLimit,
+        minimum_due: accountData.minimumDue,
+        due_date: accountData.dueDate?.toISOString().split('T')[0],
+        interest_rate: accountData.interestRate,
+        is_balance_hidden: accountData.isBalanceHidden,
+        linked_bank_account_id: accountData.linkedBankAccountId,
+        auto_sync: accountData.autoSync,
+        last_synced_at: accountData.lastSyncedAt?.toISOString(),
+        exchange_rate: accountData.exchangeRate,
+        home_currency: accountData.homeCurrency,
+        currency: accountData.currency,
+        subtype_id: accountData.subtypeId,
+        status: accountData.status,
+        account_number_masked: accountData.accountNumberMasked,
+        last_activity_date: accountData.lastActivityDate?.toISOString().split('T')[0],
+        account_holder_name: accountData.accountHolderName,
+        joint_account: accountData.jointAccount,
+        account_age_days: accountData.accountAgeDays,
+        risk_level: accountData.riskLevel,
+        interest_earned_ytd: accountData.interestEarnedYtd,
+        fees_paid_ytd: accountData.feesPaidYtd,
+        average_monthly_balance: accountData.averageMonthlyBalance,
+        account_health_score: accountData.accountHealthScore,
+        auto_categorize: accountData.autoCategorize,
+        require_approval: accountData.requireApproval,
+        max_daily_transactions: accountData.maxDailyTransactions,
+        max_daily_amount: accountData.maxDailyAmount,
+        two_factor_enabled: accountData.twoFactorEnabled,
+        biometric_enabled: accountData.biometricEnabled,
+        account_notes: accountData.accountNotes,
+        external_account_id: accountData.externalAccountId,
+        institution_logo_url: accountData.institutionLogoUrl,
+        account_color: accountData.accountColor,
+        sort_order: accountData.sortOrder
       })
       .select()
       .single();
@@ -1174,7 +1470,54 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       isVisible: data.is_visible,
       currencyCode: data.currencycode,
       createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at)
+      updatedAt: new Date(data.updated_at),
+      
+      // Enhanced fields
+      routingNumber: data.routing_number,
+      cardLastFour: data.card_last_four,
+      cardType: data.card_type,
+      spendingLimit: data.spending_limit ? Number(data.spending_limit) : undefined,
+      monthlyLimit: data.monthly_limit ? Number(data.monthly_limit) : undefined,
+      dailyLimit: data.daily_limit ? Number(data.daily_limit) : undefined,
+      isPrimary: data.is_primary,
+      notes: data.notes,
+      accountTypeCustom: data.account_type_custom,
+      isLiability: data.is_liability,
+      outstandingBalance: data.outstanding_balance ? Number(data.outstanding_balance) : undefined,
+      creditLimit: data.credit_limit ? Number(data.credit_limit) : undefined,
+      minimumDue: data.minimum_due ? Number(data.minimum_due) : undefined,
+      dueDate: data.due_date ? new Date(data.due_date) : undefined,
+      interestRate: data.interest_rate ? Number(data.interest_rate) : undefined,
+      isBalanceHidden: data.is_balance_hidden,
+      linkedBankAccountId: data.linked_bank_account_id,
+      autoSync: data.auto_sync,
+      lastSyncedAt: data.last_synced_at ? new Date(data.last_synced_at) : undefined,
+      exchangeRate: data.exchange_rate ? Number(data.exchange_rate) : undefined,
+      homeCurrency: data.home_currency,
+      currency: data.currency,
+      subtypeId: data.subtype_id,
+      status: data.status,
+      accountNumberMasked: data.account_number_masked,
+      lastActivityDate: data.last_activity_date ? new Date(data.last_activity_date) : undefined,
+      accountHolderName: data.account_holder_name,
+      jointAccount: data.joint_account,
+      accountAgeDays: data.account_age_days,
+      riskLevel: data.risk_level,
+      interestEarnedYtd: data.interest_earned_ytd ? Number(data.interest_earned_ytd) : undefined,
+      feesPaidYtd: data.fees_paid_ytd ? Number(data.fees_paid_ytd) : undefined,
+      averageMonthlyBalance: data.average_monthly_balance ? Number(data.average_monthly_balance) : undefined,
+      accountHealthScore: data.account_health_score ? Number(data.account_health_score) : undefined,
+      autoCategorize: data.auto_categorize,
+      requireApproval: data.require_approval,
+      maxDailyTransactions: data.max_daily_transactions,
+      maxDailyAmount: data.max_daily_amount ? Number(data.max_daily_amount) : undefined,
+      twoFactorEnabled: data.two_factor_enabled,
+      biometricEnabled: data.biometric_enabled,
+      accountNotes: data.account_notes,
+      externalAccountId: data.external_account_id,
+      institutionLogoUrl: data.institution_logo_url,
+      accountColor: data.account_color,
+      sortOrder: data.sort_order
     };
 
     setAccounts(prev => [newAccount, ...prev]);
@@ -1599,7 +1942,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         status: liabilityData.status,
         is_active: liabilityData.isActive,
         auto_generate_bills: liabilityData.autoGenerateBills,
-        bill_generation_day: liabilityData.billGenerationDay
+        bill_generation_day: liabilityData.billGenerationDay,
+        activity_scope: liabilityData.activityScope || 'general',
+        target_category: liabilityData.targetCategory,
+        priority: liabilityData.priority || 'medium'
       })
       .select()
       .single();
@@ -1922,7 +2268,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         send_overdue_reminder: billData.sendOverdueReminder,
         activity_scope: billData.activityScope || 'general',
         target_category: billData.targetCategory,
-        linked_accounts_count: billData.accountIds?.length || 0
+        linked_accounts_count: billData.accountIds?.length || 0,
+        // Missing fields from database
+        bill_category: billData.billCategory || 'general_expense',
+        is_recurring: billData.isRecurring || false,
+        notes: billData.notes,
+        payment_method: billData.paymentMethod,
+        priority: billData.priority || 'medium',
+        status: billData.status || 'active'
       })
       .select()
       .single();
@@ -1961,6 +2314,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: data.status || 'active',
       activityScope: data.activity_scope || 'general',
       accountIds: billData.accountIds || [],
+      linkedAccountsCount: data.linked_accounts_count || 0,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };
@@ -2008,7 +2362,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         is_essential: updates.isEssential,
         reminder_days_before: updates.reminderDaysBefore,
         send_due_date_reminder: updates.sendDueDateReminder,
-        send_overdue_reminder: updates.sendOverdueReminder
+        send_overdue_reminder: updates.sendOverdueReminder,
+        // Missing fields from database
+        bill_category: updates.billCategory,
+        is_recurring: updates.isRecurring,
+        notes: updates.notes,
+        payment_method: updates.paymentMethod,
+        priority: updates.priority,
+        status: updates.status,
+        activity_scope: updates.activityScope,
+        target_category: updates.targetCategory,
+        linked_accounts_count: updates.accountIds?.length || updates.linkedAccountsCount
       })
       .eq('id', id)
       .eq('user_id', user.id);
@@ -2480,6 +2844,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     payBillFromAccount,
     repayLiabilityFromAccount,
     markBillAsPaid,
+    payBillFlexible,
+    skipBillPayment,
+    getBillPaymentHistory,
     markRecurringTransactionAsPaid,
     getMonthlyTrends,
     getCategoryBreakdown,

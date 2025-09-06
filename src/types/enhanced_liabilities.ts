@@ -23,7 +23,6 @@ export interface EnhancedLiability {
   linkedAssetId?: string;
   status: LiabilityStatus;
   isActive: boolean;
-  priority: Priority;
   notes?: string;
   affectsCreditScore: boolean;
   isSecured: boolean;

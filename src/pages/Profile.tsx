@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Settings, Bell, Shield, HelpCircle, Info, LogOut, Repeat, DollarSign, Globe, Calculator, RefreshCw, Tag, Wallet, CreditCard, Target, PieChart, Calendar, TrendingUp, Edit3, Eye, EyeOff, Plus } from 'lucide-react';
+import { User, Settings, Bell, Shield, HelpCircle, Info, LogOut, Repeat, DollarSign, Globe, Calculator, RefreshCw, Tag, Wallet, CreditCard, Target, PieChart, Calendar, TrendingUp, Edit3, Eye, EyeOff, Plus, Activity, BarChart3, Clock, Award, Star, Zap, Database, Smartphone, Monitor, Tablet, Wifi, WifiOff, Battery, Cpu, HardDrive, Users, MessageCircle, Heart, ThumbsUp, Share2, Download, Upload, Lock, Unlock, CheckCircle, AlertCircle, XCircle, MinusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TopNavigation } from '../components/layout/TopNavigation';
@@ -65,6 +65,50 @@ const Profile: React.FC = () => {
     .filter(rt => rt.isActive && rt.type === 'expense')
     .sort((a, b) => new Date(a.nextOccurrenceDate).getTime() - new Date(b.nextOccurrenceDate).getTime())
     .slice(0, 3);
+
+  // Calculate user statistics
+  const totalTransactions = (transactions || []).length;
+  const thisMonthTransactions = (transactions || []).filter(t => {
+    const transactionDate = new Date(t.date);
+    const now = new Date();
+    return transactionDate.getMonth() === now.getMonth() && transactionDate.getFullYear() === now.getFullYear();
+  }).length;
+
+  const totalAccounts = (accounts || []).length;
+  const activeAccounts = (accounts || []).filter(a => a.isVisible).length;
+  const totalGoals = (goals || []).length;
+  const completedGoals = (goals || []).filter(g => g.currentAmount >= g.targetAmount).length;
+  const totalBudgets = (budgets || []).length;
+  const totalLiabilities = (liabilities || []).length;
+  const paidOffLiabilities = (liabilities || []).filter(l => l.remainingAmount <= 0).length;
+
+  // Calculate user activity metrics
+  const daysSinceJoined = user?.createdAt ? Math.floor((new Date().getTime() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+  const avgTransactionsPerDay = daysSinceJoined > 0 ? (totalTransactions / daysSinceJoined).toFixed(1) : '0';
+  const completionRate = totalGoals > 0 ? ((completedGoals / totalGoals) * 100).toFixed(1) : '0';
+
+  // Calculate financial health score
+  const financialHealthScore = Math.min(100, Math.max(0, 
+    (totalBalance > 0 ? 20 : 0) + 
+    (completedGoals > 0 ? 20 : 0) + 
+    (totalDebt === 0 ? 20 : Math.max(0, 20 - (totalDebt / totalBalance) * 10)) +
+    (activeBudgets > 0 ? 20 : 0) + 
+    (thisMonthTransactions > 0 ? 20 : 0)
+  ));
+
+  // Get device information
+  const deviceInfo = {
+    platform: navigator.platform,
+    userAgent: navigator.userAgent,
+    language: navigator.language,
+    online: navigator.onLine,
+    cookieEnabled: navigator.cookieEnabled,
+    doNotTrack: navigator.doNotTrack
+  };
+
+  // Calculate app usage statistics
+  const lastLogin = user?.createdAt ? new Date(user.createdAt) : new Date();
+  const streakDays = Math.floor((new Date().getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24));
 
   const getAccountIcon = (type: string) => {
     const icons = {
@@ -437,6 +481,271 @@ const Profile: React.FC = () => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* User Statistics & Activity */}
+        <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="p-3 bg-purple-500/20 rounded-lg">
+              <BarChart3 size={24} className="text-purple-400" />
+            </div>
+            <h2 className="text-xl font-semibold text-white">Your Statistics</h2>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* Financial Health Score */}
+            <div className="bg-black/30 rounded-lg p-4 text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Heart size={20} className="text-red-400 mr-2" />
+                <span className="font-medium text-white">Financial Health</span>
+              </div>
+              <div className="text-3xl font-bold text-white mb-1">{financialHealthScore}</div>
+              <div className="text-xs text-gray-400">out of 100</div>
+              <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+                <div 
+                  className="bg-gradient-to-r from-red-500 to-green-500 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${financialHealthScore}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Member Duration */}
+            <div className="bg-black/30 rounded-lg p-4 text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Clock size={20} className="text-blue-400 mr-2" />
+                <span className="font-medium text-white">Member Since</span>
+              </div>
+              <div className="text-2xl font-bold text-white mb-1">{daysSinceJoined}</div>
+              <div className="text-xs text-gray-400">days ago</div>
+            </div>
+          </div>
+
+          {/* Activity Metrics */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-black/20 rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-white">{totalTransactions}</div>
+              <div className="text-xs text-gray-400">Total Transactions</div>
+            </div>
+            <div className="bg-black/20 rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-white">{thisMonthTransactions}</div>
+              <div className="text-xs text-gray-400">This Month</div>
+            </div>
+            <div className="bg-black/20 rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-white">{avgTransactionsPerDay}</div>
+              <div className="text-xs text-gray-400">Per Day</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Account & Activity Overview */}
+        <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="p-3 bg-green-500/20 rounded-lg">
+              <Activity size={24} className="text-green-400" />
+            </div>
+            <h2 className="text-xl font-semibold text-white">Account Activity</h2>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* Accounts Summary */}
+            <div className="bg-black/30 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <Wallet size={16} className="text-green-400" />
+                  <span className="font-medium text-white">Accounts</span>
+                </div>
+                <span className="text-sm text-gray-400">{activeAccounts}/{totalAccounts}</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Active</span>
+                  <span className="text-white">{activeAccounts}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Total</span>
+                  <span className="text-white">{totalAccounts}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Goals Summary */}
+            <div className="bg-black/30 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <Target size={16} className="text-yellow-400" />
+                  <span className="font-medium text-white">Goals</span>
+                </div>
+                <span className="text-sm text-gray-400">{completionRate}%</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Completed</span>
+                  <span className="text-white">{completedGoals}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Total</span>
+                  <span className="text-white">{totalGoals}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Financial Management Stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-black/20 rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-white">{totalBudgets}</div>
+              <div className="text-xs text-gray-400">Budgets</div>
+            </div>
+            <div className="bg-black/20 rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-white">{totalLiabilities}</div>
+              <div className="text-xs text-gray-400">Liabilities</div>
+            </div>
+            <div className="bg-black/20 rounded-lg p-3 text-center">
+              <div className="text-lg font-bold text-white">{paidOffLiabilities}</div>
+              <div className="text-xs text-gray-400">Paid Off</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Device & Technical Information */}
+        <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="p-3 bg-cyan-500/20 rounded-lg">
+              <Smartphone size={24} className="text-cyan-400" />
+            </div>
+            <h2 className="text-xl font-semibold text-white">Device & Technical Info</h2>
+          </div>
+
+          <div className="space-y-4">
+            {/* Connection Status */}
+            <div className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
+              <div className="flex items-center space-x-3">
+                {deviceInfo.online ? (
+                  <Wifi size={20} className="text-green-400" />
+                ) : (
+                  <WifiOff size={20} className="text-red-400" />
+                )}
+                <span className="text-white">Connection Status</span>
+              </div>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                deviceInfo.online ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+              }`}>
+                {deviceInfo.online ? 'Online' : 'Offline'}
+              </span>
+            </div>
+
+            {/* Platform Info */}
+            <div className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <Monitor size={20} className="text-blue-400" />
+                <span className="text-white">Platform</span>
+              </div>
+              <span className="text-gray-400 text-sm">{deviceInfo.platform}</span>
+            </div>
+
+            {/* Language */}
+            <div className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <Globe size={20} className="text-purple-400" />
+                <span className="text-white">Language</span>
+              </div>
+              <span className="text-gray-400 text-sm">{deviceInfo.language}</span>
+            </div>
+
+            {/* Privacy Settings */}
+            <div className="flex items-center justify-between p-3 bg-black/30 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <Shield size={20} className="text-orange-400" />
+                <span className="text-white">Do Not Track</span>
+              </div>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                deviceInfo.doNotTrack === '1' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'
+              }`}>
+                {deviceInfo.doNotTrack === '1' ? 'Enabled' : 'Disabled'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* User Preferences & Settings */}
+        <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="p-3 bg-pink-500/20 rounded-lg">
+              <Settings size={24} className="text-pink-400" />
+            </div>
+            <h2 className="text-xl font-semibold text-white">Preferences & Settings</h2>
+          </div>
+
+          <div className="space-y-4">
+            {/* Currency & Region */}
+            <div className="bg-black/30 rounded-lg p-4">
+              <h4 className="font-medium text-white mb-3">Localization</h4>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Currency</span>
+                  <span className="text-white">{currency.code}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Language</span>
+                  <span className="text-white">English</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Display Preferences */}
+            <div className="bg-black/30 rounded-lg p-4">
+              <h4 className="font-medium text-white mb-3">Display</h4>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Show Balances</span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setShowBalances(!showBalances)}
+                      className={`w-12 h-6 rounded-full transition-colors ${
+                        showBalances ? 'bg-green-500' : 'bg-gray-600'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                        showBalances ? 'translate-x-6' : 'translate-x-0.5'
+                      }`}></div>
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Theme</span>
+                  <span className="text-white">Dark</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Data Management */}
+            <div className="bg-black/30 rounded-lg p-4">
+              <h4 className="font-medium text-white mb-3">Data Management</h4>
+              <div className="space-y-3">
+                <button className="w-full flex items-center justify-between p-3 bg-blue-500/20 rounded-lg hover:bg-blue-500/30 transition-colors">
+                  <div className="flex items-center space-x-3">
+                    <Download size={16} className="text-blue-400" />
+                    <span className="text-white">Export Data</span>
+                  </div>
+                  <span className="text-gray-400">›</span>
+                </button>
+                <button className="w-full flex items-center justify-between p-3 bg-green-500/20 rounded-lg hover:bg-green-500/30 transition-colors">
+                  <div className="flex items-center space-x-3">
+                    <Upload size={16} className="text-green-400" />
+                    <span className="text-white">Import Data</span>
+                  </div>
+                  <span className="text-gray-400">›</span>
+                </button>
+                <button className="w-full flex items-center justify-between p-3 bg-purple-500/20 rounded-lg hover:bg-purple-500/30 transition-colors">
+                  <div className="flex items-center space-x-3">
+                    <Database size={16} className="text-purple-400" />
+                    <span className="text-white">Backup Data</span>
+                  </div>
+                  <span className="text-gray-400">›</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* App Settings */}

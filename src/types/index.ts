@@ -19,6 +19,53 @@ export interface FinancialAccount {
   userId: string;
   createdAt: Date;
   updatedAt: Date;
+  
+  // Enhanced fields from database
+  routingNumber?: string;
+  cardLastFour?: string;
+  cardType?: string;
+  spendingLimit?: number;
+  monthlyLimit?: number;
+  dailyLimit?: number;
+  isPrimary?: boolean;
+  notes?: string;
+  accountTypeCustom?: string;
+  isLiability?: boolean;
+  outstandingBalance?: number;
+  creditLimit?: number;
+  minimumDue?: number;
+  dueDate?: Date;
+  interestRate?: number;
+  isBalanceHidden?: boolean;
+  linkedBankAccountId?: string;
+  autoSync?: boolean;
+  lastSyncedAt?: Date;
+  exchangeRate?: number;
+  homeCurrency?: string;
+  currency?: string;
+  subtypeId?: string;
+  status?: string;
+  accountNumberMasked?: string;
+  lastActivityDate?: Date;
+  accountHolderName?: string;
+  jointAccount?: boolean;
+  accountAgeDays?: number;
+  riskLevel?: string;
+  interestEarnedYtd?: number;
+  feesPaidYtd?: number;
+  averageMonthlyBalance?: number;
+  accountHealthScore?: number;
+  autoCategorize?: boolean;
+  requireApproval?: boolean;
+  maxDailyTransactions?: number;
+  maxDailyAmount?: number;
+  twoFactorEnabled?: boolean;
+  biometricEnabled?: boolean;
+  accountNotes?: string;
+  externalAccountId?: string;
+  institutionLogoUrl?: string;
+  accountColor?: string;
+  sortOrder?: number;
 }
 
 export interface Transaction {
@@ -289,6 +336,17 @@ export interface Bill {
   reminderDaysBefore: number;
   sendDueDateReminder: boolean;
   sendOverdueReminder: boolean;
+  // Missing fields from database
+  billCategory: 'account_specific' | 'category_based' | 'general_expense';
+  isRecurring: boolean;
+  notes?: string;
+  paymentMethod?: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'active' | 'paused' | 'completed' | 'cancelled';
+  activityScope: 'general' | 'account_specific' | 'category_based';
+  accountIds: string[];
+  targetCategory?: string;
+  linkedAccountsCount: number;
   createdAt: Date;
   updatedAt: Date;
 }

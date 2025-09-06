@@ -27,7 +27,8 @@ const LiabilityDetail: React.FC<LiabilityDetailProps> = () => {
     updateLiability, 
     deleteLiability, 
     addTransaction,
-    getLiabilityTransactions
+    getLiabilityTransactions,
+    repayLiabilityFromAccount
   } = useFinance();
 
   const [liability, setLiability] = useState<any>(null);
@@ -69,18 +70,22 @@ const LiabilityDetail: React.FC<LiabilityDetailProps> = () => {
 
   const handleAddPayment = async (transaction: any) => {
     try {
-      const newTransaction = {
-        ...transaction,
-        type: 'expense',
-        accountId: selectedAccount,
-        description: `Payment for ${liability?.name}: ${transaction.description || 'Liability Payment'}`,
-        category: 'Liability Payment'
-      };
-      await addTransaction(newTransaction);
+      if (!liability || !selectedAccount) {
+        throw new Error('Liability or account not selected');
+      }
+
+      // Use repayLiabilityFromAccount to properly update both transaction and liability
+      await repayLiabilityFromAccount(
+        selectedAccount,
+        liability.id,
+        transaction.amount,
+        transaction.description || `Payment for ${liability.name}`
+      );
+      
       setIsPaymentModalOpen(false);
       
       // Refresh data
-      const liabilityTrans = getLiabilityTransactions(liability?.id || '');
+      const liabilityTrans = getLiabilityTransactions(liability.id);
       setLiabilityTransactions(liabilityTrans);
     } catch (error) {
       console.error('Error adding payment:', error);

@@ -35,6 +35,7 @@ const Liabilities: React.FC = () => {
         name: liability.name,
         liabilityType: liability.liabilityType,
         description: liability.description,
+        totalAmount: liability.totalAmount || liability.remainingAmount,
         remainingAmount: liability.remainingAmount,
         interestRate: liability.interestRate,
         monthlyPayment: liability.monthlyPayment || liability.minimumPayment || 0,
@@ -47,7 +48,16 @@ const Liabilities: React.FC = () => {
         nextPaymentDate: liability.dueDate ? new Date(liability.dueDate) : undefined,
         linkedAssetId: liability.linkedAssetId,
         status: 'active',
-        isActive: true
+        isActive: true,
+        affectsCreditScore: liability.affectsCreditScore || false,
+        isSecured: liability.isSecured || false,
+        providesFunds: liability.providesFunds || false,
+        autoGenerateBills: liability.autoGenerateBills || false,
+        billGenerationDay: liability.billGenerationDay || 1,
+        activityScope: liability.activityScope || 'general',
+        accountIds: liability.accountIds || [],
+        targetCategory: liability.targetCategory,
+        priority: liability.priority || 'medium'
       });
       
       setShowModal(false);
