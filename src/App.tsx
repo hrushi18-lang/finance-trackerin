@@ -26,12 +26,14 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import AddTransaction from './pages/AddTransaction';
 import Transactions from './pages/Transactions';
+import TransactionsCalendar from './pages/TransactionsCalendar';
 import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
 import Goals from './pages/Goals';
 import Liabilities from './pages/Liabilities';
 import Budgets from './pages/Budgets';
 import Overview from './pages/Overview';
+import Cards from './pages/Cards';
 import Accounts from './pages/Accounts';
 import AccountDetail from './pages/AccountDetail';
 import CreateGoal from './pages/CreateGoal';
@@ -41,6 +43,7 @@ import BillDetail from './pages/BillDetail';
 import Settings from './pages/Settings';
 import ThemeSettings from './pages/ThemeSettings';
 import Bills from './pages/Bills';
+import ProfileNew from './pages/ProfileNew';
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -158,7 +161,17 @@ function App() {
                                 path="/transactions" 
                                 element={
                                   <ProtectedRoute>
-                                    <Transactions />
+                                    <TransactionsCalendar />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/cards" 
+                                element={
+                                  <ProtectedRoute>
+                                    <Cards />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
@@ -259,6 +272,16 @@ function App() {
                                 element={
                                   <ProtectedRoute>
                                     <AccountDetail />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+
+                              <Route 
+                                path="/profile" 
+                                element={
+                                  <ProtectedRoute>
+                                    <ProfileNew />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
