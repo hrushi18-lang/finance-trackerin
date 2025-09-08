@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
-import { authManager } from '../../lib/auth';
+import { useAuth } from '../../contexts/AuthContext';
 import { Chrome } from 'lucide-react';
 
 interface AuthFormProps {
@@ -11,93 +11,81 @@ interface AuthFormProps {
 }
 
 export const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) => {
+  const { 
+    login, 
+    register, 
+    loginWithGoogle, 
+    registerWithGoogle, 
+    authStatus, 
+    authError, 
+    authMessage,
+    clearAuthError 
+  } = useAuth();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
     name: ''
   });
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [localSuccess, setLocalSuccess] = useState<string | null>(null);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    setError(null);
+    setLocalError(null);
+    clearAuthError();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setLocalError(null);
+    setLocalSuccess(null);
 
     try {
-      let result;
-
       switch (mode) {
         case 'signup':
           if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match');
-            setLoading(false);
+            setLocalError('Passwords do not match');
             return;
           }
-          result = await authManager.signUp(formData.email, formData.password, formData.name);
+          await register(formData.email, formData.password, formData.name);
+          setLocalSuccess('Account created successfully! Please check your email to verify your account.');
           break;
         
         case 'signin':
-          result = await authManager.signIn(formData.email, formData.password);
+          await login(formData.email, formData.password);
+          setLocalSuccess('Welcome back!');
+          onSuccess?.();
           break;
         
         case 'reset':
-          result = await authManager.resetPassword(formData.email);
+          // TODO: Implement password reset
+          setLocalSuccess('Password reset functionality coming soon!');
           break;
         
         default:
           throw new Error('Invalid mode');
       }
-
-      if (result.success) {
-        if (mode === 'reset') {
-          setSuccess(result.message || 'Password reset email sent');
-        } else {
-          setSuccess('Success!');
-          onSuccess?.();
-        }
-      } else {
-        setError(result.error || 'An error occurred');
-      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
+      setLocalError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
 
   const handleGoogleAuth = async () => {
-    setGoogleLoading(true);
-    setError(null);
-    setSuccess(null);
+    setLocalError(null);
+    setLocalSuccess(null);
+    clearAuthError();
 
     try {
-      let result;
       if (mode === 'signup') {
-        result = await authManager.signUpWithGoogle();
+        await registerWithGoogle();
       } else {
-        result = await authManager.signInWithGoogle();
+        await loginWithGoogle();
       }
-
-      if (result.success) {
-        setSuccess('Redirecting to Google...');
-        // The OAuth flow will handle the redirect
-      } else {
-        setError(result.error || 'Google authentication failed');
-      }
+      // The OAuth flow will handle the redirect
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Google authentication failed');
-    } finally {
-      setGoogleLoading(false);
+      setLocalError(err instanceof Error ? err.message : 'Google authentication failed');
     }
   };
 
@@ -168,15 +156,15 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSucces
           />
         )}
 
-        {error && (
+        {(localError || authError) && (
           <div className="p-3 rounded-lg text-sm" style={{ backgroundColor: 'var(--error)', color: 'white' }}>
-            {error}
+            {localError || authError}
           </div>
         )}
 
-        {success && (
+        {(localSuccess || authMessage) && (
           <div className="p-3 rounded-lg text-sm" style={{ backgroundColor: 'var(--success)', color: 'white' }}>
-            {success}
+            {localSuccess || authMessage}
           </div>
         )}
 
@@ -185,8 +173,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSucces
           variant="primary"
           size="lg"
           fullWidth
-          loading={loading}
-          disabled={!isFormValid() || loading}
+          loading={authStatus === 'loading'}
+          disabled={!isFormValid() || authStatus === 'loading'}
         >
           {mode === 'signin' && 'Sign In'}
           {mode === 'signup' && 'Create Account'}
@@ -213,8 +201,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSucces
             variant="secondary"
             size="lg"
             fullWidth
-            loading={googleLoading}
-            disabled={googleLoading}
+            loading={authStatus === 'loading'}
+            disabled={authStatus === 'loading'}
             onClick={handleGoogleAuth}
             className="flex items-center justify-center space-x-2"
           >

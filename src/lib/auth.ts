@@ -69,34 +69,35 @@ class AuthManager {
   private async loadUserProfile(userId: string) {
     try {
       // Get profile from Supabase
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-        if (error) {
-          // If profile doesn't exist, create it
-          const { data: authUser } = await supabase.auth.getUser();
-          if (authUser.user) {
-            profile = await this.createUserProfile(authUser.user);
-          }
-        } else {
-          profile = data;
-          // Save to local storage
+      let profile;
+      if (error) {
+        // If profile doesn't exist, create it
+        const { data: authUser } = await supabase.auth.getUser();
+        if (authUser.user) {
+          profile = await this.createUserProfile(authUser.user);
         }
-
-        this.updateAuthState({ 
-          user: profile, 
-          loading: false, 
-          error: null 
-        });
-      } catch (error) {
-        this.updateAuthState({ 
-          error: error instanceof Error ? error.message : 'Failed to load profile',
-          loading: false 
-        });
+      } else {
+        profile = data;
+        // Save to local storage
       }
+
+      this.updateAuthState({ 
+        user: profile, 
+        loading: false, 
+        error: null 
+      });
+    } catch (error) {
+      this.updateAuthState({ 
+        error: error instanceof Error ? error.message : 'Failed to load profile',
+        loading: false 
+      });
+    }
   }
 
   private async createUserProfile(authUser: any): Promise<UserProfile> {

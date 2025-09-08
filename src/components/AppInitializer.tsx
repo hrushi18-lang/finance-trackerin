@@ -153,7 +153,17 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     return (
       <LoadingScreen 
         message="Initializing your financial app..." 
-        submessage="Setting up offline storage and sync..."
+        submessage="Loading your data and setting up the app..."
+      />
+    );
+  }
+
+  // Show loading screen while data is being loaded after authentication
+  if (isAuthenticated && user && loading) {
+    return (
+      <LoadingScreen 
+        message="Welcome back!" 
+        submessage="Loading your financial data..."
       />
     );
   }
