@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { offlineStorage } from '../lib/offline-storage';
 import { 
   FinancialAccount, 
   Transaction, 

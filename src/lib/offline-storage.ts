@@ -4,6 +4,7 @@
  */
 
 import { Database } from '../types/supabase';
+import { supabase } from './supabase';
 
 export type LocalStorageKey = 
   | 'user_profile'
@@ -362,18 +363,58 @@ class OfflineStorage {
 
   // Sync operations
   private async syncCreate(table: string, data: any): Promise<any> {
-    // This would integrate with your Supabase client
-    // For now, return the data as-is
-    return data;
+    try {
+      const { data: result, error } = await supabase
+        .from(table)
+        .insert(data)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return result;
+    } catch (error) {
+      console.error(`Failed to sync create ${table}:`, error);
+      throw error;
+    }
   }
 
   private async syncUpdate(table: string, id: string, data: any): Promise<any> {
-    // This would integrate with your Supabase client
-    return data;
+    try {
+      const { data: result, error } = await supabase
+        .from(table)
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return result;
+    } catch (error) {
+      console.error(`Failed to sync update ${table}:`, error);
+      throw error;
+    }
   }
 
   private async syncDelete(table: string, id: string): Promise<void> {
-    // This would integrate with your Supabase client
+    try {
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error(`Failed to sync delete ${table}:`, error);
+      throw error;
+    }
   }
 
   // Sync queue management

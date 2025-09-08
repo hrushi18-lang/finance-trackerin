@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { authManager } from '../../lib/auth';
+import { Chrome } from 'lucide-react';
 
 interface AuthFormProps {
   mode: 'signin' | 'signup' | 'reset';
@@ -17,6 +18,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSucces
     name: ''
   });
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -70,6 +72,32 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSucces
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setGoogleLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      let result;
+      if (mode === 'signup') {
+        result = await authManager.signUpWithGoogle();
+      } else {
+        result = await authManager.signInWithGoogle();
+      }
+
+      if (result.success) {
+        setSuccess('Redirecting to Google...');
+        // The OAuth flow will handle the redirect
+      } else {
+        setError(result.error || 'Google authentication failed');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google authentication failed');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -165,6 +193,38 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSucces
           {mode === 'reset' && 'Send Reset Email'}
         </Button>
       </form>
+
+      {/* Google OAuth Section */}
+      {mode !== 'reset' && (
+        <>
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t" style={{ borderColor: 'var(--border)' }} />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2" style={{ backgroundColor: 'var(--background)', color: 'var(--text-secondary)' }}>
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            fullWidth
+            loading={googleLoading}
+            disabled={googleLoading}
+            onClick={handleGoogleAuth}
+            className="flex items-center justify-center space-x-2"
+          >
+            <Chrome size={20} />
+            <span>
+              {mode === 'signin' ? 'Sign in with Google' : 'Sign up with Google'}
+            </span>
+          </Button>
+        </>
+      )}
 
       <div className="mt-6 text-center space-y-2">
         {mode === 'signin' && (

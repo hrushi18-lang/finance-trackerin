@@ -29,19 +29,22 @@ class FontLoader {
         return;
       }
 
-      // Create font URL
+      // Create font URL with proper encoding
       const fontFamilies = fonts.map(font => {
         const weights = font.weights.join(';');
         return `${font.family.replace(/\s+/g, '+')}:wght@${weights}`;
       }).join('&family=');
 
-      const fontUrl = `https://fonts.googleapis.com/css2?family=${fontFamilies}&display=swap`;
+      const fontUrl = `https://fonts.googleapis.com/css2?family=${fontFamilies}&display=swap&subset=latin`;
 
       // Load fonts with timeout
       await Promise.race([
         this.loadFontStylesheet(fontUrl),
         this.createTimeoutPromise(this.fallbackTimeout)
       ]);
+
+      // Wait for fonts to be actually loaded
+      await this.waitForFontsToLoad(fonts);
 
       // Mark fonts as loaded
       fonts.forEach(font => this.loadedFonts.add(font.family));
@@ -50,6 +53,14 @@ class FontLoader {
       console.warn('Failed to load Google Fonts, using fallbacks:', error);
       this.enableFallbackFonts();
     }
+  }
+
+  /**
+   * Wait for fonts to actually load
+   */
+  private async waitForFontsToLoad(fonts: FontConfig[]): Promise<void> {
+    const promises = fonts.map(font => this.waitForFont(font.family, 3000));
+    await Promise.allSettled(promises);
   }
 
   /**

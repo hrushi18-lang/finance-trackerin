@@ -290,6 +290,40 @@ class AuthManager {
     }
   }
 
+  async signInWithGoogle() {
+    this.updateAuthState({ loading: true, error: null });
+
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        }
+      });
+
+      if (error) {
+        this.updateAuthState({ error: error.message, loading: false });
+        return { success: false, error: error.message };
+      }
+
+      // The OAuth flow will redirect, so we don't need to handle success here
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Google sign in failed';
+      this.updateAuthState({ error: errorMessage, loading: false });
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  async signUpWithGoogle() {
+    // For Google OAuth, sign up and sign in are the same
+    return this.signInWithGoogle();
+  }
+
   // State management
   getAuthState(): AuthState {
     return { ...this.authState };

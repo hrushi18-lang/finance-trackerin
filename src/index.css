@@ -121,9 +121,12 @@
 /* Global Background */
 body {
   background: linear-gradient(135deg, var(--background) 0%, var(--background-secondary) 50%, var(--background-tertiary) 100%);
-  font-family: var(--font-body);
+  font-family: var(--font-titles);
   color: var(--text-primary);
   transition: all 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* Font fallback styles - Exact Font Specifications */
