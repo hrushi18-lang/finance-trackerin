@@ -217,6 +217,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     console.log('FinanceContext - Starting data load...');
     setLoading(true);
+    
+    // Add a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.warn('FinanceContext - Data load timeout, forcing loading to false');
+      setLoading(false);
+    }, 30000); // 30 second timeout
+    
     try {
       // Load critical data first in parallel for faster initial render
       console.log('FinanceContext - Loading critical data...');
@@ -264,6 +271,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Error stack:', error.stack);
       }
     } finally {
+      clearTimeout(timeoutId);
       console.log('FinanceContext - Setting loading to false');
       setLoading(false);
     }
@@ -501,8 +509,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         }
 
-        // Reload accounts to reflect changes
-        await loadAccounts();
+        // Update local state to reflect changes
+        setAccounts(prev => prev.filter(account => 
+          !vaultsToDelete.some(vault => vault.id === account.id)
+        ));
       }
     } catch (error) {
       console.error('Error cleaning up duplicate Goals Vault accounts:', error);
