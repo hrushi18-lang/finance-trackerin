@@ -5,7 +5,6 @@ import { Input } from '../common/Input';
 import { CurrencySelector } from '../currency/CurrencySelector';
 import { CurrencyInput } from '../currency/CurrencyInput';
 import { LiveRateDisplay } from '../currency/LiveRateDisplay';
-import { GoogleAuth } from '../auth/GoogleAuth';
 import { OfflineIndicator } from '../common/OfflineIndicator';
 import { PerformanceOptimizer } from '../common/PerformanceOptimizer';
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
@@ -169,22 +168,6 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
     setCompletedSteps(prev => new Set([...prev, stepId]));
   };
 
-  const handleGoogleAuth = async (user: any) => {
-    setIsLoading(true);
-    try {
-      // In a real app, this would save user data to database
-      console.log('Google auth successful:', user);
-      markStepComplete('auth');
-    } catch (error) {
-      setError('Failed to authenticate with Google');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleError = (error: string) => {
-    setError(error);
-  };
 
   const addCustomCategory = () => {
     if (newCategory.trim()) {
@@ -410,57 +393,6 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
       )
     },
     {
-      id: 'auth',
-      title: 'Account Setup',
-      description: 'Secure authentication for your financial data',
-      icon: <User size={24} />,
-      component: (
-        <div className="space-y-6">
-          <div className="text-center">
-            <p className="text-lg text-gray-600 mb-6">
-              Create your secure account to access professional financial tools
-            </p>
-          </div>
-          
-          <div className="space-y-4">
-            <GoogleAuth
-              mode="signup"
-              onSuccess={handleGoogleAuth}
-              onError={handleGoogleError}
-              loading={isLoading}
-            />
-            
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">or</span>
-              </div>
-            </div>
-            
-            <Button
-              variant="primary"
-              fullWidth
-              onClick={() => markStepComplete('auth')}
-              className="py-4 rounded-2xl"
-            >
-              Continue with Email
-            </Button>
-          </div>
-          
-          <div className="text-center">
-            <p className="text-sm text-gray-500">
-              Already have an account?{' '}
-              <button className="text-blue-600 hover:underline font-medium">
-                Sign In
-              </button>
-            </p>
-          </div>
-        </div>
-      )
-    },
-    {
       id: 'profile',
       title: 'User Profile Setup',
       description: 'Configure your financial management preferences',
@@ -477,8 +409,11 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
                 placeholder="Enter your full name"
                 value={userProfile.name}
                 onChange={(e) => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
-                className="py-3"
+                className={`py-3 ${userProfile.name.trim() === '' ? 'border-red-300 focus:border-red-500' : 'border-green-300 focus:border-green-500'}`}
               />
+              {userProfile.name.trim() === '' && (
+                <p className="text-xs text-red-500 mt-1">Name is required to continue</p>
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -553,18 +488,23 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
           </div>
           
           <div className="space-y-4">
-            <CurrencySelector
-              label="Primary Currency"
-              value={userProfile.primaryCurrency}
-              onChange={(currency) => setUserProfile(prev => ({ 
-                ...prev, 
-                primaryCurrency: currency,
-                displayCurrency: currency 
-              }))}
-              showFlag={true}
-              showFullName={true}
-              popularOnly={false}
-            />
+            <div>
+              <CurrencySelector
+                label="Primary Currency *"
+                value={userProfile.primaryCurrency}
+                onChange={(currency) => setUserProfile(prev => ({ 
+                  ...prev, 
+                  primaryCurrency: currency,
+                  displayCurrency: currency 
+                }))}
+                showFlag={true}
+                showFullName={true}
+                popularOnly={false}
+              />
+              {userProfile.primaryCurrency === '' && (
+                <p className="text-xs text-red-500 mt-1">Currency selection is required to continue</p>
+              )}
+            </div>
             
             <div className="space-y-3">
               <label className="flex items-center space-x-3">
@@ -952,11 +892,32 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
         </div>
       )
     }
-  ], [userProfile, customCategories, basicActivities, accounts, displayCurrency, handleGoogleAuth, handleGoogleError, isLoading, addCustomCategory, addBasicActivity, addAccountSetup, toggleAccountVisibility]);
+  ], [userProfile, customCategories, basicActivities, accounts, displayCurrency, isLoading, addCustomCategory, addBasicActivity, addAccountSetup, toggleAccountVisibility]);
 
   const currentStepData = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;
-  const canProceed = currentStep === 0 || completedSteps.has(currentStepData.id) || isLastStep;
+  
+  // Check if current step can proceed based on validation
+  const canProceed = (() => {
+    switch (currentStepData.id) {
+      case 'welcome':
+        return true; // Always can proceed from welcome
+      case 'profile':
+        return userProfile.name.trim() !== ''; // Name is required
+      case 'currency':
+        return userProfile.primaryCurrency !== ''; // Currency is required
+      case 'categories':
+        return true; // Categories are optional
+      case 'activities':
+        return true; // Activities are optional
+      case 'accounts':
+        return true; // Accounts are optional
+      case 'complete':
+        return true; // Always can proceed to complete
+      default:
+        return true;
+    }
+  })();
 
   return (
     <PerformanceOptimizer>
