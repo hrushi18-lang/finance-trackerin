@@ -210,11 +210,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [user]);
 
   const loadAllData = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('FinanceContext - No user, skipping data load');
+      return;
+    }
     
+    console.log('FinanceContext - Starting data load...');
     setLoading(true);
     try {
       // Load critical data first in parallel for faster initial render
+      console.log('FinanceContext - Loading critical data...');
       await Promise.all([
         loadAccounts(),
         loadTransactions(),
@@ -223,6 +228,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ]);
 
       // Load secondary data in parallel after critical data
+      console.log('FinanceContext - Loading secondary data...');
       await Promise.all([
         loadLiabilities(),
         loadBudgets(),
@@ -231,6 +237,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ]);
 
       // Load additional data in parallel
+      console.log('FinanceContext - Loading additional data...');
       await Promise.all([
         loadBillAccountLinks(),
         loadBillStagingHistory(),
@@ -245,15 +252,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ]);
 
       // Clean up any duplicate Goals Vault accounts
+      console.log('FinanceContext - Cleaning up duplicate vaults...');
       await cleanupDuplicateGoalsVaults();
+      
+      console.log('FinanceContext - Data load completed successfully');
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('FinanceContext - Error loading data:', error);
       // Add more specific error handling
       if (error instanceof Error) {
         console.error('Error message:', error.message);
         console.error('Error stack:', error.stack);
       }
     } finally {
+      console.log('FinanceContext - Setting loading to false');
       setLoading(false);
     }
   };

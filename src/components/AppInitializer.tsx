@@ -154,6 +154,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
 
   // Show loading screen while data is being loaded after authentication
   if (isAuthenticated && user && loading) {
+    console.log('AppInitializer - Showing loading screen for authenticated user');
     return (
       <LoadingScreen 
         message="Welcome back!" 
