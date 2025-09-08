@@ -108,11 +108,17 @@ class AuthManager {
   }
 
   private async createUserProfile(authUser: any): Promise<UserProfile> {
-    const profile: UserProfile = {
+    const profile = {
       id: authUser.id,
+      user_id: authUser.id,
       email: authUser.email || '',
       name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
       avatar_url: authUser.user_metadata?.avatar_url || null,
+      monthly_income: 0,
+      primary_currency: 'USD',
+      display_currency: 'USD',
+      auto_convert: true,
+      show_original_amounts: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };

@@ -250,13 +250,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('Login successful:', data);
       setAuthStatus('success');
 
-      // Get user profile
-      if (data.user) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .maybeSingle(); // Use maybeSingle instead of single
+        // Get user profile
+        if (data.user) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', data.user.id)
+            .maybeSingle(); // Use maybeSingle instead of single
           
         if (profileError) {
           console.error('Error fetching profile after login:', profileError);
@@ -268,8 +268,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 .insert([
                   {
                     id: data.user.id,
+                    user_id: data.user.id,
                     email: data.user.email,
                     name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+                    monthly_income: 0,
+                    primary_currency: 'USD',
+                    display_currency: 'USD',
+                    auto_convert: true,
+                    show_original_amounts: true,
                   }
                 ])
                 .select()
