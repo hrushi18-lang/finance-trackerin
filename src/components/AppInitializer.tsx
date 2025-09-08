@@ -124,24 +124,18 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
         loading
       });
 
-      // If user is new (no existing data) and not already on onboarding
-      if (!hasExistingData && location.pathname !== '/onboarding') {
-        console.log('AppInitializer - Redirecting to onboarding (new user)');
-        navigate('/onboarding');
-        return;
-      }
-
-      // If user has existing data and is on onboarding, redirect to dashboard
-      if (hasExistingData && location.pathname === '/onboarding') {
-        console.log('AppInitializer - Redirecting to dashboard (existing user on onboarding)');
-        navigate('/dashboard');
-        return;
-      }
-
+      // Only handle initial routing - let OnboardingWrapper handle onboarding logic
       // If user is on root path and has data, redirect to dashboard
       if (hasExistingData && location.pathname === '/') {
         console.log('AppInitializer - Redirecting to dashboard (existing user on root)');
         navigate('/dashboard');
+        return;
+      }
+
+      // If user is on root path and has no data, redirect to onboarding
+      if (!hasExistingData && location.pathname === '/') {
+        console.log('AppInitializer - Redirecting to onboarding (new user on root)');
+        navigate('/onboarding');
         return;
       }
     };

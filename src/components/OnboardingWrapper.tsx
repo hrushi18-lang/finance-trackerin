@@ -11,7 +11,7 @@ const OnboardingWrapper: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
-  const { accounts, goals, bills, liabilities, userCategories, loading: financeLoading } = useFinance();
+  const { accounts, goals, bills, liabilities, userCategories, loading: financeLoading, refreshData } = useFinance();
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(true);
 
@@ -56,6 +56,7 @@ const OnboardingWrapper: React.FC = () => {
 
       // If user has profile and data, redirect to dashboard
       if (hasProfile && hasExistingData) {
+        console.log('OnboardingWrapper - User has profile and data, redirecting to dashboard');
         analytics.trackOnboardingStep('existing_user_redirect', true);
         navigate('/dashboard');
         return;
@@ -85,7 +86,7 @@ const OnboardingWrapper: React.FC = () => {
   // Show onboarding for new users
   return (
     <EnhancedOnboardingFlow 
-      onComplete={() => {
+      onComplete={async () => {
         // Track onboarding completion
         analytics.trackOnboardingStep('onboarding_completed', true);
         analytics.trackEngagement('onboarding_completed', {
@@ -93,8 +94,15 @@ const OnboardingWrapper: React.FC = () => {
           completed_at: new Date().toISOString()
         });
 
-        // Redirect to dashboard
-        navigate('/dashboard');
+        console.log('OnboardingWrapper - Onboarding completed, refreshing data and redirecting to dashboard');
+        
+        // Refresh data to ensure latest information is loaded
+        await refreshData();
+        
+        // Add a small delay to ensure data is saved and contexts are updated
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1000);
       }} 
     />
   );

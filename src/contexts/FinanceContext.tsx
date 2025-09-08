@@ -45,6 +45,9 @@ interface FinanceContextType {
   // Loading states
   loading: boolean;
   
+  // Data refresh
+  refreshData: () => Promise<void>;
+  
   // CRUD operations
   addAccount: (account: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateAccount: (id: string, updates: Partial<FinancialAccount>) => Promise<void>;
@@ -253,6 +256,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setLoading(false);
     }
+  };
+
+  const refreshData = async () => {
+    if (!user) return;
+    console.log('FinanceContext - Refreshing all data...');
+    await loadAllData();
   };
 
   // Add a flag to prevent multiple simultaneous vault creation attempts
@@ -3646,6 +3655,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     transactionSplits,
     financialInsights,
     loading,
+    refreshData,
     addAccount,
     updateAccount,
     deleteAccount,
