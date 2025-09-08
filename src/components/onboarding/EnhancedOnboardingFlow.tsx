@@ -10,6 +10,8 @@ import { PerformanceOptimizer } from '../common/PerformanceOptimizer';
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { useFinance } from '../../contexts/FinanceContextOffline';
 import { useOfflineStorage } from '../../hooks/useOfflineStorage';
+import { profileManager, UserProfile, CustomCategory, BasicActivity, AccountSetup } from '../../lib/profile-manager';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface OnboardingStep {
   id: string;
@@ -19,44 +21,7 @@ interface OnboardingStep {
   component: React.ReactNode;
 }
 
-interface UserProfile {
-  name: string;
-  age: number;
-  country: string;
-  profession: string;
-  monthlyIncome: number;
-  primaryCurrency: string;
-  displayCurrency: string;
-  autoConvert: boolean;
-  showOriginalAmounts: boolean;
-}
-
-interface CustomCategory {
-  id: string;
-  name: string;
-  type: 'income' | 'expense';
-  icon: string;
-  color: string;
-}
-
-interface BasicActivity {
-  id: string;
-  type: 'goal' | 'bill' | 'liability' | 'budget';
-  name: string;
-  amount: number;
-  currency: string;
-  description: string;
-}
-
-interface AccountSetup {
-  id: string;
-  name: string;
-  type: string;
-  balance: number;
-  currency: string;
-  isVisible: boolean;
-  institution?: string;
-}
+// Types are now imported from profile-manager
 
 interface EnhancedOnboardingFlowProps {
   onComplete: () => void;
@@ -64,15 +29,16 @@ interface EnhancedOnboardingFlowProps {
 
 export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ onComplete }) => {
   const { displayCurrency } = useEnhancedCurrency();
-  const { addAccount, addGoal, addBill, addLiability } = useFinance();
+  const { addAccount, addGoal, addBill, addLiability, addUserCategory } = useFinance();
   const { isOnline, offlineData, saveOfflineData, syncData } = useOfflineStorage();
+  const { user } = useAuth();
   
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const [userProfile, setUserProfile] = useState<UserProfile>({
+  const [userProfile, setUserProfile] = useState<Omit<UserProfile, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>({
     name: '',
     age: 0,
     country: '',
@@ -81,7 +47,8 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
     primaryCurrency: displayCurrency,
     displayCurrency: displayCurrency,
     autoConvert: true,
-    showOriginalAmounts: true
+    showOriginalAmounts: true,
+    email: user?.email || ''
   });
   
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
@@ -169,17 +136,27 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
   };
 
 
+  const [newCategoryType, setNewCategoryType] = useState<'income' | 'expense'>('expense');
+  const [newCategoryIcon, setNewCategoryIcon] = useState('📝');
+
+  const categoryIcons = [
+    '🍔', '🚗', '🏠', '⚡', '📱', '👕', '🎬', '🏥', '🎓', '💼',
+    '✈️', '🍕', '☕', '🛒', '🎮', '📚', '💊', '🏋️', '🎵', '🎨'
+  ];
+
   const addCustomCategory = () => {
     if (newCategory.trim()) {
-      const category: CustomCategory = {
-        id: Date.now().toString(),
+      const category: Omit<CustomCategory, 'id' | 'userId' | 'createdAt' | 'updatedAt'> = {
         name: newCategory.trim(),
-        type: 'expense',
-        icon: '📝',
-        color: '#6C5CE7'
+        type: newCategoryType,
+        icon: newCategoryIcon,
+        color: newCategoryType === 'income' ? '#10B981' : '#EF4444',
+        isActive: true
       };
-      setCustomCategories(prev => [...prev, category]);
+      setCustomCategories(prev => [...prev, { ...category, id: Date.now().toString(), userId: user?.id || '' }]);
       setNewCategory('');
+      setNewCategoryType('expense');
+      setNewCategoryIcon('📝');
     }
   };
 
@@ -221,14 +198,34 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
   };
 
   const handleComplete = async () => {
+    if (!user?.id) {
+      setError('User not authenticated');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Save user profile
-      console.log('Saving user profile:', userProfile);
+      // Create user profile
+      const profileData = {
+        ...userProfile,
+        email: user.email || userProfile.email
+      };
       
-      // Save custom categories
-      console.log('Saving custom categories:', customCategories);
-      
+      await profileManager.createUserProfile(profileData, user.id);
+      console.log('✅ User profile created');
+
+      // Save custom categories to database
+      for (const category of customCategories) {
+        await addUserCategory({
+          name: category.name,
+          type: category.type,
+          icon: category.icon,
+          color: category.color,
+          isActive: true
+        });
+      }
+      console.log('✅ Custom categories saved');
+
       // Save basic activities
       for (const activity of basicActivities) {
         switch (activity.type) {
@@ -320,6 +317,7 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
             break;
         }
       }
+      console.log('✅ Basic activities saved');
       
       // Save accounts
       for (const account of accounts) {
@@ -333,7 +331,9 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
           isVisible: account.isVisible
         });
       }
+      console.log('✅ Accounts saved');
       
+      console.log('🎉 Onboarding completed successfully!');
       onComplete();
     } catch (error) {
       setError('Failed to complete setup');
@@ -577,44 +577,118 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
             <h3 className="text-lg font-bold text-gray-800">
               Custom Categories
             </h3>
-            <div className="flex space-x-2">
-              <Input
-                type="text"
-                placeholder="Add custom category"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                className="flex-1"
-              />
-              <Button
-                variant="primary"
-                onClick={addCustomCategory}
-                className="px-4"
-              >
-                <Plus size={16} />
-              </Button>
+            
+            <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+              <h4 className="font-medium text-purple-800 mb-3">Add Custom Category</h4>
+              
+              <div className="space-y-3">
+                <div className="flex space-x-2">
+                  <Input
+                    type="text"
+                    placeholder="Category name"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="flex-1"
+                  />
+                  <select
+                    value={newCategoryType}
+                    onChange={(e) => setNewCategoryType(e.target.value as 'income' | 'expense')}
+                    className="px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-700"
+                  >
+                    <option value="expense">💸 Expense</option>
+                    <option value="income">💰 Income</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    Select Icon
+                  </label>
+                  <div className="grid grid-cols-10 gap-2">
+                    {categoryIcons.map((icon) => (
+                      <button
+                        key={icon}
+                        onClick={() => setNewCategoryIcon(icon)}
+                        className={`p-2 rounded-lg border-2 transition-colors ${
+                          newCategoryIcon === icon 
+                            ? 'border-purple-500 bg-purple-100' 
+                            : 'border-gray-200 hover:border-purple-300'
+                        }`}
+                      >
+                        <span className="text-lg">{icon}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Button
+                    variant="primary"
+                    onClick={addCustomCategory}
+                    className="flex-1"
+                    disabled={!newCategory.trim()}
+                  >
+                    <Plus size={16} className="mr-2" />
+                    Add Category
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setNewCategory('');
+                      setNewCategoryType('expense');
+                      setNewCategoryIcon('📝');
+                    }}
+                    className="px-4"
+                    disabled={!newCategory && newCategoryType === 'expense' && newCategoryIcon === '📝'}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </div>
             </div>
             
             {customCategories.length > 0 && (
-              <div className="space-y-2">
-                {customCategories.map((category) => (
-                  <div
-                    key={category.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50"
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-gray-800">
+                    Your Categories ({customCategories.length})
+                  </h4>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setCustomCategories([])}
+                    className="text-xs px-3 py-1"
                   >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-lg">{category.icon}</span>
-                      <span className="font-medium text-gray-700">
-                        {category.name}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setCustomCategories(prev => prev.filter(c => c.id !== category.id))}
-                      className="text-red-500 hover:text-red-700"
+                    Clear All
+                  </Button>
+                </div>
+                
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {customCategories.map((category) => (
+                    <div
+                      key={category.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors"
                     >
-                      <FileText size={16} />
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex items-center space-x-3 flex-1">
+                        <span className="text-lg">{category.icon}</span>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-700">
+                            {category.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {category.type === 'income' ? '💰 Income' : '💸 Expense'} • {category.color}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setCustomCategories(prev => prev.filter(c => c.id !== category.id))}
+                        className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
+                        title="Remove category"
+                      >
+                        <FileText size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -628,94 +702,143 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
       icon: <Target size={24} />,
       component: (
         <div className="space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-gray-800">
-              Add Basic Activities
-            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-800">
+                  Add Basic Activities
+                </h3>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setNewActivity({ type: 'goal', name: 'Emergency Fund', amount: 10000, currency: displayCurrency, description: 'Build emergency savings' })}
+                    className="text-xs px-3 py-1"
+                  >
+                    Quick Goal
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setNewActivity({ type: 'bill', name: 'Electricity Bill', amount: 2000, currency: displayCurrency, description: 'Monthly electricity bill' })}
+                    className="text-xs px-3 py-1"
+                  >
+                    Quick Bill
+                  </Button>
+                </div>
+              </div>
             
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <select
-                  value={newActivity.type || ''}
-                  onChange={(e) => setNewActivity(prev => ({ ...prev, type: e.target.value as any }))}
-                  className="px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700"
-                >
-                  <option value="">Select type</option>
-                  <option value="goal">Goal</option>
-                  <option value="bill">Bill</option>
-                  <option value="liability">Liability</option>
-                  <option value="budget">Budget</option>
-                </select>
+              <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                <h4 className="font-medium text-blue-800 mb-3">Add New Activity</h4>
                 
-                <Input
-                  type="text"
-                  placeholder="Activity name"
-                  value={newActivity.name || ''}
-                  onChange={(e) => setNewActivity(prev => ({ ...prev, name: e.target.value }))}
-                />
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <select
+                      value={newActivity.type || ''}
+                      onChange={(e) => setNewActivity(prev => ({ ...prev, type: e.target.value as any }))}
+                      className="px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700"
+                    >
+                      <option value="">Select type</option>
+                      <option value="goal">🎯 Goal</option>
+                      <option value="bill">📄 Bill</option>
+                      <option value="liability">💳 Liability</option>
+                      <option value="budget">📊 Budget</option>
+                    </select>
+                    
+                    <Input
+                      type="text"
+                      placeholder="Activity name"
+                      value={newActivity.name || ''}
+                      onChange={(e) => setNewActivity(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <CurrencyInput
+                      value={newActivity.amount || 0}
+                      currency={newActivity.currency || displayCurrency}
+                      onValueChange={(value) => setNewActivity(prev => ({ ...prev, amount: typeof value === 'number' ? value : 0 }))}
+                      onCurrencyChange={(currency) => setNewActivity(prev => ({ ...prev, currency }))}
+                      placeholder="0"
+                    />
+                    
+                    <Input
+                      type="text"
+                      placeholder="Description (optional)"
+                      value={newActivity.description || ''}
+                      onChange={(e) => setNewActivity(prev => ({ ...prev, description: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="primary"
+                      onClick={addBasicActivity}
+                      className="flex-1"
+                      disabled={!newActivity.type || !newActivity.name || !newActivity.amount}
+                    >
+                      <Plus size={16} className="mr-2" />
+                      Add Activity
+                    </Button>
+                    
+                    <Button
+                      variant="secondary"
+                      onClick={() => setNewActivity({})}
+                      className="px-4"
+                      disabled={!newActivity.type && !newActivity.name && !newActivity.amount}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <CurrencyInput
-                  value={newActivity.amount || 0}
-                  currency={newActivity.currency || displayCurrency}
-                  onValueChange={(value) => setNewActivity(prev => ({ ...prev, amount: typeof value === 'number' ? value : 0 }))}
-                  onCurrencyChange={(currency) => setNewActivity(prev => ({ ...prev, currency }))}
-                  placeholder="0"
-                />
-                
-                <Input
-                  type="text"
-                  placeholder="Description (optional)"
-                  value={newActivity.description || ''}
-                  onChange={(e) => setNewActivity(prev => ({ ...prev, description: e.target.value }))}
-                />
-              </div>
-              
-              <Button
-                variant="primary"
-                onClick={addBasicActivity}
-                className="w-full"
-                disabled={!newActivity.type || !newActivity.name || !newActivity.amount}
-              >
-                <Plus size={16} className="mr-2" />
-                Add Activity
-              </Button>
             </div>
             
             {basicActivities.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium text-gray-800">
-                  Your Activities
-                </h4>
-                {basicActivities.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50"
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-gray-800">
+                    Your Activities ({basicActivities.length})
+                  </h4>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setBasicActivities([])}
+                    className="text-xs px-3 py-1"
                   >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-lg">
-                        {activity.type === 'goal' ? '🏆' : 
-                         activity.type === 'bill' ? '📄' :
-                         activity.type === 'liability' ? '💳' : '📊'}
-                      </span>
-                      <div>
-                        <div className="font-medium text-gray-700">
-                          {activity.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {activity.type} • {activity.currency} {activity.amount}
+                    Clear All
+                  </Button>
+                </div>
+                
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {basicActivities.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3 flex-1">
+                        <span className="text-lg">
+                          {activity.type === 'goal' ? '🎯' : 
+                           activity.type === 'bill' ? '📄' :
+                           activity.type === 'liability' ? '💳' : '📊'}
+                        </span>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-700">
+                            {activity.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {activity.type.charAt(0).toUpperCase() + activity.type.slice(1)} • {activity.currency} {activity.amount.toLocaleString()}
+                            {activity.description && ` • ${activity.description}`}
+                          </div>
                         </div>
                       </div>
+                      <button
+                        onClick={() => setBasicActivities(prev => prev.filter(a => a.id !== activity.id))}
+                        className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
+                        title="Remove activity"
+                      >
+                        <FileText size={16} />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => setBasicActivities(prev => prev.filter(a => a.id !== activity.id))}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <FileText size={16} />
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -729,104 +852,154 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
       icon: <CreditCard size={24} />,
       component: (
         <div className="space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-gray-800">
-              Add Account
-            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-800">
+                  Add Account
+                </h3>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setNewAccount({ name: 'Main Savings', type: 'bank_savings', balance: 50000, currency: displayCurrency, institution: 'Your Bank' })}
+                    className="text-xs px-3 py-1"
+                  >
+                    Quick Savings
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setNewAccount({ name: 'Cash Wallet', type: 'cash', balance: 5000, currency: displayCurrency })}
+                    className="text-xs px-3 py-1"
+                  >
+                    Quick Cash
+                  </Button>
+                </div>
+              </div>
             
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  type="text"
-                  placeholder="Account name"
-                  value={newAccount.name || ''}
-                  onChange={(e) => setNewAccount(prev => ({ ...prev, name: e.target.value }))}
-                />
+              <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                <h4 className="font-medium text-green-800 mb-3">Add New Account</h4>
                 
-                <select
-                  value={newAccount.type || ''}
-                  onChange={(e) => setNewAccount(prev => ({ ...prev, type: e.target.value }))}
-                  className="px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700"
-                >
-                  <option value="">Select type</option>
-                  <option value="bank_savings">Savings</option>
-                  <option value="bank_current">Current</option>
-                  <option value="digital_wallet">Digital Wallet</option>
-                  <option value="cash">Cash</option>
-                  <option value="credit_card">Credit Card</option>
-                </select>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      type="text"
+                      placeholder="Account name"
+                      value={newAccount.name || ''}
+                      onChange={(e) => setNewAccount(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                    
+                    <select
+                      value={newAccount.type || ''}
+                      onChange={(e) => setNewAccount(prev => ({ ...prev, type: e.target.value }))}
+                      className="px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700"
+                    >
+                      <option value="">Select type</option>
+                      <option value="bank_savings">🏦 Savings</option>
+                      <option value="bank_current">🏦 Current</option>
+                      <option value="digital_wallet">📱 Digital Wallet</option>
+                      <option value="cash">💵 Cash</option>
+                      <option value="credit_card">💳 Credit Card</option>
+                    </select>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <CurrencyInput
+                      value={newAccount.balance || 0}
+                      currency={newAccount.currency || displayCurrency}
+                      onValueChange={(value) => setNewAccount(prev => ({ ...prev, balance: typeof value === 'number' ? value : 0 }))}
+                      onCurrencyChange={(currency) => setNewAccount(prev => ({ ...prev, currency }))}
+                      placeholder="0"
+                    />
+                    
+                    <Input
+                      type="text"
+                      placeholder="Institution (optional)"
+                      value={newAccount.institution || ''}
+                      onChange={(e) => setNewAccount(prev => ({ ...prev, institution: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="primary"
+                      onClick={addAccountSetup}
+                      className="flex-1"
+                      disabled={!newAccount.name || !newAccount.type || newAccount.balance === undefined}
+                    >
+                      <Plus size={16} className="mr-2" />
+                      Add Account
+                    </Button>
+                    
+                    <Button
+                      variant="secondary"
+                      onClick={() => setNewAccount({})}
+                      className="px-4"
+                      disabled={!newAccount.name && !newAccount.type && newAccount.balance === undefined}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <CurrencyInput
-                  value={newAccount.balance || 0}
-                  currency={newAccount.currency || displayCurrency}
-                  onValueChange={(value) => setNewAccount(prev => ({ ...prev, balance: typeof value === 'number' ? value : 0 }))}
-                  onCurrencyChange={(currency) => setNewAccount(prev => ({ ...prev, currency }))}
-                  placeholder="0"
-                />
-                
-                <Input
-                  type="text"
-                  placeholder="Institution (optional)"
-                  value={newAccount.institution || ''}
-                  onChange={(e) => setNewAccount(prev => ({ ...prev, institution: e.target.value }))}
-                />
-              </div>
-              
-              <Button
-                variant="primary"
-                onClick={addAccountSetup}
-                className="w-full"
-                disabled={!newAccount.name || !newAccount.type || newAccount.balance === undefined}
-              >
-                <Plus size={16} className="mr-2" />
-                Add Account
-              </Button>
             </div>
             
             {accounts.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium text-gray-800">
-                  Your Accounts
-                </h4>
-                {accounts.map((account) => (
-                  <div
-                    key={account.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50"
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-gray-800">
+                    Your Accounts ({accounts.length})
+                  </h4>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setAccounts([])}
+                    className="text-xs px-3 py-1"
                   >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-lg">
-                        {account.type === 'bank_savings' ? '🏦' :
-                         account.type === 'bank_current' ? '🏦' :
-                         account.type === 'digital_wallet' ? '📱' :
-                         account.type === 'cash' ? '💵' : '💳'}
-                      </span>
-                      <div>
-                        <div className="font-medium text-gray-700">
-                          {account.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {account.currency} {account.balance} • {account.type.replace('_', ' ')}
+                    Clear All
+                  </Button>
+                </div>
+                
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {accounts.map((account) => (
+                    <div
+                      key={account.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3 flex-1">
+                        <span className="text-lg">
+                          {account.type === 'bank_savings' ? '🏦' :
+                           account.type === 'bank_current' ? '🏦' :
+                           account.type === 'digital_wallet' ? '📱' :
+                           account.type === 'cash' ? '💵' : '💳'}
+                        </span>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-700">
+                            {account.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {account.currency} {account.balance.toLocaleString()} • {account.type.replace('_', ' ')}
+                            {account.institution && ` • ${account.institution}`}
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => toggleAccountVisibility(account.id)}
+                          className={`p-1 rounded hover:bg-gray-200 transition-colors ${account.isVisible ? 'text-green-600' : 'text-gray-400'}`}
+                          title={account.isVisible ? 'Hide account' : 'Show account'}
+                        >
+                          {account.isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+                        </button>
+                        <button
+                          onClick={() => setAccounts(prev => prev.filter(a => a.id !== account.id))}
+                          className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
+                          title="Remove account"
+                        >
+                          <FileText size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => toggleAccountVisibility(account.id)}
-                        className={`p-1 rounded ${account.isVisible ? 'text-green-600' : 'text-gray-400'}`}
-                      >
-                        {account.isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
-                      </button>
-                      <button
-                        onClick={() => setAccounts(prev => prev.filter(a => a.id !== account.id))}
-                        className="text-red-500 hover:text-red-700 p-1"
-                      >
-                        <FileText size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
