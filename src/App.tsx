@@ -13,8 +13,8 @@ import { ErrorFallback } from './components/common/ErrorFallback';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { BottomNavigation } from './components/layout/BottomNavigation';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import EnhancedOnboardingFlow from './components/onboarding/EnhancedOnboardingFlow';
 import OnboardingWrapper from './components/OnboardingWrapper';
+import RouteHandler from './components/RouteHandler';
 import { SyncStatus } from './components/sync/SyncStatus';
 import OfflineIndicator from './components/common/OfflineIndicator';
 import { AppInitializer } from './components/AppInitializer';
@@ -92,23 +92,24 @@ function App() {
                     <FinanceProvider>
                       <AppInitializer>
                       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                        <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-                          {/* Accessibility Enhancements */}
-                          <div className="fixed top-4 right-4 z-50">
-                            <AccessibilityEnhancements />
-                          </div>
+                        <RouteHandler>
+                          <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
+                            {/* Accessibility Enhancements */}
+                            <div className="fixed top-4 right-4 z-50">
+                              <AccessibilityEnhancements />
+                            </div>
 
-                          {/* Sync Status Indicator */}
-                          <div className="fixed top-4 left-4 z-50">
-                            <SyncStatus />
-                          </div>
+                            {/* Sync Status Indicator */}
+                            <div className="fixed top-4 left-4 z-50">
+                              <SyncStatus />
+                            </div>
 
-                          {/* Offline Indicator */}
-                          <OfflineIndicator />
+                            {/* Offline Indicator */}
+                            <OfflineIndicator />
 
-                          {/* Main Content */}
-                          <div className="relative z-10">
-                            <Routes>
+                            {/* Main Content */}
+                            <div className="relative z-10">
+                              <Routes>
                               {/* Public Routes */}
                               <Route path="/auth" element={<Auth />} />
                               
@@ -364,8 +365,9 @@ function App() {
                               {/* Catch all route */}
                               <Route path="*" element={<Navigate to="/" replace />} />
                               </Routes>
+                            </div>
                           </div>
-                        </div>
+                        </RouteHandler>
                       </Router>
                       <ReactQueryDevtools initialIsOpen={false} />
                       </AppInitializer>
