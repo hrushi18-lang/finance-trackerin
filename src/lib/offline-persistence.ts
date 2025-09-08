@@ -111,6 +111,9 @@ class OfflinePersistence {
       retryCount: 0
     };
 
+    if (!this.operationQueue.operations) {
+      this.operationQueue.operations = [];
+    }
     this.operationQueue.operations.push(offlineOperation);
     await this.saveOperationQueue();
     
@@ -122,14 +125,15 @@ class OfflinePersistence {
 
   // Process the operation queue
   private async processQueue(): Promise<void> {
-    if (this.isProcessingQueue || this.operationQueue.operations.length === 0) {
+    const operations = this.operationQueue?.operations || [];
+    if (this.isProcessingQueue || operations.length === 0) {
       return;
     }
 
     this.isProcessingQueue = true;
 
     try {
-      const unsyncedOperations = this.operationQueue.operations.filter(op => !op.synced);
+      const unsyncedOperations = operations.filter(op => !op?.synced);
       
       for (const operation of unsyncedOperations) {
         try {
@@ -143,7 +147,9 @@ class OfflinePersistence {
           // Remove operation if it has failed too many times
           if (operation.retryCount >= 3) {
             console.error(`Operation ${operation.id} failed too many times, removing from queue`);
-            this.operationQueue.operations = this.operationQueue.operations.filter(op => op.id !== operation.id);
+            if (this.operationQueue?.operations) {
+              this.operationQueue.operations = this.operationQueue.operations.filter(op => op?.id !== operation.id);
+            }
           }
         }
       }
@@ -288,7 +294,8 @@ class OfflinePersistence {
   private setupQueueProcessor(): void {
     // Process queue every 30 seconds
     setInterval(() => {
-      if (syncManager.getSyncStatus().isOnline && this.operationQueue.operations.length > 0) {
+      const operations = this.operationQueue?.operations || [];
+      if (syncManager.getSyncStatus().isOnline && operations.length > 0) {
         this.processQueue();
       }
     }, 30 * 1000);
@@ -355,15 +362,17 @@ class OfflinePersistence {
     syncedOperations: number;
     lastProcessed: Date | null;
   } {
-    const totalOperations = this.operationQueue.operations.length;
-    const syncedOperations = this.operationQueue.operations.filter(op => op.synced).length;
+    // Ensure operations array exists and is valid
+    const operations = this.operationQueue?.operations || [];
+    const totalOperations = operations.length;
+    const syncedOperations = operations.filter(op => op?.synced === true).length;
     const pendingOperations = totalOperations - syncedOperations;
 
     return {
       totalOperations,
       pendingOperations,
       syncedOperations,
-      lastProcessed: this.operationQueue.lastProcessed
+      lastProcessed: this.operationQueue?.lastProcessed || null
     };
   }
 
@@ -401,9 +410,10 @@ class OfflinePersistence {
     storageUsed: number;
     queueSize: number;
   } {
-    const totalRecords = this.dataIntegrityChecks.reduce((sum, check) => sum + check.recordCount, 0);
-    const lastModified = this.dataIntegrityChecks.reduce((latest, check) => {
-      if (!check.lastModified) return latest;
+    const integrityChecks = this.dataIntegrityChecks || [];
+    const totalRecords = integrityChecks.reduce((sum, check) => sum + (check?.recordCount || 0), 0);
+    const lastModified = integrityChecks.reduce((latest, check) => {
+      if (!check?.lastModified) return latest;
       if (!latest) return check.lastModified;
       return check.lastModified > latest ? check.lastModified : latest;
     }, null as Date | null);
@@ -412,7 +422,7 @@ class OfflinePersistence {
       totalRecords,
       lastModified,
       storageUsed: 0, // Would need to calculate actual storage usage
-      queueSize: this.operationQueue.operations.length
+      queueSize: this.operationQueue?.operations?.length || 0
     };
   }
 }
