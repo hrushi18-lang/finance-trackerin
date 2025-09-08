@@ -73,7 +73,7 @@ class OfflineStorage {
     }
 
     try {
-      const request = indexedDB.open('FinTrackDB', 1);
+      const request = indexedDB.open('FinTrackDB', 2);
       
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
@@ -251,10 +251,18 @@ class OfflineStorage {
   // IndexedDB operations
   private async saveToIndexedDB(table: string, data: any): Promise<void> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('FinTrackDB', 1);
+      const request = indexedDB.open('FinTrackDB', 2);
       
       request.onsuccess = () => {
         const db = request.result;
+        
+        // Check if the object store exists
+        if (!db.objectStoreNames.contains(table)) {
+          console.error(`Object store '${table}' does not exist. Available stores:`, Array.from(db.objectStoreNames));
+          reject(new Error(`Object store '${table}' not found`));
+          return;
+        }
+        
         const transaction = db.transaction([table], 'readwrite');
         const store = transaction.objectStore(table);
         store.put(data);
@@ -269,10 +277,18 @@ class OfflineStorage {
 
   private async getFromIndexedDB(table: string, userId?: string): Promise<any[]> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('FinTrackDB', 1);
+      const request = indexedDB.open('FinTrackDB', 2);
       
       request.onsuccess = () => {
         const db = request.result;
+        
+        // Check if the object store exists
+        if (!db.objectStoreNames.contains(table)) {
+          console.error(`Object store '${table}' does not exist. Available stores:`, Array.from(db.objectStoreNames));
+          resolve([]); // Return empty array instead of rejecting
+          return;
+        }
+        
         const transaction = db.transaction([table], 'readonly');
         const store = transaction.objectStore(table);
         const getAllRequest = store.getAll();
@@ -294,7 +310,7 @@ class OfflineStorage {
 
   private async getFromIndexedDBById(table: string, id: string): Promise<any> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('FinTrackDB', 1);
+      const request = indexedDB.open('FinTrackDB', 2);
       
       request.onsuccess = () => {
         const db = request.result;
@@ -312,7 +328,7 @@ class OfflineStorage {
 
   private async removeFromIndexedDB(table: string, id: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('FinTrackDB', 1);
+      const request = indexedDB.open('FinTrackDB', 2);
       
       request.onsuccess = () => {
         const db = request.result;
@@ -434,7 +450,7 @@ class OfflineStorage {
     };
 
     if (window.indexedDB) {
-      const request = indexedDB.open('FinTrackDB', 1);
+      const request = indexedDB.open('FinTrackDB', 2);
       request.onsuccess = () => {
         const db = request.result;
         const transaction = db.transaction(['sync_queue'], 'readwrite');
@@ -492,7 +508,7 @@ class OfflineStorage {
   private async getSyncQueue(): Promise<OfflineQueueItem[]> {
     if (window.indexedDB) {
       return new Promise((resolve, reject) => {
-        const request = indexedDB.open('FinTrackDB', 1);
+        const request = indexedDB.open('FinTrackDB', 2);
         request.onsuccess = () => {
           const db = request.result;
           const transaction = db.transaction(['sync_queue'], 'readonly');
@@ -512,7 +528,7 @@ class OfflineStorage {
 
   private async removeFromSyncQueue(id: string): Promise<void> {
     if (window.indexedDB) {
-      const request = indexedDB.open('FinTrackDB', 1);
+      const request = indexedDB.open('FinTrackDB', 2);
       request.onsuccess = () => {
         const db = request.result;
         const transaction = db.transaction(['sync_queue'], 'readwrite');
@@ -577,12 +593,25 @@ class OfflineStorage {
     if (window.indexedDB) {
       const request = indexedDB.deleteDatabase('FinTrackDB');
       request.onsuccess = () => {
+        console.log('Database cleared, reinitializing...');
         this.initializeStorage();
+      };
+      request.onerror = () => {
+        console.error('Failed to clear database:', request.error);
       };
     } else {
       const keys = Object.keys(localStorage).filter(key => key.startsWith('fintrack_'));
       keys.forEach(key => localStorage.removeItem(key));
     }
+  }
+
+  // Force recreate database with all object stores
+  async recreateDatabase(): Promise<void> {
+    console.log('Recreating database...');
+    await this.clearLocalData();
+    // Wait a bit for the database to be deleted
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await this.initializeStorage();
   }
 }
 

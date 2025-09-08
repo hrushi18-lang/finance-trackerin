@@ -54,7 +54,15 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
           });
 
           // Initialize offline storage
-          await offlinePersistence.initialize();
+          try {
+            await offlinePersistence.initialize();
+          } catch (error) {
+            console.error('Failed to initialize offline persistence, recreating database...', error);
+            // If initialization fails, try to recreate the database
+            const { offlineStorage } = await import('../lib/offline-storage');
+            await offlineStorage.recreateDatabase();
+            await offlinePersistence.initialize();
+          }
 
           // Start sync if online
           if (navigator.onLine) {
