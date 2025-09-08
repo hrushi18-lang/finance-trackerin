@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 
 // Supported currencies interface
@@ -431,8 +431,8 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
     return supportedCurrencies.find(currency => currency.code === code) || null;
   };
 
-  // Get popular currencies with USD always first
-  const getPopularCurrencies = (): SupportedCurrency[] => {
+  // Get popular currencies with USD always first (memoized)
+  const popularCurrencies = useMemo((): SupportedCurrency[] => {
     console.log('getPopularCurrencies called, supportedCurrencies length:', supportedCurrencies.length);
     
     // Fallback popular currencies if database is not loaded
@@ -457,18 +457,23 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
     const usdCurrency = supportedCurrencies.find(c => c.code === 'USD');
     const otherCurrencies = supportedCurrencies.filter(c => c.code !== 'USD');
     
-    const popularCurrencies = [];
+    const result = [];
     
     // Add USD first if it exists
     if (usdCurrency) {
-      popularCurrencies.push(usdCurrency);
+      result.push(usdCurrency);
     }
     
     // Add up to 7 more currencies (total of 8)
-    const remainingSlots = 8 - popularCurrencies.length;
-    popularCurrencies.push(...otherCurrencies.slice(0, remainingSlots));
+    const remainingSlots = 8 - result.length;
+    result.push(...otherCurrencies.slice(0, remainingSlots));
     
-    console.log('Returning popular currencies:', popularCurrencies.map(c => c.code));
+    console.log('Returning popular currencies:', result.map(c => c.code));
+    return result;
+  }, [supportedCurrencies]);
+
+  // Get popular currencies function (now just returns memoized value)
+  const getPopularCurrencies = (): SupportedCurrency[] => {
     return popularCurrencies;
   };
 

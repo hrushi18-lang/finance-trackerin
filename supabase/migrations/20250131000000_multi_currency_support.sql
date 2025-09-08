@@ -123,21 +123,21 @@ BEGIN
 END $$;
 
 -- Insert supported currencies
-INSERT INTO supported_currencies (code, name, symbol, flag_emoji, decimal_places) VALUES
-  ('USD', 'US Dollar', '$', '🇺🇸', 2),
-  ('INR', 'Indian Rupee', '₹', '🇮🇳', 2),
-  ('EUR', 'Euro', '€', '🇪🇺', 2),
-  ('GBP', 'British Pound', '£', '🇬🇧', 2),
-  ('JPY', 'Japanese Yen', '¥', '🇯🇵', 0),
-  ('CNY', 'Chinese Yuan', '¥', '🇨🇳', 2),
-  ('MYR', 'Malaysian Ringgit', 'RM', '🇲🇾', 2),
-  ('SGD', 'Singapore Dollar', 'S$', '🇸🇬', 2),
-  ('AED', 'UAE Dirham', 'د.إ', '🇦🇪', 2),
-  ('NZD', 'New Zealand Dollar', 'NZ$', '🇳🇿', 2),
-  ('ZAR', 'South African Rand', 'R', '🇿🇦', 2),
-  ('CAD', 'Canadian Dollar', 'C$', '🇨🇦', 2),
-  ('LKR', 'Sri Lankan Rupee', 'Rs', '🇱🇰', 2),
-  ('AUD', 'Australian Dollar', 'A$', '🇦🇺', 2)
+INSERT INTO supported_currencies (code, name, symbol, flag_emoji, decimal_places, is_active) VALUES
+  ('USD', 'US Dollar', '$', '🇺🇸', 2, true),
+  ('INR', 'Indian Rupee', '₹', '🇮🇳', 2, true),
+  ('EUR', 'Euro', '€', '🇪🇺', 2, true),
+  ('GBP', 'British Pound', '£', '🇬🇧', 2, true),
+  ('JPY', 'Japanese Yen', '¥', '🇯🇵', 0, true),
+  ('CNY', 'Chinese Yuan', '¥', '🇨🇳', 2, true),
+  ('MYR', 'Malaysian Ringgit', 'RM', '🇲🇾', 2, true),
+  ('SGD', 'Singapore Dollar', 'S$', '🇸🇬', 2, true),
+  ('AED', 'UAE Dirham', 'د.إ', '🇦🇪', 2, true),
+  ('NZD', 'New Zealand Dollar', 'NZ$', '🇳🇿', 2, true),
+  ('ZAR', 'South African Rand', 'R', '🇿🇦', 2, true),
+  ('CAD', 'Canadian Dollar', 'C$', '🇨🇦', 2, true),
+  ('LKR', 'Sri Lankan Rupee', 'Rs', '🇱🇰', 2, true),
+  ('AUD', 'Australian Dollar', 'A$', '🇦🇺', 2, true)
 ON CONFLICT (code) DO NOTHING;
 
 -- Create indexes for performance

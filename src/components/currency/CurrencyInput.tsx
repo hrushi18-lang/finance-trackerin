@@ -56,10 +56,10 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
     if (value === '') {
       setInputValue('');
     } else if (typeof value === 'number') {
-      const decimalPlaces = currencyInfo?.decimal_places || 2;
-      setInputValue(value.toFixed(decimalPlaces));
+      // Don't force decimal formatting - let user decide
+      setInputValue(value.toString());
     }
-  }, [value, currencyInfo]);
+  }, [value]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputVal = e.target.value;
@@ -80,10 +80,9 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
   const handleInputBlur = () => {
     setIsFocused(false);
     
-    // Format the input value when focus is lost
+    // Don't force decimal formatting on blur - preserve user input
     if (value !== '' && typeof value === 'number') {
-      const decimalPlaces = currencyInfo?.decimal_places || 2;
-      setInputValue(value.toFixed(decimalPlaces));
+      setInputValue(value.toString());
     }
   };
 
@@ -231,10 +230,7 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
       {/* Helper Text */}
       {!error && currencyInfo && (
         <p className="text-xs text-gray-500">
-          {currencyInfo.decimal_places === 0 
-            ? 'Whole numbers only' 
-            : `Up to ${currencyInfo.decimal_places} decimal places`
-          }
+          Enter any amount - decimals optional
         </p>
       )}
     </div>

@@ -365,38 +365,44 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
     {
       id: 'welcome',
       title: 'Welcome to FinTrack',
-      description: 'Your personal finance companion',
+      description: 'Professional Financial Management Platform',
       icon: <Check size={24} />,
       component: (
         <div className="text-center space-y-8">
           <div className="w-24 h-24 mx-auto rounded-full flex items-center justify-center bg-blue-600">
-            <span className="text-4xl">💰</span>
+            <PieChart size={32} className="text-white" />
           </div>
           <div>
             <h2 className="text-3xl font-bold mb-4 text-gray-800">
-              Welcome to FinTrack!
+              Welcome to FinTrack
             </h2>
             <p className="text-lg text-gray-600">
-              Let's set up your personal finance management system
+              Professional financial management and accounting platform
             </p>
           </div>
           <div className="space-y-4 text-left">
             <div className="flex items-center space-x-3">
               <Check size={20} className="text-green-600" />
               <span className="text-gray-600">
-                Multi-currency support with live exchange rates
+                Multi-currency accounting with real-time exchange rates
               </span>
             </div>
             <div className="flex items-center space-x-3">
               <Check size={20} className="text-green-600" />
               <span className="text-gray-600">
-                Smart budgeting and goal tracking
+                Comprehensive budgeting and financial planning tools
               </span>
             </div>
             <div className="flex items-center space-x-3">
               <Check size={20} className="text-green-600" />
               <span className="text-gray-600">
-                Works offline, syncs online
+                Enterprise-grade security and data protection
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Check size={20} className="text-green-600" />
+              <span className="text-gray-600">
+                Offline capability with automatic synchronization
               </span>
             </div>
           </div>
@@ -405,14 +411,14 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
     },
     {
       id: 'auth',
-      title: 'Get Started',
-      description: 'Sign in to begin your financial journey',
+      title: 'Account Setup',
+      description: 'Secure authentication for your financial data',
       icon: <User size={24} />,
       component: (
         <div className="space-y-6">
           <div className="text-center">
             <p className="text-lg text-gray-600 mb-6">
-              Choose how you'd like to sign in
+              Create your secure account to access professional financial tools
             </p>
           </div>
           
@@ -456,8 +462,8 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
     },
     {
       id: 'profile',
-      title: "Let's get to know you",
-      description: 'Personalize your financial journey',
+      title: 'User Profile Setup',
+      description: 'Configure your financial management preferences',
       icon: <User size={24} />,
       component: (
         <div className="space-y-6">
@@ -535,14 +541,14 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
     },
     {
       id: 'currency',
-      title: 'Choose your currency',
-      description: 'Select your primary currency for financial tracking',
+      title: 'Currency Configuration',
+      description: 'Set up multi-currency accounting preferences',
       icon: <Globe size={24} />,
       component: (
         <div className="space-y-6">
           <div className="text-center">
             <p className="text-lg text-gray-600 mb-4">
-              Choose your primary currency. You can always change this later.
+              Configure your primary currency and multi-currency settings for professional accounting.
             </p>
           </div>
           
@@ -603,8 +609,8 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
     },
     {
       id: 'categories',
-      title: 'Select Categories',
-      description: 'Choose your spending categories. You can add your own.',
+      title: 'Category Management',
+      description: 'Configure transaction categories for professional accounting',
       icon: <PieChart size={24} />,
       component: (
         <div className="space-y-6">

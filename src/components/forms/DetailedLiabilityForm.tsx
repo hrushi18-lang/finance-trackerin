@@ -193,7 +193,7 @@ export const DetailedLiabilityForm: React.FC<DetailedLiabilityFormProps> = ({
                 <Input
                   label="Total Amount"
                   type="number"
-                  step="0.01"
+                  step="any"
                   placeholder="e.g., 100000"
                   icon={<CurrencyIcon currencyCode={watch('currencyCode') || currency.code} className="text-green-400" />}
                   {...register('totalAmount', {
@@ -206,7 +206,7 @@ export const DetailedLiabilityForm: React.FC<DetailedLiabilityFormProps> = ({
                 <Input
                   label="Remaining Amount"
                   type="number"
-                  step="0.01"
+                  step="any"
                   placeholder="e.g., 75000"
                   icon={<CurrencyIcon currencyCode={watch('currencyCode') || currency.code} className="text-orange-400" />}
                   {...register('remainingAmount', {

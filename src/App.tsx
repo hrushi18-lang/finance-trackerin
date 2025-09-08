@@ -1,21 +1,18 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from './contexts/AuthContext';
 import { FinanceProvider } from './contexts/FinanceContext';
 import { InternationalizationProvider } from './contexts/InternationalizationContext';
-import { CurrencyConversionProvider } from './contexts/CurrencyConversionContext';
 import { EnhancedCurrencyProvider } from './contexts/EnhancedCurrencyContext';
 import { PersonalizationProvider } from './contexts/PersonalizationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/common/Toast';
-import { LoadingScreen } from './components/common/LoadingScreen';
 import { ErrorFallback } from './components/common/ErrorFallback';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { BottomNavigation } from './components/layout/BottomNavigation';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
 import EnhancedOnboardingFlow from './components/onboarding/EnhancedOnboardingFlow';
 import { SyncStatus } from './components/sync/SyncStatus';
 import { AppInitializer } from './components/AppInitializer';
@@ -29,7 +26,6 @@ import Auth from './pages/Auth';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import AddTransaction from './pages/AddTransaction';
-import Transactions from './pages/Transactions';
 import TransactionsCalendar from './pages/TransactionsCalendar';
 import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
@@ -89,11 +85,10 @@ function App() {
           <ThemeProvider>
             <AuthProvider>
               <InternationalizationProvider>
-                <CurrencyConversionProvider>
-                  <EnhancedCurrencyProvider>
-                    <PersonalizationProvider>
-                      <FinanceProvider>
-                    <AppInitializer>
+                <EnhancedCurrencyProvider>
+                  <PersonalizationProvider>
+                    <FinanceProvider>
+                      <AppInitializer>
                       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                         <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
                           {/* Accessibility Enhancements */}
@@ -375,11 +370,10 @@ function App() {
                         </div>
                       </Router>
                       <ReactQueryDevtools initialIsOpen={false} />
-                    </AppInitializer>
-                      </FinanceProvider>
+                      </AppInitializer>
+                    </FinanceProvider>
                     </PersonalizationProvider>
                   </EnhancedCurrencyProvider>
-                </CurrencyConversionProvider>
               </InternationalizationProvider>
             </AuthProvider>
           </ThemeProvider>

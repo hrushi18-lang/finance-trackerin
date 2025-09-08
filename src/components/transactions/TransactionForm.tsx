@@ -37,24 +37,20 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const categories = [
-    'Food & Dining',
-    'Transportation',
-    'Shopping',
-    'Entertainment',
-    'Bills & Utilities',
-    'Healthcare',
-    'Education',
-    'Travel',
-    'Groceries',
-    'Gas',
-    'Rent',
-    'Insurance',
-    'Salary',
-    'Freelance',
-    'Investment',
-    'Other'
-  ];
+  const getCategoriesForType = (type: string) => {
+    switch (type) {
+      case 'income':
+        return ['Salary', 'Freelance', 'Investment', 'Business', 'Gift', 'Refund', 'Other'];
+      case 'expense':
+        return ['Food & Dining', 'Transportation', 'Shopping', 'Entertainment', 'Bills & Utilities', 'Healthcare', 'Education', 'Travel', 'Groceries', 'Gas', 'Rent', 'Insurance', 'Other'];
+      case 'transfer':
+        return ['Transfer', 'Internal Transfer', 'Account Transfer', 'Other'];
+      default:
+        return ['Other'];
+    }
+  };
+
+  const categories = getCategoriesForType(formData.type);
 
   useEffect(() => {
     if (transaction) {
@@ -81,6 +77,13 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       });
     }
   }, [transaction, defaultType, defaultAccountId, isOpen]);
+
+  // Clear category when transaction type changes
+  useEffect(() => {
+    if (!transaction) {
+      setFormData(prev => ({ ...prev, category: '' }));
+    }
+  }, [formData.type, transaction]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,7 +181,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           value={formData.amount}
           onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
           placeholder="0.00"
-          step="0.01"
+          step="any"
           required
           disabled={loading}
           icon={<DollarSign size={16} />}

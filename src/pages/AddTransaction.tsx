@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Plus, Minus, Target, CreditCard, AlertCircle, Trash2, Link, Unlink, Clock, Calendar } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -6,7 +6,6 @@ import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 import { CategorySelector } from '../components/common/CategorySelector';
 import { toNumber } from '../utils/validation';
-import { TopNavigation } from '../components/layout/TopNavigation';
 import { useFinance } from '../contexts/FinanceContext';
 import { useEnhancedCurrency } from '../contexts/EnhancedCurrencyContext';
 import { CurrencyInput } from '../components/currency/CurrencyInput';
@@ -88,7 +87,12 @@ const AddTransaction: React.FC = () => {
       futureDate.setDate(futureDate.getDate() + 7);
       setValue('date', futureDate.toISOString().split('T')[0]);
     }
-  }, [accountId, isHistorical, isScheduled, setValue]);
+  }, [accountId, isHistorical, isScheduled]);
+
+  // Sync transaction type when tabs are clicked
+  useEffect(() => {
+    setValue('type', transactionType);
+  }, [transactionType]);
 
   const type = watch('type');
   const linkedGoalId = watch('linkedGoalId');
@@ -102,10 +106,10 @@ const AddTransaction: React.FC = () => {
     transfer: ['Transfer', 'Internal Transfer', 'Account Transfer']
   };
   
-  const userCategoriesForType = userCategories.filter(c => c.type === type);
-  const availableCategories = userCategoriesForType.length > 0 
-    ? userCategoriesForType.map(c => ({ id: c.id, name: c.name }))
-    : defaultCategories[type].map(name => ({ id: name, name }));
+  // Memoize categories to prevent infinite re-renders
+  const userCategoriesForType = useMemo(() => {
+    return userCategories.filter(c => c.type === type);
+  }, [userCategories, type]);
 
   // Clear and set default category when type changes
   React.useEffect(() => {
@@ -114,13 +118,17 @@ const AddTransaction: React.FC = () => {
     
     // Set a default category after a brief delay to allow CategorySelector to re-render
     const timer = setTimeout(() => {
-      if (availableCategories.length > 0) {
-        setValue('category', availableCategories[0].name);
+      const categories = userCategoriesForType.length > 0 
+        ? userCategoriesForType.map(c => ({ id: c.id, name: c.name }))
+        : defaultCategories[type].map(name => ({ id: name, name }));
+        
+      if (categories.length > 0) {
+        setValue('category', categories[0].name);
       }
     }, 100);
     
     return () => clearTimeout(timer);
-  }, [type, setValue]);
+  }, [type, userCategoriesForType]);
 
   // Filter available goals, bills, and liabilities based on transaction type
   const availableGoals = goals.filter(g => g.currentAmount < g.targetAmount);
@@ -310,8 +318,22 @@ const AddTransaction: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 pb-20">
-      <TopNavigation title="Add Transaction" showBack />
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
+      {/* Immersive Header with Back Button */}
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
+        <div className="px-4 py-3">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+              aria-label="Go back"
+            >
+              <ArrowLeft size={20} className="text-gray-700" />
+            </button>
+            <h1 className="text-xl font-semibold text-gray-900">Add Transaction</h1>
+          </div>
+        </div>
+      </div>
       
       {/* Transaction Type Indicator */}
       {(isHistorical || isScheduled) && (
@@ -338,7 +360,7 @@ const AddTransaction: React.FC = () => {
         </div>
       )}
       
-      <div className="px-4 py-4 sm:py-6 space-y-6">
+      <div className="px-4 py-4 sm:py-6 space-y-6 pb-20">
         {/* Transaction Type Selector */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Type</h3>

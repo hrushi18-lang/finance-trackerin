@@ -355,7 +355,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({
             <Input
               label="Total Amount"
               type="number"
-              step="0.01"
+              step="any"
               icon={<CurrencyIcon currencycode={currency.code} className="text-error-400" />}
               {...register('totalAmount', {
                 required: 'Total amount is required',
@@ -368,7 +368,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({
             <Input
               label="Remaining Amount"
               type="number"
-              step="0.01"
+              step="any"
               icon={<CurrencyIcon currencycode={currency.code} className="text-orange-400" />}
               {...register('remainingAmount', {
                 required: 'Remaining amount is required',

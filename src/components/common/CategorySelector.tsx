@@ -96,7 +96,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         setIsOpen(false);
       } catch (error) {
         console.error('Error adding category:', error);
-        // You might want to show an error message to the user
+        alert(`Failed to add category: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
         setIsAdding(false);
       }
