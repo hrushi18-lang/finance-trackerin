@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { profileManager, UserProfile } from '../lib/profile-manager';
-import { offlineStorage } from '../lib/offline-storage';
 
 interface ProfileContextType {
   profile: UserProfile | null;

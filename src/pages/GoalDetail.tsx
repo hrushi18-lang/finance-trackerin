@@ -10,7 +10,7 @@ import {
   Play,
   CheckCircle
 } from 'lucide-react';
-import { useFinance } from '../contexts/FinanceContextOffline';
+import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { format, isBefore, differenceInDays } from 'date-fns';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { Modal } from '../common/Modal';
-import { useFinance } from '../../contexts/FinanceContextOffline';
+import { useFinance } from '../../contexts/FinanceContext';
 import { Transaction, FinancialAccount } from '../../types/index';
 import { Calendar, Tag, DollarSign, FileText, ArrowUpRight, ArrowDownRight, ArrowLeftRight } from 'lucide-react';
 import { format } from 'date-fns';

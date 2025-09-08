@@ -21,7 +21,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useFinance } from '../contexts/FinanceContextOffline';
+import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { FontOptimizedText } from '../components/common/FontOptimizedText';
 

@@ -8,7 +8,7 @@ import { CategorySelector } from '../common/CategorySelector';
 import { Budget } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
-import { useFinance } from '../../contexts/FinanceContextOffline';
+import { useFinance } from '../../contexts/FinanceContext';
 
 interface BudgetFormData {
   category: string;

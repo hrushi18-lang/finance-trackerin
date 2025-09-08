@@ -26,7 +26,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useFinance } from '../contexts/FinanceContextOffline';
+import { useFinance } from '../contexts/FinanceContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { useSwipeGestures } from '../hooks/useMobileGestures';

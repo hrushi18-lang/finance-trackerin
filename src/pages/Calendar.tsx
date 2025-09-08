@@ -34,7 +34,7 @@ import {
   endOfDay
 } from 'date-fns';
 import { PageNavigation } from '../components/layout/PageNavigation';
-import { useFinance } from '../contexts/FinanceContextOffline';
+import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { getCategoryIcon, getCategoryColor } from '../utils/categories';

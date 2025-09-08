@@ -9,7 +9,7 @@ import { GoalForm } from '../components/forms/GoalForm';
 import { GoalTransactionForm } from '../components/forms/GoalTransactionForm';
 import { GoalCompletionModal } from '../components/goals/GoalCompletionModal';
 import { Button } from '../components/common/Button';
-import { useFinance } from '../contexts/FinanceContextOffline';
+import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { Goal } from '../types';
 import { ProgressBar } from '../components/analytics/ProgressBar';

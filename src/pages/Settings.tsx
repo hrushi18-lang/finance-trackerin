@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useFinance } from '../contexts/FinanceContextOffline';
+import { useFinance } from '../contexts/FinanceContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
@@ -28,12 +28,10 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { financeManager } from '../lib/finance-manager';
-import { offlineStorage } from '../lib/offline-storage';
 import CustomCategoriesManager from '../components/settings/CustomCategoriesManager';
 
 const Settings: React.FC = () => {
   const { user, signOut } = useAuth();
-  const { syncData } = useFinance();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   
@@ -63,7 +61,8 @@ const Settings: React.FC = () => {
   const handleSyncData = async () => {
     setIsSyncing(true);
     try {
-      await syncData();
+      // Data sync not needed in online-only mode
+      console.log('Data sync not needed in online-only mode');
       // Show success message
     } catch (error) {
       console.error('Error syncing data:', error);
@@ -107,10 +106,11 @@ const Settings: React.FC = () => {
 
   const handleClearOfflineData = async () => {
     try {
-      await offlineStorage.clear();
+      // Clear any cached data
+      console.log('Offline data clearing not needed in online-only mode');
       // Show success message
     } catch (error) {
-      console.error('Error clearing offline data:', error);
+      console.error('Error clearing data:', error);
     }
   };
 

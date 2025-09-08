@@ -6,7 +6,7 @@ import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 import { CategorySelector } from '../components/common/CategorySelector';
 import { TopNavigation } from '../components/layout/TopNavigation';
-import { useFinance } from '../contexts/FinanceContextOffline';
+import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 
 interface BillFormData {

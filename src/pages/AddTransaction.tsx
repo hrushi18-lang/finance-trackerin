@@ -6,7 +6,7 @@ import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 import { CategorySelector } from '../components/common/CategorySelector';
 import { toNumber } from '../utils/validation';
-import { useFinance } from '../contexts/FinanceContextOffline';
+import { useFinance } from '../contexts/FinanceContext';
 import { useEnhancedCurrency } from '../contexts/EnhancedCurrencyContext';
 import { CurrencyInput } from '../components/currency/CurrencyInput';
 import { LiveRateDisplay } from '../components/currency/LiveRateDisplay';

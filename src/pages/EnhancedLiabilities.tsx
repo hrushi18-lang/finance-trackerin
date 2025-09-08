@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, Edit, Trash2, Calendar, DollarSign, CreditCard, AlertCircle, Users, GraduationCap, Home, Car, ShoppingCart, Wallet, Scale, Zap, FileText, Globe, Building, ArrowLeft } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
-import { useFinance } from '../contexts/FinanceContextOffline';
+import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { QuickLiabilityForm } from '../components/forms/QuickLiabilityForm';
 import { DetailedLiabilityForm } from '../components/forms/DetailedLiabilityForm';

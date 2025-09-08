@@ -6,7 +6,7 @@ import { SmartAccountForm } from '../components/forms/SmartAccountForm';
 import { ContextualHelp } from '../components/common/ContextualHelp';
 import { TransferForm } from '../components/forms/TransferForm';
 import { TransactionForm } from '../components/forms/TransactionForm';
-import { useFinance } from '../contexts/FinanceContextOffline';
+import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { FinancialAccount, Transaction } from '../types';

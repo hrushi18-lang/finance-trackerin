@@ -68,11 +68,7 @@ class AuthManager {
 
   private async loadUserProfile(userId: string) {
     try {
-      // Try to get profile from local storage first
-      let profile = await offlineStorage.getById<UserProfile>('profiles', userId);
-      
-      if (!profile) {
-        // If not in local storage, fetch from Supabase
+      // Get profile from Supabase
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -88,7 +84,6 @@ class AuthManager {
         } else {
           profile = data;
           // Save to local storage
-          await offlineStorage.saveToLocal('profiles', profile);
         }
       }
 
@@ -250,7 +245,7 @@ class AuthManager {
       };
 
       // Update in Supabase if online
-      if (offlineStorage.isOnlineMode()) {
+      // Always update in Supabase for online-only mode
         const { error } = await supabase
           .from('profiles')
           .update(updates)
@@ -262,7 +257,6 @@ class AuthManager {
       }
 
       // Update locally
-      await offlineStorage.saveToLocal('profiles', updatedProfile);
       this.updateAuthState({ user: updatedProfile });
 
       return { success: true };

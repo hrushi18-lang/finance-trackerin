@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import { offlineStorage } from './offline-storage';
 
 export interface UserProfile {
   id?: string;
@@ -121,8 +120,6 @@ class ProfileManager {
         updatedAt: new Date(data.updated_at),
       };
 
-      // Save to offline storage
-      await offlineStorage.create('profiles', profile);
 
       return profile;
     } catch (error) {
@@ -179,7 +176,6 @@ class ProfileManager {
       };
 
       // Update in offline storage
-      await offlineStorage.update('profiles', profileId, profile);
 
       return profile;
     } catch (error) {
@@ -190,13 +186,7 @@ class ProfileManager {
 
   async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
-      // Try offline storage first
-      const offlineProfile = await offlineStorage.getById('profiles', userId, 'userId');
-      if (offlineProfile) {
-        return offlineProfile;
-      }
-
-      // Fallback to Supabase
+      // Get from Supabase
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -253,7 +243,6 @@ class ProfileManager {
       }
 
       // Save to offline storage
-      await offlineStorage.create('user_categories', data);
 
       return data;
     } catch (error) {
@@ -281,7 +270,6 @@ class ProfileManager {
       }
 
       // Save to offline storage
-      await offlineStorage.create('financial_accounts', data);
 
       return data;
     } catch (error) {

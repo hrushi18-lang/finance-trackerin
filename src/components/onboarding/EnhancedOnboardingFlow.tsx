@@ -1,16 +1,14 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ArrowLeft, ArrowRight, Check, User, Globe, Plus, Eye, EyeOff, Target, CreditCard, FileText, PieChart } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { CurrencySelector } from '../currency/CurrencySelector';
 import { CurrencyInput } from '../currency/CurrencyInput';
 import { LiveRateDisplay } from '../currency/LiveRateDisplay';
-import { OfflineIndicator } from '../common/OfflineIndicator';
 import { PerformanceOptimizer } from '../common/PerformanceOptimizer';
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
-import { useFinance } from '../../contexts/FinanceContextOffline';
+import { useFinance } from '../../contexts/FinanceContext';
 import { useProfile } from '../../contexts/ProfileContext';
-import { useOfflineStorage } from '../../hooks/useOfflineStorage';
 import { profileManager, UserProfile, CustomCategory, BasicActivity, AccountSetup } from '../../lib/profile-manager';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -32,11 +30,9 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
   const { displayCurrency } = useEnhancedCurrency();
   const { addAccount, addGoal, addBill, addLiability, addUserCategory } = useFinance();
   const { refreshProfile } = useProfile();
-  const { isOnline, offlineData, saveOfflineData, syncData } = useOfflineStorage();
   const { user } = useAuth();
   
   const [currentStep, setCurrentStep] = useState(0);
-  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -60,52 +56,8 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
   const [newActivity, setNewActivity] = useState<Partial<BasicActivity>>({});
   const [newAccount, setNewAccount] = useState<Partial<AccountSetup>>({});
 
-  // Load offline data on mount
-  useEffect(() => {
-    if (offlineData.userProfile) {
-      setUserProfile(offlineData.userProfile);
-    }
-    if (offlineData.customCategories) {
-      setCustomCategories(offlineData.customCategories);
-    }
-    if (offlineData.basicActivities) {
-      setBasicActivities(offlineData.basicActivities);
-    }
-    if (offlineData.accounts) {
-      setAccounts(offlineData.accounts);
-    }
-    if (offlineData.currentStep !== undefined) {
-      setCurrentStep(offlineData.currentStep);
-    }
-    if (offlineData.completedSteps) {
-      setCompletedSteps(new Set(offlineData.completedSteps));
-    }
-  }, [offlineData]);
 
-  // Auto-save data changes
-  const saveData = useCallback(() => {
-    saveOfflineData({
-      userProfile,
-      customCategories,
-      basicActivities,
-      accounts,
-      currentStep,
-      completedSteps: Array.from(completedSteps)
-    });
-  }, [userProfile, customCategories, basicActivities, accounts, currentStep, completedSteps, saveOfflineData]);
 
-  // Auto-save on data changes
-  useEffect(() => {
-    const timeoutId = setTimeout(saveData, 500); // Debounce saves
-    return () => clearTimeout(timeoutId);
-  }, [saveData]);
-
-  // Sync data when coming back online
-  useEffect(() => {
-    if (isOnline && Object.keys(offlineData).length > 0) {
-      syncData();
-    }
-  }, [isOnline, offlineData, syncData]);
 
   const defaultCategories = [
     { name: 'Food & Dining', icon: '🍛', color: '#FF6B6B' },
@@ -133,9 +85,6 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
     }
   };
 
-  const markStepComplete = (stepId: string) => {
-    setCompletedSteps(prev => new Set([...prev, stepId]));
-  };
 
 
   const [newCategoryType, setNewCategoryType] = useState<'income' | 'expense'>('expense');
@@ -1122,7 +1071,6 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
   return (
     <PerformanceOptimizer>
       <div className="min-h-screen flex items-center justify-center px-4 bg-amber-50">
-        <OfflineIndicator />
         <div className="w-full max-w-md">
         {/* Progress Indicator */}
         <div className="mb-8">

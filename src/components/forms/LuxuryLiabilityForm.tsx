@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Check, CreditCard, GraduationCap, Users, ShoppingCart, Wallet, Car, Home, Scale, Zap, FileText, Globe, Building, DollarSign, Calendar, Percent, Target, Settings } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
-import { useFinance } from '../../contexts/FinanceContextOffline';
+import { useFinance } from '../../contexts/FinanceContext';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { CurrencyInput } from '../currency/CurrencyInput';

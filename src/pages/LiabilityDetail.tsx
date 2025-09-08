@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CreditCard, TrendingDown, Calendar, DollarSign, Clock, AlertCircle, CheckCircle, Plus, Edit, Trash2, Percent } from 'lucide-react';
-import { useFinance } from '../contexts/FinanceContextOffline';
+import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { useTheme } from '../contexts/ThemeContext';
 
