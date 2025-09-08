@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useFinance } from '../contexts/FinanceContextOffline';
-import { syncManager } from '../lib/sync-manager';
-import { offlinePersistence } from '../lib/offline-persistence';
-import { conflictResolver } from '../lib/conflict-resolver';
-import { financeManager } from '../lib/finance-manager';
+import { useFinance } from '../contexts/FinanceContext';
 import { LoadingScreen } from './common/LoadingScreen';
 import { analytics } from '../utils/analytics';
 import { auditLogger } from '../utils/auditLogger';
@@ -28,13 +24,9 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     const initializeApp = async () => {
       try {
         if (isAuthenticated && user) {
-          // Set user ID for all managers
+          // Set user ID for analytics and monitoring
           const userId = user.id;
-          syncManager.setUserId(userId);
-          offlinePersistence.setUserId(userId);
-          conflictResolver.setUserId(userId);
-          financeManager.setUserId(userId);
-
+          
           // Set up analytics and audit logging
           analytics.setUserId(userId);
           analytics.setUserProperties({
@@ -47,7 +39,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
 
           // Set up error monitoring
           errorMonitoring.setUserId(userId);
-          errorMonitoring.setSeverityThreshold('medium'); // Only capture medium+ severity errors
+          errorMonitoring.setSeverityThreshold('medium');
 
           // Log user login
           auditLogger.logUser(userId, 'login', {
@@ -55,28 +47,6 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
             user_agent: navigator.userAgent,
             timestamp: new Date().toISOString()
           });
-
-          // Initialize offline storage
-          try {
-            await offlinePersistence.initialize();
-          } catch (error) {
-            console.error('Failed to initialize offline persistence, recreating database...', error);
-            // If initialization fails, try to recreate the database
-            const { offlineStorage } = await import('../lib/offline-storage');
-            await offlineStorage.recreateDatabase();
-            await offlinePersistence.initialize();
-          }
-
-          // Start sync if online
-          if (navigator.onLine) {
-            await syncManager.startSync();
-          }
-
-          // Check for conflicts
-          const conflicts = conflictResolver.getUnresolvedConflicts();
-          if (conflicts.length > 0) {
-            console.log(`Found ${conflicts.length} unresolved conflicts`);
-          }
 
           // Determine if user is new based on existing data
           const hasExistingData = accounts.length > 0 || goals.length > 0 || bills.length > 0 || liabilities.length > 0 || userCategories.length > 0;
@@ -96,10 +66,6 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
           setIsInitialized(true);
         } else {
           // Clear user data when not authenticated
-          syncManager.setUserId(null);
-          offlinePersistence.setUserId(null);
-          conflictResolver.setUserId(null);
-          financeManager.setUserId(null);
           analytics.clearUserData();
           errorMonitoring.setUserId(null);
           setIsInitialized(true);

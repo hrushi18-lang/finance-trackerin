@@ -32,14 +32,21 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    flowType: 'pkce'
   },
   db: {
     schema: 'public'
   },
   global: {
     headers: {
-      'x-client-info': 'fintrack-app'
+      'x-client-info': 'fintrack-app',
+      'x-application-name': 'finance-tracker'
+    }
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
     }
   }
 });

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
-import { offlineStorage } from '../lib/offline-storage';
+import { queryCache, invalidateUserData } from '../lib/query-cache';
 import { 
   FinancialAccount, 
   Transaction, 
@@ -211,26 +211,36 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     setLoading(true);
     try {
+      // Load critical data first in parallel for faster initial render
       await Promise.all([
         loadAccounts(),
         loadTransactions(),
         loadGoals(),
+        loadUserCategories()
+      ]);
+
+      // Load secondary data in parallel after critical data
+      await Promise.all([
         loadLiabilities(),
         loadBudgets(),
         loadBills(),
+        loadRecurringTransactions()
+      ]);
+
+      // Load additional data in parallel
+      await Promise.all([
         loadBillAccountLinks(),
         loadBillStagingHistory(),
         loadBillCompletionTracking(),
-        loadRecurringTransactions(),
         loadIncomeSource(),
         loadAccountTransfers(),
-        loadUserCategories(),
         loadBillReminders(),
         loadDebtPayments(),
         loadTransactionSplits(),
         loadFinancialInsights(),
         loadCalendarEvents()
       ]);
+
       // Clean up any duplicate Goals Vault accounts
       await cleanupDuplicateGoalsVaults();
     } catch (error) {
@@ -856,11 +866,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const loadAccounts = async () => {
     if (!user) return;
     
+    // Check cache first
+    const cacheKey = queryCache.generateKey('financial_accounts', { user_id: user.id, is_visible: true });
+    const cachedData = queryCache.get<FinancialAccount[]>(cacheKey);
+    if (cachedData) {
+      setAccounts(cachedData);
+      return;
+    }
+    
     const { data, error } = await supabase
       .from('financial_accounts')
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .eq('is_visible', true) // Only load visible accounts for better performance
+      .order('created_at', { ascending: false })
+      .limit(100); // Limit to prevent large data loads
 
     if (error) {
       console.error('Error loading accounts:', error);
@@ -930,16 +950,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }));
 
     setAccounts(mappedAccounts);
+    
+    // Cache the results for 5 minutes
+    queryCache.set(cacheKey, mappedAccounts, 5 * 60 * 1000);
   };
 
   const loadTransactions = async () => {
     if (!user) return;
     
+    // Load only recent transactions for better performance
     const { data, error } = await supabase
       .from('transactions')
       .select('*')
       .eq('user_id', user.id)
-      .order('date', { ascending: false });
+      .order('date', { ascending: false })
+      .limit(500); // Limit to recent 500 transactions
 
     if (error) {
       console.error('Error loading transactions:', error);
@@ -1681,6 +1706,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setAccounts(prev => [newAccount, ...prev]);
+    
+    // Invalidate cache for accounts
+    invalidateUserData(user.id);
   };
 
   const updateAccount = async (id: string, updates: Partial<FinancialAccount>) => {
@@ -1706,6 +1734,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setAccounts(prev => prev.map(account => 
       account.id === id ? { ...account, ...updates } : account
     ));
+    
+    // Invalidate cache for accounts
+    invalidateUserData(user.id);
   };
 
   const deleteAccount = async (id: string) => {
@@ -1720,6 +1751,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (error) throw error;
 
     setAccounts(prev => prev.filter(account => account.id !== id));
+    
+    // Invalidate cache for accounts
+    invalidateUserData(user.id);
   };
 
   const addTransaction = async (transactionData: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {

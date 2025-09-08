@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from './contexts/AuthContext';
-import { FinanceProvider } from './contexts/FinanceContextOffline';
+import { FinanceProvider } from './contexts/FinanceContext';
 import { ProfileProvider } from './contexts/ProfileContext';
 import { InternationalizationProvider } from './contexts/InternationalizationContext';
 import { EnhancedCurrencyProvider } from './contexts/EnhancedCurrencyContext';
@@ -16,8 +16,6 @@ import { BottomNavigation } from './components/layout/BottomNavigation';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import OnboardingWrapper from './components/OnboardingWrapper';
 import RouteHandler from './components/RouteHandler';
-import { SyncStatus } from './components/sync/SyncStatus';
-import OfflineIndicator from './components/common/OfflineIndicator';
 import { AppInitializer } from './components/AppInitializer';
 import { AccessibilityEnhancements, useKeyboardNavigation } from './components/common/AccessibilityEnhancements';
 import { fontLoader } from './utils/fontLoader';
@@ -101,13 +99,6 @@ function App() {
                               <AccessibilityEnhancements />
                             </div>
 
-                            {/* Sync Status Indicator */}
-                            <div className="fixed top-4 left-4 z-50">
-                              <SyncStatus />
-                            </div>
-
-                            {/* Offline Indicator */}
-                            <OfflineIndicator />
 
                             {/* Main Content */}
                             <div className="relative z-10">

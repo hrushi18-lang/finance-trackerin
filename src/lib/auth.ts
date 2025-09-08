@@ -5,7 +5,6 @@
 
 import { supabase } from './supabase';
 import { Database } from '../types/supabase';
-import { offlineStorage } from './offline-storage';
 
 export interface UserProfile {
   id: string;
@@ -57,7 +56,6 @@ class AuthManager {
           await this.loadUserProfile(session.user.id);
         } else if (event === 'SIGNED_OUT') {
           this.updateAuthState({ user: null, loading: false, error: null });
-          await offlineStorage.clearLocalData();
         }
       });
     } catch (error) {
@@ -149,8 +147,6 @@ class AuthManager {
       console.warn('Error creating profile in Supabase:', error);
     }
 
-    // Save to local storage regardless
-    await offlineStorage.saveToLocal('profiles', profile);
     return profile;
   }
 
