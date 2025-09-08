@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';
+import { CurrencySelector } from '../currency/CurrencySelector';
+import { CurrencyInput } from '../currency/CurrencyInput';
+import { LiveRateDisplay } from '../currency/LiveRateDisplay';
+import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { FinancialAccount, CreateAccountData } from '../../lib/finance-manager';
 
 interface AccountFormProps {
@@ -19,6 +23,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
   account,
   loading = false
 }) => {
+  const { displayCurrency, formatCurrency } = useEnhancedCurrency();
   const [formData, setFormData] = useState<CreateAccountData>({
     name: '',
     type: 'bank_savings',
@@ -26,7 +31,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
     institution: '',
     platform: '',
     account_number: '',
-    currency: 'USD'
+    currency: displayCurrency
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -50,7 +55,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
         institution: '',
         platform: '',
         account_number: '',
-        currency: 'USD'
+        currency: displayCurrency
       });
     }
     setErrors({});
@@ -103,14 +108,6 @@ export const AccountForm: React.FC<AccountFormProps> = ({
     { value: 'investment', label: 'Investment Account' }
   ];
 
-  const currencies = [
-    { value: 'USD', label: 'USD - US Dollar' },
-    { value: 'EUR', label: 'EUR - Euro' },
-    { value: 'GBP', label: 'GBP - British Pound' },
-    { value: 'INR', label: 'INR - Indian Rupee' },
-    { value: 'CAD', label: 'CAD - Canadian Dollar' },
-    { value: 'AUD', label: 'AUD - Australian Dollar' }
-  ];
 
   return (
     <Modal
@@ -161,12 +158,12 @@ export const AccountForm: React.FC<AccountFormProps> = ({
           <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
             Initial Balance
           </label>
-          <Input
-            type="number"
-            step="0.01"
-            placeholder="0.00"
+          <CurrencyInput
             value={formData.balance}
-            onChange={(e) => handleInputChange('balance', parseFloat(e.target.value) || 0)}
+            currencyCode={formData.currency}
+            onValueChange={(value) => handleInputChange('balance', value)}
+            onCurrencyChange={(currency) => handleInputChange('currency', currency)}
+            placeholder="0.00"
             error={!!errors.balance}
           />
           {errors.balance && (
@@ -178,22 +175,24 @@ export const AccountForm: React.FC<AccountFormProps> = ({
           <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
             Currency
           </label>
-          <select
+          <CurrencySelector
             value={formData.currency}
-            onChange={(e) => handleInputChange('currency', e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            style={{
-              backgroundColor: 'var(--background)',
-              color: 'var(--text-primary)',
-              borderColor: 'var(--border)'
-            }}
-          >
-            {currencies.map(currency => (
-              <option key={currency.value} value={currency.value}>
-                {currency.label}
-              </option>
-            ))}
-          </select>
+            onChange={(currency) => handleInputChange('currency', currency)}
+            showFlag={true}
+            showFullName={true}
+            popularOnly={false}
+          />
+          {formData.currency !== displayCurrency && (
+            <div className="mt-2">
+              <LiveRateDisplay
+                fromCurrency={formData.currency}
+                toCurrency={displayCurrency}
+                amount={formData.balance}
+                showTrend={true}
+                showLastUpdated={true}
+              />
+            </div>
+          )}
         </div>
 
         <div>

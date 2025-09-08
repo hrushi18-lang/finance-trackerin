@@ -7,8 +7,11 @@ import { AccountForm } from '../components/accounts/AccountForm';
 import { GoalsVaultManager } from '../components/accounts/GoalsVaultManager';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
+import { useEnhancedCurrency } from '../contexts/EnhancedCurrencyContext';
 import { useNavigate } from 'react-router-dom';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
+import { CurrencySelector } from '../components/currency/CurrencySelector';
+import { LiveRateDisplay } from '../components/currency/LiveRateDisplay';
 
 const Accounts: React.FC = () => {
   const navigate = useNavigate();
@@ -21,6 +24,14 @@ const Accounts: React.FC = () => {
     error 
   } = useFinance();
   const { formatCurrency } = useInternationalization();
+  const { 
+    displayCurrency, 
+    setDisplayCurrency, 
+    convertAmount, 
+    formatCurrency: formatCurrencyEnhanced,
+    getCurrencySymbol,
+    supportedCurrencies 
+  } = useEnhancedCurrency();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -48,15 +59,23 @@ const Accounts: React.FC = () => {
     return filtered;
   }, [accounts, searchTerm, showHidden]);
 
-  // Calculate total balance
+  // Calculate total balance with currency conversion
   const totalBalance = useMemo(() => {
     return accounts.reduce((sum, account) => {
       if (account.is_visible !== false) {
-        return account.type === 'credit_card' ? sum - (account.balance || 0) : sum + (account.balance || 0);
+        const accountBalance = account.balance || 0;
+        const accountCurrency = account.currency_code || 'USD';
+        
+        // Convert to display currency if different
+        const convertedBalance = accountCurrency !== displayCurrency 
+          ? (convertAmount(accountBalance, accountCurrency, displayCurrency) || accountBalance)
+          : accountBalance;
+        
+        return account.type === 'credit_card' ? sum - convertedBalance : sum + convertedBalance;
       }
       return sum;
     }, 0);
-  }, [accounts]);
+  }, [accounts, displayCurrency, convertAmount]);
 
   const handleCreateAccount = async (data: any) => {
     try {
@@ -161,7 +180,7 @@ const Accounts: React.FC = () => {
             <div className="text-center text-white">
               <p className="text-lg font-body mb-2 opacity-90">Total Net Worth</p>
               <p className="text-4xl font-serif font-bold mb-2">
-                {formatCurrency(totalBalance)}
+                {formatCurrencyEnhanced(totalBalance, displayCurrency)}
               </p>
               <p className="text-sm font-medium opacity-90">
                 {accounts.length} account{accounts.length !== 1 ? 's' : ''}
@@ -285,11 +304,21 @@ const Accounts: React.FC = () => {
                   
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-lg font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
-                        {formatCurrency(account.balance || 0)}
-                      </p>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-lg font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
+                          {formatCurrencyEnhanced(account.balance || 0, account.currency_code || 'USD')}
+                        </p>
+                        {account.currency_code && account.currency_code !== displayCurrency && (
+                          <span className="text-xs text-gray-500">
+                            ({formatCurrencyEnhanced(
+                              convertAmount(account.balance || 0, account.currency_code, displayCurrency) || account.balance || 0,
+                              displayCurrency
+                            )})
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
-                        {account.type?.replace('_', ' ').toUpperCase() || 'ACCOUNT'}
+                        {account.type?.replace('_', ' ').toUpperCase() || 'ACCOUNT'} • {account.currency_code || 'USD'}
                       </p>
                     </div>
                     <button

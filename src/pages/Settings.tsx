@@ -29,6 +29,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { financeManager } from '../lib/finance-manager';
 import { offlineStorage } from '../lib/offline-storage';
+import CustomCategoriesManager from '../components/settings/CustomCategoriesManager';
 
 const Settings: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -42,6 +43,7 @@ const Settings: React.FC = () => {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [showCustomCategories, setShowCustomCategories] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -191,6 +193,17 @@ const Settings: React.FC = () => {
       ]
     },
     {
+      title: 'Categories',
+      items: [
+        {
+          icon: <Edit size={20} />,
+          title: 'Custom Categories',
+          subtitle: 'Manage your custom income and expense categories',
+          onClick: () => setShowCustomCategories(true)
+        }
+      ]
+    },
+    {
       title: 'Appearance',
       items: [
         {
@@ -230,6 +243,12 @@ const Settings: React.FC = () => {
           title: 'About',
           subtitle: 'App version and information',
           onClick: () => {}
+        },
+        {
+          icon: <Database size={20} />,
+          title: 'Currency Demo',
+          subtitle: 'Test multi-currency features and live exchange rates',
+          onClick: () => navigate('/currency-demo')
         }
       ]
     },
@@ -643,6 +662,16 @@ const Settings: React.FC = () => {
             </div>
           </div>
         </div>
+      </Modal>
+
+      {/* Custom Categories Modal */}
+      <Modal
+        isOpen={showCustomCategories}
+        onClose={() => setShowCustomCategories(false)}
+        title="Custom Categories"
+        size="lg"
+      >
+        <CustomCategoriesManager />
       </Modal>
     </div>
   );

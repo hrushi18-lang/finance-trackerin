@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, Calendar, Plus, ArrowUpDown, TrendingUp, Edit3, Trash2, AlertCircle, CheckCircle, PiggyBank, TrendingDown, Eye } from 'lucide-react';
+import { Target, Calendar, Plus, ArrowUpDown, TrendingUp, Edit3, Trash2, AlertCircle, CheckCircle, PiggyBank, TrendingDown, Eye, ArrowLeft } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -286,7 +286,15 @@ const Goals: React.FC = () => {
       {/* Immersive Header */}
       <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-heading">Financial Goals</h1>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/cards')}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft size={20} className="text-gray-600" />
+            </button>
+            <h1 className="text-2xl font-heading">Financial Goals</h1>
+          </div>
           <button
             onClick={() => navigate('/goals/create')}
             className="btn-primary flex items-center space-x-2 px-4 py-2"

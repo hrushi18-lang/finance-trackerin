@@ -7,7 +7,10 @@ import { Button } from '../common/Button';
 import { CategorySelector } from '../common/CategorySelector';
 import { Goal } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
+import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
+import { CurrencyInput } from '../currency/CurrencyInput';
+import { LiveRateDisplay } from '../currency/LiveRateDisplay';
 import { AlertCircle } from 'lucide-react';
 import { useFinance } from '../../contexts/FinanceContext';
 
@@ -21,6 +24,7 @@ interface GoalFormData {
   activityScope: 'general' | 'account_specific' | 'category_based';
   accountIds: string[];
   targetCategory?: string;
+  currencyCode: string;
 }
 
 interface GoalFormProps {
@@ -37,9 +41,11 @@ export const GoalForm: React.FC<GoalFormProps> = ({
   initialData
 }) => {
   const { currency } = useInternationalization();
+  const { displayCurrency, formatCurrency, convertAmount } = useEnhancedCurrency();
   const { accounts } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [goalCurrency, setGoalCurrency] = useState(initialData?.currencyCode || displayCurrency);
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<GoalFormData>({
     defaultValues: {
@@ -51,7 +57,8 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       category: initialData?.category || '',
       activityScope: initialData?.activityScope || 'general',
       accountIds: initialData?.accountIds || [],
-      targetCategory: initialData?.targetCategory || ''
+      targetCategory: initialData?.targetCategory || '',
+      currencyCode: initialData?.currencyCode || displayCurrency
     },
   });
 
@@ -73,6 +80,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       await onSubmit({
         ...validatedData,
         targetDate: new Date(data.targetDate),
+        currencyCode: goalCurrency,
       });
       
     } catch (error: any) {
@@ -147,36 +155,61 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       </div>
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input
+        <CurrencyInput
           label="Target Amount"
-          type="number"
-          step="0.01"
-          icon={<CurrencyIcon currencyCode={currency.code} className="text-green-400" />}
-          {...register('targetAmount', {
-            required: 'Target amount is required',
-            min: { value: 1, message: 'Target amount must be greater than 0' },
-          })}
+          value={watch('targetAmount')}
+          currency={goalCurrency}
+          onValueChange={(value) => setValue('targetAmount', value)}
+          onCurrencyChange={setGoalCurrency}
+          placeholder="e.g., 5000"
+          showConversion={goalCurrency !== displayCurrency}
+          targetCurrency={displayCurrency}
           error={errors.targetAmount?.message}
-          className="bg-black/40 border-white/20 text-white"
-          placeholder={`e.g., 5000`}
+          className="text-white"
         />
       </div>
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input
+        <CurrencyInput
           label="Current Amount"
-          type="number"
-          step="0.01"
-          icon={<CurrencyIcon currencyCode={currency.code} className="text-yellow-400" />}
-          {...register('currentAmount', {
-            min: { value: 0, message: 'Current amount cannot be negative' },
-          })}
-          error={errors.currentAmount?.message}
-          className="bg-black/40 border-white/20 text-white"
+          value={watch('currentAmount')}
+          currency={goalCurrency}
+          onValueChange={(value) => setValue('currentAmount', value)}
+          onCurrencyChange={setGoalCurrency}
           placeholder="0"
-          helpText="How much have you already saved towards this goal?"
+          showConversion={goalCurrency !== displayCurrency}
+          targetCurrency={displayCurrency}
+          error={errors.currentAmount?.message}
+          className="text-white"
         />
+        <p className="text-xs text-gray-400 mt-1">How much have you already saved towards this goal?</p>
       </div>
+
+      {/* Live Rate Display */}
+      {goalCurrency !== displayCurrency && watch('targetAmount') && (
+        <div className="bg-gradient-to-r from-blue-500/20 to-green-500/20 rounded-xl p-4 border border-blue-500/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium text-blue-400 mb-1">Live Conversion</h4>
+              <p className="text-xs text-gray-300">
+                {formatCurrency(watch('targetAmount') || 0, goalCurrency)} = {' '}
+                {convertAmount(watch('targetAmount') || 0, goalCurrency, displayCurrency) 
+                  ? formatCurrency(convertAmount(watch('targetAmount') || 0, goalCurrency, displayCurrency)!, displayCurrency)
+                  : 'N/A'
+                }
+              </p>
+            </div>
+            <LiveRateDisplay
+              fromCurrency={goalCurrency}
+              toCurrency={displayCurrency}
+              amount={1}
+              compact={true}
+              showTrend={true}
+              showLastUpdated={false}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Activity Scope Selection */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">

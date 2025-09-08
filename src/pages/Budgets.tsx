@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { PieChart, Calculator, TrendingUp, AlertTriangle, Plus, Edit3, Trash2, AlertCircle, Target } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { PieChart, Calculator, TrendingUp, AlertTriangle, Plus, Edit3, Trash2, AlertCircle, Target, ArrowLeft } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 import { BudgetForm } from '../components/forms/BudgetForm';
 import { Button } from '../components/common/Button';
@@ -9,6 +10,7 @@ import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { Budget } from '../types';
 
 const Budgets: React.FC = () => {
+  const navigate = useNavigate();
   const { budgets, addBudget, updateBudget, deleteBudget, transactions } = useFinance();
   const { currency, formatCurrency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
@@ -99,7 +101,15 @@ const Budgets: React.FC = () => {
       {/* Immersive Header */}
       <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-heading">Budgets</h1>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/cards')}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft size={20} className="text-gray-600" />
+            </button>
+            <h1 className="text-2xl font-heading">Budgets</h1>
+          </div>
           <button
             onClick={() => setShowModal(true)}
             className="btn-primary flex items-center space-x-2 px-4 py-2"

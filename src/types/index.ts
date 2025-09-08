@@ -155,6 +155,9 @@ export interface Goal {
   status: 'active' | 'paused' | 'completed' | 'cancelled';
   createdAt: Date;
   updatedAt: Date;
+  // Activity scope and account linking
+  activityScope?: 'general' | 'account_specific' | 'category_based';
+  linkedAccountsCount?: number;
   // New completion and management fields
   completionDate?: Date;
   withdrawalDate?: Date;
@@ -199,10 +202,10 @@ export interface Asset {
   updatedAt: Date;
 }
 
-export interface Bill { // Renamed from Bill to EnhancedBill
+export interface Bill { // Enhanced Bill interface with all new features
   id: string;
   userId: string;
-  title: string; // Renamed from title to name
+  title: string;
   description?: string;
   category: string;
   billType: 'fixed' | 'variable' | 'one_time' | 'liability_linked';
@@ -210,21 +213,21 @@ export interface Bill { // Renamed from Bill to EnhancedBill
   estimatedAmount?: number;
   frequency: 'weekly' | 'bi_weekly' | 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'custom' | 'one_time';
   customFrequencyDays?: number;
-  dueDate: Date; // Renamed from due_date to dueDate
-  nextDueDate: Date; // Renamed from next_due_date to nextDueDate
+  dueDate: Date;
+  nextDueDate: Date;
   lastPaidDate?: Date;
-  defaultAccountId?: string; // Renamed from default_account_id to defaultAccountId
-  autoPay: boolean; // Renamed from auto_pay to autoPay
-  linkedLiabilityId?: string; // Renamed from linked_liability_id to linkedLiabilityId
-  isEmi: boolean; // Renamed from is_emi to isEmi
-  isActive: boolean; // Renamed from is_active to isActive
-  isEssential: boolean; // Renamed from is_essential to isEssential
-  reminderDaysBefore: number; // Renamed from reminder_days_before to reminderDaysBefore
-  sendDueDateReminder: boolean; // Renamed from send_due_date_reminder to sendDueDateReminder
-  sendOverdueReminder: boolean; // Renamed from send_overdue_reminder to sendOverdueReminder
+  defaultAccountId?: string;
+  autoPay: boolean;
+  linkedLiabilityId?: string;
+  isEmi: boolean;
+  isActive: boolean;
+  isEssential: boolean;
+  reminderDaysBefore: number;
+  sendDueDateReminder: boolean;
+  sendOverdueReminder: boolean;
   // Enhanced fields
   billCategory: 'account_specific' | 'category_based' | 'general_expense';
-  targetCategory?: string; // For category-based bills
+  targetCategory?: string;
   isRecurring: boolean;
   paymentMethod?: string;
   notes?: string;
@@ -232,6 +235,29 @@ export interface Bill { // Renamed from Bill to EnhancedBill
   status: 'active' | 'paused' | 'completed' | 'cancelled';
   activityScope: 'general' | 'account_specific' | 'category_based';
   accountIds: string[];
+  // New multi-currency support
+  currencyCode: string;
+  // Income bills support
+  isIncome: boolean;
+  // Bill staging support
+  billStage: 'pending' | 'paid' | 'moved' | 'failed' | 'stopped';
+  movedToDate?: Date;
+  stageReason?: string;
+  // Variable amount support
+  isVariableAmount: boolean;
+  minAmount?: number;
+  maxAmount?: number;
+  // Completion flow support
+  completionAction: 'continue' | 'extend' | 'archive' | 'delete';
+  completionDate?: Date;
+  completionNotes?: string;
+  originalAmount?: number;
+  extendedAmount?: number;
+  isArchived: boolean;
+  archivedDate?: Date;
+  archivedReason?: string;
+  // Multi-account support
+  linkedAccountsCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -370,6 +396,41 @@ export interface BillInstance {
   penaltyApplied: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface BillAccountLink {
+  id: string;
+  billId: string;
+  accountId: string;
+  userId: string;
+  isPrimary: boolean;
+  paymentPercentage: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BillStagingHistory {
+  id: string;
+  billId: string;
+  userId: string;
+  fromStage: string;
+  toStage: string;
+  stageReason?: string;
+  changedBy: string;
+  changedAt: Date;
+  metadata?: any;
+}
+
+export interface BillCompletionTracking {
+  id: string;
+  billId: string;
+  userId: string;
+  completionType: 'continue' | 'extend' | 'archive' | 'delete';
+  completionDate: Date;
+  completionReason?: string;
+  newAmount?: number;
+  newDueDate?: Date;
+  metadata?: any;
 }
 
 export interface LiabilityPayment {

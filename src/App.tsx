@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { FinanceProvider } from './contexts/FinanceContext';
 import { InternationalizationProvider } from './contexts/InternationalizationContext';
 import { CurrencyConversionProvider } from './contexts/CurrencyConversionContext';
+import { EnhancedCurrencyProvider } from './contexts/EnhancedCurrencyContext';
 import { PersonalizationProvider } from './contexts/PersonalizationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/common/Toast';
@@ -15,9 +16,12 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { BottomNavigation } from './components/layout/BottomNavigation';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
+import EnhancedOnboardingFlow from './components/onboarding/EnhancedOnboardingFlow';
 import { SyncStatus } from './components/sync/SyncStatus';
 import { AppInitializer } from './components/AppInitializer';
 import { AccessibilityEnhancements, useKeyboardNavigation } from './components/common/AccessibilityEnhancements';
+import { fontLoader } from './utils/fontLoader';
+import { registerSW } from './utils/registerSW';
 import './styles/accessibility.css';
 
 // Import pages directly to avoid lazy loading issues
@@ -31,6 +35,7 @@ import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
 import Goals from './pages/Goals';
 import Liabilities from './pages/Liabilities';
+import { EnhancedLiabilities } from './pages/EnhancedLiabilities';
 import Budgets from './pages/Budgets';
 import Overview from './pages/Overview';
 import Cards from './pages/Cards';
@@ -44,6 +49,7 @@ import Settings from './pages/Settings';
 import ThemeSettings from './pages/ThemeSettings';
 import Bills from './pages/Bills';
 import ProfileNew from './pages/ProfileNew';
+import CurrencyDemo from './pages/CurrencyDemo';
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -70,6 +76,12 @@ function App() {
   // Enable keyboard navigation
   useKeyboardNavigation();
 
+  // Initialize font loading and service worker
+  useEffect(() => {
+    fontLoader.preloadCriticalFonts();
+    registerSW();
+  }, []);
+
   return (
     <ErrorBoundary fallback={<ErrorFallback />}>
       <QueryClientProvider client={queryClient}>
@@ -78,10 +90,11 @@ function App() {
             <AuthProvider>
               <InternationalizationProvider>
                 <CurrencyConversionProvider>
-                  <PersonalizationProvider>
-                    <FinanceProvider>
+                  <EnhancedCurrencyProvider>
+                    <PersonalizationProvider>
+                      <FinanceProvider>
                     <AppInitializer>
-                      <Router>
+                      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                         <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
                           {/* Accessibility Enhancements */}
                           <div className="fixed top-4 right-4 z-50">
@@ -104,7 +117,7 @@ function App() {
                                 path="/onboarding" 
                                 element={
                                   <ProtectedRoute>
-                                    <OnboardingFlow 
+                                    <EnhancedOnboardingFlow 
                                       onComplete={() => {
                                         // Always redirect to dashboard after onboarding
                                         // Use SPA navigation instead of hard reload
@@ -248,6 +261,16 @@ function App() {
                               />
                               
                               <Route 
+                                path="/liabilities/enhanced" 
+                                element={
+                                  <ProtectedRoute>
+                                    <EnhancedLiabilities />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
                                 path="/budgets" 
                                 element={
                                   <ProtectedRoute>
@@ -328,6 +351,15 @@ function App() {
                               />
                               
                               <Route 
+                                path="/currency-demo" 
+                                element={
+                                  <ProtectedRoute>
+                                    <CurrencyDemo />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
                                 path="/theme-settings" 
                                 element={
                                   <ProtectedRoute>
@@ -344,8 +376,9 @@ function App() {
                       </Router>
                       <ReactQueryDevtools initialIsOpen={false} />
                     </AppInitializer>
-                    </FinanceProvider>
-                  </PersonalizationProvider>
+                      </FinanceProvider>
+                    </PersonalizationProvider>
+                  </EnhancedCurrencyProvider>
                 </CurrencyConversionProvider>
               </InternationalizationProvider>
             </AuthProvider>

@@ -1,0 +1,1033 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { ArrowLeft, ArrowRight, Check, User, Globe, Plus, Eye, EyeOff, Target, CreditCard, FileText, PieChart } from 'lucide-react';
+import { Button } from '../common/Button';
+import { Input } from '../common/Input';
+import { CurrencySelector } from '../currency/CurrencySelector';
+import { CurrencyInput } from '../currency/CurrencyInput';
+import { LiveRateDisplay } from '../currency/LiveRateDisplay';
+import { GoogleAuth } from '../auth/GoogleAuth';
+import { OfflineIndicator } from '../common/OfflineIndicator';
+import { PerformanceOptimizer } from '../common/PerformanceOptimizer';
+import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
+import { useFinance } from '../../contexts/FinanceContext';
+import { useOfflineStorage } from '../../hooks/useOfflineStorage';
+
+interface OnboardingStep {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  component: React.ReactNode;
+}
+
+interface UserProfile {
+  name: string;
+  age: number;
+  country: string;
+  profession: string;
+  monthlyIncome: number;
+  primaryCurrency: string;
+  displayCurrency: string;
+  autoConvert: boolean;
+  showOriginalAmounts: boolean;
+}
+
+interface CustomCategory {
+  id: string;
+  name: string;
+  type: 'income' | 'expense';
+  icon: string;
+  color: string;
+}
+
+interface BasicActivity {
+  id: string;
+  type: 'goal' | 'bill' | 'liability' | 'budget';
+  name: string;
+  amount: number;
+  currency: string;
+  description: string;
+}
+
+interface AccountSetup {
+  id: string;
+  name: string;
+  type: string;
+  balance: number;
+  currency: string;
+  isVisible: boolean;
+  institution?: string;
+}
+
+interface EnhancedOnboardingFlowProps {
+  onComplete: () => void;
+}
+
+export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ onComplete }) => {
+  const { displayCurrency } = useEnhancedCurrency();
+  const { addAccount, addGoal, addBill, addLiability } = useFinance();
+  const { isOnline, offlineData, saveOfflineData, syncData } = useOfflineStorage();
+  
+  const [currentStep, setCurrentStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    name: '',
+    age: 0,
+    country: '',
+    profession: '',
+    monthlyIncome: 0,
+    primaryCurrency: displayCurrency,
+    displayCurrency: displayCurrency,
+    autoConvert: true,
+    showOriginalAmounts: true
+  });
+  
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
+  const [basicActivities, setBasicActivities] = useState<BasicActivity[]>([]);
+  const [accounts, setAccounts] = useState<AccountSetup[]>([]);
+  const [newCategory, setNewCategory] = useState('');
+  const [newActivity, setNewActivity] = useState<Partial<BasicActivity>>({});
+  const [newAccount, setNewAccount] = useState<Partial<AccountSetup>>({});
+
+  // Load offline data on mount
+  useEffect(() => {
+    if (offlineData.userProfile) {
+      setUserProfile(offlineData.userProfile);
+    }
+    if (offlineData.customCategories) {
+      setCustomCategories(offlineData.customCategories);
+    }
+    if (offlineData.basicActivities) {
+      setBasicActivities(offlineData.basicActivities);
+    }
+    if (offlineData.accounts) {
+      setAccounts(offlineData.accounts);
+    }
+    if (offlineData.currentStep !== undefined) {
+      setCurrentStep(offlineData.currentStep);
+    }
+    if (offlineData.completedSteps) {
+      setCompletedSteps(new Set(offlineData.completedSteps));
+    }
+  }, [offlineData]);
+
+  // Auto-save data changes
+  const saveData = useCallback(() => {
+    saveOfflineData({
+      userProfile,
+      customCategories,
+      basicActivities,
+      accounts,
+      currentStep,
+      completedSteps: Array.from(completedSteps)
+    });
+  }, [userProfile, customCategories, basicActivities, accounts, currentStep, completedSteps, saveOfflineData]);
+
+  // Auto-save on data changes
+  useEffect(() => {
+    const timeoutId = setTimeout(saveData, 500); // Debounce saves
+    return () => clearTimeout(timeoutId);
+  }, [saveData]);
+
+  // Sync data when coming back online
+  useEffect(() => {
+    if (isOnline && Object.keys(offlineData).length > 0) {
+      syncData();
+    }
+  }, [isOnline, offlineData, syncData]);
+
+  const defaultCategories = [
+    { name: 'Food & Dining', icon: '🍛', color: '#FF6B6B' },
+    { name: 'Transportation', icon: '🚗', color: '#4ECDC4' },
+    { name: 'Bills & Utilities', icon: '📄', color: '#45B7D1' },
+    { name: 'Entertainment', icon: '🎉', color: '#96CEB4' },
+    { name: 'Health & Fitness', icon: '🏥', color: '#FFEAA7' },
+    { name: 'Education', icon: '🎓', color: '#DDA0DD' },
+    { name: 'Savings', icon: '🐷', color: '#98D8C8' },
+    { name: 'Investments', icon: '📈', color: '#F7DC6F' },
+    { name: 'Shopping', icon: '🛍️', color: '#BB8FCE' }
+  ];
+
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleComplete();
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const markStepComplete = (stepId: string) => {
+    setCompletedSteps(prev => new Set([...prev, stepId]));
+  };
+
+  const handleGoogleAuth = async (user: any) => {
+    setIsLoading(true);
+    try {
+      // In a real app, this would save user data to database
+      console.log('Google auth successful:', user);
+      markStepComplete('auth');
+    } catch (error) {
+      setError('Failed to authenticate with Google');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = (error: string) => {
+    setError(error);
+  };
+
+  const addCustomCategory = () => {
+    if (newCategory.trim()) {
+      const category: CustomCategory = {
+        id: Date.now().toString(),
+        name: newCategory.trim(),
+        type: 'expense',
+        icon: '📝',
+        color: '#6C5CE7'
+      };
+      setCustomCategories(prev => [...prev, category]);
+      setNewCategory('');
+    }
+  };
+
+  const addBasicActivity = () => {
+    if (newActivity.name && newActivity.amount && newActivity.type) {
+      const activity: BasicActivity = {
+        id: Date.now().toString(),
+        name: newActivity.name,
+        amount: newActivity.amount,
+        currency: newActivity.currency || displayCurrency,
+        type: newActivity.type,
+        description: newActivity.description || ''
+      };
+      setBasicActivities(prev => [...prev, activity]);
+      setNewActivity({});
+    }
+  };
+
+  const addAccountSetup = () => {
+    if (newAccount.name && newAccount.type && newAccount.balance !== undefined) {
+      const account: AccountSetup = {
+        id: Date.now().toString(),
+        name: newAccount.name,
+        type: newAccount.type,
+        balance: newAccount.balance,
+        currency: newAccount.currency || displayCurrency,
+        isVisible: true,
+        institution: newAccount.institution
+      };
+      setAccounts(prev => [...prev, account]);
+      setNewAccount({});
+    }
+  };
+
+  const toggleAccountVisibility = (accountId: string) => {
+    setAccounts(prev => prev.map(acc => 
+      acc.id === accountId ? { ...acc, isVisible: !acc.isVisible } : acc
+    ));
+  };
+
+  const handleComplete = async () => {
+    setIsLoading(true);
+    try {
+      // Save user profile
+      console.log('Saving user profile:', userProfile);
+      
+      // Save custom categories
+      console.log('Saving custom categories:', customCategories);
+      
+      // Save basic activities
+      for (const activity of basicActivities) {
+        switch (activity.type) {
+          case 'goal':
+            await addGoal({
+              title: activity.name,
+              targetAmount: activity.amount,
+              currentAmount: 0,
+              targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              category: 'Personal',
+              description: activity.description,
+              goalType: 'general_savings',
+              periodType: 'yearly',
+              isRecurring: false,
+              priority: 'medium',
+              status: 'active',
+              activityScope: 'general',
+              withdrawalAmount: 0,
+              isWithdrawn: false,
+              completionAction: 'waiting'
+            });
+            break;
+          case 'bill':
+            await addBill({
+              title: activity.name,
+              amount: activity.amount,
+              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              category: 'Utilities',
+              description: activity.description,
+              billType: 'fixed',
+              frequency: 'monthly',
+              nextDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              autoPay: false,
+              isEmi: false,
+              isActive: true,
+              isEssential: false,
+              reminderDaysBefore: 3,
+              sendDueDateReminder: true,
+              sendOverdueReminder: true,
+              billCategory: 'general_expense',
+              isRecurring: true,
+              priority: 'medium',
+              status: 'active',
+              activityScope: 'general',
+              accountIds: [],
+              currencyCode: activity.currency,
+              isIncome: false,
+              billStage: 'pending',
+              isVariableAmount: false,
+              completionAction: 'continue',
+              linkedAccountsCount: 0,
+              isArchived: false
+            });
+            break;
+          case 'liability':
+            await addLiability({
+              name: activity.name,
+              totalAmount: activity.amount,
+              remainingAmount: activity.amount,
+              monthlyPayment: activity.amount / 12,
+              minimumPayment: activity.amount / 24,
+              dueDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              liabilityType: 'personal_loan',
+              description: activity.description,
+              currencyCode: activity.currency,
+              priority: 'medium',
+              status: 'active',
+              activityScope: 'general',
+              isActive: true,
+              autoGenerateBills: true,
+              reminderDays: 7,
+              notes: '',
+              interestRate: 0,
+              startDate: new Date(),
+              modificationCount: 0,
+              liabilityStatus: 'new',
+              paymentDay: 1,
+              affectsCreditScore: true,
+              isSecured: false,
+              providesFunds: false,
+              billGenerationDay: 1,
+              sendReminders: true,
+              paymentStrategy: 'equal',
+              paymentAccounts: [],
+              paymentPercentages: [],
+              typeSpecificData: {},
+              accountIds: []
+            });
+            break;
+        }
+      }
+      
+      // Save accounts
+      for (const account of accounts) {
+        await addAccount({
+          name: account.name,
+          type: account.type as any,
+          balance: account.balance,
+          institution: account.institution,
+          currency: account.currency,
+          currencyCode: account.currency,
+          isVisible: account.isVisible
+        });
+      }
+      
+      onComplete();
+    } catch (error) {
+      setError('Failed to complete setup');
+      console.error('Setup error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Memoize steps to prevent unnecessary re-renders
+  const steps: OnboardingStep[] = useMemo(() => [
+    {
+      id: 'welcome',
+      title: 'Welcome to FinTrack',
+      description: 'Your personal finance companion',
+      icon: <Check size={24} />,
+      component: (
+        <div className="text-center space-y-8">
+          <div className="w-24 h-24 mx-auto rounded-full flex items-center justify-center bg-blue-600">
+            <span className="text-4xl">💰</span>
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold mb-4 text-gray-800">
+              Welcome to FinTrack!
+            </h2>
+            <p className="text-lg text-gray-600">
+              Let's set up your personal finance management system
+            </p>
+          </div>
+          <div className="space-y-4 text-left">
+            <div className="flex items-center space-x-3">
+              <Check size={20} className="text-green-600" />
+              <span className="text-gray-600">
+                Multi-currency support with live exchange rates
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Check size={20} className="text-green-600" />
+              <span className="text-gray-600">
+                Smart budgeting and goal tracking
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Check size={20} className="text-green-600" />
+              <span className="text-gray-600">
+                Works offline, syncs online
+              </span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'auth',
+      title: 'Get Started',
+      description: 'Sign in to begin your financial journey',
+      icon: <User size={24} />,
+      component: (
+        <div className="space-y-6">
+          <div className="text-center">
+            <p className="text-lg text-gray-600 mb-6">
+              Choose how you'd like to sign in
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <GoogleAuth
+              mode="signup"
+              onSuccess={handleGoogleAuth}
+              onError={handleGoogleError}
+              loading={isLoading}
+            />
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">or</span>
+              </div>
+            </div>
+            
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() => markStepComplete('auth')}
+              className="py-4 rounded-2xl"
+            >
+              Continue with Email
+            </Button>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-sm text-gray-500">
+              Already have an account?{' '}
+              <button className="text-blue-600 hover:underline font-medium">
+                Sign In
+              </button>
+            </p>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'profile',
+      title: "Let's get to know you",
+      description: 'Personalize your financial journey',
+      icon: <User size={24} />,
+      component: (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">
+                Full Name *
+              </label>
+              <Input
+                type="text"
+                placeholder="Enter your full name"
+                value={userProfile.name}
+                onChange={(e) => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
+                className="py-3"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Age
+                </label>
+                <Input
+                  type="number"
+                  placeholder="25"
+                  value={userProfile.age || ''}
+                  onChange={(e) => setUserProfile(prev => ({ ...prev, age: parseInt(e.target.value) || 0 }))}
+                  className="py-3"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Country
+                </label>
+                <Input
+                  type="text"
+                  placeholder="India"
+                  value={userProfile.country}
+                  onChange={(e) => setUserProfile(prev => ({ ...prev, country: e.target.value }))}
+                  className="py-3"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">
+                Profession
+              </label>
+              <Input
+                type="text"
+                placeholder="Software Engineer"
+                value={userProfile.profession}
+                onChange={(e) => setUserProfile(prev => ({ ...prev, profession: e.target.value }))}
+                className="py-3"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">
+                Monthly Income
+              </label>
+              <CurrencyInput
+                value={userProfile.monthlyIncome}
+                currency={userProfile.primaryCurrency}
+                onValueChange={(value) => setUserProfile(prev => ({ ...prev, monthlyIncome: typeof value === 'number' ? value : 0 }))}
+                onCurrencyChange={(currency) => setUserProfile(prev => ({ ...prev, primaryCurrency: currency, displayCurrency: currency }))}
+                placeholder="50000"
+                showConversion={userProfile.primaryCurrency !== displayCurrency}
+                targetCurrency={displayCurrency}
+              />
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'currency',
+      title: 'Choose your currency',
+      description: 'Select your primary currency for financial tracking',
+      icon: <Globe size={24} />,
+      component: (
+        <div className="space-y-6">
+          <div className="text-center">
+            <p className="text-lg text-gray-600 mb-4">
+              Choose your primary currency. You can always change this later.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <CurrencySelector
+              label="Primary Currency"
+              value={userProfile.primaryCurrency}
+              onChange={(currency) => setUserProfile(prev => ({ 
+                ...prev, 
+                primaryCurrency: currency,
+                displayCurrency: currency 
+              }))}
+              showFlag={true}
+              showFullName={true}
+              popularOnly={false}
+            />
+            
+            <div className="space-y-3">
+              <label className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  checked={userProfile.autoConvert}
+                  onChange={(e) => setUserProfile(prev => ({ ...prev, autoConvert: e.target.checked }))}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">
+                  Automatically convert amounts to my primary currency
+                </span>
+              </label>
+              
+              <label className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  checked={userProfile.showOriginalAmounts}
+                  onChange={(e) => setUserProfile(prev => ({ ...prev, showOriginalAmounts: e.target.checked }))}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">
+                  Show original amounts alongside converted amounts
+                </span>
+              </label>
+            </div>
+            
+            {userProfile.primaryCurrency !== 'USD' && (
+              <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                <LiveRateDisplay
+                  fromCurrency={userProfile.primaryCurrency}
+                  toCurrency="USD"
+                  amount={100}
+                  showTrend={true}
+                  showLastUpdated={true}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'categories',
+      title: 'Select Categories',
+      description: 'Choose your spending categories. You can add your own.',
+      icon: <PieChart size={24} />,
+      component: (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-gray-800">
+              Default Categories
+            </h3>
+            <div className="grid grid-cols-3 gap-3">
+              {defaultCategories.map((category, index) => (
+                <button
+                  key={index}
+                  className="p-4 rounded-xl border-2 border-dashed border-gray-300 hover:border-solid hover:border-blue-500 transition-all duration-200 text-center bg-gray-50 hover:bg-blue-50"
+                >
+                  <div className="text-2xl mb-2">{category.icon}</div>
+                  <div className="text-sm font-medium text-gray-700">
+                    {category.name}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-gray-800">
+              Custom Categories
+            </h3>
+            <div className="flex space-x-2">
+              <Input
+                type="text"
+                placeholder="Add custom category"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                variant="primary"
+                onClick={addCustomCategory}
+                className="px-4"
+              >
+                <Plus size={16} />
+              </Button>
+            </div>
+            
+            {customCategories.length > 0 && (
+              <div className="space-y-2">
+                {customCategories.map((category) => (
+                  <div
+                    key={category.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-lg">{category.icon}</span>
+                      <span className="font-medium text-gray-700">
+                        {category.name}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setCustomCategories(prev => prev.filter(c => c.id !== category.id))}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <FileText size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'activities',
+      title: 'Create Activities',
+      description: 'Set up goals, bills, liabilities, and budgets to stay on track.',
+      icon: <Target size={24} />,
+      component: (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-gray-800">
+              Add Basic Activities
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <select
+                  value={newActivity.type || ''}
+                  onChange={(e) => setNewActivity(prev => ({ ...prev, type: e.target.value as any }))}
+                  className="px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700"
+                >
+                  <option value="">Select type</option>
+                  <option value="goal">Goal</option>
+                  <option value="bill">Bill</option>
+                  <option value="liability">Liability</option>
+                  <option value="budget">Budget</option>
+                </select>
+                
+                <Input
+                  type="text"
+                  placeholder="Activity name"
+                  value={newActivity.name || ''}
+                  onChange={(e) => setNewActivity(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <CurrencyInput
+                  value={newActivity.amount || 0}
+                  currency={newActivity.currency || displayCurrency}
+                  onValueChange={(value) => setNewActivity(prev => ({ ...prev, amount: typeof value === 'number' ? value : 0 }))}
+                  onCurrencyChange={(currency) => setNewActivity(prev => ({ ...prev, currency }))}
+                  placeholder="0"
+                />
+                
+                <Input
+                  type="text"
+                  placeholder="Description (optional)"
+                  value={newActivity.description || ''}
+                  onChange={(e) => setNewActivity(prev => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+              
+              <Button
+                variant="primary"
+                onClick={addBasicActivity}
+                className="w-full"
+                disabled={!newActivity.type || !newActivity.name || !newActivity.amount}
+              >
+                <Plus size={16} className="mr-2" />
+                Add Activity
+              </Button>
+            </div>
+            
+            {basicActivities.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-medium text-gray-800">
+                  Your Activities
+                </h4>
+                {basicActivities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-lg">
+                        {activity.type === 'goal' ? '🏆' : 
+                         activity.type === 'bill' ? '📄' :
+                         activity.type === 'liability' ? '💳' : '📊'}
+                      </span>
+                      <div>
+                        <div className="font-medium text-gray-700">
+                          {activity.name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {activity.type} • {activity.currency} {activity.amount}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setBasicActivities(prev => prev.filter(a => a.id !== activity.id))}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <FileText size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'accounts',
+      title: 'Set Up Your Accounts',
+      description: 'Start by adding your accounts. You can add more later.',
+      icon: <CreditCard size={24} />,
+      component: (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-gray-800">
+              Add Account
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  type="text"
+                  placeholder="Account name"
+                  value={newAccount.name || ''}
+                  onChange={(e) => setNewAccount(prev => ({ ...prev, name: e.target.value }))}
+                />
+                
+                <select
+                  value={newAccount.type || ''}
+                  onChange={(e) => setNewAccount(prev => ({ ...prev, type: e.target.value }))}
+                  className="px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700"
+                >
+                  <option value="">Select type</option>
+                  <option value="bank_savings">Savings</option>
+                  <option value="bank_current">Current</option>
+                  <option value="digital_wallet">Digital Wallet</option>
+                  <option value="cash">Cash</option>
+                  <option value="credit_card">Credit Card</option>
+                </select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <CurrencyInput
+                  value={newAccount.balance || 0}
+                  currency={newAccount.currency || displayCurrency}
+                  onValueChange={(value) => setNewAccount(prev => ({ ...prev, balance: typeof value === 'number' ? value : 0 }))}
+                  onCurrencyChange={(currency) => setNewAccount(prev => ({ ...prev, currency }))}
+                  placeholder="0"
+                />
+                
+                <Input
+                  type="text"
+                  placeholder="Institution (optional)"
+                  value={newAccount.institution || ''}
+                  onChange={(e) => setNewAccount(prev => ({ ...prev, institution: e.target.value }))}
+                />
+              </div>
+              
+              <Button
+                variant="primary"
+                onClick={addAccountSetup}
+                className="w-full"
+                disabled={!newAccount.name || !newAccount.type || newAccount.balance === undefined}
+              >
+                <Plus size={16} className="mr-2" />
+                Add Account
+              </Button>
+            </div>
+            
+            {accounts.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-medium text-gray-800">
+                  Your Accounts
+                </h4>
+                {accounts.map((account) => (
+                  <div
+                    key={account.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-lg">
+                        {account.type === 'bank_savings' ? '🏦' :
+                         account.type === 'bank_current' ? '🏦' :
+                         account.type === 'digital_wallet' ? '📱' :
+                         account.type === 'cash' ? '💵' : '💳'}
+                      </span>
+                      <div>
+                        <div className="font-medium text-gray-700">
+                          {account.name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {account.currency} {account.balance} • {account.type.replace('_', ' ')}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => toggleAccountVisibility(account.id)}
+                        className={`p-1 rounded ${account.isVisible ? 'text-green-600' : 'text-gray-400'}`}
+                      >
+                        {account.isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+                      </button>
+                      <button
+                        onClick={() => setAccounts(prev => prev.filter(a => a.id !== account.id))}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <FileText size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'complete',
+      title: 'You\'re all set!',
+      description: 'Your FinTrack account is ready to use',
+      icon: <Check size={24} />,
+      component: (
+        <div className="text-center space-y-6">
+          <div className="w-24 h-24 mx-auto rounded-full flex items-center justify-center bg-green-600">
+            <Check size={32} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold mb-2 text-gray-800">
+              Welcome to FinTrack!
+            </h2>
+            <p className="text-lg text-gray-600">
+              Your personal finance management system is ready to go.
+            </p>
+          </div>
+          <div className="space-y-3 text-left">
+            <div className="flex items-center space-x-3">
+              <Check size={16} className="text-green-600" />
+              <span className="text-sm text-gray-600">
+                Profile setup complete
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Check size={16} className="text-green-600" />
+              <span className="text-sm text-gray-600">
+                Currency preferences set ({userProfile.primaryCurrency})
+              </span>
+            </div>
+            {customCategories.length > 0 && (
+              <div className="flex items-center space-x-3">
+                <Check size={16} className="text-green-600" />
+                <span className="text-sm text-gray-600">
+                  {customCategories.length} custom categories added
+                </span>
+              </div>
+            )}
+            {basicActivities.length > 0 && (
+              <div className="flex items-center space-x-3">
+                <Check size={16} className="text-green-600" />
+                <span className="text-sm text-gray-600">
+                  {basicActivities.length} activities created
+                </span>
+              </div>
+            )}
+            {accounts.length > 0 && (
+              <div className="flex items-center space-x-3">
+                <Check size={16} className="text-green-600" />
+                <span className="text-sm text-gray-600">
+                  {accounts.length} accounts added
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    }
+  ], [userProfile, customCategories, basicActivities, accounts, displayCurrency, handleGoogleAuth, handleGoogleError, isLoading, addCustomCategory, addBasicActivity, addAccountSetup, toggleAccountVisibility]);
+
+  const currentStepData = steps[currentStep];
+  const isLastStep = currentStep === steps.length - 1;
+  const canProceed = currentStep === 0 || completedSteps.has(currentStepData.id) || isLastStep;
+
+  return (
+    <PerformanceOptimizer>
+      <div className="min-h-screen flex items-center justify-center px-4 bg-amber-50">
+        <OfflineIndicator isOnline={isOnline} />
+        <div className="w-full max-w-md">
+        {/* Progress Indicator */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-gray-500">
+              Step {currentStep + 1} of {steps.length}
+            </span>
+            <span className="text-xs text-gray-500">
+              {Math.round(((currentStep + 1) / steps.length) * 100)}%
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="h-2 rounded-full transition-all duration-300 bg-blue-600"
+              style={{
+                width: `${((currentStep + 1) / steps.length) * 100}%`
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Step Content */}
+        <div className="p-8 rounded-2xl mb-6 bg-white shadow-2xl">
+          <div className="text-center mb-6">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center bg-blue-600 text-white">
+              {currentStepData.icon}
+            </div>
+            <h1 className="text-2xl font-bold mb-2 text-gray-800">
+              {currentStepData.title}
+            </h1>
+            <p className="text-sm text-gray-600">
+              {currentStepData.description}
+            </p>
+          </div>
+
+          {currentStepData.component}
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200">
+            <p className="text-sm text-red-600 text-center">{error}</p>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between">
+          <Button
+            variant="secondary"
+            onClick={handlePrevious}
+            disabled={currentStep === 0}
+            className="flex items-center space-x-2"
+          >
+            <ArrowLeft size={16} />
+            <span>Back</span>
+          </Button>
+          
+          <Button
+            variant="primary"
+            onClick={handleNext}
+            disabled={!canProceed || isLoading}
+            loading={isLoading}
+            className="flex items-center space-x-2"
+          >
+            <span>{isLastStep ? 'Get Started' : 'Continue'}</span>
+            {!isLastStep && <ArrowRight size={16} />}
+          </Button>
+        </div>
+        </div>
+      </div>
+    </PerformanceOptimizer>
+  );
+};
+
+export default EnhancedOnboardingFlow;

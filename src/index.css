@@ -2,6 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
 /* Theme System - Multiple Themes Support */
 :root {
   /* Default Theme - Cool Blue + Neumorphic */
@@ -10,9 +39,9 @@
   --primary-dark: #1d4ed8;
   
   /* Background Colors */
-  --background: #f8fafc;
-  --background-secondary: #f1f5f9;
-  --background-tertiary: #e2e8f0;
+  --background: #F5F5DC; /* Cream background */
+  --background-secondary: #f8f8f0;
+  --background-tertiary: #f0f0e8;
   
   /* Surface Colors */
   --surface: #ffffff;
@@ -47,11 +76,11 @@
   --neumorphic-light: 8px 8px 16px rgba(255, 255, 255, 0.7), -8px -8px 16px rgba(37, 99, 235, 0.1);
   --neumorphic-inset: inset 8px 8px 16px rgba(37, 99, 235, 0.1), inset -8px -8px 16px rgba(255, 255, 255, 0.7);
   
-  /* Typography Variables */
-  --font-heading: 'Archivo Black', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-numbers: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-serif: 'Playfair Display', serif;
+  /* Typography Variables - Exact Font Specifications */
+  --font-heading: 'Archivo Black', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-numbers: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-titles: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-description: 'Playfair Display', 'Times New Roman', 'Times', serif;
 }
 
 /* Olive Green Theme */
@@ -97,7 +126,26 @@ body {
   transition: all 0.3s ease;
 }
 
-/* Typography Classes */
+/* Font fallback styles - Exact Font Specifications */
+.fonts-fallback {
+  --font-heading: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-numbers: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-titles: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-description: 'Times New Roman', 'Times', serif;
+}
+
+/* Font loading states */
+.font-loading {
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.font-loaded {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Typography Classes - Exact Font Specifications */
 .font-heading {
   font-family: var(--font-heading);
   font-weight: 900;
@@ -113,27 +161,42 @@ body {
   letter-spacing: -0.025em;
 }
 
+.font-titles {
+  font-family: var(--font-titles);
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.025em;
+}
+
+.font-description {
+  font-family: var(--font-description);
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-style: normal;
+}
+
+/* Legacy support - map old classes to new specifications */
 .font-body {
-  font-family: var(--font-body);
+  font-family: var(--font-titles);
   font-weight: 500;
   color: var(--text-secondary);
 }
 
 .font-body-light {
-  font-family: var(--font-body);
+  font-family: var(--font-titles);
   font-weight: 400;
   color: var(--text-secondary);
 }
 
 .font-serif {
-  font-family: var(--font-serif);
+  font-family: var(--font-description);
   font-weight: 500;
   color: var(--text-primary);
   font-style: italic;
 }
 
 .font-serif-light {
-  font-family: var(--font-serif);
+  font-family: var(--font-description);
   font-weight: 400;
   color: var(--text-secondary);
   font-style: italic;
@@ -319,10 +382,56 @@ html {
   min-width: 44px;
 }
 
-/* Fix for iOS input zoom */
+/* Mobile font optimizations */
 @media screen and (max-width: 768px) {
+  /* Prevent iOS input zoom */
   input, select, textarea {
     font-size: 16px !important;
+  }
+  
+  /* Optimize font rendering for mobile */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  }
+  
+  /* Ensure consistent font loading */
+  .font-heading, .font-body, .font-numbers {
+    font-display: swap;
+  }
+  
+  /* Mobile-specific font sizes */
+  .mobile-text-hero {
+    font-size: 2rem;
+    line-height: 1.1;
+    font-weight: 700;
+  }
+  
+  .mobile-text-display {
+    font-size: 1.5rem;
+    line-height: 1.2;
+    font-weight: 600;
+  }
+  
+  .mobile-text-lg {
+    font-size: 1.125rem;
+    line-height: 1.4;
+    font-weight: 500;
+  }
+  
+  /* Improve text readability on mobile */
+  p, span, div {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* Better font rendering on high DPI screens */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    body {
+      -webkit-font-smoothing: subpixel-antialiased;
+    }
   }
 }
 

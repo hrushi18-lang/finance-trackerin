@@ -9,6 +9,7 @@ export interface EnhancedLiability {
   name: string;
   liabilityType: LiabilityType;
   description?: string;
+  liabilityStatus: 'new' | 'existing' | 'paid_off' | 'defaulted' | 'restructured' | 'closed' | 'archived';
   totalAmount: number;
   remainingAmount: number;
   interestRate: number;
@@ -17,7 +18,7 @@ export interface EnhancedLiability {
   paymentDay: number;
   loanTermMonths?: number;
   remainingTermMonths?: number;
-  startDate?: Date;
+  startDate: Date;
   dueDate?: Date;
   nextPaymentDate?: Date;
   linkedAssetId?: string;
@@ -32,10 +33,23 @@ export interface EnhancedLiability {
   defaultPaymentAccountId?: string;
   autoGenerateBills: boolean;
   billGenerationDay: number;
+  sendReminders: boolean;
+  reminderDays: number;
+  paymentStrategy: 'equal' | 'proportional' | 'priority' | 'manual';
+  paymentAccounts: string[];
+  paymentPercentages: number[];
+  originalAmount?: number;
+  originalTermMonths?: number;
+  originalStartDate?: Date;
+  modificationCount: number;
+  lastModifiedDate?: Date;
+  modificationReason?: string;
+  typeSpecificData: Record<string, any>;
+  currencyCode: string;
   activityScope: 'general' | 'account_specific' | 'category_based';
   accountIds: string[];
   targetCategory?: string;
-  priority: 'low' | 'medium' | 'high';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -292,6 +306,29 @@ export interface InterestAnalysisData {
   interestRemaining: number;
   monthlyInterest: number;
   interestPercentage: number;
+}
+
+export interface LiabilityModification {
+  id: string;
+  userId: string;
+  liabilityId: string;
+  modificationType: 'amount_change' | 'term_change' | 'date_change' | 'account_change' | 'status_change';
+  oldValue: Record<string, any>;
+  newValue: Record<string, any>;
+  reason: string;
+  modifiedAt: Date;
+  createdAt: Date;
+}
+
+export interface LiabilityAccountLink {
+  id: string;
+  userId: string;
+  liabilityId: string;
+  accountId: string;
+  paymentPercentage: number;
+  isPrimary: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Export all types

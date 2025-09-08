@@ -1,91 +1,63 @@
 import React, { useState } from 'react';
-import { CreditCard, Calendar, Percent, TrendingDown, Plus, Edit3, Trash2, BarChart3, Calculator, Info, AlertTriangle, ShoppingCart, CheckCircle, Building, Car, Home, GraduationCap, Wallet, Target, Clock, DollarSign } from 'lucide-react';
-import { format, differenceInDays } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { CreditCard, Plus, Edit3, Trash2, BarChart3, Calculator, AlertTriangle, CheckCircle, Building, Car, Home, GraduationCap, Wallet, DollarSign, ArrowLeft, Search } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
-import { EnhancedLiabilityForm } from '../components/forms/EnhancedLiabilityForm';
+import { LuxuryLiabilityForm } from '../components/forms/LuxuryLiabilityForm';
+import { LiabilityModificationForm } from '../components/forms/LiabilityModificationForm';
 import { PaymentForm } from '../components/forms/PaymentForm';
-import { Button } from '../components/common/Button';
+import { Input } from '../components/common/Input';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
-import { CurrencyIcon } from '../components/common/CurrencyIcon';
-import { DebtStrategyTool } from '../components/liabilities/DebtStrategyTool';
+import { LiabilityType } from '../lib/liability-behaviors';
 
 const Liabilities: React.FC = () => {
-  const { liabilities, addLiability, updateLiability, deleteLiability, addTransaction, accounts, repayLiabilityFromAccount } = useFinance();
-  const { currency, formatCurrency } = useInternationalization();
+  const navigate = useNavigate();
+  const { liabilities, updateLiability, deleteLiability, accounts, repayLiabilityFromAccount } = useFinance();
+  const { formatCurrency } = useInternationalization();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showLuxuryForm, setShowLuxuryForm] = useState(false);
+  const [showModificationForm, setShowModificationForm] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedLiability, setSelectedLiability] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingLiability, setEditingLiability] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [liabilityToDelete, setLiabilityToDelete] = useState<string | null>(null);
-  const [showStrategyTool, setShowStrategyTool] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'payments'>('overview');
+  
+  // Enhanced features state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<LiabilityType | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'paid_off' | 'overdue'>('all');
 
-  const handleAddLiability = async (liability: any) => {
+  // Enhanced handler functions
+  const handleLuxuryFormComplete = () => {
+    setShowLuxuryForm(false);
+    // Liability is already created by the form
+  };
+
+  const handleModifyLiability = async (modificationData: any) => {
+    if (!selectedLiability) return;
+
     try {
       setIsSubmitting(true);
       setError(null);
+
+      // For now, we'll use updateLiability - in a full implementation, you'd use modifyLiability
+      await updateLiability(selectedLiability, modificationData);
       
-      // Create the liability
-      await addLiability({
-        name: liability.name,
-        liabilityType: liability.liabilityType,
-        description: liability.description,
-        totalAmount: liability.totalAmount || liability.remainingAmount,
-        remainingAmount: liability.remainingAmount,
-        interestRate: liability.interestRate,
-        monthlyPayment: liability.monthlyPayment || liability.minimumPayment || 0,
-        minimumPayment: liability.minimumPayment || 0,
-        paymentDay: liability.paymentDay || 1,
-        loanTermMonths: liability.loanTermMonths,
-        remainingTermMonths: liability.loanTermMonths,
-        startDate: new Date(liability.startDate),
-        dueDate: liability.dueDate ? new Date(liability.dueDate) : undefined,
-        nextPaymentDate: liability.dueDate ? new Date(liability.dueDate) : undefined,
-        linkedAssetId: liability.linkedAssetId,
-        status: 'active',
-        isActive: true,
-        affectsCreditScore: liability.affectsCreditScore || false,
-        isSecured: liability.isSecured || false,
-        providesFunds: liability.providesFunds || false,
-        autoGenerateBills: liability.autoGenerateBills || false,
-        billGenerationDay: liability.billGenerationDay || 1,
-        activityScope: liability.activityScope || 'general',
-        accountIds: liability.accountIds || [],
-        targetCategory: liability.targetCategory,
-        priority: liability.priority || 'medium'
-      });
-      
-      setShowModal(false);
+      setShowModificationForm(false);
+      setSelectedLiability(null);
     } catch (error: any) {
-      console.error('Error adding liability:', error);
-      setError(error.message || 'Failed to add liability');
+      console.error('Error modifying liability:', error);
+      setError(error.message || 'Failed to modify liability');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleEditLiability = async (liability: any) => {
-    try {
-      setIsSubmitting(true);
-      setError(null);
-      
-      if (editingLiability) {
-        await updateLiability(editingLiability.id, liability);
-        setEditingLiability(null);
-        setShowEditModal(false);
-      }
-    } catch (error: any) {
-      console.error('Error updating liability:', error);
-      setError(error.message || 'Failed to update liability');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
 
   const handleMakePayment = async (paymentData: { amount: number; description: string; createTransaction: boolean; accountId: string }) => {
     const liability = liabilities.find(l => l.id === selectedLiability);
@@ -175,19 +147,110 @@ const Liabilities: React.FC = () => {
     return { status: 'Active', color: 'text-blue-600 bg-blue-100' };
   };
 
+
+  // Filter liabilities based on search and filters
+  const filteredLiabilities = (liabilities || []).filter(liability => {
+    const matchesSearch = liability.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         liability.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesType = filterType === 'all' || liability.liabilityType === filterType;
+    
+    const matchesStatus = (() => {
+      if (filterStatus === 'all') return true;
+      if (filterStatus === 'active') return liability.liabilityStatus === 'new' || liability.liabilityStatus === 'existing';
+      if (filterStatus === 'paid_off') return liability.liabilityStatus === 'paid_off';
+      if (filterStatus === 'overdue') {
+        if (!liability.nextPaymentDate) return false;
+        return new Date(liability.nextPaymentDate) < new Date() && liability.remainingAmount > 0;
+      }
+      return true;
+    })();
+
+    return matchesSearch && matchesType && matchesStatus;
+  });
+
+
+  // Convert EnhancedLiability to Liability for PaymentForm
+  const convertToLiability = (enhancedLiability: any) => {
+    return {
+      id: enhancedLiability.id,
+      name: enhancedLiability.name,
+      type: enhancedLiability.liabilityType,
+      totalAmount: enhancedLiability.totalAmount,
+      remainingAmount: enhancedLiability.remainingAmount,
+      interestRate: enhancedLiability.interestRate,
+      monthlyPayment: enhancedLiability.monthlyPayment,
+      due_date: enhancedLiability.dueDate || enhancedLiability.nextPaymentDate
+    };
+  };
+
   return (
     <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
       {/* Immersive Header */}
       <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-heading">Liabilities</h1>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/cards')}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft size={20} className="text-gray-600" />
+            </button>
+            <h1 className="text-2xl font-heading">Liabilities</h1>
+          </div>
           <button
-            onClick={() => setShowModal(true)}
-            className="btn-primary flex items-center space-x-2 px-4 py-2"
+            onClick={() => setShowLuxuryForm(true)}
+            className="btn-primary flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
           >
-            <Plus size={16} />
-            <span>Add Liability</span>
+            <Plus size={20} />
+            <span className="font-semibold">Add Liability</span>
           </button>
+        </div>
+      </div>
+      
+      {/* Enhanced Filters */}
+      <div className="px-4 mb-4">
+        <div className="card p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Input
+              placeholder="Search liabilities..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              icon={<Search size={18} className="text-blue-400" />}
+              className="bg-white border-gray-200 text-gray-900"
+            />
+            
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as LiabilityType | 'all')}
+              className="px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:border-primary-500 focus:ring-primary-500"
+            >
+              <option value="all">All Types</option>
+              <option value="education_loan">Education Loan</option>
+              <option value="student_credit_card">Student Credit Card</option>
+              <option value="family_debt">Family Debt</option>
+              <option value="bnpl">Buy Now Pay Later</option>
+              <option value="personal_loan">Personal Loan</option>
+              <option value="credit_card">Credit Card</option>
+              <option value="auto_loan">Auto Loan</option>
+              <option value="home_loan">Home Loan</option>
+              <option value="gold_loan">Gold Loan</option>
+              <option value="utility_debt">Utility Debt</option>
+              <option value="tax_debt">Tax Debt</option>
+              <option value="international_debt">International Debt</option>
+            </select>
+
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as any)}
+              className="px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:border-primary-500 focus:ring-primary-500"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="paid_off">Paid Off</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
         </div>
       </div>
       
@@ -221,10 +284,11 @@ const Liabilities: React.FC = () => {
                 Add your first liability to start tracking your debt
               </p>
               <button
-                onClick={() => setShowModal(true)}
-                className="btn-primary"
+                onClick={() => setShowLuxuryForm(true)}
+                className="btn-primary bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                Add Liability
+                <Plus size={20} className="mr-2" />
+                Add Your First Liability
               </button>
             </div>
           )}
@@ -258,11 +322,11 @@ const Liabilities: React.FC = () => {
         )}
 
         {/* Liabilities List */}
-        {liabilities.length > 0 && (
+        {filteredLiabilities.length > 0 && (
           <div className="slide-in-up">
             <h3 className="text-lg font-heading mb-4">Your Liabilities</h3>
             <div className="space-y-3">
-              {liabilities.map((liability) => {
+              {filteredLiabilities.map((liability) => {
                 const status = getLiabilityStatus(liability);
                 const progress = ((liability.totalAmount - liability.remainingAmount) / liability.totalAmount) * 100;
                 
@@ -409,17 +473,30 @@ const Liabilities: React.FC = () => {
         )}
       </div>
 
-      {/* Add Liability Modal */}
-      <Modal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title="Add Liability"
-      >
-        <EnhancedLiabilityForm
-          onSubmit={handleAddLiability}
-          onCancel={() => setShowModal(false)}
-          isSubmitting={isSubmitting}
+      {/* Luxury Liability Form */}
+      {showLuxuryForm && (
+        <LuxuryLiabilityForm
+          onComplete={handleLuxuryFormComplete}
+          onCancel={() => setShowLuxuryForm(false)}
         />
+      )}
+
+      {/* Modification Modal */}
+      <Modal
+        isOpen={showModificationForm}
+        onClose={() => setShowModificationForm(false)}
+        title="Modify Liability"
+      >
+        {selectedLiability && (
+          <LiabilityModificationForm
+            liability={liabilities.find(l => l.id === selectedLiability)}
+            onSubmit={handleModifyLiability}
+            onCancel={() => {
+              setShowModificationForm(false);
+              setSelectedLiability(null);
+            }}
+          />
+        )}
       </Modal>
 
       {/* Edit Liability Modal */}
@@ -428,12 +505,25 @@ const Liabilities: React.FC = () => {
         onClose={() => setShowEditModal(false)}
         title="Edit Liability"
       >
-        <EnhancedLiabilityForm
-          liability={editingLiability}
-          onSubmit={handleEditLiability}
-          onCancel={() => setShowEditModal(false)}
-          isSubmitting={isSubmitting}
-        />
+        <div className="p-6">
+          <div className="text-center py-8">
+            <div className="text-6xl mb-4">✏️</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Edit Liability</h3>
+            <p className="text-gray-500 mb-6">
+              Use the modification form to make changes to your liability
+            </p>
+            <button
+              onClick={() => {
+                setShowEditModal(false);
+                setSelectedLiability(editingLiability?.id);
+                setShowModificationForm(true);
+              }}
+              className="btn-primary bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+            >
+              Modify Liability
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* Payment Modal */}
@@ -444,11 +534,10 @@ const Liabilities: React.FC = () => {
       >
         {selectedLiability && (
           <PaymentForm
-            liability={liabilities.find(l => l.id === selectedLiability)}
+            liability={selectedLiability ? convertToLiability(liabilities.find(l => l.id === selectedLiability)) : undefined}
             accounts={accounts}
             onSubmit={handleMakePayment}
             onCancel={() => setShowPaymentModal(false)}
-            isSubmitting={isSubmitting}
           />
         )}
       </Modal>

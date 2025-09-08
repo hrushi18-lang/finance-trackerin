@@ -157,10 +157,16 @@ export default {
         },
       },
       fontFamily: {
-        'sans': ['Archivo', 'system-ui', 'sans-serif'],
-        'display': ['Archivo Black', 'system-ui', 'sans-serif'],
-        'body': ['Playfair Display', 'serif'],
-        'numbers': ['Archivo', 'monospace'],
+        // Exact Font Specifications
+        'heading': ['Archivo Black', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'sans-serif'],
+        'numbers': ['Archivo', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'sans-serif'],
+        'titles': ['Archivo', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'sans-serif'],
+        'description': ['Playfair Display', 'Times New Roman', 'Times', 'serif'],
+        
+        // Legacy support
+        'sans': ['Archivo', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'sans-serif'],
+        'display': ['Archivo Black', 'Archivo', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'sans-serif'],
+        'body': ['Playfair Display', 'Times New Roman', 'Times', 'serif'],
       },
       fontSize: {
         'hero': ['3.5rem', { lineHeight: '1.1', fontWeight: '700' }],

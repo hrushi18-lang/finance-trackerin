@@ -8,6 +8,9 @@ import {
   EnhancedLiability, 
   Budget, 
   Bill,
+  BillAccountLink,
+  BillStagingHistory,
+  BillCompletionTracking,
   RecurringTransaction,
   IncomeSource,
   AccountTransfer,
@@ -26,6 +29,9 @@ interface FinanceContextType {
   liabilities: EnhancedLiability[];
   budgets: Budget[];
   bills: Bill[];
+  billAccountLinks: BillAccountLink[];
+  billStagingHistory: BillStagingHistory[];
+  billCompletionTracking: BillCompletionTracking[];
   recurringTransactions: RecurringTransaction[];
   incomeSource: IncomeSource[];
   accountTransfers: AccountTransfer[];
@@ -50,10 +56,22 @@ interface FinanceContextType {
   addGoal: (goal: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
+  deleteGoalSoft: (goalId: string, reason?: string) => Promise<any>;
   
   addLiability: (liability: Omit<EnhancedLiability, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateLiability: (id: string, updates: Partial<EnhancedLiability>) => Promise<void>;
   deleteLiability: (id: string) => Promise<void>;
+  
+  // Enhanced liability management functions
+  modifyLiability: (id: string, modificationData: any) => Promise<void>;
+  addLiabilityAccountLink: (link: { liabilityId: string; accountId: string; paymentPercentage: number; isPrimary?: boolean }) => Promise<void>;
+  removeLiabilityAccountLink: (liabilityId: string, accountId: string) => Promise<void>;
+  getLiabilityAccountLinks: (liabilityId: string) => any[];
+  extendLiabilityTerm: (id: string, newTermMonths: number, reason?: string) => Promise<void>;
+  shortenLiabilityTerm: (id: string, newTermMonths: number, reason?: string) => Promise<void>;
+  changeLiabilityAmount: (id: string, newAmount: number, reason?: string) => Promise<void>;
+  changeLiabilityDates: (id: string, dateChanges: { startDate?: Date; dueDate?: Date; nextPaymentDate?: Date }, reason?: string) => Promise<void>;
+  payLiabilityFromMultipleAccounts: (liabilityId: string, payments: { accountId: string; amount: number; percentage?: number }[]) => Promise<void>;
   
   addBudget: (budget: Omit<Budget, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateBudget: (id: string, updates: Partial<Budget>) => Promise<void>;
@@ -62,6 +80,17 @@ interface FinanceContextType {
   addBill: (bill: Omit<Bill, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateBill: (id: string, updates: Partial<Bill>) => Promise<void>;
   deleteBill: (id: string) => Promise<void>;
+  
+  // Enhanced bill management functions
+  addBillAccountLink: (link: Omit<BillAccountLink, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  removeBillAccountLink: (billId: string, accountId: string) => Promise<void>;
+  updateBillStage: (billId: string, stage: 'pending' | 'paid' | 'moved' | 'failed' | 'stopped', reason?: string, movedToDate?: Date) => Promise<void>;
+  handleBillCompletion: (billId: string, action: 'continue' | 'extend' | 'archive' | 'delete', newAmount?: number, newDueDate?: Date, reason?: string) => Promise<void>;
+  createVariableAmountBill: (billData: Omit<Bill, 'id' | 'userId' | 'createdAt' | 'updatedAt'> & { minAmount: number; maxAmount: number }) => Promise<void>;
+  createIncomeBill: (billData: Omit<Bill, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  payBillFromMultipleAccounts: (billId: string, payments: { accountId: string; amount: number; percentage?: number }[]) => Promise<void>;
+  getBillAccountLinks: (billId: string) => BillAccountLink[];
+  getBillStagingHistory: (billId: string) => BillStagingHistory[];
   
   addRecurringTransaction: (rt: Omit<RecurringTransaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateRecurringTransaction: (id: string, updates: Partial<RecurringTransaction>) => Promise<void>;
@@ -80,7 +109,6 @@ interface FinanceContextType {
   extendGoal: (goalId: string, newTargetAmount: number, reason?: string) => Promise<any>;
   customizeGoal: (goalId: string, newTargetAmount: number, newTitle?: string, newDescription?: string, reason?: string) => Promise<any>;
   archiveGoal: (goalId: string, reason?: string) => Promise<any>;
-  deleteGoal: (goalId: string, reason?: string) => Promise<any>;
   // High-level flows
   fundGoalFromAccount: (fromAccountId: string, goalId: string, amount: number, description?: string) => Promise<void>;
   contributeToGoal: (goalId: string, amount: number, sourceAccountId?: string, description?: string) => Promise<void>;
@@ -113,6 +141,12 @@ interface FinanceContextType {
   getBillTransactions: (billId: string) => Transaction[];
   getLiabilityTransactions: (liabilityId: string) => Transaction[];
   
+  // User Categories CRUD operations
+  addUserCategory: (category: Omit<UserCategory, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateUserCategory: (id: string, updates: Partial<UserCategory>) => Promise<void>;
+  deleteUserCategory: (id: string) => Promise<void>;
+  getUserCategoriesByType: (type: 'income' | 'expense' | 'bill' | 'goal' | 'liability' | 'budget' | 'account') => UserCategory[];
+  
   // Statistics
   stats: {
     totalIncome: number;
@@ -134,6 +168,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [liabilities, setLiabilities] = useState<EnhancedLiability[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [billAccountLinks, setBillAccountLinks] = useState<BillAccountLink[]>([]);
+  const [billStagingHistory, setBillStagingHistory] = useState<BillStagingHistory[]>([]);
+  const [billCompletionTracking, setBillCompletionTracking] = useState<BillCompletionTracking[]>([]);
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
   const [incomeSource, setIncomeSource] = useState<IncomeSource[]>([]);
   const [accountTransfers, setAccountTransfers] = useState<AccountTransfer[]>([]);
@@ -180,6 +217,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         loadLiabilities(),
         loadBudgets(),
         loadBills(),
+        loadBillAccountLinks(),
+        loadBillStagingHistory(),
+        loadBillCompletionTracking(),
         loadRecurringTransactions(),
         loadIncomeSource(),
         loadAccountTransfers(),
@@ -641,8 +681,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         date: paymentDate,
         accountId: paymentData.accountId,
         affectsBalance: true,
-        status: 'completed',
-        linkedBillId: billId
+        status: 'completed'
       });
     }
 
@@ -960,6 +999,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: goal.status || 'active',
       createdAt: new Date(goal.created_at),
       updatedAt: new Date(goal.updated_at),
+      // Activity scope and account linking
+      activityScope: goal.activity_scope || 'general',
+      linkedAccountsCount: goal.linked_accounts_count || 0,
       // New completion and management fields
       completionDate: goal.completion_date ? new Date(goal.completion_date) : undefined,
       withdrawalDate: goal.withdrawal_date ? new Date(goal.withdrawal_date) : undefined,
@@ -978,7 +1020,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) return;
     
     const { data, error } = await supabase
-      .from('enhanced_liabilities')
+      .from('liabilities')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -1006,6 +1048,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         name: liability.name,
         liabilityType: liability.liability_type,
         description: liability.description,
+        liabilityStatus: liability.liability_status || 'existing',
         totalAmount: Number(liability.total_amount),
         remainingAmount: Number(liability.remaining_amount),
         interestRate: Number(liability.interest_rate || 0),
@@ -1027,6 +1070,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isActive: liability.is_active,
         autoGenerateBills: liability.auto_generate_bills,
         billGenerationDay: liability.bill_generation_day,
+        sendReminders: liability.send_reminders ?? true,
+        reminderDays: liability.reminder_days ?? 7,
+        paymentStrategy: liability.payment_strategy || 'equal',
+        paymentAccounts: liability.payment_accounts || [],
+        paymentPercentages: liability.payment_percentages || [],
+        originalAmount: liability.original_amount,
+        originalTermMonths: liability.original_term_months,
+        originalStartDate: liability.original_start_date ? new Date(liability.original_start_date) : undefined,
+        modificationCount: liability.modification_count || 0,
+        lastModifiedDate: liability.last_modified_date ? new Date(liability.last_modified_date) : undefined,
+        modificationReason: liability.modification_reason,
+        typeSpecificData: liability.type_specific_data || {},
+        currencyCode: liability.currency_code || 'USD',
         activityScope: liability.activity_scope || 'general',
         accountIds: accountIds,
         targetCategory: targetCategory,
@@ -1114,11 +1170,114 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       activityScope: bill.activity_scope || 'general',
       accountIds: [], // Will be loaded separately from activity_account_links
       linkedAccountsCount: bill.linked_accounts_count || 0,
+      // New fields
+      currencyCode: bill.currency_code || 'USD',
+      isIncome: bill.is_income || false,
+      billStage: bill.bill_stage || 'pending',
+      movedToDate: bill.moved_to_date ? new Date(bill.moved_to_date) : undefined,
+      stageReason: bill.stage_reason,
+      isVariableAmount: bill.is_variable_amount || false,
+      minAmount: bill.min_amount ? Number(bill.min_amount) : undefined,
+      maxAmount: bill.max_amount ? Number(bill.max_amount) : undefined,
+      completionAction: bill.completion_action || 'continue',
+      completionDate: bill.completion_date ? new Date(bill.completion_date) : undefined,
+      completionNotes: bill.completion_notes,
+      originalAmount: bill.original_amount ? Number(bill.original_amount) : undefined,
+      extendedAmount: bill.extended_amount ? Number(bill.extended_amount) : undefined,
+      isArchived: bill.is_archived || false,
+      archivedDate: bill.archived_date ? new Date(bill.archived_date) : undefined,
+      archivedReason: bill.archived_reason,
       createdAt: new Date(bill.created_at),
       updatedAt: new Date(bill.updated_at)
     }));
 
     setBills(mappedBills);
+  };
+
+  const loadBillAccountLinks = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('bill_account_links')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading bill account links:', error);
+      return;
+    }
+
+    const mappedLinks: BillAccountLink[] = (data || []).map(link => ({
+      id: link.id,
+      billId: link.bill_id,
+      accountId: link.account_id,
+      userId: link.user_id,
+      isPrimary: link.is_primary,
+      paymentPercentage: Number(link.payment_percentage),
+      createdAt: new Date(link.created_at),
+      updatedAt: new Date(link.updated_at)
+    }));
+
+    setBillAccountLinks(mappedLinks);
+  };
+
+  const loadBillStagingHistory = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('bill_staging_history')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('changed_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading bill staging history:', error);
+      return;
+    }
+
+    const mappedHistory: BillStagingHistory[] = (data || []).map(history => ({
+      id: history.id,
+      billId: history.bill_id,
+      userId: history.user_id,
+      fromStage: history.from_stage,
+      toStage: history.to_stage,
+      stageReason: history.stage_reason,
+      changedBy: history.changed_by,
+      changedAt: new Date(history.changed_at),
+      metadata: history.metadata
+    }));
+
+    setBillStagingHistory(mappedHistory);
+  };
+
+  const loadBillCompletionTracking = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('bill_completion_tracking')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('completion_date', { ascending: false });
+
+    if (error) {
+      console.error('Error loading bill completion tracking:', error);
+      return;
+    }
+
+    const mappedTracking: BillCompletionTracking[] = (data || []).map(tracking => ({
+      id: tracking.id,
+      billId: tracking.bill_id,
+      userId: tracking.user_id,
+      completionType: tracking.completion_type,
+      completionDate: new Date(tracking.completion_date),
+      completionReason: tracking.completion_reason,
+      newAmount: tracking.new_amount ? Number(tracking.new_amount) : undefined,
+      newDueDate: tracking.new_due_date ? new Date(tracking.new_due_date) : undefined,
+      metadata: tracking.metadata
+    }));
+
+    setBillCompletionTracking(mappedTracking);
   };
 
   const loadRecurringTransactions = async () => {
@@ -1630,6 +1789,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setTransactions(prev => [newTransaction, ...prev]);
 
+    // Update account balance based on transaction type
+    if (newTransaction.affectsBalance !== false) {
+      setAccounts(prev => prev.map(account => {
+        if (account.id === newTransaction.accountId) {
+          const balanceChange = newTransaction.type === 'income' 
+            ? newTransaction.amount 
+            : -newTransaction.amount;
+          return {
+            ...account,
+            balance: account.balance + balanceChange
+          };
+        }
+        return account;
+      }));
+    }
+
     // Update budget if this is an expense transaction
     if (newTransaction.type === 'expense') {
       try {
@@ -1728,7 +1903,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         target_amount: goalData.targetAmount,
         current_amount: goalData.currentAmount,
         target_date: goalData.targetDate.toISOString().split('T')[0],
-        category: goalData.category
+        category: goalData.category,
+        // Add all missing fields
+        account_id: goalData.accountId,
+        goal_type: goalData.goalType,
+        target_category: goalData.targetCategory,
+        period_type: goalData.periodType,
+        custom_period_days: goalData.customPeriodDays,
+        is_recurring: goalData.isRecurring,
+        recurring_frequency: goalData.recurringFrequency,
+        priority: goalData.priority,
+        status: goalData.status,
+        activity_scope: goalData.activityScope || 'general',
+        linked_accounts_count: goalData.linkedAccountsCount || 0
       })
       .select()
       .single();
@@ -1754,7 +1941,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       priority: data.priority || 'medium',
       status: data.status || 'active',
       createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at)
+      updatedAt: new Date(data.updated_at),
+      // Add completion and management fields
+      completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
+      withdrawalDate: data.withdrawal_date ? new Date(data.withdrawal_date) : undefined,
+      withdrawalAmount: Number(data.withdrawal_amount || 0),
+      isWithdrawn: data.is_withdrawn || false,
+      completionAction: data.completion_action || 'waiting',
+      originalTargetAmount: data.original_target_amount ? Number(data.original_target_amount) : undefined,
+      extendedTargetAmount: data.extended_target_amount ? Number(data.extended_target_amount) : undefined,
+      completionNotes: data.completion_notes
     };
 
     setGoals(prev => [newGoal, ...prev]);
@@ -1763,16 +1959,40 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updateGoal = async (id: string, updates: Partial<Goal>) => {
     if (!user) throw new Error('User not authenticated');
 
+    const updateData: any = {};
+    
+    // Map all possible fields to database columns
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.targetAmount !== undefined) updateData.target_amount = updates.targetAmount;
+    if (updates.currentAmount !== undefined) updateData.current_amount = updates.currentAmount;
+    if (updates.targetDate !== undefined) updateData.target_date = updates.targetDate.toISOString().split('T')[0];
+    if (updates.category !== undefined) updateData.category = updates.category;
+    if (updates.accountId !== undefined) updateData.account_id = updates.accountId;
+    if (updates.goalType !== undefined) updateData.goal_type = updates.goalType;
+    if (updates.targetCategory !== undefined) updateData.target_category = updates.targetCategory;
+    if (updates.periodType !== undefined) updateData.period_type = updates.periodType;
+    if (updates.customPeriodDays !== undefined) updateData.custom_period_days = updates.customPeriodDays;
+    if (updates.isRecurring !== undefined) updateData.is_recurring = updates.isRecurring;
+    if (updates.recurringFrequency !== undefined) updateData.recurring_frequency = updates.recurringFrequency;
+    if (updates.priority !== undefined) updateData.priority = updates.priority;
+    if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.activityScope !== undefined) updateData.activity_scope = updates.activityScope;
+    if (updates.linkedAccountsCount !== undefined) updateData.linked_accounts_count = updates.linkedAccountsCount;
+    
+    // Completion and management fields
+    if (updates.completionDate !== undefined) updateData.completion_date = updates.completionDate?.toISOString();
+    if (updates.withdrawalDate !== undefined) updateData.withdrawal_date = updates.withdrawalDate?.toISOString();
+    if (updates.withdrawalAmount !== undefined) updateData.withdrawal_amount = updates.withdrawalAmount;
+    if (updates.isWithdrawn !== undefined) updateData.is_withdrawn = updates.isWithdrawn;
+    if (updates.completionAction !== undefined) updateData.completion_action = updates.completionAction;
+    if (updates.originalTargetAmount !== undefined) updateData.original_target_amount = updates.originalTargetAmount;
+    if (updates.extendedTargetAmount !== undefined) updateData.extended_target_amount = updates.extendedTargetAmount;
+    if (updates.completionNotes !== undefined) updateData.completion_notes = updates.completionNotes;
+
     const { error } = await supabase
       .from('goals')
-      .update({
-        title: updates.title,
-        description: updates.description,
-        target_amount: updates.targetAmount,
-        current_amount: updates.currentAmount,
-        target_date: updates.targetDate?.toISOString().split('T')[0],
-        category: updates.category
-      })
+      .update(updateData)
       .eq('id', id)
       .eq('user_id', user.id);
 
@@ -1916,12 +2136,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) throw new Error('User not authenticated');
 
     const { data, error } = await supabase
-      .from('enhanced_liabilities')
+      .from('liabilities')
       .insert({
         user_id: user.id,
         name: liabilityData.name,
         liability_type: liabilityData.liabilityType,
         description: liabilityData.description,
+        liability_status: liabilityData.liabilityStatus || 'new',
         total_amount: liabilityData.totalAmount,
         remaining_amount: liabilityData.remainingAmount,
         interest_rate: liabilityData.interestRate,
@@ -1943,6 +2164,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         is_active: liabilityData.isActive,
         auto_generate_bills: liabilityData.autoGenerateBills,
         bill_generation_day: liabilityData.billGenerationDay,
+        send_reminders: liabilityData.sendReminders ?? true,
+        reminder_days: liabilityData.reminderDays ?? 7,
+        payment_strategy: liabilityData.paymentStrategy || 'equal',
+        payment_accounts: liabilityData.paymentAccounts || [],
+        payment_percentages: liabilityData.paymentPercentages || [],
+        original_amount: liabilityData.originalAmount,
+        original_term_months: liabilityData.originalTermMonths,
+        original_start_date: liabilityData.originalStartDate?.toISOString().split('T')[0],
+        modification_count: liabilityData.modificationCount || 0,
+        last_modified_date: liabilityData.lastModifiedDate?.toISOString(),
+        modification_reason: liabilityData.modificationReason,
+        type_specific_data: liabilityData.typeSpecificData || {},
+        currency_code: liabilityData.currencyCode || 'USD',
         activity_scope: liabilityData.activityScope || 'general',
         target_category: liabilityData.targetCategory,
         priority: liabilityData.priority || 'medium'
@@ -1958,6 +2192,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       name: data.name,
       liabilityType: data.liability_type,
       description: data.description,
+      liabilityStatus: data.liability_status || 'new',
       totalAmount: Number(data.total_amount),
       remainingAmount: Number(data.remaining_amount),
       interestRate: Number(data.interest_rate || 0),
@@ -1979,6 +2214,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       isActive: data.is_active,
       autoGenerateBills: data.auto_generate_bills,
       billGenerationDay: data.bill_generation_day,
+      sendReminders: data.send_reminders ?? true,
+      reminderDays: data.reminder_days ?? 7,
+      paymentStrategy: data.payment_strategy || 'equal',
+      paymentAccounts: data.payment_accounts || [],
+      paymentPercentages: data.payment_percentages || [],
+      originalAmount: data.original_amount,
+      originalTermMonths: data.original_term_months,
+      originalStartDate: data.original_start_date ? new Date(data.original_start_date) : undefined,
+      modificationCount: data.modification_count || 0,
+      lastModifiedDate: data.last_modified_date ? new Date(data.last_modified_date) : undefined,
+      modificationReason: data.modification_reason,
+      typeSpecificData: data.type_specific_data || {},
+      currencyCode: data.currency_code || 'USD',
       activityScope: liabilityData.activityScope || 'general',
       accountIds: liabilityData.accountIds || [],
       targetCategory: liabilityData.targetCategory,
@@ -2123,7 +2371,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) throw new Error('User not authenticated');
 
     const { error } = await supabase
-      .from('enhanced_liabilities')
+      .from('liabilities')
       .update({
         name: updates.name,
         liability_type: updates.liabilityType,
@@ -2164,7 +2412,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) throw new Error('User not authenticated');
 
     const { error } = await supabase
-      .from('enhanced_liabilities')
+      .from('liabilities')
       .delete()
       .eq('id', id)
       .eq('user_id', user.id);
@@ -2172,6 +2420,194 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (error) throw error;
 
     setLiabilities(prev => prev.filter(liability => liability.id !== id));
+  };
+
+  // Enhanced liability management functions
+  const modifyLiability = async (id: string, modificationData: any) => {
+    if (!user) throw new Error('User not authenticated');
+
+    // Record the modification
+    const { error: modError } = await supabase
+      .from('liability_modifications')
+      .insert({
+        user_id: user.id,
+        liability_id: id,
+        modification_type: modificationData.modificationType,
+        old_value: modificationData.oldValue,
+        new_value: modificationData.newValue,
+        reason: modificationData.reason
+      });
+
+    if (modError) throw modError;
+
+    // Update the liability
+    const updateData: any = {
+      last_modified_date: new Date().toISOString(),
+      modification_reason: modificationData.reason
+    };
+
+    // Add specific changes based on modification type
+    if (modificationData.newAmount !== undefined) {
+      updateData.remaining_amount = modificationData.newAmount;
+    }
+    if (modificationData.newTermMonths !== undefined) {
+      updateData.loan_term_months = modificationData.newTermMonths;
+      updateData.remaining_term_months = modificationData.newTermMonths;
+    }
+    if (modificationData.newStartDate) {
+      updateData.start_date = modificationData.newStartDate;
+    }
+    if (modificationData.newDueDate) {
+      updateData.due_date = modificationData.newDueDate;
+    }
+    if (modificationData.newNextPaymentDate) {
+      updateData.next_payment_date = modificationData.newNextPaymentDate;
+    }
+    if (modificationData.newInterestRate !== undefined) {
+      updateData.interest_rate = modificationData.newInterestRate;
+    }
+    if (modificationData.newMonthlyPayment !== undefined) {
+      updateData.monthly_payment = modificationData.newMonthlyPayment;
+    }
+
+    const { error } = await supabase
+      .from('liabilities')
+      .update(updateData)
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    // Reload liabilities to get updated data
+    await loadLiabilities();
+  };
+
+  const addLiabilityAccountLink = async (link: { liabilityId: string; accountId: string; paymentPercentage: number; isPrimary?: boolean }) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('liability_account_links')
+      .insert({
+        user_id: user.id,
+        liability_id: link.liabilityId,
+        account_id: link.accountId,
+        payment_percentage: link.paymentPercentage,
+        is_primary: link.isPrimary || false
+      });
+
+    if (error) throw error;
+  };
+
+  const removeLiabilityAccountLink = async (liabilityId: string, accountId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('liability_account_links')
+      .delete()
+      .eq('liability_id', liabilityId)
+      .eq('account_id', accountId)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+  };
+
+  const getLiabilityAccountLinks = (_liabilityId: string) => {
+    // This would typically come from state, but for now return empty array
+    return [];
+  };
+
+  const extendLiabilityTerm = async (id: string, newTermMonths: number, reason?: string) => {
+    const liability = liabilities.find(l => l.id === id);
+    if (!liability) throw new Error('Liability not found');
+
+    await modifyLiability(id, {
+      modificationType: 'term_change',
+      oldValue: { loanTermMonths: liability.loanTermMonths },
+      newValue: { loanTermMonths: newTermMonths },
+      reason: reason || 'Term extended'
+    });
+  };
+
+  const shortenLiabilityTerm = async (id: string, newTermMonths: number, reason?: string) => {
+    const liability = liabilities.find(l => l.id === id);
+    if (!liability) throw new Error('Liability not found');
+
+    await modifyLiability(id, {
+      modificationType: 'term_change',
+      oldValue: { loanTermMonths: liability.loanTermMonths },
+      newValue: { loanTermMonths: newTermMonths },
+      reason: reason || 'Term shortened'
+    });
+  };
+
+  const changeLiabilityAmount = async (id: string, newAmount: number, reason?: string) => {
+    const liability = liabilities.find(l => l.id === id);
+    if (!liability) throw new Error('Liability not found');
+
+    await modifyLiability(id, {
+      modificationType: 'amount_change',
+      oldValue: { remainingAmount: liability.remainingAmount },
+      newValue: { remainingAmount: newAmount },
+      reason: reason || 'Amount changed'
+    });
+  };
+
+  const changeLiabilityDates = async (id: string, dateChanges: { startDate?: Date; dueDate?: Date; nextPaymentDate?: Date }, reason?: string) => {
+    const liability = liabilities.find(l => l.id === id);
+    if (!liability) throw new Error('Liability not found');
+
+    await modifyLiability(id, {
+      modificationType: 'date_change',
+      oldValue: { 
+        startDate: liability.startDate, 
+        dueDate: liability.dueDate, 
+        nextPaymentDate: liability.nextPaymentDate 
+      },
+      newValue: dateChanges,
+      reason: reason || 'Dates changed'
+    });
+  };
+
+  const payLiabilityFromMultipleAccounts = async (liabilityId: string, payments: { accountId: string; amount: number; percentage?: number }[]) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const liability = liabilities.find(l => l.id === liabilityId);
+    if (!liability) throw new Error('Liability not found');
+
+    const totalAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
+
+    // Create transactions for each account payment
+    for (const payment of payments) {
+      const account = accounts.find(a => a.id === payment.accountId);
+      if (!account) continue;
+
+      // Create transaction
+      const transactionData = {
+        accountId: payment.accountId,
+        amount: payment.amount,
+        type: 'expense' as 'income' | 'expense',
+        category: 'Debt Payment',
+        description: `Payment to ${liability.name} from ${account.name}`,
+        date: new Date(),
+        status: 'completed' as 'pending' | 'completed' | 'cancelled',
+        affectsBalance: true,
+        linkedLiabilityId: liabilityId
+      };
+
+      await addTransaction(transactionData);
+    }
+
+    // Update liability remaining amount
+    const newRemainingAmount = Math.max(0, liability.remainingAmount - totalAmount);
+    await changeLiabilityAmount(liabilityId, newRemainingAmount, 'Payment from multiple accounts');
+
+    // If fully paid, update status
+    if (newRemainingAmount === 0) {
+      await updateLiability(liabilityId, { 
+        status: 'paid_off',
+        isActive: false 
+      });
+    }
   };
 
   const addBudget = async (budgetData: Omit<Budget, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
@@ -2269,13 +2705,34 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         activity_scope: billData.activityScope || 'general',
         target_category: billData.targetCategory,
         linked_accounts_count: billData.accountIds?.length || 0,
-        // Missing fields from database
+        // Enhanced fields
         bill_category: billData.billCategory || 'general_expense',
         is_recurring: billData.isRecurring || false,
         notes: billData.notes,
         payment_method: billData.paymentMethod,
         priority: billData.priority || 'medium',
-        status: billData.status || 'active'
+        status: billData.status || 'active',
+        // New multi-currency support
+        currency_code: billData.currencyCode || 'USD',
+        // Income bills support
+        is_income: billData.isIncome || false,
+        // Bill staging support
+        bill_stage: billData.billStage || 'pending',
+        moved_to_date: billData.movedToDate?.toISOString().split('T')[0],
+        stage_reason: billData.stageReason,
+        // Variable amount support
+        is_variable_amount: billData.isVariableAmount || false,
+        min_amount: billData.minAmount,
+        max_amount: billData.maxAmount,
+        // Completion flow support
+        completion_action: billData.completionAction || 'continue',
+        completion_date: billData.completionDate?.toISOString().split('T')[0],
+        completion_notes: billData.completionNotes,
+        original_amount: billData.originalAmount,
+        extended_amount: billData.extendedAmount,
+        is_archived: billData.isArchived || false,
+        archived_date: billData.archivedDate?.toISOString().split('T')[0],
+        archived_reason: billData.archivedReason
       })
       .select()
       .single();
@@ -2315,6 +2772,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       activityScope: data.activity_scope || 'general',
       accountIds: billData.accountIds || [],
       linkedAccountsCount: data.linked_accounts_count || 0,
+      // New fields
+      currencyCode: data.currency_code || 'USD',
+      isIncome: data.is_income || false,
+      billStage: data.bill_stage || 'pending',
+      movedToDate: data.moved_to_date ? new Date(data.moved_to_date) : undefined,
+      stageReason: data.stage_reason,
+      isVariableAmount: data.is_variable_amount || false,
+      minAmount: data.min_amount ? Number(data.min_amount) : undefined,
+      maxAmount: data.max_amount ? Number(data.max_amount) : undefined,
+      completionAction: data.completion_action || 'continue',
+      completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
+      completionNotes: data.completion_notes,
+      originalAmount: data.original_amount ? Number(data.original_amount) : undefined,
+      extendedAmount: data.extended_amount ? Number(data.extended_amount) : undefined,
+      isArchived: data.is_archived || false,
+      archivedDate: data.archived_date ? new Date(data.archived_date) : undefined,
+      archivedReason: data.archived_reason,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };
@@ -2363,7 +2837,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         reminder_days_before: updates.reminderDaysBefore,
         send_due_date_reminder: updates.sendDueDateReminder,
         send_overdue_reminder: updates.sendOverdueReminder,
-        // Missing fields from database
+        // Enhanced fields
         bill_category: updates.billCategory,
         is_recurring: updates.isRecurring,
         notes: updates.notes,
@@ -2372,7 +2846,28 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         status: updates.status,
         activity_scope: updates.activityScope,
         target_category: updates.targetCategory,
-        linked_accounts_count: updates.accountIds?.length || updates.linkedAccountsCount
+        linked_accounts_count: updates.accountIds?.length || updates.linkedAccountsCount,
+        // New multi-currency support
+        currency_code: updates.currencyCode,
+        // Income bills support
+        is_income: updates.isIncome,
+        // Bill staging support
+        bill_stage: updates.billStage,
+        moved_to_date: updates.movedToDate?.toISOString().split('T')[0],
+        stage_reason: updates.stageReason,
+        // Variable amount support
+        is_variable_amount: updates.isVariableAmount,
+        min_amount: updates.minAmount,
+        max_amount: updates.maxAmount,
+        // Completion flow support
+        completion_action: updates.completionAction,
+        completion_date: updates.completionDate?.toISOString().split('T')[0],
+        completion_notes: updates.completionNotes,
+        original_amount: updates.originalAmount,
+        extended_amount: updates.extendedAmount,
+        is_archived: updates.isArchived,
+        archived_date: updates.archivedDate?.toISOString().split('T')[0],
+        archived_reason: updates.archivedReason
       })
       .eq('id', id)
       .eq('user_id', user.id);
@@ -2396,6 +2891,231 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (error) throw error;
 
     setBills(prev => prev.filter(bill => bill.id !== id));
+  };
+
+  // Enhanced bill management functions
+  const addBillAccountLink = async (link: Omit<BillAccountLink, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('bill_account_links')
+      .insert({
+        bill_id: link.billId,
+        account_id: link.accountId,
+        user_id: user.id,
+        is_primary: link.isPrimary,
+        payment_percentage: link.paymentPercentage
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newLink: BillAccountLink = {
+      id: data.id,
+      billId: data.bill_id,
+      accountId: data.account_id,
+      userId: data.user_id,
+      isPrimary: data.is_primary,
+      paymentPercentage: Number(data.payment_percentage),
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
+
+    setBillAccountLinks(prev => [...prev, newLink]);
+  };
+
+  const removeBillAccountLink = async (billId: string, accountId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('bill_account_links')
+      .delete()
+      .eq('bill_id', billId)
+      .eq('account_id', accountId)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setBillAccountLinks(prev => 
+      prev.filter(link => !(link.billId === billId && link.accountId === accountId))
+    );
+  };
+
+  const updateBillStage = async (billId: string, stage: 'pending' | 'paid' | 'moved' | 'failed' | 'stopped', reason?: string, movedToDate?: Date) => {
+    if (!user) throw new Error('User not authenticated');
+
+    // Get current bill stage for history
+    const currentBill = bills.find(bill => bill.id === billId);
+    if (!currentBill) throw new Error('Bill not found');
+
+    // Update bill stage
+    const { error: updateError } = await supabase
+      .from('bills')
+      .update({
+        bill_stage: stage,
+        moved_to_date: movedToDate?.toISOString().split('T')[0],
+        stage_reason: reason
+      })
+      .eq('id', billId)
+      .eq('user_id', user.id);
+
+    if (updateError) throw updateError;
+
+    // Record staging history
+    const { error: historyError } = await supabase
+      .from('bill_staging_history')
+      .insert({
+        bill_id: billId,
+        user_id: user.id,
+        from_stage: currentBill.billStage,
+        to_stage: stage,
+        stage_reason: reason,
+        changed_by: 'user'
+      });
+
+    if (historyError) throw historyError;
+
+    // Update local state
+    setBills(prev => prev.map(bill => 
+      bill.id === billId 
+        ? { 
+            ...bill, 
+            billStage: stage, 
+            movedToDate, 
+            stageReason: reason 
+          } 
+        : bill
+    ));
+  };
+
+  const handleBillCompletion = async (billId: string, action: 'continue' | 'extend' | 'archive' | 'delete', newAmount?: number, newDueDate?: Date, reason?: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const currentBill = bills.find(bill => bill.id === billId);
+    if (!currentBill) throw new Error('Bill not found');
+
+    let updateData: any = {
+      completion_action: action,
+      completion_date: new Date().toISOString().split('T')[0],
+      completion_notes: reason
+    };
+
+    switch (action) {
+      case 'extend':
+        updateData.extended_amount = newAmount;
+        updateData.next_due_date = newDueDate?.toISOString().split('T')[0];
+        break;
+      case 'archive':
+        updateData.is_archived = true;
+        updateData.archived_date = new Date().toISOString().split('T')[0];
+        updateData.archived_reason = reason;
+        break;
+      case 'delete':
+        // This will be handled by deleteBill function
+        break;
+    }
+
+    if (action !== 'delete') {
+      const { error: updateError } = await supabase
+        .from('bills')
+        .update(updateData)
+        .eq('id', billId)
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+    }
+
+    // Record completion tracking
+    const { error: trackingError } = await supabase
+      .from('bill_completion_tracking')
+      .insert({
+        bill_id: billId,
+        user_id: user.id,
+        completion_type: action,
+        completion_reason: reason,
+        new_amount: newAmount,
+        new_due_date: newDueDate?.toISOString().split('T')[0]
+      });
+
+    if (trackingError) throw trackingError;
+
+    // Update local state
+    setBills(prev => prev.map(bill => 
+      bill.id === billId 
+        ? { 
+            ...bill, 
+            completionAction: action,
+            completionDate: new Date(),
+            completionNotes: reason,
+            extendedAmount: newAmount,
+            nextDueDate: newDueDate || bill.nextDueDate,
+            isArchived: action === 'archive' ? true : bill.isArchived,
+            archivedDate: action === 'archive' ? new Date() : bill.archivedDate,
+            archivedReason: action === 'archive' ? reason : bill.archivedReason
+          } 
+        : bill
+    ));
+
+    if (action === 'delete') {
+      await deleteBill(billId);
+    }
+  };
+
+  const createVariableAmountBill = async (billData: Omit<Bill, 'id' | 'userId' | 'createdAt' | 'updatedAt'> & { minAmount: number; maxAmount: number }) => {
+    const variableBillData = {
+      ...billData,
+      isVariableAmount: true,
+      minAmount: billData.minAmount,
+      maxAmount: billData.maxAmount,
+      amount: billData.minAmount // Use min amount as default
+    };
+    
+    await addBill(variableBillData);
+  };
+
+  const createIncomeBill = async (billData: Omit<Bill, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    const incomeBillData = {
+      ...billData,
+      isIncome: true,
+      billType: 'fixed' as const
+    };
+    
+    await addBill(incomeBillData);
+  };
+
+  const payBillFromMultipleAccounts = async (billId: string, payments: { accountId: string; amount: number; percentage?: number }[]) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const bill = bills.find(b => b.id === billId);
+    if (!bill) throw new Error('Bill not found');
+
+    // Create transactions for each payment
+    for (const payment of payments) {
+      const transactionData = {
+        accountId: payment.accountId,
+        amount: bill.isIncome ? payment.amount : -payment.amount,
+        description: `${bill.isIncome ? 'Income from' : 'Payment for'} ${bill.title}`,
+        category: bill.category,
+        type: (bill.isIncome ? 'income' : 'expense') as 'income' | 'expense',
+        date: new Date(),
+        status: 'completed' as const,
+        affectsBalance: true
+      };
+
+      await addTransaction(transactionData);
+    }
+
+    // Update bill as paid
+    await updateBillStage(billId, 'paid', 'Paid from multiple accounts');
+  };
+
+  const getBillAccountLinks = (billId: string) => {
+    return billAccountLinks.filter(link => link.billId === billId);
+  };
+
+  const getBillStagingHistory = (billId: string) => {
+    return billStagingHistory.filter(history => history.billId === billId);
   };
 
   const addRecurringTransaction = async (rtData: Omit<RecurringTransaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
@@ -2790,6 +3510,88 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       .reduce((sum, t) => sum + t.amount, 0)
   };
 
+  // User Categories CRUD Operations
+  const addUserCategory = async (categoryData: Omit<UserCategory, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('user_categories')
+      .insert({
+        user_id: user.id,
+        name: categoryData.name,
+        type: categoryData.type,
+        color: categoryData.color || '#6B7280',
+        icon: categoryData.icon || 'Circle',
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase user category insert error:', error);
+      throw new Error(`Failed to create category: ${error.message}`);
+    }
+
+    const newCategory: UserCategory = {
+      id: data.id,
+      userId: data.user_id,
+      name: data.name,
+      type: data.type,
+      color: data.color,
+      icon: data.icon,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
+
+    setUserCategories(prev => [newCategory, ...prev]);
+  };
+
+  const updateUserCategory = async (id: string, updates: Partial<UserCategory>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('user_categories')
+      .update({
+        name: updates.name,
+        type: updates.type,
+        color: updates.color,
+        icon: updates.icon,
+        is_active: true
+      })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Supabase user category update error:', error);
+      throw new Error(`Failed to update category: ${error.message}`);
+    }
+
+    setUserCategories(prev => prev.map(category => 
+      category.id === id ? { ...category, ...updates } : category
+    ));
+  };
+
+  const deleteUserCategory = async (id: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('user_categories')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Supabase user category delete error:', error);
+      throw new Error(`Failed to delete category: ${error.message}`);
+    }
+
+    setUserCategories(prev => prev.filter(category => category.id !== id));
+  };
+
+  const getUserCategoriesByType = (type: 'income' | 'expense' | 'bill' | 'goal' | 'liability' | 'budget' | 'account') => {
+    return userCategories.filter(category => category.type === type);
+  };
+
   const value: FinanceContextType = {
     accounts,
     transactions,
@@ -2797,6 +3599,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     liabilities,
     budgets,
     bills,
+    billAccountLinks,
+    billStagingHistory,
+    billCompletionTracking,
     recurringTransactions,
     incomeSource,
     accountTransfers,
@@ -2818,12 +3623,30 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     addLiability,
     updateLiability,
     deleteLiability,
+    modifyLiability,
+    addLiabilityAccountLink,
+    removeLiabilityAccountLink,
+    getLiabilityAccountLinks,
+    extendLiabilityTerm,
+    shortenLiabilityTerm,
+    changeLiabilityAmount,
+    changeLiabilityDates,
+    payLiabilityFromMultipleAccounts,
     addBudget,
     updateBudget,
     deleteBudget,
     addBill,
     updateBill,
     deleteBill,
+    addBillAccountLink,
+    removeBillAccountLink,
+    updateBillStage,
+    handleBillCompletion,
+    createVariableAmountBill,
+    createIncomeBill,
+    payBillFromMultipleAccounts,
+    getBillAccountLinks,
+    getBillStagingHistory,
     addRecurringTransaction,
     updateRecurringTransaction,
     deleteRecurringTransaction,
@@ -2858,6 +3681,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     getGoalTransactions,
     getBillTransactions,
     getLiabilityTransactions,
+    addUserCategory,
+    updateUserCategory,
+    deleteUserCategory,
+    getUserCategoriesByType,
     stats
   };
 
