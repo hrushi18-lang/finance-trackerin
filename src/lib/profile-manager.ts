@@ -74,16 +74,27 @@ class ProfileManager {
   }
 
   async createUserProfile(profileData: Omit<UserProfile, 'id' | 'userId' | 'createdAt' | 'updatedAt'>, userId: string): Promise<UserProfile> {
-    const profile: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'> = {
-      ...profileData,
-      userId,
-    };
-
     try {
+      // Map to database column names
+      const dbProfile = {
+        user_id: userId,
+        email: profileData.email || '',
+        name: profileData.name,
+        avatar: profileData.avatar || '',
+        age: profileData.age,
+        country: profileData.country,
+        profession: profileData.profession,
+        monthly_income: profileData.monthlyIncome,
+        primary_currency: profileData.primaryCurrency,
+        display_currency: profileData.displayCurrency,
+        auto_convert: profileData.autoConvert,
+        show_original_amounts: profileData.showOriginalAmounts,
+      };
+
       // Save to Supabase
       const { data, error } = await supabase
         .from('profiles')
-        .insert(profile)
+        .insert(dbProfile)
         .select()
         .single();
 
@@ -91,10 +102,29 @@ class ProfileManager {
         throw error;
       }
 
-      // Save to offline storage
-      await offlineStorage.create('profiles', data);
+      // Map back to our interface
+      const profile: UserProfile = {
+        id: data.id,
+        userId: data.user_id,
+        name: data.name,
+        email: data.email,
+        avatar: data.avatar,
+        age: data.age,
+        country: data.country,
+        profession: data.profession,
+        monthlyIncome: data.monthly_income,
+        primaryCurrency: data.primary_currency,
+        displayCurrency: data.display_currency,
+        autoConvert: data.auto_convert,
+        showOriginalAmounts: data.show_original_amounts,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at),
+      };
 
-      return data;
+      // Save to offline storage
+      await offlineStorage.create('profiles', profile);
+
+      return profile;
     } catch (error) {
       console.error('Failed to create user profile:', error);
       throw error;
@@ -103,10 +133,24 @@ class ProfileManager {
 
   async updateUserProfile(profileId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
     try {
+      // Map updates to database column names
+      const dbUpdates: any = {};
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.email !== undefined) dbUpdates.email = updates.email;
+      if (updates.avatar !== undefined) dbUpdates.avatar = updates.avatar;
+      if (updates.age !== undefined) dbUpdates.age = updates.age;
+      if (updates.country !== undefined) dbUpdates.country = updates.country;
+      if (updates.profession !== undefined) dbUpdates.profession = updates.profession;
+      if (updates.monthlyIncome !== undefined) dbUpdates.monthly_income = updates.monthlyIncome;
+      if (updates.primaryCurrency !== undefined) dbUpdates.primary_currency = updates.primaryCurrency;
+      if (updates.displayCurrency !== undefined) dbUpdates.display_currency = updates.displayCurrency;
+      if (updates.autoConvert !== undefined) dbUpdates.auto_convert = updates.autoConvert;
+      if (updates.showOriginalAmounts !== undefined) dbUpdates.show_original_amounts = updates.showOriginalAmounts;
+
       // Update in Supabase
       const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', profileId)
         .select()
         .single();
@@ -115,10 +159,29 @@ class ProfileManager {
         throw error;
       }
 
-      // Update in offline storage
-      await offlineStorage.update('profiles', profileId, data);
+      // Map back to our interface
+      const profile: UserProfile = {
+        id: data.id,
+        userId: data.user_id,
+        name: data.name,
+        email: data.email,
+        avatar: data.avatar,
+        age: data.age,
+        country: data.country,
+        profession: data.profession,
+        monthlyIncome: data.monthly_income,
+        primaryCurrency: data.primary_currency,
+        displayCurrency: data.display_currency,
+        autoConvert: data.auto_convert,
+        showOriginalAmounts: data.show_original_amounts,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at),
+      };
 
-      return data;
+      // Update in offline storage
+      await offlineStorage.update('profiles', profileId, profile);
+
+      return profile;
     } catch (error) {
       console.error('Failed to update user profile:', error);
       throw error;
@@ -137,14 +200,33 @@ class ProfileManager {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('userId', userId)
+        .eq('user_id', userId)
         .single();
 
       if (error) {
         return null;
       }
 
-      return data;
+      // Map database response to our interface
+      const profile: UserProfile = {
+        id: data.id,
+        userId: data.user_id,
+        name: data.name,
+        email: data.email,
+        avatar: data.avatar,
+        age: data.age,
+        country: data.country,
+        profession: data.profession,
+        monthlyIncome: data.monthly_income,
+        primaryCurrency: data.primary_currency,
+        displayCurrency: data.display_currency,
+        autoConvert: data.auto_convert,
+        showOriginalAmounts: data.show_original_amounts,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at),
+      };
+
+      return profile;
     } catch (error) {
       console.error('Failed to get user profile:', error);
       return null;
