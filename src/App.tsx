@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from './contexts/AuthContext';
 import { FinanceProvider } from './contexts/FinanceContextOffline';
+import { ProfileProvider } from './contexts/ProfileContext';
 import { InternationalizationProvider } from './contexts/InternationalizationContext';
 import { EnhancedCurrencyProvider } from './contexts/EnhancedCurrencyContext';
 import { PersonalizationProvider } from './contexts/PersonalizationContext';
@@ -86,10 +87,11 @@ function App() {
         <ToastProvider>
           <ThemeProvider>
             <AuthProvider>
-              <InternationalizationProvider>
-                <EnhancedCurrencyProvider>
-                  <PersonalizationProvider>
-                    <FinanceProvider>
+              <ProfileProvider>
+                <InternationalizationProvider>
+                  <EnhancedCurrencyProvider>
+                    <PersonalizationProvider>
+                      <FinanceProvider>
                       <AppInitializer>
                       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                         <RouteHandler>
@@ -371,10 +373,11 @@ function App() {
                       </Router>
                       <ReactQueryDevtools initialIsOpen={false} />
                       </AppInitializer>
-                    </FinanceProvider>
+                      </FinanceProvider>
                     </PersonalizationProvider>
                   </EnhancedCurrencyProvider>
-              </InternationalizationProvider>
+                </InternationalizationProvider>
+              </ProfileProvider>
             </AuthProvider>
           </ThemeProvider>
         </ToastProvider>

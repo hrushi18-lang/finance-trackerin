@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useProfile } from '../contexts/ProfileContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { useFinance } from '../contexts/FinanceContextOffline';
 import { Button } from '../components/common/Button';
@@ -45,17 +46,18 @@ interface CustomCategory {
 const ProfileNew: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { profile: userProfile, updateProfile, loading: profileLoading } = useProfile();
   const { formatCurrency } = useInternationalization();
   const { userCategories, addUserCategory, updateUserCategory, deleteUserCategory } = useFinance();
 
   const [profile, setProfile] = useState<UserProfile>({
     id: user?.id || '',
-    name: user?.user_metadata?.full_name || 'Sophia Carter',
-    email: user?.email || 'sophia.carter@example.com',
-    profilePicture: user?.user_metadata?.avatar_url || '',
-    country: user?.user_metadata?.country || 'United States',
-    currencies: user?.user_metadata?.currencies || ['USD', 'EUR'],
-    createdAt: user?.created_at || new Date().toISOString(),
+    name: userProfile?.name || user?.user_metadata?.full_name || 'User',
+    email: userProfile?.email || user?.email || '',
+    profilePicture: userProfile?.avatar || user?.user_metadata?.avatar_url || '',
+    country: userProfile?.country || 'United States',
+    currencies: [userProfile?.primaryCurrency || 'USD'],
+    createdAt: userProfile?.createdAt?.toString() || user?.created_at || new Date().toISOString(),
     lastLogin: user?.last_sign_in_at || new Date().toISOString()
   });
 
@@ -91,8 +93,15 @@ const ProfileNew: React.FC = () => {
 
   const handleSaveProfile = async () => {
     try {
-      // Here you would typically save to your backend
-      console.log('Saving profile:', profile);
+      if (userProfile?.id) {
+        await updateProfile({
+          name: profile.name,
+          email: profile.email,
+          country: profile.country,
+          primaryCurrency: profile.currencies[0] || 'USD',
+          displayCurrency: profile.currencies[0] || 'USD'
+        });
+      }
       setIsEditing(false);
     } catch (error) {
       console.error('Error saving profile:', error);

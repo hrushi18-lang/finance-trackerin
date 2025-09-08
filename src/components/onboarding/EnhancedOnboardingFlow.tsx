@@ -9,6 +9,7 @@ import { OfflineIndicator } from '../common/OfflineIndicator';
 import { PerformanceOptimizer } from '../common/PerformanceOptimizer';
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { useFinance } from '../../contexts/FinanceContextOffline';
+import { useProfile } from '../../contexts/ProfileContext';
 import { useOfflineStorage } from '../../hooks/useOfflineStorage';
 import { profileManager, UserProfile, CustomCategory, BasicActivity, AccountSetup } from '../../lib/profile-manager';
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,6 +31,7 @@ interface EnhancedOnboardingFlowProps {
 export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ onComplete }) => {
   const { displayCurrency } = useEnhancedCurrency();
   const { addAccount, addGoal, addBill, addLiability, addUserCategory } = useFinance();
+  const { refreshProfile } = useProfile();
   const { isOnline, offlineData, saveOfflineData, syncData } = useOfflineStorage();
   const { user } = useAuth();
   
@@ -332,6 +334,9 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
         });
       }
       console.log('✅ Accounts saved');
+      
+      // Refresh profile context to reflect new data
+      await refreshProfile();
       
       console.log('🎉 Onboarding completed successfully!');
       onComplete();

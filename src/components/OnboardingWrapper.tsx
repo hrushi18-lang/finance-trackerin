@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useFinance } from '../contexts/FinanceContextOffline';
+import { useProfile } from '../contexts/ProfileContext';
 import EnhancedOnboardingFlow from './onboarding/EnhancedOnboardingFlow';
 import { analytics } from '../utils/analytics';
 import { LoadingScreen } from './common/LoadingScreen';
@@ -9,7 +10,8 @@ import { LoadingScreen } from './common/LoadingScreen';
 const OnboardingWrapper: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { accounts, goals, bills, liabilities, userCategories, loading } = useFinance();
+  const { profile, loading: profileLoading } = useProfile();
+  const { accounts, goals, bills, liabilities, userCategories, loading: financeLoading } = useFinance();
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(true);
 
@@ -20,12 +22,15 @@ const OnboardingWrapper: React.FC = () => {
         return;
       }
 
-      // Wait for data to load
-      if (loading) {
+      // Wait for profile and finance data to load
+      if (profileLoading || financeLoading) {
         return;
       }
 
-      // Check if user has existing data
+      // Check if user has a profile (primary indicator of setup completion)
+      const hasProfile = !!profile;
+      
+      // Also check if user has existing financial data
       const hasExistingData = 
         accounts.length > 0 || 
         goals.length > 0 || 
@@ -33,13 +38,15 @@ const OnboardingWrapper: React.FC = () => {
         liabilities.length > 0 || 
         userCategories.length > 0;
 
-      const isNew = !hasExistingData;
+      // User is new if they don't have a profile OR no financial data
+      const isNew = !hasProfile || !hasExistingData;
       setIsNewUser(isNew);
 
       // Track onboarding check
       analytics.trackEngagement('onboarding_check', {
         feature: 'onboarding_flow',
         is_new_user: isNew,
+        has_profile: hasProfile,
         has_accounts: accounts.length > 0,
         has_goals: goals.length > 0,
         has_bills: bills.length > 0,
@@ -47,8 +54,8 @@ const OnboardingWrapper: React.FC = () => {
         has_custom_categories: userCategories.length > 0
       });
 
-      // If user has existing data, redirect to dashboard
-      if (!isNew) {
+      // If user has profile and data, redirect to dashboard
+      if (hasProfile && hasExistingData) {
         analytics.trackOnboardingStep('existing_user_redirect', true);
         navigate('/dashboard');
         return;
@@ -58,10 +65,10 @@ const OnboardingWrapper: React.FC = () => {
     };
 
     checkUserStatus();
-  }, [user, accounts, goals, bills, liabilities, userCategories, loading, navigate]);
+  }, [user, profile, profileLoading, accounts, goals, bills, liabilities, userCategories, financeLoading, navigate]);
 
   // Show loading while checking user status
-  if (isChecking || loading) {
+  if (isChecking || profileLoading || financeLoading) {
     return (
       <LoadingScreen 
         message="Checking your account..." 
