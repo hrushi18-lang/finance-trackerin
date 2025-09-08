@@ -154,21 +154,37 @@ export const AccountForm: React.FC<AccountFormProps> = ({
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-            Initial Balance
-          </label>
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <div className="flex items-center space-x-2 mb-3">
+            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 text-sm">💰</span>
+            </div>
+            <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Initial Balance *
+            </label>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              Current amount in account
+            </span>
+          </div>
+          
           <CurrencyInput
             value={formData.balance}
             currencyCode={formData.currency}
             onValueChange={(value) => handleInputChange('balance', value)}
             onCurrencyChange={(currency) => handleInputChange('currency', currency)}
-            placeholder="0.00"
+            placeholder="Enter current balance"
             error={!!errors.balance}
+            className="w-full"
           />
-          {errors.balance && (
-            <p className="mt-1 text-xs text-red-600">{errors.balance}</p>
-          )}
+          
+          <div className="mt-2 space-y-1">
+            <p className="text-xs text-gray-600">
+              This will be your starting balance for this account
+            </p>
+            {errors.balance && (
+              <p className="text-xs text-red-600">{errors.balance}</p>
+            )}
+          </div>
         </div>
 
         <div>

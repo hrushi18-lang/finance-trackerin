@@ -166,6 +166,7 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
     if (newActivity.name && newActivity.amount && newActivity.type) {
       const activity: BasicActivity = {
         id: Date.now().toString(),
+        userId: user?.id || '',
         name: newActivity.name,
         amount: newActivity.amount,
         currency: newActivity.currency || displayCurrency,
@@ -181,6 +182,7 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
     if (newAccount.name && newAccount.type && newAccount.balance !== undefined) {
       const account: AccountSetup = {
         id: Date.now().toString(),
+        userId: user?.id || '',
         name: newAccount.name,
         type: newAccount.type,
         balance: newAccount.balance,
@@ -222,8 +224,7 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
           name: category.name,
           type: category.type,
           icon: category.icon,
-          color: category.color,
-          isActive: true
+          color: category.color
         });
       }
       console.log('✅ Custom categories saved');
@@ -907,21 +908,42 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
                     </select>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3">
-                    <CurrencyInput
-                      value={newAccount.balance || 0}
-                      currency={newAccount.currency || displayCurrency}
-                      onValueChange={(value) => setNewAccount(prev => ({ ...prev, balance: typeof value === 'number' ? value : 0 }))}
-                      onCurrencyChange={(currency) => setNewAccount(prev => ({ ...prev, currency }))}
-                      placeholder="0"
-                    />
+                  {/* Initial Balance Section - Enhanced */}
+                  <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 text-sm">💰</span>
+                      </div>
+                      <label className="text-sm font-semibold text-gray-800">
+                        Current Balance *
+                      </label>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        This will be your starting balance
+                      </span>
+                    </div>
                     
-                    <Input
-                      type="text"
-                      placeholder="Institution (optional)"
-                      value={newAccount.institution || ''}
-                      onChange={(e) => setNewAccount(prev => ({ ...prev, institution: e.target.value }))}
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <CurrencyInput
+                        value={newAccount.balance || 0}
+                        currency={newAccount.currency || displayCurrency}
+                        onValueChange={(value) => setNewAccount(prev => ({ ...prev, balance: typeof value === 'number' ? value : 0 }))}
+                        onCurrencyChange={(currency) => setNewAccount(prev => ({ ...prev, currency }))}
+                        placeholder="Enter current balance"
+                        className="w-full"
+                      />
+                      
+                      <Input
+                        type="text"
+                        placeholder="Bank/Institution name (optional)"
+                        value={newAccount.institution || ''}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, institution: e.target.value }))}
+                        className="w-full"
+                      />
+                    </div>
+                    
+                    <p className="text-xs text-gray-500 mt-2">
+                      Enter the current amount in this account
+                    </p>
                   </div>
                   
                   <div className="flex space-x-2">
@@ -1100,7 +1122,7 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
   return (
     <PerformanceOptimizer>
       <div className="min-h-screen flex items-center justify-center px-4 bg-amber-50">
-        <OfflineIndicator isOnline={isOnline} />
+        <OfflineIndicator />
         <div className="w-full max-w-md">
         {/* Progress Indicator */}
         <div className="mb-8">

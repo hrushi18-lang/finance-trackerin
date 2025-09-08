@@ -154,35 +154,118 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         />
       </div>
 
-      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+      {/* Target Amount - Enhanced */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
+        <div className="flex items-center space-x-2 mb-4">
+          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+            <span className="text-purple-600 text-lg">🎯</span>
+          </div>
+          <div>
+            <label className="text-lg font-semibold text-gray-800">
+              Target Amount *
+            </label>
+            <p className="text-sm text-gray-600">
+              How much do you want to save?
+            </p>
+          </div>
+        </div>
+        
         <CurrencyInput
-          label="Target Amount"
           value={watch('targetAmount')}
           currency={goalCurrency}
           onValueChange={(value) => setValue('targetAmount', value)}
           onCurrencyChange={setGoalCurrency}
-          placeholder="e.g., 5000"
+          placeholder="Enter target amount"
           showConversion={goalCurrency !== displayCurrency}
           targetCurrency={displayCurrency}
           error={errors.targetAmount?.message}
-          className="text-white"
+          className="w-full text-lg"
         />
+        
+        {/* Quick Amount Buttons */}
+        <div className="mt-4">
+          <p className="text-sm text-gray-600 mb-2">Quick amounts:</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 10000)}
+              className="text-xs"
+            >
+              ₹10K
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 50000)}
+              className="text-xs"
+            >
+              ₹50K
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 100000)}
+              className="text-xs"
+            >
+              ₹1L
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 500000)}
+              className="text-xs"
+            >
+              ₹5L
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 1000000)}
+              className="text-xs"
+            >
+              ₹10L
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+      {/* Current Amount - Enhanced */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border-2 border-green-200">
+        <div className="flex items-center space-x-2 mb-4">
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+            <span className="text-green-600 text-lg">💰</span>
+          </div>
+          <div>
+            <label className="text-lg font-semibold text-gray-800">
+              Current Amount
+            </label>
+            <p className="text-sm text-gray-600">
+              How much have you already saved?
+            </p>
+          </div>
+        </div>
+        
         <CurrencyInput
-          label="Current Amount"
           value={watch('currentAmount')}
           currency={goalCurrency}
           onValueChange={(value) => setValue('currentAmount', value)}
           onCurrencyChange={setGoalCurrency}
-          placeholder="0"
+          placeholder="Enter current amount"
           showConversion={goalCurrency !== displayCurrency}
           targetCurrency={displayCurrency}
           error={errors.currentAmount?.message}
-          className="text-white"
+          className="w-full text-lg"
         />
-        <p className="text-xs text-gray-400 mt-1">How much have you already saved towards this goal?</p>
+        
+        <p className="text-xs text-gray-500 mt-2">
+          Leave as 0 if you're starting fresh
+        </p>
       </div>
 
       {/* Live Rate Display */}

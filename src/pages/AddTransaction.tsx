@@ -391,18 +391,86 @@ const AddTransaction: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Details</h3>
           
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-            {/* Amount */}
-            <CurrencyInput
-              label="Amount"
-              value={typeof watch('amount') === 'number' ? watch('amount') : ''}
-              currency={transactionCurrency}
-              onValueChange={(value) => setValue('amount', typeof value === 'number' ? value : 0)}
-              onCurrencyChange={setTransactionCurrency}
-              placeholder="0.00"
-              showConversion={transactionCurrency !== displayCurrency}
-              targetCurrency={displayCurrency}
-              error={errors.amount?.message}
-            />
+            {/* Amount - Enhanced */}
+            <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-6 border-2 border-blue-200">
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-600 text-lg">💰</span>
+                </div>
+                <div>
+                  <label className="text-lg font-semibold text-gray-800">
+                    Transaction Amount *
+                  </label>
+                  <p className="text-sm text-gray-600">
+                    Enter the amount for this {transactionType}
+                  </p>
+                </div>
+              </div>
+              
+              <CurrencyInput
+                value={typeof watch('amount') === 'number' ? watch('amount') : ''}
+                currency={transactionCurrency}
+                onValueChange={(value) => setValue('amount', typeof value === 'number' ? value : 0)}
+                onCurrencyChange={setTransactionCurrency}
+                placeholder="Enter amount"
+                showConversion={transactionCurrency !== displayCurrency}
+                targetCurrency={displayCurrency}
+                error={errors.amount?.message}
+                className="w-full text-lg"
+              />
+              
+              {/* Quick Amount Buttons */}
+              <div className="mt-4">
+                <p className="text-sm text-gray-600 mb-2">Quick amounts:</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setValue('amount', 100)}
+                    className="text-xs"
+                  >
+                    ₹100
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setValue('amount', 500)}
+                    className="text-xs"
+                  >
+                    ₹500
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setValue('amount', 1000)}
+                    className="text-xs"
+                  >
+                    ₹1,000
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setValue('amount', 5000)}
+                    className="text-xs"
+                  >
+                    ₹5,000
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setValue('amount', 10000)}
+                    className="text-xs"
+                  >
+                    ₹10,000
+                  </Button>
+                </div>
+              </div>
+            </div>
 
             {/* Live Rate Display */}
             {transactionCurrency !== displayCurrency && watch('amount') && (
