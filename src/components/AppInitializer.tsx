@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinance } from '../contexts/FinanceContextOffline';
 import { syncManager } from '../lib/sync-manager';
 import { offlinePersistence } from '../lib/offline-persistence';
 import { conflictResolver } from '../lib/conflict-resolver';

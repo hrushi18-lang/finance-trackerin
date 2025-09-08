@@ -26,7 +26,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinance } from '../contexts/FinanceContextOffline';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 

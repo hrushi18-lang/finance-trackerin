@@ -11,7 +11,7 @@ import {
   Filter
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinance } from '../contexts/FinanceContextOffline';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { RingChart } from '../components/analytics/RingChart';

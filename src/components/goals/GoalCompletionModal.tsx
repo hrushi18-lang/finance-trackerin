@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Download, ArrowUpRight, Edit3, Archive, Trash2, Clock } from 'lucide-react';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 import { Button } from '../common/Button';
 
 interface GoalCompletionModalProps {

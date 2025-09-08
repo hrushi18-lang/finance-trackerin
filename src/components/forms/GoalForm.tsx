@@ -12,7 +12,7 @@ import { CurrencyIcon } from '../common/CurrencyIcon';
 import { CurrencyInput } from '../currency/CurrencyInput';
 import { LiveRateDisplay } from '../currency/LiveRateDisplay';
 import { AlertCircle } from 'lucide-react';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 
 interface GoalFormData {
   title: string;

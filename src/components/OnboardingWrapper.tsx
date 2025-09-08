@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinance } from '../contexts/FinanceContextOffline';
 import EnhancedOnboardingFlow from './onboarding/EnhancedOnboardingFlow';
 import { analytics } from '../utils/analytics';
 import { LoadingScreen } from './common/LoadingScreen';

@@ -6,7 +6,7 @@ import { Modal } from '../components/common/Modal';
 import { EnhancedBillForm } from '../components/forms/EnhancedBillForm';
 import { BillPaymentForm } from '../components/forms/BillPaymentForm';
 import { Button } from '../components/common/Button';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinance } from '../contexts/FinanceContextOffline';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 

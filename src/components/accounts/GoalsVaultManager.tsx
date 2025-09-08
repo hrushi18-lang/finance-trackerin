@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';

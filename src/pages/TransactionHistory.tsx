@@ -6,7 +6,7 @@ import { SearchAndFilter } from '../components/common/SearchAndFilter';
 import { Modal } from '../components/common/Modal';
 import { TransactionForm } from '../components/forms/TransactionForm';
 import { Button } from '../components/common/Button';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinance } from '../contexts/FinanceContextOffline';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { Transaction } from '../types';

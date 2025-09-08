@@ -7,7 +7,7 @@ import { Button } from '../common/Button';
 import { EnhancedLiability, Transaction } from '../../types'; // Changed to EnhancedLiability
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 
 interface LiabilityFormData {
   name: string;

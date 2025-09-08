@@ -14,7 +14,7 @@ import {
   Clock,
   Edit
 } from 'lucide-react';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinance } from '../contexts/FinanceContextOffline';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { format, isAfter, isBefore, differenceInDays, addDays } from 'date-fns';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';

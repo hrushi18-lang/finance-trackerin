@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { Select } from '../common/Select';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { sanitizeFinancialData, toNumber } from '../../utils/validation';
 import { DEFAULT_CATEGORIES } from '../../utils/categories';

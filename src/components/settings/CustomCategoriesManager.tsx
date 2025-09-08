@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit3, Trash2, Save, X, Tag } from 'lucide-react';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { FontOptimizedText } from '../common/FontOptimizedText';

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Calculator, TrendingDown, ArrowRight, Calendar, DollarSign, Percent, Clock, BarChart3, RefreshCw, CheckCircle, Info } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
 import { Button } from '../common/Button';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { Liability } from '../../types';

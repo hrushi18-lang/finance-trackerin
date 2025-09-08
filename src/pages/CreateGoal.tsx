@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TopNavigation } from '../components/layout/TopNavigation';
 import { GoalForm } from '../components/forms/GoalForm';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinance } from '../contexts/FinanceContextOffline';
 
 const CreateGoal: React.FC = () => {
   const navigate = useNavigate();

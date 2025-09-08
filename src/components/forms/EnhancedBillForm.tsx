@@ -9,7 +9,7 @@ import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { CurrencyInput } from '../currency/CurrencyInput';
 import { LiveRateDisplay } from '../currency/LiveRateDisplay';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 
 interface EnhancedBillFormData {
   title: string;

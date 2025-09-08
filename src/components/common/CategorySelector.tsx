@@ -3,7 +3,7 @@ import { ChevronDown, Plus, X, Search } from 'lucide-react';
 import { Button } from './Button';
 import { Input } from './Input';
 import { getCategoryColor, getCategoryIcon, getAllCategories, addCustomCategory, getCustomCategories, DEFAULT_CATEGORIES } from '../../utils/categories';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 
 interface CategorySelectorProps {
   value: string;

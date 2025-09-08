@@ -5,7 +5,7 @@ import { Input } from '../components/common/Input';
 import { AccountCard } from '../components/accounts/AccountCard';
 import { AccountForm } from '../components/accounts/AccountForm';
 import { GoalsVaultManager } from '../components/accounts/GoalsVaultManager';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinance } from '../contexts/FinanceContextOffline';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { useEnhancedCurrency } from '../contexts/EnhancedCurrencyContext';
 import { useNavigate } from 'react-router-dom';

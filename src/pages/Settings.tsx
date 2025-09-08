@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinance } from '../contexts/FinanceContextOffline';
 import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';

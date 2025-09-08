@@ -4,7 +4,7 @@ import { PieChart, Calculator, TrendingUp, AlertTriangle, Plus, Edit3, Trash2, A
 import { Modal } from '../components/common/Modal';
 import { BudgetForm } from '../components/forms/BudgetForm';
 import { Button } from '../components/common/Button';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinance } from '../contexts/FinanceContextOffline';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { Budget } from '../types';

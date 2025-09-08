@@ -9,7 +9,7 @@ import { GoogleAuth } from '../auth/GoogleAuth';
 import { OfflineIndicator } from '../common/OfflineIndicator';
 import { PerformanceOptimizer } from '../common/PerformanceOptimizer';
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 import { useOfflineStorage } from '../../hooks/useOfflineStorage';
 
 interface OnboardingStep {

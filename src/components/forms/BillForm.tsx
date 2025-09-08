@@ -5,7 +5,7 @@ import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 
 interface BillFormData {
   description: string;

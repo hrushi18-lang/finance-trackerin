@@ -6,7 +6,7 @@ import { LuxuryLiabilityForm } from '../components/forms/LuxuryLiabilityForm';
 import { LiabilityModificationForm } from '../components/forms/LiabilityModificationForm';
 import { PaymentForm } from '../components/forms/PaymentForm';
 import { Input } from '../components/common/Input';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinance } from '../contexts/FinanceContextOffline';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { LiabilityType } from '../lib/liability-behaviors';
 

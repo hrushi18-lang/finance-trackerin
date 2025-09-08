@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Calendar, Percent, DollarSign, CreditCard, Building, Car, Home, GraduationCap, ShoppingCart, Users, Scale, Zap, FileText, Globe, Wallet, AlertCircle, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { getLiabilityBehavior, LiabilityType } from '../../lib/liability-behaviors';
