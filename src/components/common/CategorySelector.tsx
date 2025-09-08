@@ -24,7 +24,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   error,
   transactionType
 }) => {
-  const { addUserCategory, getUserCategoriesByType } = useFinance();
+  const { addUserCategory, userCategories } = useFinance();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -53,16 +53,16 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         : [...DEFAULT_CATEGORIES.TRANSACTION.INCOME, ...DEFAULT_CATEGORIES.TRANSACTION.EXPENSE];
       
       // Get user categories from database
-      const userCategories = getUserCategoriesByType(transactionType);
-      const userCategoryNames = userCategories.map(cat => cat.name);
+      const userCategoriesForType = userCategories.filter(cat => cat.type === transactionType);
+      const userCategoryNames = userCategoriesForType.map(cat => cat.name);
       
       return [...baseCategories, ...userCategoryNames];
     }
     
     // For non-transaction types, get default + user categories
     const defaultCategories = getAllCategories(type);
-    const userCategories = getUserCategoriesByType(type as any);
-    const userCategoryNames = userCategories.map(cat => cat.name);
+    const userCategoriesForType = userCategories.filter(cat => cat.type === type);
+    const userCategoryNames = userCategoriesForType.map(cat => cat.name);
     
     return [...defaultCategories, ...userCategoryNames];
   };
