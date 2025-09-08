@@ -50,6 +50,14 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
 
           // Determine if user is new based on existing data
           const hasExistingData = accounts.length > 0 || goals.length > 0 || bills.length > 0 || liabilities.length > 0 || userCategories.length > 0;
+          console.log('AppInitializer - Data counts:', {
+            accounts: accounts.length,
+            goals: goals.length,
+            bills: bills.length,
+            liabilities: liabilities.length,
+            userCategories: userCategories.length,
+            hasExistingData
+          });
           setIsNewUser(!hasExistingData);
 
           // Track app initialization
@@ -98,21 +106,34 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
 
       // Check if user has existing data
       const hasExistingData = accounts.length > 0 || goals.length > 0 || bills.length > 0 || liabilities.length > 0 || userCategories.length > 0;
+      
+      console.log('AppInitializer - Routing decision:', {
+        currentPath: location.pathname,
+        hasExistingData,
+        accounts: accounts.length,
+        goals: goals.length,
+        bills: bills.length,
+        liabilities: liabilities.length,
+        userCategories: userCategories.length
+      });
 
       // If user is new (no existing data) and not already on onboarding
       if (!hasExistingData && location.pathname !== '/onboarding') {
+        console.log('AppInitializer - Redirecting to onboarding (new user)');
         navigate('/onboarding');
         return;
       }
 
       // If user has existing data and is on onboarding, redirect to dashboard
       if (hasExistingData && location.pathname === '/onboarding') {
+        console.log('AppInitializer - Redirecting to dashboard (existing user on onboarding)');
         navigate('/dashboard');
         return;
       }
 
       // If user is on root path and has data, redirect to dashboard
       if (hasExistingData && location.pathname === '/') {
+        console.log('AppInitializer - Redirecting to dashboard (existing user on root)');
         navigate('/dashboard');
         return;
       }
