@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useFinance } from '../contexts/FinanceContextOffline';
 import { LoadingScreen } from './common/LoadingScreen';
 
 interface RouteHandlerProps {
@@ -12,7 +11,6 @@ const RouteHandler: React.FC<RouteHandlerProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const { accounts, goals, bills, liabilities, userCategories, loading: financeLoading } = useFinance();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
@@ -35,40 +33,8 @@ const RouteHandler: React.FC<RouteHandlerProps> = ({ children }) => {
         return;
       }
 
-      // Wait for finance data to load
-      if (financeLoading) {
-        return;
-      }
-
-      // Check if user has existing data
-      const hasExistingData = 
-        accounts.length > 0 || 
-        goals.length > 0 || 
-        bills.length > 0 || 
-        liabilities.length > 0 || 
-        userCategories.length > 0;
-
-      // If user is new (no existing data) and not already on onboarding
-      if (!hasExistingData && location.pathname !== '/onboarding') {
-        navigate('/onboarding');
-        setIsChecking(false);
-        return;
-      }
-
-      // If user has existing data and is on onboarding, redirect to dashboard
-      if (hasExistingData && location.pathname === '/onboarding') {
-        navigate('/dashboard');
-        setIsChecking(false);
-        return;
-      }
-
-      // If user is on root path and has data, redirect to dashboard
-      if (hasExistingData && location.pathname === '/') {
-        navigate('/dashboard');
-        setIsChecking(false);
-        return;
-      }
-
+      // For authenticated users, let the AppInitializer handle the routing logic
+      // based on finance data availability
       setIsChecking(false);
     };
 
@@ -77,18 +43,12 @@ const RouteHandler: React.FC<RouteHandlerProps> = ({ children }) => {
     isAuthenticated, 
     user, 
     authLoading, 
-    financeLoading, 
-    accounts, 
-    goals, 
-    bills, 
-    liabilities, 
-    userCategories, 
     location.pathname, 
     navigate
   ]);
 
   // Show loading while checking routing
-  if (isChecking || authLoading || financeLoading) {
+  if (isChecking || authLoading) {
     return (
       <LoadingScreen 
         message="Setting up your financial app..." 

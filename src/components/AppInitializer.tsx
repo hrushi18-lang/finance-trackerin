@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useFinance } from '../contexts/FinanceContextOffline';
 import { syncManager } from '../lib/sync-manager';
@@ -15,6 +16,8 @@ interface AppInitializerProps {
 }
 
 export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { accounts, goals, bills, liabilities, userCategories } = useFinance();
   const [isInitialized, setIsInitialized] = useState(false);
@@ -110,6 +113,47 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
 
     initializeApp();
   }, [isAuthenticated, user, accounts, goals, bills, liabilities, userCategories]);
+
+  // Handle routing after initialization
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const handleRouting = () => {
+      // Don't redirect if already on auth page
+      if (location.pathname === '/auth') {
+        return;
+      }
+
+      // If not authenticated, redirect to auth
+      if (!isAuthenticated || !user) {
+        navigate('/auth');
+        return;
+      }
+
+      // Check if user has existing data
+      const hasExistingData = accounts.length > 0 || goals.length > 0 || bills.length > 0 || liabilities.length > 0 || userCategories.length > 0;
+
+      // If user is new (no existing data) and not already on onboarding
+      if (!hasExistingData && location.pathname !== '/onboarding') {
+        navigate('/onboarding');
+        return;
+      }
+
+      // If user has existing data and is on onboarding, redirect to dashboard
+      if (hasExistingData && location.pathname === '/onboarding') {
+        navigate('/dashboard');
+        return;
+      }
+
+      // If user is on root path and has data, redirect to dashboard
+      if (hasExistingData && location.pathname === '/') {
+        navigate('/dashboard');
+        return;
+      }
+    };
+
+    handleRouting();
+  }, [isInitialized, isAuthenticated, user, accounts, goals, bills, liabilities, userCategories, location.pathname, navigate]);
 
   if (!isInitialized) {
     return (
