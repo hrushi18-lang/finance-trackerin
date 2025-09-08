@@ -15,7 +15,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
-  const { accounts, goals, bills, liabilities, userCategories } = useFinance();
+  const { accounts, goals, bills, liabilities, userCategories, loading } = useFinance();
   const [isInitialized, setIsInitialized] = useState(false);
   const [initializationError, setInitializationError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
@@ -104,6 +104,12 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
         return;
       }
 
+      // Wait for data loading to complete before making routing decisions
+      if (loading) {
+        console.log('AppInitializer - Data still loading, waiting...');
+        return;
+      }
+
       // Check if user has existing data
       const hasExistingData = accounts.length > 0 || goals.length > 0 || bills.length > 0 || liabilities.length > 0 || userCategories.length > 0;
       
@@ -114,7 +120,8 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
         goals: goals.length,
         bills: bills.length,
         liabilities: liabilities.length,
-        userCategories: userCategories.length
+        userCategories: userCategories.length,
+        loading
       });
 
       // If user is new (no existing data) and not already on onboarding
@@ -140,7 +147,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     };
 
     handleRouting();
-  }, [isInitialized, isAuthenticated, user, accounts, goals, bills, liabilities, userCategories, location.pathname, navigate]);
+  }, [isInitialized, isAuthenticated, user, accounts, goals, bills, liabilities, userCategories, loading, location.pathname, navigate]);
 
   if (!isInitialized) {
     return (
