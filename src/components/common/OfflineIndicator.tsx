@@ -1,6 +1,6 @@
 import React from 'react';
-import { Wifi, WifiOff, Sync, AlertCircle } from 'lucide-react';
-import { useFinance } from '../../contexts/FinanceContext';
+import { Wifi, WifiOff, RefreshCw, AlertCircle } from 'lucide-react';
+import { useFinance } from '../../contexts/FinanceContextOffline';
 
 interface OfflineIndicatorProps {
   className?: string;
@@ -22,7 +22,7 @@ const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({ className = '' }) =
         </div>
       ) : syncStatus.pendingChanges > 0 ? (
         <div className="flex items-center space-x-2 bg-blue-100 text-blue-800 px-3 py-2 rounded-lg shadow-lg border border-blue-200">
-          <Sync size={16} className="animate-spin" />
+          <RefreshCw size={16} className="animate-spin" />
           <span className="text-sm font-medium">
             Syncing {syncStatus.pendingChanges} changes...
           </span>
