@@ -83,7 +83,10 @@ class OfflineStorage {
           'profiles', 'financial_accounts', 'transactions', 'goals', 
           'budgets', 'liabilities', 'bills', 'recurring_transactions',
           'enhanced_liabilities', 'assets', 'bill_instances', 
-          'liability_payments', 'notifications'
+          'liability_payments', 'notifications', 'user_categories',
+          'bill_account_links', 'bill_staging_history', 'bill_completion_tracking',
+          'income_sources', 'account_transfers', 'bill_reminders',
+          'debt_payments', 'transaction_splits', 'financial_insights'
         ];
 
         tables.forEach(table => {
@@ -91,6 +94,7 @@ class OfflineStorage {
             const store = db.createObjectStore(table, { keyPath: 'id' });
             store.createIndex('user_id', 'user_id', { unique: false });
             store.createIndex('created_at', 'created_at', { unique: false });
+            store.createIndex('updated_at', 'updated_at', { unique: false });
           }
         });
 
@@ -98,6 +102,7 @@ class OfflineStorage {
         if (!db.objectStoreNames.contains('sync_queue')) {
           const store = db.createObjectStore('sync_queue', { keyPath: 'id' });
           store.createIndex('timestamp', 'timestamp', { unique: false });
+          store.createIndex('table', 'table', { unique: false });
         }
       };
 
@@ -433,7 +438,7 @@ class OfflineStorage {
       request.onsuccess = () => {
         const db = request.result;
         const transaction = db.transaction(['sync_queue'], 'readwrite');
-        const store = transaction.objectStore(table);
+        const store = transaction.objectStore('sync_queue');
         store.add(queueItem);
       };
     } else {
@@ -491,7 +496,7 @@ class OfflineStorage {
         request.onsuccess = () => {
           const db = request.result;
           const transaction = db.transaction(['sync_queue'], 'readonly');
-          const store = transaction.objectStore(table);
+          const store = transaction.objectStore('sync_queue');
           const getAllRequest = store.getAll();
           
           getAllRequest.onsuccess = () => resolve(getAllRequest.result);
@@ -511,7 +516,7 @@ class OfflineStorage {
       request.onsuccess = () => {
         const db = request.result;
         const transaction = db.transaction(['sync_queue'], 'readwrite');
-        const store = transaction.objectStore(table);
+        const store = transaction.objectStore('sync_queue');
         store.delete(id);
       };
     } else {
@@ -525,6 +530,34 @@ class OfflineStorage {
   // Utility methods
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  // Additional methods for compatibility
+  async getItem(key: string): Promise<any> {
+    try {
+      const data = await this.getFromLocal(key);
+      return data;
+    } catch (error) {
+      console.error(`Error getting item ${key}:`, error);
+      return null;
+    }
+  }
+
+  async setItem(key: string, value: any): Promise<void> {
+    try {
+      await this.saveToLocal(key, value);
+    } catch (error) {
+      console.error(`Error setting item ${key}:`, error);
+    }
+  }
+
+  async removeItem(key: string): Promise<void> {
+    try {
+      // This is a simplified version - in practice you'd need to know the ID
+      console.warn('removeItem called but ID not specified');
+    } catch (error) {
+      console.error(`Error removing item ${key}:`, error);
+    }
   }
 
   // Public API

@@ -49,6 +49,33 @@ class OfflinePersistence {
     this.setupDataIntegrityChecks();
   }
 
+  // Initialize the offline persistence system
+  async initialize(): Promise<void> {
+    try {
+      // Initialize offline storage
+      await offlineStorage.initialize();
+      
+      // Setup event listeners for online/offline status
+      this.setupEventListeners();
+      
+      console.log('Offline persistence initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize offline persistence:', error);
+      throw error;
+    }
+  }
+
+  // Setup event listeners
+  private setupEventListeners(): void {
+    window.addEventListener('online', () => {
+      this.processQueue();
+    });
+
+    window.addEventListener('offline', () => {
+      console.log('App went offline, operations will be queued');
+    });
+  }
+
   setUserId(userId: string | null) {
     this.userId = userId;
     if (userId) {
