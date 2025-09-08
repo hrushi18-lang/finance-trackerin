@@ -92,8 +92,8 @@ function App() {
                   <EnhancedCurrencyProvider>
                     <PersonalizationProvider>
                       <FinanceProvider>
-                      <AppInitializer>
                       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                        <AppInitializer>
                         <RouteHandler>
                           <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
                             {/* Accessibility Enhancements */}
@@ -370,9 +370,9 @@ function App() {
                             </div>
                           </div>
                         </RouteHandler>
+                        </AppInitializer>
                       </Router>
                       <ReactQueryDevtools initialIsOpen={false} />
-                      </AppInitializer>
                       </FinanceProvider>
                     </PersonalizationProvider>
                   </EnhancedCurrencyProvider>
