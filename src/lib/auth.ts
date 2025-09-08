@@ -86,17 +86,17 @@ class AuthManager {
           // Save to local storage
         }
 
-      this.updateAuthState({ 
-        user: profile, 
-        loading: false, 
-        error: null 
-      });
-    } catch (error) {
-      this.updateAuthState({ 
-        error: error instanceof Error ? error.message : 'Failed to load profile',
-        loading: false 
-      });
-    }
+        this.updateAuthState({ 
+          user: profile, 
+          loading: false, 
+          error: null 
+        });
+      } catch (error) {
+        this.updateAuthState({ 
+          error: error instanceof Error ? error.message : 'Failed to load profile',
+          loading: false 
+        });
+      }
   }
 
   private async createUserProfile(authUser: any): Promise<UserProfile> {
@@ -253,7 +253,6 @@ class AuthManager {
         if (error) {
           console.warn('Failed to update profile in Supabase:', error);
         }
-      }
 
       // Update locally
       this.updateAuthState({ user: updatedProfile });
