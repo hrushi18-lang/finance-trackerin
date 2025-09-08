@@ -198,6 +198,13 @@ class OfflineStorage {
 
   async getAll<T>(table: string, userId?: string): Promise<T[]> {
     try {
+      // Handle special cases for conflicts and other non-table keys
+      if (table.startsWith('conflicts_')) {
+        console.warn(`Attempted to use getAll with conflicts key: ${table}. Using getItem instead.`);
+        const result = await this.getItem<T[]>(table);
+        return result || [];
+      }
+
       const items = await this.getFromLocal(table, userId);
       return items.filter(item => !item._deleted);
     } catch (error) {
@@ -277,6 +284,13 @@ class OfflineStorage {
 
   private async getFromIndexedDB(table: string, userId?: string): Promise<any[]> {
     return new Promise((resolve, reject) => {
+      // Handle special cases for conflicts and other non-table keys
+      if (table.startsWith('conflicts_') || table.includes('_sync_') || table.includes('_cache_')) {
+        console.warn(`Attempted to access non-table key '${table}' as IndexedDB table. Returning empty array.`);
+        resolve([]);
+        return;
+      }
+
       const request = indexedDB.open('FinTrackDB', 2);
       
       request.onsuccess = () => {
