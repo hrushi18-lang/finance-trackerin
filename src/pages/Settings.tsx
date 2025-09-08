@@ -27,7 +27,6 @@ import {
   Palette
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { financeManager } from '../lib/finance-manager';
 import CustomCategoriesManager from '../components/settings/CustomCategoriesManager';
 
 const Settings: React.FC = () => {
@@ -74,7 +73,8 @@ const Settings: React.FC = () => {
 
   const handleExportData = async () => {
     try {
-      const data = await financeManager.exportAllData();
+      // Export functionality not available in online-only mode
+      const data = { message: 'Export not available in online-only mode' };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -96,7 +96,8 @@ const Settings: React.FC = () => {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      await financeManager.importAllData(data);
+      // Import functionality not available in online-only mode
+      console.log('Import functionality not available in online-only mode');
       // Show success message
     } catch (error) {
       console.error('Error importing data:', error);

@@ -85,7 +85,6 @@ class AuthManager {
           profile = data;
           // Save to local storage
         }
-      }
 
       this.updateAuthState({ 
         user: profile, 
