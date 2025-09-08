@@ -3,7 +3,6 @@
  * Handles local data persistence and synchronization
  */
 
-import { Database } from '../types/supabase';
 import { supabase } from './supabase';
 
 export type LocalStorageKey = 
@@ -149,7 +148,7 @@ class OfflineStorage {
   }
 
   async update<T>(table: string, id: string, data: Partial<T>): Promise<T> {
-    const existingItem = await this.getById(table, id);
+    const existingItem = await this.getById<T>(table, id);
     if (!existingItem) {
       throw new Error(`Item with id ${id} not found in ${table}`);
     }
@@ -159,7 +158,7 @@ class OfflineStorage {
       ...data,
       updated_at: new Date().toISOString(),
       _local: true
-    };
+    } as T;
 
     if (this.isOnline) {
       try {
@@ -201,7 +200,7 @@ class OfflineStorage {
       // Handle special cases for conflicts and other non-table keys
       if (table.startsWith('conflicts_')) {
         console.warn(`Attempted to use getAll with conflicts key: ${table}. Using getItem instead.`);
-        const result = await this.getItem<T[]>(table);
+        const result = await this.getItem(table);
         return result || [];
       }
 
@@ -515,7 +514,7 @@ class OfflineStorage {
       this.syncStatus.lastSync = new Date().toISOString();
       this.syncStatus.lastError = null;
     } catch (error) {
-      this.syncStatus.lastError = error.message;
+      this.syncStatus.lastError = error instanceof Error ? error.message : 'Unknown error';
     }
   }
 
