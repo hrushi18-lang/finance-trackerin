@@ -6,7 +6,7 @@ interface OfflineIndicatorProps {
   className?: string;
 }
 
-const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({ className = '' }) => {
+export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({ className = '' }) => {
   const { isOffline, syncStatus } = useFinance();
 
   if (!isOffline && syncStatus.pendingChanges === 0) {
