@@ -89,6 +89,8 @@ export interface Transaction {
   parentTransactionId?: string; // Link to parent transaction (for split transactions)
   originalAmount?: number;
   originalCurrency?: string;
+  exchangeRateUsed?: number;
+  currencyCode?: string;
   exchangeRate?: number;
   isSplit?: boolean;
   splitGroupId?: string;

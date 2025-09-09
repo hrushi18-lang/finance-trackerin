@@ -78,9 +78,12 @@ const AccountSummary: React.FC<AccountSummaryProps> = ({ accounts, className = "
           if (account.currency === primaryCurrency) {
             total += account.balance;
           } else {
-            const converted = await convertAmount(account.balance, account.currency, primaryCurrency);
+            // Convert to minor units for conversion
+            const balanceInMinorUnits = Math.round(account.balance * 100);
+            const converted = await convertAmount(balanceInMinorUnits, account.currency, primaryCurrency);
             if (converted !== null) {
-              total += converted;
+              // Convert back to major units
+              total += converted / 100;
             }
           }
         }

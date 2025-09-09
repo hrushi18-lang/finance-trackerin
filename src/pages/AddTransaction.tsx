@@ -10,6 +10,8 @@ import { useFinance } from '../contexts/FinanceContext';
 import { useEnhancedCurrency } from '../contexts/EnhancedCurrencyContext';
 import { CurrencyInput } from '../components/currency/CurrencyInput';
 import { LiveRateDisplay } from '../components/currency/LiveRateDisplay';
+import { ConversionTransparency } from '../components/currency/ConversionTransparency';
+import { StaleRatesBanner } from '../components/currency/StaleRatesBanner';
 
 interface TransactionFormData {
   type: 'income' | 'expense' | 'transfer';
@@ -38,7 +40,14 @@ interface SplitFormData {
 const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { displayCurrency, formatCurrency, convertAmount, saveConversionLog } = useEnhancedCurrency();
+  const { 
+    displayCurrency, 
+    formatCurrency, 
+    convertAmount, 
+    saveConversionLog,
+    hasStaleRates,
+    refreshRates
+  } = useEnhancedCurrency();
   const { 
     addTransaction, 
     userCategories, 
@@ -55,8 +64,10 @@ const AddTransaction: React.FC = () => {
   const [splits, setSplits] = useState<SplitFormData[]>([{ category: '', amount: 0, description: '' }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [transactionCurrency, setTransactionCurrency] = useState(displayCurrency);
+  const [transactionCurrency, setTransactionCurrency] = useState(displayCurrency || 'USD');
   const [showLinkOptions, setShowLinkOptions] = useState(false);
+  const [conversionResult, setConversionResult] = useState<any>(null);
+  const [showStaleBanner, setShowStaleBanner] = useState(true);
   
   // Handle location state for historical and scheduled transactions
   const { accountId, isHistorical, isScheduled } = location.state || {};
@@ -143,34 +154,55 @@ const AddTransaction: React.FC = () => {
       // For historical transactions, don't affect current balance
       const affectsBalance = !isHistorical;
       
-      // Handle currency conversion if needed
-      let finalAmount = data.amount;
-      let originalAmount = data.amount;
-      let originalCurrency = transactionCurrency;
-      let exchangeRateUsed = 1.0;
+      // Get the selected account to determine its native currency
+      const selectedAccount = accounts.find(acc => acc.id === data.accountId);
+      if (!selectedAccount) {
+        setError('Selected account not found.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const accountCurrency = selectedAccount.currency;
       
-      if (transactionCurrency !== displayCurrency) {
-        const convertedAmount = convertAmount(data.amount, transactionCurrency, displayCurrency);
-        if (convertedAmount === null) {
-          setError('Unable to convert currency. Please try again.');
+      // Handle currency conversion based on account's native currency
+      let finalAmount = data.amount;
+      
+      // If transaction currency differs from account currency, convert to account currency
+      if (transactionCurrency !== accountCurrency) {
+        try {
+          // Convert amount to minor units for conversion
+          const amountInMinorUnits = Math.round(data.amount * 100);
+          const result = await convertAmount(amountInMinorUnits, transactionCurrency || 'USD', accountCurrency || 'USD');
+          if (result === null) {
+            setError(`Unable to convert ${transactionCurrency} to ${accountCurrency}. Please try again.`);
+            setIsSubmitting(false);
+            return;
+          }
+          
+          // Convert from minor units back to major units for the transaction
+          finalAmount = result.convertedAmount / 100;
+          setConversionResult(result);
+          
+          // Log the conversion
+          await saveConversionLog({
+            from_currency: transactionCurrency || 'USD',
+            to_currency: accountCurrency || 'USD',
+            original_amount: data.amount,
+            converted_amount: finalAmount,
+            exchange_rate: result.fxRate,
+            conversion_fee: 0, // No fee for now
+            transaction_id: undefined // Will be set after transaction is created
+          });
+        } catch (conversionError) {
+          console.error('Currency conversion error:', conversionError);
+          setError(`Currency conversion from ${transactionCurrency} to ${accountCurrency} failed. Please try again.`);
           setIsSubmitting(false);
           return;
         }
-        
-        finalAmount = convertedAmount;
-        exchangeRateUsed = convertAmount(1, transactionCurrency, displayCurrency) || 1.0;
-        
-        // Log the conversion
-        await saveConversionLog({
-          from_currency: transactionCurrency,
-          to_currency: displayCurrency,
-          original_amount: originalAmount,
-          converted_amount: finalAmount,
-          exchange_rate: exchangeRateUsed,
-          conversion_fee: 0, // No fee for now
-          transaction_id: undefined // Will be set after transaction is created
-        });
       }
+      
+      // Note: Account currency conversion is handled above
+      // Display currency conversion is handled in the UI components
       
       if (isSplitTransaction) {
         // For split transactions, create individual transactions for each split
@@ -186,9 +218,19 @@ const AddTransaction: React.FC = () => {
         // Create individual transactions for each split
         for (const split of splits) {
           const splitAmount = toNumber(split.amount);
-          const convertedSplitAmount = transactionCurrency !== displayCurrency 
-            ? convertAmount(splitAmount, transactionCurrency, displayCurrency) || splitAmount
-            : splitAmount;
+          let convertedSplitAmount = splitAmount;
+          
+          // Convert split amount to account currency
+          if (transactionCurrency !== accountCurrency) {
+            try {
+              const amountInMinorUnits = Math.round(splitAmount * 100);
+              const result = await convertAmount(amountInMinorUnits, transactionCurrency || 'USD', accountCurrency || 'USD');
+              convertedSplitAmount = result ? result.convertedAmount / 100 : splitAmount;
+            } catch (error) {
+              console.error('Split currency conversion error:', error);
+              convertedSplitAmount = splitAmount; // Fallback to original amount
+            }
+          }
             
           const transactionData = {
             type: data.type as 'income' | 'expense',
@@ -199,10 +241,10 @@ const AddTransaction: React.FC = () => {
             accountId: data.accountId,
             affectsBalance: affectsBalance,
             status: isScheduled ? 'scheduled' as const : 'completed' as const,
-            currencyCode: displayCurrency,
+            currencyCode: accountCurrency,
             originalAmount: splitAmount,
-            originalCurrency: transactionCurrency,
-            exchangeRateUsed: exchangeRateUsed
+            originalCurrency: transactionCurrency || 'USD',
+            exchangeRateUsed: conversionResult?.fxRate || 1.0
           };
 
           await addTransaction(transactionData);
@@ -218,10 +260,10 @@ const AddTransaction: React.FC = () => {
           accountId: data.accountId,
           affectsBalance: affectsBalance,
           status: isScheduled ? 'scheduled' as const : 'completed' as const,
-          currencyCode: displayCurrency,
-          originalAmount: originalAmount,
-          originalCurrency: originalCurrency,
-          exchangeRateUsed: exchangeRateUsed
+          currencyCode: accountCurrency,
+          originalAmount: data.amount,
+          originalCurrency: transactionCurrency,
+          exchangeRateUsed: conversionResult?.fxRate || 1.0
         };
 
         // Submit the main transaction
@@ -335,6 +377,14 @@ const AddTransaction: React.FC = () => {
         </div>
       </div>
       
+      {/* Stale Rates Banner */}
+      <StaleRatesBanner
+        isVisible={hasStaleRates && showStaleBanner}
+        onRefresh={refreshRates}
+        onDismiss={() => setShowStaleBanner(false)}
+        className="mx-4 mt-4"
+      />
+      
       {/* Transaction Type Indicator */}
       {(isHistorical || isScheduled) && (
         <div className="px-4 py-2">
@@ -413,11 +463,22 @@ const AddTransaction: React.FC = () => {
                 onValueChange={(value) => setValue('amount', typeof value === 'number' ? value : 0)}
                 onCurrencyChange={setTransactionCurrency}
                 placeholder="Enter amount"
-                showConversion={transactionCurrency !== displayCurrency}
-                targetCurrency={displayCurrency}
+                showConversion={transactionCurrency !== (accounts.find(acc => acc.id === watch('accountId'))?.currencyCode || displayCurrency)}
+                targetCurrency={accounts.find(acc => acc.id === watch('accountId'))?.currencyCode || displayCurrency}
                 error={errors.amount?.message}
                 className="w-full text-lg"
               />
+              
+              {/* Conversion Transparency */}
+              {conversionResult && (
+                <div className="mt-2">
+                  <ConversionTransparency
+                    result={conversionResult}
+                    size="sm"
+                    className="text-gray-600"
+                  />
+                </div>
+              )}
               
               {/* Quick Amount Buttons */}
               <div className="mt-4">
@@ -473,22 +534,26 @@ const AddTransaction: React.FC = () => {
             </div>
 
             {/* Live Rate Display */}
-            {transactionCurrency !== displayCurrency && watch('amount') && (
+            {transactionCurrency !== (accounts.find(acc => acc.id === watch('accountId'))?.currencyCode || displayCurrency) && watch('amount') && (
               <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-4 border border-blue-200">
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-sm font-medium text-blue-600 mb-1">Live Conversion</h4>
                     <p className="text-xs text-gray-600">
                       {formatCurrency(watch('amount') || 0, transactionCurrency)} = {' '}
-                      {convertAmount(watch('amount') || 0, transactionCurrency, displayCurrency) 
-                        ? formatCurrency(convertAmount(watch('amount') || 0, transactionCurrency, displayCurrency)!, displayCurrency)
-                        : 'N/A'
-                      }
+                      <LiveRateDisplay
+                        fromCurrency={transactionCurrency}
+                        toCurrency={accounts.find(acc => acc.id === watch('accountId'))?.currencyCode || displayCurrency}
+                        amount={watch('amount') || 0}
+                        compact={true}
+                        showTrend={false}
+                        showLastUpdated={false}
+                      />
                     </p>
                   </div>
                   <LiveRateDisplay
                     fromCurrency={transactionCurrency}
-                    toCurrency={displayCurrency}
+                    toCurrency={accounts.find(acc => acc.id === watch('accountId'))?.currencyCode || displayCurrency}
                     amount={1}
                     compact={true}
                     showTrend={true}
@@ -541,7 +606,7 @@ const AddTransaction: React.FC = () => {
                 <option value="">Choose your bank account...</option>
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.name} ({account.type.replace('_', ' ')}) - {formatCurrency(account.balance, displayCurrency)}
+                    {account.name} ({account.type.replace('_', ' ')}) - {formatCurrency(account.balance, account.currencyCode)} {account.currencyCode}
                   </option>
                 ))}
               </select>
@@ -556,6 +621,17 @@ const AddTransaction: React.FC = () => {
                   <AlertCircle size={14} className="mr-1" />
                   No accounts found. Please add an account first.
                 </p>
+              )}
+              {/* Account Currency Info */}
+              {watch('accountId') && (
+                <div className="mt-2 p-2 bg-forest-700/30 rounded-lg">
+                  <p className="text-xs text-forest-300">
+                    💡 This account uses <strong>{accounts.find(acc => acc.id === watch('accountId'))?.currencyCode}</strong> currency. 
+                    {transactionCurrency !== accounts.find(acc => acc.id === watch('accountId'))?.currencyCode && (
+                      <span className="text-yellow-300"> Amount will be converted automatically.</span>
+                    )}
+                  </p>
+                </div>
               )}
             </div>
 

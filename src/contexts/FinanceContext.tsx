@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { useEnhancedCurrency } from './EnhancedCurrencyContext';
 import { queryCache, invalidateUserData } from '../lib/query-cache';
 import { 
   FinancialAccount, 
@@ -166,6 +167,7 @@ const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const { convertAmount } = useEnhancedCurrency();
   const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -1798,8 +1800,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (transactionData.type === 'expense' && transactionData.affectsBalance !== false) {
       const account = accounts.find(acc => acc.id === transactionData.accountId);
       if (account) {
-        // Allow negative balances for credit cards and investment accounts
-        if (account.type !== 'credit_card' && account.type !== 'investment') {
+        // Allow negative balances for credit cards, investment accounts, and goals_vault
+        if (account.type !== 'credit_card' && account.type !== 'investment' && account.type !== 'goals_vault') {
           if (account.balance < transactionData.amount) {
             throw new Error(`Insufficient funds. Account balance (${account.balance.toFixed(2)}) is less than transaction amount (${transactionData.amount.toFixed(2)})`);
           }
@@ -1825,7 +1827,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         affects_balance: transactionData.affectsBalance ?? true,
         reason: transactionData.reason || null,
         transfer_to_account_id: transactionData.transferToAccountId || null,
-        status: transactionData.status || 'completed'
+        status: transactionData.status || 'completed',
+        currency_code: transactionData.currencyCode || 'USD',
+        original_amount: transactionData.originalAmount || null,
+        original_currency: transactionData.originalCurrency || null,
+        exchange_rate_used: transactionData.exchangeRateUsed || null
       })
       .select()
       .single();
@@ -1856,18 +1862,42 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Update account balance based on transaction type
     if (newTransaction.affectsBalance !== false) {
-      setAccounts(prev => prev.map(account => {
-        if (account.id === newTransaction.accountId) {
-          const balanceChange = newTransaction.type === 'income' 
-            ? newTransaction.amount 
-            : -newTransaction.amount;
-          return {
-            ...account,
-            balance: account.balance + balanceChange
-          };
+      const account = accounts.find(acc => acc.id === newTransaction.accountId);
+      if (account) {
+        const balanceChange = newTransaction.type === 'income' 
+          ? newTransaction.amount 
+          : -newTransaction.amount;
+        const newBalance = account.balance + balanceChange;
+        
+        // Check if the new balance would violate constraints
+        if (account.type !== 'goals_vault' && account.type !== 'credit_card' && account.type !== 'investment') {
+          if (newBalance < 0) {
+            throw new Error(`Insufficient funds. Account balance would be ${newBalance.toFixed(2)} after this transaction.`);
+          }
         }
-        return account;
-      }));
+        
+        // Update the database
+        const { error: updateError } = await supabase
+          .from('financial_accounts')
+          .update({ balance: newBalance })
+          .eq('id', newTransaction.accountId);
+          
+        if (updateError) {
+          console.error('Error updating account balance:', updateError);
+          throw new Error(`Failed to update account balance: ${updateError.message}`);
+        }
+        
+        // Update local state
+        setAccounts(prev => prev.map(acc => {
+          if (acc.id === newTransaction.accountId) {
+            return {
+              ...acc,
+              balance: newBalance
+            };
+          }
+          return acc;
+        }));
+      }
     }
 
     // Update budget if this is an expense transaction
@@ -3292,6 +3322,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error('Invalid account selection');
     }
 
+    // Handle currency conversion if needed
+    let convertedAmount = amount;
+    let exchangeRateUsed = 1.0;
+    
+    if (fromAccount.currency !== toAccount.currency) {
+      try {
+        // Convert amount to minor units for conversion
+        const amountInMinorUnits = Math.round(amount * 100);
+        const result = await convertAmount(amountInMinorUnits, fromAccount.currency || 'USD', toAccount.currency || 'USD');
+        if (result) {
+          convertedAmount = result.convertedAmount / 100;
+          exchangeRateUsed = result.fxRate;
+        } else {
+          throw new Error(`Unable to convert ${fromAccount.currency || 'USD'} to ${toAccount.currency || 'USD'}`);
+        }
+      } catch (error) {
+        console.error('Transfer currency conversion error:', error);
+        throw new Error(`Currency conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
     // Create paired transactions for the transfer
     const transferDate = new Date();
     
@@ -3304,19 +3355,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       date: transferDate,
       accountId: fromAccountId,
       affectsBalance: true,
-      status: 'completed'
+      status: 'completed',
+      currencyCode: fromAccount.currency,
+      originalAmount: amount,
+      originalCurrency: fromAccount.currency,
+      exchangeRateUsed: 1.0
     });
 
     // Create incoming transaction (income to destination account)
     const incomingTransaction = await addTransaction({
       type: 'income',
-      amount: amount,
+      amount: convertedAmount,
       category: 'Transfer',
       description: `Transfer from ${fromAccount.name}: ${description}`,
       date: transferDate,
       accountId: toAccountId,
       affectsBalance: true,
-      status: 'completed'
+      status: 'completed',
+      currencyCode: toAccount.currency,
+      originalAmount: amount,
+      originalCurrency: fromAccount.currency,
+      exchangeRateUsed: exchangeRateUsed
     });
 
     // Create transfer record for tracking

@@ -95,10 +95,13 @@ const Home: React.FC = () => {
             totalAssets += account.balance || 0;
             console.log(`Same currency, adding directly: ${account.balance}`);
           } else {
-            const converted = await convertAmount(account.balance || 0, account.currency, primaryCurrency);
+            // Convert to minor units for conversion
+            const balanceInMinorUnits = Math.round((account.balance || 0) * 100);
+            const converted = await convertAmount(balanceInMinorUnits, account.currency, primaryCurrency);
             console.log(`Converted ${account.balance} ${account.currency} to ${converted} ${primaryCurrency}`);
             if (converted !== null) {
-              totalAssets += converted;
+              // Convert back to major units
+              totalAssets += converted / 100;
             } else {
               console.warn(`⚠️ Conversion failed for ${account.name}, using original amount`);
               // Fallback: use original amount if conversion fails
@@ -113,9 +116,12 @@ const Home: React.FC = () => {
           if (liability.currency === primaryCurrency) {
             totalLiabilities += liability.remaining_amount || 0;
           } else {
-            const converted = await convertAmount(liability.remaining_amount || 0, liability.currency, primaryCurrency);
+            // Convert to minor units for conversion
+            const liabilityInMinorUnits = Math.round((liability.remaining_amount || 0) * 100);
+            const converted = await convertAmount(liabilityInMinorUnits, liability.currency, primaryCurrency);
             if (converted !== null) {
-              totalLiabilities += converted;
+              // Convert back to major units
+              totalLiabilities += converted / 100;
             } else {
               // Fallback: use original amount if conversion fails
               totalLiabilities += liability.remaining_amount || 0;

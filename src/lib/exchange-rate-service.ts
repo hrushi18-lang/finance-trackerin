@@ -20,6 +20,10 @@ export interface ExchangeRateResponse {
 
 class ExchangeRateService {
   private readonly API_URL = 'https://api.exchangerate-api.com/v4/latest';
+  private readonly FIXER_API_URL = 'https://api.fixer.io/v1/latest';
+  private readonly FIXER_API_KEY = 'your-fixer-api-key'; // Replace with actual API key
+  
+  // Simplified fallback rates - only essential currencies
   private readonly FALLBACK_RATES: { [key: string]: number } = {
     'USD': 1.0,
     'EUR': 0.85,
@@ -54,106 +58,9 @@ class ExchangeRateService {
     'KHR': 4100.0,
     'LAK': 9500.0,
     'BND': 1.35,
-    'FJD': 2.1,
-    'PGK': 3.5,
-    'SBD': 8.0,
-    'VUV': 110.0,
-    'WST': 2.6,
-    'TOP': 2.3,
-    'TVD': 1.35,
-    'SOS': 580.0,
-    'ETB': 45.0,
-    'KES': 110.0,
-    'TZS': 2300.0,
-    'UGX': 3500.0,
-    'RWF': 1000.0,
-    'BIF': 2000.0,
-    'MWK': 800.0,
-    'ZMW': 18.0,
-    'BWP': 11.0,
-    'SZL': 15.0,
-    'LSL': 15.0,
-    'NAD': 15.0,
-    'MZN': 65.0,
-    'AOA': 650.0,
-    'MGA': 4000.0,
-    'KMF': 450.0,
-    'DJF': 180.0,
-    'SCR': 13.5,
-    'MUR': 40.0,
-    'MVR': 15.4,
-    'AFN': 80.0,
-    'AMD': 520.0,
-    'AZN': 1.7,
-    'GEL': 3.1,
-    'KZT': 425.0,
-    'KGS': 85.0,
-    'TJS': 11.0,
-    'TMT': 3.5,
-    'UZS': 10700.0,
-    'TND': 2.8,
-    'DZD': 135.0,
-    'MAD': 9.0,
-    'EGP': 15.7,
-    'LYD': 4.5,
-    'SDG': 55.0,
-    'SSP': 300.0,
-    'CDF': 2000.0,
-    'XAF': 550.0,
-    'XOF': 550.0,
-    'CVE': 100.0,
-    'STN': 22.0,
-    'GMD': 52.0,
-    'GNF': 10200.0,
-    'LRD': 150.0,
-    'SLE': 20.0,
-    'GHS': 6.0,
-    'NGN': 410.0,
-    'XPF': 100.0,
-    'CUP': 25.0,
-    'DOP': 57.0,
-    'HTG': 100.0,
-    'JMD': 150.0,
-    'TTD': 6.8,
-    'BBD': 2.0,
-    'BZD': 2.0,
-    'XCD': 2.7,
-    'AWG': 1.8,
-    'BMD': 1.0,
-    'KYD': 0.82,
-    'BHD': 0.38,
-    'QAR': 3.64,
-    'OMR': 0.38,
-    'JOD': 0.71,
-    'LBP': 1500.0,
-    'SYP': 2500.0,
-    'IQD': 1460.0,
-    'IRR': 42000.0,
-    'YER': 250.0,
-    'ILS': 3.2,
-    'PEN': 3.7,
-    'BOB': 6.9,
-    'CLP': 800.0,
-    'COP': 3800.0,
-    'ARS': 100.0,
-    'UYU': 44.0,
-    'PYG': 7000.0,
-    'BRL': 5.2,
-    'VES': 4000000.0,
-    'GYD': 210.0,
-    'SRD': 21.0,
-    'FKP': 0.73,
-    'BND': 1.35,
-    'KHR': 4100.0,
-    'LAK': 9500.0,
     'MOP': 8.0,
-    'NPR': 120.0,
-    'LKR': 200.0,
-    'BDT': 85.0,
-    'BTN': 75.0,
+    'TWD': 28.0,
     'MVR': 15.4,
-    'NPR': 120.0,
-    'PKR': 160.0,
     'AFN': 80.0,
     'AMD': 520.0,
     'AZN': 1.7,
@@ -164,31 +71,48 @@ class ExchangeRateService {
     'TMT': 3.5,
     'UZS': 10700.0,
     'MNT': 2850.0,
-    'KPW': 900.0,
-    'KRW': 1180.0,
-    'MOP': 8.0,
-    'TWD': 28.0,
-    'HKD': 7.8,
-    'CNY': 6.45,
-    'JPY': 110.0,
-    'MOP': 8.0,
-    'TWD': 28.0,
-    'HKD': 7.8,
-    'CNY': 6.45,
-    'JPY': 110.0,
-    'MOP': 8.0,
-    'TWD': 28.0,
-    'HKD': 7.8,
-    'CNY': 6.45,
-    'JPY': 110.0
+    'KPW': 900.0
   };
+
+  // Check if we need to fetch new rates for today
+  async shouldFetchNewRates(): Promise<boolean> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from('exchange_rates')
+        .select('created_at')
+        .eq('source', 'api')
+        .gte('created_at', `${today}T00:00:00.000Z`)
+        .limit(1);
+      
+      if (error) {
+        console.error('Error checking existing rates:', error);
+        return true; // Fetch if error
+      }
+      
+      return data.length === 0; // Fetch if no rates for today
+    } catch (error) {
+      console.error('Error in shouldFetchNewRates:', error);
+      return true; // Fetch if error
+    }
+  }
 
   // Fetch exchange rates from API
   async fetchExchangeRates(baseCurrency: string = 'USD'): Promise<ExchangeRate[]> {
     try {
       console.log(`🔄 Fetching exchange rates for base currency: ${baseCurrency}`);
       
-      const response = await fetch(`${this.API_URL}/${baseCurrency}`);
+      // Try primary API first
+      let response = await fetch(`${this.API_URL}/${baseCurrency}`);
+      let apiProvider = 'exchangerate-api';
+      
+      if (!response.ok) {
+        console.warn('Primary API failed, trying Fixer.io...');
+        // Try Fixer.io as backup
+        response = await fetch(`${this.FIXER_API_URL}?access_key=${this.FIXER_API_KEY}&base=${baseCurrency}`);
+        apiProvider = 'fixer-io';
+      }
       
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status}`);
@@ -212,47 +136,19 @@ class ExchangeRateService {
             to_currency: currency,
             rate: rate,
             source: 'api',
-            api_provider: 'exchangerate-api',
+            api_provider: apiProvider,
             created_at: now,
             valid_until: validUntil
           });
         }
       }
       
-      console.log(`✅ Fetched ${exchangeRates.length} exchange rates`);
+      console.log(`✅ Fetched ${exchangeRates.length} exchange rates from ${apiProvider}`);
       return exchangeRates;
-      
     } catch (error) {
-      console.error('❌ Failed to fetch exchange rates:', error);
-      
-      // Return fallback rates
-      return this.getFallbackRates(baseCurrency);
+      console.error('Error fetching exchange rates:', error);
+      throw error;
     }
-  }
-
-  // Get fallback rates when API fails
-  private getFallbackRates(baseCurrency: string): ExchangeRate[] {
-    console.log(`🔄 Using fallback rates for base currency: ${baseCurrency}`);
-    
-    const baseRate = this.FALLBACK_RATES[baseCurrency] || 1.0;
-    const exchangeRates: ExchangeRate[] = [];
-    const now = new Date();
-    const validUntil = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    
-    for (const [currency, rate] of Object.entries(this.FALLBACK_RATES)) {
-      if (currency !== baseCurrency) {
-        exchangeRates.push({
-          from_currency: baseCurrency,
-          to_currency: currency,
-          rate: rate / baseRate,
-          source: 'fallback',
-          created_at: now,
-          valid_until: validUntil
-        });
-      }
-    }
-    
-    return exchangeRates;
   }
 
   // Store exchange rates in database
@@ -262,176 +158,169 @@ class ExchangeRateService {
       
       const { error } = await supabase
         .from('exchange_rates')
-        .upsert(rates, { 
+        .upsert(rates, {
           onConflict: 'from_currency,to_currency,created_at',
-          ignoreDuplicates: false 
+          ignoreDuplicates: false
         });
       
       if (error) {
+        console.error('Error storing exchange rates:', error);
         throw error;
       }
       
       console.log('✅ Exchange rates stored successfully');
-      
     } catch (error) {
-      console.error('❌ Failed to store exchange rates:', error);
+      console.error('Error in storeExchangeRates:', error);
       throw error;
     }
   }
 
-  // Get latest exchange rate for a currency pair
+  // Get exchange rate from database or fallback
   async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number | null> {
     try {
-      // If same currency, return 1
-      if (fromCurrency === toCurrency) {
-        return 1.0;
-      }
+      if (fromCurrency === toCurrency) return 1.0;
       
-      // Try to get from database first
-      const { data, error } = await supabase
-        .from('exchange_rates')
-        .select('rate, valid_until')
-        .eq('from_currency', fromCurrency)
-        .eq('to_currency', toCurrency)
-        .or(`valid_until.is.null,valid_until.gte.${new Date().toISOString()}`)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+      console.log(`🔍 Looking for exchange rate: ${fromCurrency} → ${toCurrency}`);
       
-      if (error || !data) {
-        console.log(`🔄 No direct rate found for ${fromCurrency} → ${toCurrency}, trying reverse conversion`);
-        
-        // Try reverse conversion first
-        const { data: reverseData } = await supabase
-          .from('exchange_rates')
-          .select('rate, valid_until')
-          .eq('from_currency', toCurrency)
-          .eq('to_currency', fromCurrency)
-          .or(`valid_until.is.null,valid_until.gte.${new Date().toISOString()}`)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (reverseData) {
-          console.log(`✅ Found reverse rate: ${reverseData.rate} for ${toCurrency} → ${fromCurrency}, returning ${1 / reverseData.rate}`);
-          return 1 / reverseData.rate;
-        }
-        
-        console.log(`🔄 No reverse rate found, fetching fresh rates for ${fromCurrency}`);
-        
-        // Fetch fresh rates
-        const freshRates = await this.fetchExchangeRates(fromCurrency);
-        await this.storeExchangeRates(freshRates);
-        
-        // Try to get the rate again
-        const { data: newData } = await supabase
-          .from('exchange_rates')
-          .select('rate')
-          .eq('from_currency', fromCurrency)
-          .eq('to_currency', toCurrency)
-          .or(`valid_until.is.null,valid_until.gte.${new Date().toISOString()}`)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        return newData?.rate || null;
-      }
-      
-      return data.rate;
-      
-    } catch (error) {
-      console.error(`❌ Failed to get exchange rate for ${fromCurrency} → ${toCurrency}:`, error);
-      
-      // Return fallback rate
-      const baseRate = this.FALLBACK_RATES[fromCurrency] || 1.0;
-      const targetRate = this.FALLBACK_RATES[toCurrency] || 1.0;
-      return targetRate / baseRate;
-    }
-  }
-
-  // Get historical exchange rate for a specific date
-  async getHistoricalRate(fromCurrency: string, toCurrency: string, date: Date): Promise<number | null> {
-    try {
-      if (fromCurrency === toCurrency) {
-        return 1.0;
-      }
-      
-      const { data, error } = await supabase
+      // First try direct conversion
+      const { data: directRate, error: directError } = await supabase
         .from('exchange_rates')
         .select('rate')
         .eq('from_currency', fromCurrency)
         .eq('to_currency', toCurrency)
-        .lte('created_at', date.toISOString())
+        .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
       
-      if (error || !data) {
-        console.log(`🔄 No historical rate found for ${fromCurrency} → ${toCurrency} on ${date.toISOString()}`);
-        return null;
+      if (!directError && directRate) {
+        console.log(`✅ Found direct rate: ${directRate.rate}`);
+        return directRate.rate;
       }
       
-      return data.rate;
+      // Try reverse conversion (e.g., if USD->INR not found, try INR->USD)
+      const { data: reverseRate, error: reverseError } = await supabase
+        .from('exchange_rates')
+        .select('rate')
+        .eq('from_currency', toCurrency)
+        .eq('to_currency', fromCurrency)
+        .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
       
+      if (!reverseError && reverseRate) {
+        const calculatedRate = 1 / reverseRate.rate;
+        console.log(`✅ Found reverse rate: ${reverseRate.rate} → ${calculatedRate}`);
+        return calculatedRate;
+      }
+      
+      // Fallback to hardcoded rates
+      if (fromCurrency === 'USD' && this.FALLBACK_RATES[toCurrency]) {
+        console.log(`⚠️ Using fallback rate for ${fromCurrency} → ${toCurrency}: ${this.FALLBACK_RATES[toCurrency]}`);
+        return this.FALLBACK_RATES[toCurrency];
+      }
+      
+      if (toCurrency === 'USD' && this.FALLBACK_RATES[fromCurrency]) {
+        const fallbackRate = 1 / this.FALLBACK_RATES[fromCurrency];
+        console.log(`⚠️ Using fallback rate for ${fromCurrency} → ${toCurrency}: ${fallbackRate}`);
+        return fallbackRate;
+      }
+      
+      console.log(`❌ No exchange rate found for ${fromCurrency} → ${toCurrency}`);
+      return null;
     } catch (error) {
-      console.error(`❌ Failed to get historical rate for ${fromCurrency} → ${toCurrency}:`, error);
+      console.error('Error getting exchange rate:', error);
       return null;
     }
   }
 
-  // Refresh all exchange rates
-  async refreshAllRates(): Promise<void> {
+  // Get cached rate (alias for getExchangeRate)
+  async getCachedRate(fromCurrency: string, toCurrency: string): Promise<number | null> {
+    return this.getExchangeRate(fromCurrency, toCurrency);
+  }
+
+  // Initialize daily rates
+  async initializeDailyRates(): Promise<void> {
     try {
-      console.log('🔄 Refreshing all exchange rates');
+      console.log('🚀 Initializing daily exchange rates...');
       
-      // Get all supported currencies
-      const supportedCurrencies = Object.keys(this.FALLBACK_RATES);
+      const shouldFetch = await this.shouldFetchNewRates();
       
-      // Fetch rates for each currency as base
-      for (const baseCurrency of supportedCurrencies) {
-        try {
-          const rates = await this.fetchExchangeRates(baseCurrency);
-          await this.storeExchangeRates(rates);
-          
-          // Add a small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (error) {
-          console.error(`❌ Failed to refresh rates for ${baseCurrency}:`, error);
+      if (shouldFetch) {
+        console.log('📅 No rates found for today, fetching new rates...');
+        
+        // Fetch rates for major currencies
+        const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'INR', 'CAD', 'AUD', 'CHF', 'CNY', 'SGD', 'HKD', 'NZD', 'KRW', 'MXN', 'BRL', 'RUB', 'ZAR', 'TRY', 'AED', 'SAR', 'THB', 'MYR', 'IDR', 'PHP', 'VND', 'BDT', 'PKR', 'LKR', 'NPR', 'MMK', 'KHR', 'LAK', 'BND', 'MOP', 'TWD', 'MVR', 'AFN', 'AMD', 'AZN', 'GEL', 'KZT', 'KGS', 'TJS', 'TMT', 'UZS', 'MNT', 'KPW'];
+        
+        for (const baseCurrency of currencies) {
+          try {
+            const rates = await this.fetchExchangeRates(baseCurrency);
+            await this.storeExchangeRates(rates);
+            
+            // Add small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (error) {
+            console.error(`Error fetching rates for ${baseCurrency}:`, error);
+            // Continue with other currencies
+          }
         }
+        
+        console.log('✅ Daily exchange rates initialized');
+      } else {
+        console.log('✅ Exchange rates for today already exist');
       }
-      
-      console.log('✅ All exchange rates refreshed');
-      
     } catch (error) {
-      console.error('❌ Failed to refresh all exchange rates:', error);
+      console.error('Error initializing daily rates:', error);
       throw error;
     }
   }
 
-  // Get exchange rate with caching
-  private rateCache = new Map<string, { rate: number; timestamp: number }>();
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-  async getCachedRate(fromCurrency: string, toCurrency: string): Promise<number | null> {
-    const cacheKey = `${fromCurrency}_${toCurrency}`;
-    const cached = this.rateCache.get(cacheKey);
-    
-    if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
-      return cached.rate;
+  // Get all available currencies
+  async getAvailableCurrencies(): Promise<string[]> {
+    try {
+      const { data, error } = await supabase
+        .from('exchange_rates')
+        .select('from_currency, to_currency')
+        .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString());
+      
+      if (error) {
+        console.error('Error getting available currencies:', error);
+        return Object.keys(this.FALLBACK_RATES);
+      }
+      
+      const currencies = new Set<string>();
+      data.forEach(rate => {
+        currencies.add(rate.from_currency);
+        currencies.add(rate.to_currency);
+      });
+      
+      return Array.from(currencies);
+    } catch (error) {
+      console.error('Error in getAvailableCurrencies:', error);
+      return Object.keys(this.FALLBACK_RATES);
     }
-    
-    const rate = await this.getExchangeRate(fromCurrency, toCurrency);
-    
-    if (rate !== null) {
-      this.rateCache.set(cacheKey, { rate, timestamp: Date.now() });
-    }
-    
-    return rate;
   }
 
-  // Clear rate cache
-  clearCache(): void {
-    this.rateCache.clear();
+  // Clean up old rates (older than 7 days)
+  async cleanupOldRates(): Promise<void> {
+    try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const { error } = await supabase
+        .from('exchange_rates')
+        .delete()
+        .lt('created_at', sevenDaysAgo.toISOString());
+      
+      if (error) {
+        console.error('Error cleaning up old rates:', error);
+      } else {
+        console.log('✅ Old exchange rates cleaned up');
+      }
+    } catch (error) {
+      console.error('Error in cleanupOldRates:', error);
+    }
   }
 }
 

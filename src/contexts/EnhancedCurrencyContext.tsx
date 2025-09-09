@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { exchangeRateService, ExchangeRate } from '../lib/exchange-rate-service';
+import { dailyRateFetcher } from '../lib/daily-rate-fetcher';
+import { currencyConversionService, ConversionResult } from '../lib/currency-conversion-service';
+import { cronService } from '../lib/cron-service';
 
 // Supported currencies interface
 interface SupportedCurrency {
@@ -60,6 +62,7 @@ interface EnhancedCurrencyContextType {
   isLoading: boolean;
   lastUpdated: Date | null;
   isOnline: boolean;
+  hasStaleRates: boolean;
   
   // User preferences
   userPreferences: UserCurrencyPreferences | null;
@@ -67,9 +70,9 @@ interface EnhancedCurrencyContextType {
   displayCurrency: string;
   
   // Core functions
-  convertAmount: (amount: number, fromCurrency: string, toCurrency: string) => Promise<number | null>;
-  getConversionRate: (fromCurrency: string, toCurrency: string) => number | null;
+  convertAmount: (amount: number, fromCurrency: string, toCurrency: string) => Promise<ConversionResult | null>;
   formatCurrency: (amount: number, currencyCode: string, showSymbol?: boolean) => string;
+  formatCurrencyMinor: (amount: number, currencyCode: string, showSymbol?: boolean) => string;
   
   // Database functions
   saveConversionLog: (conversion: Omit<CurrencyConversion, 'created_at'>) => Promise<void>;
@@ -78,12 +81,13 @@ interface EnhancedCurrencyContextType {
   
   // Exchange rate functions
   refreshRates: () => Promise<void>;
-  getHistoricalRate: (fromCurrency: string, toCurrency: string, date: Date) => Promise<number | null>;
+  getTransparencyText: (result: ConversionResult) => string;
   
   // Utility functions
   getCurrencyInfo: (code: string) => SupportedCurrency | null;
   getPopularCurrencies: () => SupportedCurrency[];
   searchCurrencies: (query: string) => SupportedCurrency[];
+  isSupported: (currency: string) => boolean;
 }
 
 const EnhancedCurrencyContext = createContext<EnhancedCurrencyContextType | undefined>(undefined);
@@ -91,6 +95,8 @@ const EnhancedCurrencyContext = createContext<EnhancedCurrencyContextType | unde
 export const useEnhancedCurrency = () => {
   const context = useContext(EnhancedCurrencyContext);
   if (context === undefined) {
+    console.error('useEnhancedCurrency called outside of EnhancedCurrencyProvider');
+    console.error('Current context value:', context);
     throw new Error('useEnhancedCurrency must be used within an EnhancedCurrencyProvider');
   }
   return context;
@@ -101,12 +107,15 @@ interface EnhancedCurrencyProviderProps {
 }
 
 export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> = ({ children }) => {
+  console.log('🔄 EnhancedCurrencyProvider rendering...');
+  
   // State
   const [supportedCurrencies, setSupportedCurrencies] = useState<SupportedCurrency[]>([]);
   const [exchangeRates, setExchangeRates] = useState<ExchangeRates>({});
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [hasStaleRates, setHasStaleRates] = useState(false);
   const [userPreferences, setUserPreferences] = useState<UserCurrencyPreferences | null>(null);
 
   // Derived state
@@ -147,8 +156,30 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
 
   // Load supported currencies on mount
   useEffect(() => {
-    loadSupportedCurrencies();
-    loadUserPreferences();
+    const initializeCurrencySystem = async () => {
+      try {
+        setIsLoading(true);
+        console.log('🔄 Initializing currency system...');
+        
+        // Start cron service for daily rate fetching
+        cronService.startDailyRateFetch();
+        
+        // Load currencies and preferences
+        await Promise.all([
+          loadSupportedCurrencies(),
+          loadUserPreferences(),
+          checkStaleRates()
+        ]);
+        
+        console.log('✅ Currency system initialized successfully');
+      } catch (error) {
+        console.error('Error initializing currency system:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeCurrencySystem();
   }, []);
 
   // Auto-refresh rates every 5 minutes when online
@@ -230,6 +261,20 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
     }
   };
 
+  // Check for stale rates
+  const checkStaleRates = async (): Promise<void> => {
+    try {
+      const isStale = await cronService.checkStaleRates();
+      setHasStaleRates(isStale);
+      
+      if (isStale) {
+        console.warn('⚠️ Using stale exchange rates');
+      }
+    } catch (error) {
+      console.error('Error checking stale rates:', error);
+    }
+  };
+
   // Refresh exchange rates using the new service
   const refreshRates = async (): Promise<void> => {
     if (!isOnline) {
@@ -241,11 +286,11 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
     try {
       console.log('🔄 Refreshing exchange rates...');
       
-      // Use the new exchange rate service
-      await exchangeRateService.refreshAllRates();
+      // Trigger daily rate fetch
+      await cronService.triggerDailyFetch();
       
-      // Load rates from database
-      await loadRatesFromDatabase();
+      // Check for stale rates
+      await checkStaleRates();
       
       setLastUpdated(new Date());
       console.log('✅ Exchange rates refreshed successfully');
@@ -288,7 +333,7 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
         .from('exchange_rates')
         .select('from_currency, to_currency, rate')
         .eq('from_currency', 'USD')
-        .gte('valid_until', new Date().toISOString())
+        .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString())
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -326,26 +371,21 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
   };
 
   // Convert amount between currencies using the new service
-  const convertAmount = async (amount: number, fromCurrency: string, toCurrency: string): Promise<number | null> => {
+  const convertAmount = async (amount: number, fromCurrency: string, toCurrency: string): Promise<ConversionResult | null> => {
     try {
-      if (fromCurrency === toCurrency) return amount;
-      
       console.log(`🔄 Converting ${amount} ${fromCurrency} to ${toCurrency}`);
       
-      const rate = await exchangeRateService.getCachedRate(fromCurrency, toCurrency);
-      console.log(`📊 Exchange rate: ${rate}`);
+      // Convert amount to minor units for calculation
+      const amountInMinorUnits = currencyConversionService.toMinorUnits(amount, fromCurrency);
       
-      if (rate === null) {
-        console.log(`❌ No exchange rate found for ${fromCurrency} → ${toCurrency}`);
-        return null;
+      // Perform conversion
+      const result = await currencyConversionService.convert(amountInMinorUnits, fromCurrency, toCurrency);
+      
+      if (result) {
+        console.log(`✅ Converted: ${currencyConversionService.formatAmount(amountInMinorUnits, fromCurrency)} → ${currencyConversionService.formatAmount(result.convertedAmount, toCurrency)}`);
+        console.log(`📊 ${result.displayText}`);
       }
       
-      const convertedAmount = amount * rate;
-      const currency = getCurrencyInfo(toCurrency);
-      const decimalPlaces = currency?.decimal_places || 2;
-      const result = Number(convertedAmount.toFixed(decimalPlaces));
-      
-      console.log(`✅ Converted ${amount} ${fromCurrency} to ${result} ${toCurrency}`);
       return result;
     } catch (error) {
       console.error(`Failed to convert ${amount} ${fromCurrency} to ${toCurrency}:`, error);
@@ -353,37 +393,24 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
     }
   };
 
-  // Format currency amount
+  // Format currency amount (major units)
   const formatCurrency = (amount: number, currencyCode: string, showSymbol: boolean = true): string => {
-    const currency = getCurrencyInfo(currencyCode);
-    
-    // Fallback currency symbols if not found in supported currencies
-    const fallbackSymbols: { [key: string]: string } = {
-      'USD': '$',
-      'INR': '₹',
-      'EUR': '€',
-      'GBP': '£',
-      'JPY': '¥',
-      'CNY': '¥',
-      'MYR': 'RM',
-      'SGD': 'S$',
-      'AED': 'د.إ',
-      'NZD': 'NZ$',
-      'ZAR': 'R',
-      'CAD': 'C$',
-      'LKR': 'Rs',
-      'AUD': 'A$'
-    };
-    
-    const symbol = currency?.symbol || fallbackSymbols[currencyCode] || currencyCode;
-    const decimalPlaces = currency?.decimal_places || 2;
+    return currencyConversionService.formatAmount(amount, currencyCode, showSymbol);
+  };
 
-    const formatted = new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: decimalPlaces,
-      maximumFractionDigits: decimalPlaces,
-    }).format(amount);
+  // Format currency amount (minor units)
+  const formatCurrencyMinor = (amount: number, currencyCode: string, showSymbol: boolean = true): string => {
+    return currencyConversionService.formatAmount(amount, currencyCode, showSymbol);
+  };
 
-    return showSymbol ? `${symbol}${formatted}` : formatted;
+  // Get transparency text for conversion
+  const getTransparencyText = (result: ConversionResult): string => {
+    return currencyConversionService.getTransparencyText(result);
+  };
+
+  // Check if currency is supported
+  const isSupported = (currency: string): boolean => {
+    return currencyConversionService.isSupported(currency);
   };
 
   // Save conversion log to database
@@ -519,14 +546,15 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
     isLoading,
     lastUpdated,
     isOnline,
+    hasStaleRates,
     userPreferences,
     primaryCurrency,
     displayCurrency,
     
     // Core functions
     convertAmount,
-    getConversionRate,
     formatCurrency,
+    formatCurrencyMinor,
     
     // Database functions
     saveConversionLog,
@@ -535,12 +563,13 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
     
     // Exchange rate functions
     refreshRates,
-    getHistoricalRate,
+    getTransparencyText,
     
     // Utility functions
     getCurrencyInfo,
     getPopularCurrencies,
     searchCurrencies,
+    isSupported,
   };
 
   return (
