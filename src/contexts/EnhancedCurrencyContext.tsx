@@ -330,14 +330,23 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
     try {
       if (fromCurrency === toCurrency) return amount;
       
+      console.log(`🔄 Converting ${amount} ${fromCurrency} to ${toCurrency}`);
+      
       const rate = await exchangeRateService.getCachedRate(fromCurrency, toCurrency);
-      if (rate === null) return null;
+      console.log(`📊 Exchange rate: ${rate}`);
+      
+      if (rate === null) {
+        console.log(`❌ No exchange rate found for ${fromCurrency} → ${toCurrency}`);
+        return null;
+      }
       
       const convertedAmount = amount * rate;
       const currency = getCurrencyInfo(toCurrency);
       const decimalPlaces = currency?.decimal_places || 2;
+      const result = Number(convertedAmount.toFixed(decimalPlaces));
       
-      return Number(convertedAmount.toFixed(decimalPlaces));
+      console.log(`✅ Converted ${amount} ${fromCurrency} to ${result} ${toCurrency}`);
+      return result;
     } catch (error) {
       console.error(`Failed to convert ${amount} ${fromCurrency} to ${toCurrency}:`, error);
       return null;
@@ -347,14 +356,34 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
   // Format currency amount
   const formatCurrency = (amount: number, currencyCode: string, showSymbol: boolean = true): string => {
     const currency = getCurrencyInfo(currencyCode);
-    if (!currency) return amount.toString();
+    
+    // Fallback currency symbols if not found in supported currencies
+    const fallbackSymbols: { [key: string]: string } = {
+      'USD': '$',
+      'INR': '₹',
+      'EUR': '€',
+      'GBP': '£',
+      'JPY': '¥',
+      'CNY': '¥',
+      'MYR': 'RM',
+      'SGD': 'S$',
+      'AED': 'د.إ',
+      'NZD': 'NZ$',
+      'ZAR': 'R',
+      'CAD': 'C$',
+      'LKR': 'Rs',
+      'AUD': 'A$'
+    };
+    
+    const symbol = currency?.symbol || fallbackSymbols[currencyCode] || currencyCode;
+    const decimalPlaces = currency?.decimal_places || 2;
 
     const formatted = new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: currency.decimal_places,
-      maximumFractionDigits: currency.decimal_places,
+      minimumFractionDigits: decimalPlaces,
+      maximumFractionDigits: decimalPlaces,
     }).format(amount);
 
-    return showSymbol ? `${currency.symbol}${formatted}` : formatted;
+    return showSymbol ? `${symbol}${formatted}` : formatted;
   };
 
   // Save conversion log to database

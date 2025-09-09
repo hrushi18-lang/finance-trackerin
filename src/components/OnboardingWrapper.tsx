@@ -40,6 +40,18 @@ const OnboardingWrapper: React.FC = () => {
 
       // User is new if they don't have a profile OR no financial data
       const isNew = !hasProfile || !hasExistingData;
+      
+      console.log('OnboardingWrapper - User status check:', {
+        hasProfile,
+        hasExistingData,
+        accountsCount: accounts.length,
+        goalsCount: goals.length,
+        billsCount: bills.length,
+        liabilitiesCount: liabilities.length,
+        userCategoriesCount: userCategories.length,
+        isNew
+      });
+      
       setIsNewUser(isNew);
 
       // Track onboarding check
@@ -99,10 +111,16 @@ const OnboardingWrapper: React.FC = () => {
         // Refresh data to ensure latest information is loaded
         await refreshData();
         
-        // Add a small delay to ensure data is saved and contexts are updated
-        setTimeout(() => {
+        // Force a re-check of user status after data refresh
+        setTimeout(async () => {
+          console.log('OnboardingWrapper - Data refreshed, checking user status again');
+          
+          // Force a re-render by updating state
+          setIsNewUser(false);
+          
+          // Navigate to dashboard
           navigate('/dashboard');
-        }, 1000);
+        }, 1500);
       }} 
     />
   );

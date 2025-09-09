@@ -293,13 +293,31 @@ class ExchangeRateService {
         .select('rate, valid_until')
         .eq('from_currency', fromCurrency)
         .eq('to_currency', toCurrency)
-        .gte('valid_until', new Date().toISOString())
+        .or(`valid_until.is.null,valid_until.gte.${new Date().toISOString()}`)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
       
       if (error || !data) {
-        console.log(`🔄 No valid rate found for ${fromCurrency} → ${toCurrency}, fetching fresh rates`);
+        console.log(`🔄 No direct rate found for ${fromCurrency} → ${toCurrency}, trying reverse conversion`);
+        
+        // Try reverse conversion first
+        const { data: reverseData } = await supabase
+          .from('exchange_rates')
+          .select('rate, valid_until')
+          .eq('from_currency', toCurrency)
+          .eq('to_currency', fromCurrency)
+          .or(`valid_until.is.null,valid_until.gte.${new Date().toISOString()}`)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (reverseData) {
+          console.log(`✅ Found reverse rate: ${reverseData.rate} for ${toCurrency} → ${fromCurrency}, returning ${1 / reverseData.rate}`);
+          return 1 / reverseData.rate;
+        }
+        
+        console.log(`🔄 No reverse rate found, fetching fresh rates for ${fromCurrency}`);
         
         // Fetch fresh rates
         const freshRates = await this.fetchExchangeRates(fromCurrency);
@@ -311,6 +329,7 @@ class ExchangeRateService {
           .select('rate')
           .eq('from_currency', fromCurrency)
           .eq('to_currency', toCurrency)
+          .or(`valid_until.is.null,valid_until.gte.${new Date().toISOString()}`)
           .order('created_at', { ascending: false })
           .limit(1)
           .single();
