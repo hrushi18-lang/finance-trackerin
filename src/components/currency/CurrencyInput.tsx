@@ -97,12 +97,20 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
     }
   };
 
-  const getConvertedAmount = (): number | null => {
-    if (value === '' || typeof value !== 'number') return null;
-    return convertAmount(value, currency, effectiveTargetCurrency);
-  };
+  const [convertedAmount, setConvertedAmount] = useState<number | null>(null);
 
-  const convertedAmount = getConvertedAmount();
+  useEffect(() => {
+    const getConvertedAmount = async () => {
+      if (value === '' || typeof value !== 'number') {
+        setConvertedAmount(null);
+        return;
+      }
+      const converted = await convertAmount(value, currency, effectiveTargetCurrency);
+      setConvertedAmount(converted);
+    };
+
+    getConvertedAmount();
+  }, [value, currency, effectiveTargetCurrency, convertAmount]);
 
   return (
     <div className={`space-y-3 ${className}`}>

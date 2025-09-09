@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import { exchangeRateService, ExchangeRate } from '../lib/exchange-rate-service';
 
 // Supported currencies interface
 interface SupportedCurrency {
@@ -66,7 +67,7 @@ interface EnhancedCurrencyContextType {
   displayCurrency: string;
   
   // Core functions
-  convertAmount: (amount: number, fromCurrency: string, toCurrency: string) => number | null;
+  convertAmount: (amount: number, fromCurrency: string, toCurrency: string) => Promise<number | null>;
   getConversionRate: (fromCurrency: string, toCurrency: string) => number | null;
   formatCurrency: (amount: number, currencyCode: string, showSymbol?: boolean) => string;
   
@@ -229,7 +230,7 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
     }
   };
 
-  // Refresh exchange rates from multiple APIs
+  // Refresh exchange rates using the new service
   const refreshRates = async (): Promise<void> => {
     if (!isOnline) {
       setExchangeRates(fallbackRates);
@@ -238,59 +239,19 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
 
     setIsLoading(true);
     try {
-      let rates: ExchangeRates | null = null;
-      let source: 'api' | 'manual' | 'fallback' = 'fallback';
-      let apiProvider: string | undefined;
-
-      // Try multiple APIs for reliability
-      // Primary API: ExchangeRate-API (free tier: 1500 requests/month)
-      try {
-        const response = await fetch(`https://api.exchangerate-api.com/v4/latest/USD`);
-        if (response.ok) {
-          const data = await response.json();
-          rates = data.rates;
-          source = 'api';
-          apiProvider = 'exchangerate-api.com';
-          console.log('✅ Primary API (ExchangeRate-API) successful');
-        }
-      } catch (error) {
-        console.log('❌ Primary API failed, trying backup...');
-      }
-
-      // Backup API: Fixer.io (free tier: 1000 requests/month)
-      if (!rates) {
-        try {
-          const response = await fetch(`https://api.fixer.io/latest?base=USD`);
-          if (response.ok) {
-            const data = await response.json();
-            rates = data.rates;
-            source = 'api';
-            apiProvider = 'fixer.io';
-            console.log('✅ Backup API (Fixer.io) successful');
-          }
-        } catch (error) {
-          console.log('❌ Backup API failed, using fallback rates');
-        }
-      }
-
-      // Use fallback rates if all APIs fail
-      if (!rates) {
-        rates = fallbackRates;
-        source = 'fallback';
-        console.log('⚠️ Using fallback exchange rates');
-      }
-
-      // Ensure USD is always 1.0
-      rates['USD'] = 1.0;
-
-      setExchangeRates(rates);
+      console.log('🔄 Refreshing exchange rates...');
+      
+      // Use the new exchange rate service
+      await exchangeRateService.refreshAllRates();
+      
+      // Load rates from database
+      await loadRatesFromDatabase();
+      
       setLastUpdated(new Date());
-
-      // Save rates to database for historical tracking
-      await saveRatesToDatabase(rates, source, apiProvider);
-
+      console.log('✅ Exchange rates refreshed successfully');
+      
     } catch (error) {
-      console.error('Failed to fetch exchange rates:', error);
+      console.error('❌ Failed to refresh exchange rates:', error);
       setExchangeRates(fallbackRates);
     } finally {
       setIsLoading(false);
@@ -320,6 +281,35 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
     }
   };
 
+  // Load rates from database
+  const loadRatesFromDatabase = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('exchange_rates')
+        .select('from_currency, to_currency, rate')
+        .eq('from_currency', 'USD')
+        .gte('valid_until', new Date().toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const rates: ExchangeRates = { USD: 1.0 };
+        data.forEach(rate => {
+          rates[rate.to_currency] = rate.rate;
+        });
+        setExchangeRates(rates);
+        console.log(`✅ Loaded ${data.length} exchange rates from database`);
+      } else {
+        console.log('⚠️ No valid rates in database, using fallback');
+        setExchangeRates(fallbackRates);
+      }
+    } catch (error) {
+      console.error('Failed to load rates from database:', error);
+      setExchangeRates(fallbackRates);
+    }
+  };
+
   // Get conversion rate between two currencies
   const getConversionRate = (fromCurrency: string, toCurrency: string): number | null => {
     if (fromCurrency === toCurrency) return 1.0;
@@ -335,16 +325,23 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
     return toRate / fromRate;
   };
 
-  // Convert amount between currencies
-  const convertAmount = (amount: number, fromCurrency: string, toCurrency: string): number | null => {
-    const rate = getConversionRate(fromCurrency, toCurrency);
-    if (rate === null) return null;
-    
-    const convertedAmount = amount * rate;
-    const currency = getCurrencyInfo(toCurrency);
-    const decimalPlaces = currency?.decimal_places || 2;
-    
-    return Number(convertedAmount.toFixed(decimalPlaces));
+  // Convert amount between currencies using the new service
+  const convertAmount = async (amount: number, fromCurrency: string, toCurrency: string): Promise<number | null> => {
+    try {
+      if (fromCurrency === toCurrency) return amount;
+      
+      const rate = await exchangeRateService.getCachedRate(fromCurrency, toCurrency);
+      if (rate === null) return null;
+      
+      const convertedAmount = amount * rate;
+      const currency = getCurrencyInfo(toCurrency);
+      const decimalPlaces = currency?.decimal_places || 2;
+      
+      return Number(convertedAmount.toFixed(decimalPlaces));
+    } catch (error) {
+      console.error(`Failed to convert ${amount} ${fromCurrency} to ${toCurrency}:`, error);
+      return null;
+    }
   };
 
   // Format currency amount

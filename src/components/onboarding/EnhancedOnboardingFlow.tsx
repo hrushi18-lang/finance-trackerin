@@ -118,29 +118,29 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
         userId: user?.id || '',
         name: newActivity.name,
         amount: newActivity.amount,
-        currency: newActivity.currency || displayCurrency,
+        currency: newActivity.currency || userProfile.primaryCurrency,
         type: newActivity.type,
         description: newActivity.description || ''
       };
       setBasicActivities(prev => [...prev, activity]);
-      setNewActivity({});
+      setNewActivity({ currency: userProfile.primaryCurrency });
     }
   };
 
   const addAccountSetup = () => {
-    if (newAccount.name && newAccount.type && newAccount.balance !== undefined) {
+    if (newAccount.name && newAccount.type) {
       const account: AccountSetup = {
         id: Date.now().toString(),
         userId: user?.id || '',
         name: newAccount.name,
         type: newAccount.type,
-        balance: newAccount.balance,
-        currency: newAccount.currency || displayCurrency,
+        balance: newAccount.balance || 0,
+        currency: newAccount.currency || userProfile.primaryCurrency,
         isVisible: true,
         institution: newAccount.institution
       };
       setAccounts(prev => [...prev, account]);
-      setNewAccount({});
+      setNewAccount({ currency: userProfile.primaryCurrency });
     }
   };
 
@@ -495,7 +495,12 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
                 value={userProfile.monthlyIncome}
                 currency={userProfile.primaryCurrency}
                 onValueChange={(value) => setUserProfile(prev => ({ ...prev, monthlyIncome: typeof value === 'number' ? value : 0 }))}
-                onCurrencyChange={(currency) => setUserProfile(prev => ({ ...prev, primaryCurrency: currency, displayCurrency: currency }))}
+                onCurrencyChange={(currency) => {
+                  setUserProfile(prev => ({ ...prev, primaryCurrency: currency, displayCurrency: currency }));
+                  // Reset new activity and account states to use the new currency
+                  setNewActivity(prev => ({ ...prev, currency: currency }));
+                  setNewAccount(prev => ({ ...prev, currency: currency }));
+                }}
                 placeholder="50000"
                 showConversion={userProfile.primaryCurrency !== displayCurrency}
                 targetCurrency={displayCurrency}
@@ -741,14 +746,14 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
                 <div className="flex space-x-2">
                   <Button
                     variant="secondary"
-                    onClick={() => setNewActivity({ type: 'goal', name: 'Emergency Fund', amount: 10000, currency: displayCurrency, description: 'Build emergency savings' })}
+                    onClick={() => setNewActivity({ type: 'goal', name: 'Emergency Fund', amount: 10000, currency: userProfile.primaryCurrency, description: 'Build emergency savings' })}
                     className="text-xs px-3 py-1"
                   >
                     Quick Goal
                   </Button>
                   <Button
                     variant="secondary"
-                    onClick={() => setNewActivity({ type: 'bill', name: 'Electricity Bill', amount: 2000, currency: displayCurrency, description: 'Monthly electricity bill' })}
+                    onClick={() => setNewActivity({ type: 'bill', name: 'Electricity Bill', amount: 2000, currency: userProfile.primaryCurrency, description: 'Monthly electricity bill' })}
                     className="text-xs px-3 py-1"
                   >
                     Quick Bill
@@ -783,13 +788,25 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3">
-                    <CurrencyInput
-                      value={newActivity.amount || 0}
-                      currency={newActivity.currency || displayCurrency}
-                      onValueChange={(value) => setNewActivity(prev => ({ ...prev, amount: typeof value === 'number' ? value : 0 }))}
-                      onCurrencyChange={(currency) => setNewActivity(prev => ({ ...prev, currency }))}
-                      placeholder="0"
-                    />
+                    <div className="space-y-2">
+                      <CurrencyInput
+                        value={newActivity.amount || 0}
+                        currency={newActivity.currency || userProfile.primaryCurrency}
+                        onValueChange={(value) => setNewActivity(prev => ({ ...prev, amount: typeof value === 'number' ? value : 0 }))}
+                        onCurrencyChange={(currency) => setNewActivity(prev => ({ ...prev, currency }))}
+                        placeholder="0"
+                        showConversion={!!(newActivity.currency && newActivity.currency !== userProfile.primaryCurrency)}
+                        targetCurrency={userProfile.primaryCurrency}
+                      />
+                      <CurrencySelector
+                        value={newActivity.currency || userProfile.primaryCurrency}
+                        onChange={(currency) => setNewActivity(prev => ({ ...prev, currency }))}
+                        showFlag={true}
+                        showFullName={false}
+                        popularOnly={false}
+                        className="text-sm"
+                      />
+                    </div>
                     
                     <Input
                       type="text"
@@ -812,7 +829,7 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
                     
                     <Button
                       variant="secondary"
-                      onClick={() => setNewActivity({})}
+                      onClick={() => setNewActivity({ currency: userProfile.primaryCurrency })}
                       className="px-4"
                       disabled={!newActivity.type && !newActivity.name && !newActivity.amount}
                     >
@@ -879,7 +896,7 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
     {
       id: 'accounts',
       title: 'Set Up Your Accounts',
-      description: 'Start by adding your accounts. You can add more later.',
+      description: 'Start by adding your accounts. You can add more later. Zero balance accounts are allowed.',
       icon: <CreditCard size={24} />,
       component: (
         <div className="space-y-6">
@@ -891,17 +908,24 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
                 <div className="flex space-x-2">
                   <Button
                     variant="secondary"
-                    onClick={() => setNewAccount({ name: 'Main Savings', type: 'bank_savings', balance: 50000, currency: displayCurrency, institution: 'Your Bank' })}
+                    onClick={() => setNewAccount({ name: 'Main Savings', type: 'bank_savings', balance: 50000, currency: userProfile.primaryCurrency, institution: 'Your Bank' })}
                     className="text-xs px-3 py-1"
                   >
                     Quick Savings
                   </Button>
                   <Button
                     variant="secondary"
-                    onClick={() => setNewAccount({ name: 'Cash Wallet', type: 'cash', balance: 5000, currency: displayCurrency })}
+                    onClick={() => setNewAccount({ name: 'Cash Wallet', type: 'cash', balance: 5000, currency: userProfile.primaryCurrency })}
                     className="text-xs px-3 py-1"
                   >
                     Quick Cash
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setNewAccount({ name: 'Empty Account', type: 'bank_savings', balance: 0, currency: userProfile.primaryCurrency, institution: 'To be filled later' })}
+                    className="text-xs px-3 py-1"
+                  >
+                    Zero Balance
                   </Button>
                 </div>
               </div>
@@ -948,14 +972,26 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <CurrencyInput
-                        value={newAccount.balance || 0}
-                        currency={newAccount.currency || displayCurrency}
-                        onValueChange={(value) => setNewAccount(prev => ({ ...prev, balance: typeof value === 'number' ? value : 0 }))}
-                        onCurrencyChange={(currency) => setNewAccount(prev => ({ ...prev, currency }))}
-                        placeholder="Enter current balance"
-                        className="w-full"
-                      />
+                      <div className="space-y-2">
+                        <CurrencyInput
+                          value={newAccount.balance || 0}
+                          currency={newAccount.currency || userProfile.primaryCurrency}
+                          onValueChange={(value) => setNewAccount(prev => ({ ...prev, balance: typeof value === 'number' ? value : 0 }))}
+                          onCurrencyChange={(currency) => setNewAccount(prev => ({ ...prev, currency }))}
+                          placeholder="Enter current balance (0 is allowed)"
+                          className="w-full"
+                          showConversion={!!(newAccount.currency && newAccount.currency !== userProfile.primaryCurrency)}
+                          targetCurrency={userProfile.primaryCurrency}
+                        />
+                        <CurrencySelector
+                          value={newAccount.currency || userProfile.primaryCurrency}
+                          onChange={(currency) => setNewAccount(prev => ({ ...prev, currency }))}
+                          showFlag={true}
+                          showFullName={false}
+                          popularOnly={false}
+                          className="text-sm"
+                        />
+                      </div>
                       
                       <Input
                         type="text"
@@ -967,7 +1003,7 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
                     </div>
                     
                     <p className="text-xs text-gray-500 mt-2">
-                      Enter the current amount in this account
+                      Enter the current amount in this account (0 is allowed for empty accounts)
                     </p>
                   </div>
                   
@@ -976,7 +1012,7 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
                       variant="primary"
                       onClick={addAccountSetup}
                       className="flex-1"
-                      disabled={!newAccount.name || !newAccount.type || newAccount.balance === undefined}
+                      disabled={!newAccount.name || !newAccount.type}
                     >
                       <Plus size={16} className="mr-2" />
                       Add Account
@@ -984,9 +1020,9 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
                     
                     <Button
                       variant="secondary"
-                      onClick={() => setNewAccount({})}
+                      onClick={() => setNewAccount({ currency: userProfile.primaryCurrency })}
                       className="px-4"
-                      disabled={!newAccount.name && !newAccount.type && newAccount.balance === undefined}
+                      disabled={!newAccount.name && !newAccount.type}
                     >
                       Clear
                     </Button>
