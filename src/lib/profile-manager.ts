@@ -144,11 +144,12 @@ class ProfileManager {
       if (updates.autoConvert !== undefined) dbUpdates.auto_convert = updates.autoConvert;
       if (updates.showOriginalAmounts !== undefined) dbUpdates.show_original_amounts = updates.showOriginalAmounts;
 
-      // Update in Supabase
+      // Update in Supabase - use user_id if profileId looks like a user_id, otherwise use id
+      const isUserId = profileId.includes('-') && profileId.length === 36; // UUID format
       const { data, error } = await supabase
         .from('profiles')
         .update(dbUpdates)
-        .eq('id', profileId)
+        .eq(isUserId ? 'user_id' : 'id', profileId)
         .select()
         .single();
 

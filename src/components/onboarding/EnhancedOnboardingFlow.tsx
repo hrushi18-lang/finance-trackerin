@@ -158,14 +158,33 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
 
     setIsLoading(true);
     try {
-      // Create user profile
+      // Update existing user profile instead of creating new one
       const profileData = {
         ...userProfile,
         email: user.email || userProfile.email
       };
       
-      await profileManager.createUserProfile(profileData, user.id);
-      console.log('✅ User profile created');
+      // Check if profile already exists
+      const existingProfile = await profileManager.getUserProfile(user.id);
+      if (existingProfile) {
+        // Update existing profile using user_id
+        try {
+          await profileManager.updateUserProfile(user.id, profileData);
+          console.log('✅ User profile updated');
+        } catch (profileError) {
+          console.error('Profile update error:', profileError);
+          throw new Error(`Failed to update profile: ${profileError instanceof Error ? profileError.message : 'Unknown error'}`);
+        }
+      } else {
+        // Create new profile if it doesn't exist
+        try {
+          await profileManager.createUserProfile(profileData, user.id);
+          console.log('✅ User profile created');
+        } catch (profileError) {
+          console.error('Profile creation error:', profileError);
+          throw new Error(`Failed to create profile: ${profileError instanceof Error ? profileError.message : 'Unknown error'}`);
+        }
+      }
 
       // Save custom categories to database
       for (const category of customCategories) {
@@ -273,17 +292,70 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
       
       // Save accounts
       for (const account of accounts) {
-        await addAccount({
-          name: account.name,
-          type: account.type as any,
-          balance: account.balance,
-          institution: account.institution,
-          currency: account.currency,
-          currencyCode: account.currency,
-          isVisible: account.isVisible
-        });
+        try {
+          await addAccount({
+            name: account.name,
+            type: account.type as any,
+            balance: account.balance,
+            institution: account.institution,
+            currency: account.currency,
+            currencyCode: account.currency,
+            isVisible: account.isVisible,
+            // Add required fields
+            platform: 'manual',
+            accountNumber: '',
+            routingNumber: '',
+            cardLastFour: '',
+            cardType: '',
+            spendingLimit: 0,
+            monthlyLimit: 0,
+            dailyLimit: 0,
+            isPrimary: false,
+            notes: '',
+            accountTypeCustom: '',
+            isLiability: false,
+            outstandingBalance: 0,
+            creditLimit: 0,
+            minimumDue: 0,
+            dueDate: undefined,
+            interestRate: 0,
+            isBalanceHidden: false,
+            linkedBankAccountId: undefined,
+            autoSync: false,
+            lastSyncedAt: undefined,
+            exchangeRate: 1,
+            homeCurrency: account.currency,
+            subtypeId: undefined,
+            status: 'active',
+            accountNumberMasked: '',
+            lastActivityDate: undefined,
+            accountHolderName: userProfile.name,
+            jointAccount: false,
+            accountAgeDays: 0,
+            riskLevel: 'low',
+            interestEarnedYtd: 0,
+            feesPaidYtd: 0,
+            averageMonthlyBalance: account.balance,
+            accountHealthScore: 100,
+            autoCategorize: true,
+            requireApproval: false,
+            maxDailyTransactions: 100,
+            maxDailyAmount: 10000,
+            twoFactorEnabled: false,
+            biometricEnabled: false,
+            accountNotes: '',
+            externalAccountId: '',
+            institutionLogoUrl: '',
+            accountColor: '#3B82F6',
+            sortOrder: 0
+          });
+          console.log(`✅ Account "${account.name}" saved`);
+        } catch (accountError) {
+          console.error(`Account creation error for "${account.name}":`, accountError);
+          throw new Error(`Failed to create account "${account.name}": ${accountError instanceof Error ? accountError.message : 'Unknown error'}`);
+        }
       }
-      console.log('✅ Accounts saved');
+      console.log('✅ All accounts saved');
       
       // Refresh profile context to reflect new data
       await refreshProfile();
@@ -291,8 +363,12 @@ export const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ 
       console.log('🎉 Onboarding completed successfully!');
       onComplete();
     } catch (error) {
-      setError('Failed to complete setup');
       console.error('Setup error:', error);
+      if (error instanceof Error) {
+        setError(`Failed to complete setup: ${error.message}`);
+      } else {
+        setError('Failed to complete setup. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
