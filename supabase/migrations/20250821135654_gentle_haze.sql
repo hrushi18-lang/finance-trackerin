@@ -1,4 +1,5 @@
-
+/*
+  # Complete Financial Management System
 
   1. New Tables
     - `financial_accounts` - Multi-account management (Bank, UPI, Cash, Credit Cards, Investment)
