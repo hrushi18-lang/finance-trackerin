@@ -14,7 +14,7 @@ export interface AuditLogEntry {
   old_values?: Record<string, any>;
   new_values?: Record<string, any>;
   metadata?: Record<string, any>;
-  ip_address?: string;
+  ip_address?: string | null;
   user_agent?: string;
   timestamp: Date;
   severity: 'low' | 'medium' | 'high' | 'critical';
@@ -292,12 +292,17 @@ class AuditLogger {
   /**
    * Get client IP address
    */
-  private getClientIP(): string {
-    if (typeof window === 'undefined') return 'unknown';
+  private getClientIP(): string | null {
+    if (typeof window === 'undefined') return null;
     
-    // This would be implemented based on your setup
-    // For now, return a placeholder
-    return 'unknown';
+    // Try to get IP from various sources
+    try {
+      // This would be implemented based on your setup
+      // For now, return null to avoid constraint violations
+      return null;
+    } catch (error) {
+      return null;
+    }
   }
 
   /**
