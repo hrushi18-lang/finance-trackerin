@@ -204,7 +204,7 @@ const Home: React.FC = () => {
           </h2>
         </div>
 
-        {/* Net Worth Card */}
+        {/* Current Balance Card */}
         <div 
           className="p-8 rounded-3xl"
           style={{
@@ -213,16 +213,16 @@ const Home: React.FC = () => {
           }}
         >
           <div className="text-center">
-            <p className="text-sm font-body mb-3" style={{ color: 'var(--text-secondary)' }}>Net Worth</p>
+            <p className="text-sm font-body mb-3" style={{ color: 'var(--text-secondary)' }}>Current Balance</p>
             <div className="mb-3">
               <span className="text-4xl font-numbers" style={{ color: 'var(--text-primary)' }}>
-                {hideBalance ? '••••••' : formatCurrency(netWorth)}
+                {hideBalance ? '••••••' : formatCurrency(accounts.reduce((sum, account) => sum + (account.balance || 0), 0))}
               </span>
             </div>
             <div className="flex items-center justify-center space-x-2">
-              <TrendingUp size={16} style={{ color: 'var(--success)' }} />
-              <span className="text-sm font-body" style={{ color: 'var(--success)' }}>
-                +{hideBalance ? '••' : formatCurrency(netWorthChange.amount)} ({netWorthChange.percentage}%)
+              <Wallet size={16} style={{ color: 'var(--primary)' }} />
+              <span className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
+                Across {accounts.length} account{accounts.length !== 1 ? 's' : ''}
               </span>
             </div>
           </div>

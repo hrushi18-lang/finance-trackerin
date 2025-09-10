@@ -15,7 +15,12 @@ import {
   EyeOff,
   Filter,
   Search,
-  X
+  X,
+  BarChart3,
+  PieChart,
+  DollarSign,
+  Calendar as CalIcon,
+  TrendingUp as TrendUp
 } from 'lucide-react';
 import { 
   format, 
@@ -34,6 +39,9 @@ import {
   endOfDay
 } from 'date-fns';
 import { PageNavigation } from '../components/layout/PageNavigation';
+import { RingChart } from '../components/analytics/RingChart';
+import { BarChart } from '../components/analytics/BarChart';
+import { AnalyticsEngine } from '../utils/analytics-engine';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
@@ -62,7 +70,9 @@ const Calendar: React.FC = () => {
     recurringTransactions,
     accounts,
     markBillAsPaid,
-    markRecurringTransactionAsPaid
+    markRecurringTransactionAsPaid,
+    budgets,
+    userCategories
   } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
   
@@ -79,6 +89,21 @@ const Calendar: React.FC = () => {
     showOverdue: true
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
+
+  // Initialize analytics engine
+  const analyticsEngine = useMemo(() => {
+    return new AnalyticsEngine(
+      transactions,
+      accounts,
+      goals,
+      bills,
+      liabilities,
+      budgets,
+      userCategories
+    );
+  }, [transactions, accounts, goals, bills, liabilities, budgets, userCategories]);
   const [filterType, setFilterType] = useState<'all' | 'upcoming' | 'overdue' | 'completed' | 'this_week' | 'this_month'>('all');
 
   const monthStart = startOfMonth(currentDate);
@@ -409,6 +434,162 @@ const Calendar: React.FC = () => {
         </div>
         <PageNavigation />
       </header>
+
+      {/* Calendar Analytics Section */}
+      <div className="px-4 py-6">
+        <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 mb-6 border border-white/10">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white">Calendar Analytics</h2>
+            <div className="flex items-center space-x-2">
+              <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value)}
+                className="px-3 py-1 rounded-lg text-sm bg-black/20 text-white border border-white/20"
+              >
+                <option value="thisMonth">This Month</option>
+                <option value="lastMonth">Last Month</option>
+                <option value="last3Months">Last 3 Months</option>
+              </select>
+              <button
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                className="p-2 rounded-lg hover:bg-black/30 transition-colors"
+                title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+              >
+                <BarChart3 size={16} className={showAnalytics ? 'text-blue-400' : 'text-gray-400'} />
+              </button>
+            </div>
+          </div>
+
+          {showAnalytics && (
+            <div className="space-y-6">
+              {/* Calendar Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-lg bg-green-500/20 border border-green-500/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-green-300">Total Income</h3>
+                    <TrendingUp size={16} className="text-green-400" />
+                  </div>
+                  <p className="text-2xl font-numbers text-green-100">${monthStats.income.toFixed(2)}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-red-500/20 border border-red-500/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-red-300">Total Expenses</h3>
+                    <TrendingDown size={16} className="text-red-400" />
+                  </div>
+                  <p className="text-2xl font-numbers text-red-100">${monthStats.expenses.toFixed(2)}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-blue-500/20 border border-blue-500/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-blue-300">Net Income</h3>
+                    <DollarSign size={16} className="text-blue-400" />
+                  </div>
+                  <p className={`text-2xl font-numbers ${monthStats.net >= 0 ? 'text-blue-100' : 'text-red-100'}`}>
+                    ${monthStats.net.toFixed(2)}
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-purple-500/20 border border-purple-500/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-purple-300">Total Events</h3>
+                    <CalIcon size={16} className="text-purple-400" />
+                  </div>
+                  <p className="text-2xl font-numbers text-purple-100">{monthStats.totalEvents}</p>
+                </div>
+              </div>
+
+              {/* Bill Status Breakdown */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-md font-semibold mb-3 text-white">Bill Status Overview</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-500/20 border border-yellow-500/30">
+                      <span className="text-yellow-300">Pending Bills</span>
+                      <span className="text-yellow-100 font-numbers">{monthStats.pendingBills}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-red-500/20 border border-red-500/30">
+                      <span className="text-red-300">Overdue Bills</span>
+                      <span className="text-red-100 font-numbers">{monthStats.overdueBills}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/20 border border-green-500/30">
+                      <span className="text-green-300">Completed Bills</span>
+                      <span className="text-green-100 font-numbers">{monthStats.completedBills}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Event Type Distribution */}
+                <div>
+                  <h3 className="text-md font-semibold mb-3 text-white">Event Types</h3>
+                  {(() => {
+                    const eventTypes = calendarEvents.reduce((acc, event) => {
+                      acc[event.type] = (acc[event.type] || 0) + 1;
+                      return acc;
+                    }, {} as Record<string, number>);
+
+                    const chartData = Object.entries(eventTypes).map(([type, count], index) => ({
+                      label: type.charAt(0).toUpperCase() + type.slice(1),
+                      value: count,
+                      color: `hsl(${120 + index * 60}, 60%, 50%)`
+                    }));
+
+                    return chartData.length > 0 ? (
+                      <RingChart
+                        data={chartData}
+                        size={150}
+                        strokeWidth={12}
+                        interactive={true}
+                      />
+                    ) : (
+                      <div className="text-center py-8">
+                        <PieChart size={48} className="text-gray-400 mx-auto mb-4" />
+                        <p className="text-sm text-gray-400">No events for this period</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Upcoming Events Timeline */}
+              <div>
+                <h3 className="text-md font-semibold mb-3 text-white">Upcoming Events (Next 7 Days)</h3>
+                <div className="space-y-2">
+                  {calendarEvents
+                    .filter(event => {
+                      const eventDate = event.date;
+                      const now = new Date();
+                      const nextWeek = addDays(now, 7);
+                      return eventDate >= now && eventDate <= nextWeek;
+                    })
+                    .slice(0, 5)
+                    .map((event) => (
+                      <div key={event.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-3 h-3 rounded-full ${
+                            event.type === 'transaction' ? 'bg-blue-400' :
+                            event.type === 'goal' ? 'bg-green-400' :
+                            event.type === 'bill' ? 'bg-yellow-400' :
+                            'bg-purple-400'
+                          }`} />
+                          <div>
+                            <p className="text-sm font-medium text-white">{event.title}</p>
+                            <p className="text-xs text-gray-400">{event.category}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-numbers text-white">
+                            {event.amount ? formatCurrency(event.amount) : ''}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {format(event.date, 'MMM dd')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
       
       <div className="px-4 py-6">
         {/* Enhanced Filters */}

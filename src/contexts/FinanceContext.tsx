@@ -50,6 +50,18 @@ interface FinanceContextType {
   updateAccount: (id: string, updates: Partial<FinancialAccount>) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
   
+  // Account Management Features
+  duplicateAccount: (accountId: string) => Promise<void>;
+  archiveAccount: (accountId: string) => Promise<void>;
+  restoreAccount: (accountId: string) => Promise<void>;
+  softDeleteAccount: (accountId: string) => Promise<void>;
+  toggleAccountVisibility: (accountId: string) => Promise<void>;
+  toggleAccountPin: (accountId: string) => Promise<void>;
+  transferBetweenAccounts: (transferData: Omit<AccountTransfer, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
+  getAccountSummary: (accountId: string) => Promise<any>;
+  getAccountTransfers: (accountId: string) => Promise<AccountTransfer[]>;
+  getAccountAnalytics: (accountId: string, periodStart: Date, periodEnd: Date) => Promise<any>;
+  
   addTransaction: (transaction: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<Transaction>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
@@ -1754,6 +1766,241 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     invalidateUserData(user.id);
   };
 
+  // Account Management Features
+  const duplicateAccount = async (accountId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const account = accounts.find(acc => acc.id === accountId);
+    if (!account) throw new Error('Account not found');
+
+    const duplicateData = {
+      ...account,
+      name: `${account.name} (Copy)`,
+      balance: 0, // Start with zero balance
+      id: undefined,
+      userId: undefined,
+      createdAt: undefined,
+      updatedAt: undefined
+    };
+
+    await addAccount(duplicateData);
+  };
+
+  const archiveAccount = async (accountId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('financial_accounts')
+      .update({
+        is_archived: true,
+        is_visible: false,
+        status: 'closed'
+      })
+      .eq('id', accountId)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setAccounts(prev => prev.map(account => 
+      account.id === accountId 
+        ? { ...account, isArchived: true, isVisible: false, status: 'closed' }
+        : account
+    ));
+    
+    invalidateUserData(user.id);
+  };
+
+  const restoreAccount = async (accountId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('financial_accounts')
+      .update({
+        is_archived: false,
+        is_visible: true,
+        status: 'active',
+        deleted_at: null
+      })
+      .eq('id', accountId)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setAccounts(prev => prev.map(account => 
+      account.id === accountId 
+        ? { ...account, isArchived: false, isVisible: true, status: 'active', deletedAt: undefined }
+        : account
+    ));
+    
+    invalidateUserData(user.id);
+  };
+
+  const softDeleteAccount = async (accountId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('financial_accounts')
+      .update({
+        deleted_at: new Date().toISOString(),
+        is_archived: true,
+        is_visible: false,
+        status: 'closed'
+      })
+      .eq('id', accountId)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setAccounts(prev => prev.map(account => 
+      account.id === accountId 
+        ? { 
+            ...account, 
+            deletedAt: new Date(), 
+            isArchived: true, 
+            isVisible: false, 
+            status: 'closed' 
+          }
+        : account
+    ));
+    
+    invalidateUserData(user.id);
+  };
+
+  const toggleAccountVisibility = async (accountId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const account = accounts.find(acc => acc.id === accountId);
+    if (!account) throw new Error('Account not found');
+
+    const { error } = await supabase
+      .from('financial_accounts')
+      .update({
+        is_visible: !account.isVisible
+      })
+      .eq('id', accountId)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setAccounts(prev => prev.map(acc => 
+      acc.id === accountId 
+        ? { ...acc, isVisible: !acc.isVisible }
+        : acc
+    ));
+    
+    invalidateUserData(user.id);
+  };
+
+  const toggleAccountPin = async (accountId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const account = accounts.find(acc => acc.id === accountId);
+    if (!account) throw new Error('Account not found');
+
+    const { error } = await supabase
+      .from('financial_accounts')
+      .update({
+        is_primary: !account.isPrimary
+      })
+      .eq('id', accountId)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+
+    setAccounts(prev => prev.map(acc => 
+      acc.id === accountId 
+        ? { ...acc, isPrimary: !acc.isPrimary }
+        : acc
+    ));
+    
+    invalidateUserData(user.id);
+  };
+
+  const transferBetweenAccounts = async (transferData: Omit<AccountTransfer, 'id' | 'userId' | 'createdAt'>) => {
+    if (!user) throw new Error('User not authenticated');
+
+    // Create transfer record
+    const { data: transfer, error: transferError } = await supabase
+      .from('account_transfers')
+      .insert({
+        user_id: user.id,
+        from_account_id: transferData.fromAccountId,
+        to_account_id: transferData.toAccountId,
+        amount: transferData.amount,
+        from_currency: transferData.fromCurrency,
+        to_currency: transferData.toCurrency,
+        converted_amount: transferData.convertedAmount,
+        exchange_rate: transferData.exchangeRate,
+        description: transferData.description,
+        transfer_type: transferData.transferType,
+        status: transferData.status,
+        notes: transferData.notes
+      })
+      .select()
+      .single();
+
+    if (transferError) throw transferError;
+
+    // Update account balances
+    const fromAccount = accounts.find(acc => acc.id === transferData.fromAccountId);
+    const toAccount = accounts.find(acc => acc.id === transferData.toAccountId);
+
+    if (!fromAccount || !toAccount) throw new Error('Account not found');
+
+    // Update from account (debit)
+    await updateAccount(transferData.fromAccountId, {
+      balance: fromAccount.balance - transferData.amount
+    });
+
+    // Update to account (credit)
+    await updateAccount(transferData.toAccountId, {
+      balance: toAccount.balance + (transferData.convertedAmount || transferData.amount)
+    });
+
+    // Add transfer to state
+    setAccountTransfers(prev => [transfer, ...prev]);
+    
+    invalidateUserData(user.id);
+  };
+
+  const getAccountSummary = async (accountId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .rpc('get_account_summary', { account_uuid: accountId });
+
+    if (error) throw error;
+    return data;
+  };
+
+  const getAccountTransfers = async (accountId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('account_transfers')
+      .select('*')
+      .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  };
+
+  const getAccountAnalytics = async (accountId: string, periodStart: Date, periodEnd: Date) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('account_analytics')
+      .select('*')
+      .eq('account_id', accountId)
+      .gte('period_start', periodStart.toISOString().split('T')[0])
+      .lte('period_end', periodEnd.toISOString().split('T')[0])
+      .order('period_start', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  };
+
   const addTransaction = async (transactionData: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
@@ -3254,86 +3501,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setRecurringTransactions(prev => prev.filter(rt => rt.id !== id));
   };
 
-  const transferBetweenAccounts = async (fromAccountId: string, toAccountId: string, amount: number, description: string) => {
-    if (!user) throw new Error('User not authenticated');
-
-    // Get account details for currency information
-    const fromAccount = accounts.find(a => a.id === fromAccountId);
-    const toAccount = accounts.find(a => a.id === toAccountId);
-
-    if (!fromAccount || !toAccount) {
-      throw new Error('Invalid account selection');
-    }
-
-    // Create paired transactions for the transfer
-    const transferDate = new Date();
-    
-    // Create outgoing transaction (expense from source account)
-    const outgoingTransaction = await addTransaction({
-      type: 'expense',
-      amount: amount,
-      category: 'Transfer',
-      description: `Transfer to ${toAccount.name}: ${description}`,
-      date: transferDate,
-      accountId: fromAccountId,
-      affectsBalance: true,
-      status: 'completed'
-    });
-
-    // Create incoming transaction (income to destination account)
-    const incomingTransaction = await addTransaction({
-      type: 'income',
-      amount: amount,
-      category: 'Transfer',
-      description: `Transfer from ${fromAccount.name}: ${description}`,
-      date: transferDate,
-      accountId: toAccountId,
-      affectsBalance: true,
-      status: 'completed'
-    });
-
-    // Create transfer record for tracking
-    const { data, error } = await supabase
-      .from('enhanced_account_transfers')
-      .insert({
-        user_id: user.id,
-        from_account_id: fromAccountId,
-        to_account_id: toAccountId,
-        amount: amount,
-        from_currency: fromAccount.currencyCode,
-        to_currency: toAccount.currencyCode,
-        exchange_rate: 1.0, // Simplified for now
-        converted_amount: amount,
-        description: description,
-        transfer_date: transferDate.toISOString().split('T')[0],
-        status: 'completed',
-        fees: 0,
-        from_transaction_id: outgoingTransaction.id,
-        to_transaction_id: incomingTransaction.id
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    const newTransfer: AccountTransfer = {
-      id: data.id,
-      userId: data.user_id,
-      fromAccountId: data.from_account_id,
-      toAccountId: data.to_account_id,
-      amount: Number(data.amount),
-      description: data.description,
-      transferDate: new Date(data.transfer_date),
-      fromTransactionId: data.from_transaction_id,
-      toTransactionId: data.to_transaction_id,
-      createdAt: new Date(data.created_at)
-    };
-
-    setAccountTransfers(prev => [newTransfer, ...prev]);
-
-    // Reload accounts to reflect balance changes
-    await loadAccounts();
-  };
 
   // Analytics functions
   const getMonthlyTrends = (months: number) => {
@@ -3652,6 +3819,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     addAccount,
     updateAccount,
     deleteAccount,
+    duplicateAccount,
+    archiveAccount,
+    restoreAccount,
+    softDeleteAccount,
+    toggleAccountVisibility,
+    toggleAccountPin,
+    getAccountSummary,
+    getAccountTransfers,
+    getAccountAnalytics,
     addTransaction,
     updateTransaction,
     deleteTransaction,

@@ -8,7 +8,10 @@ import {
   PieChart,
   BarChart3,
   Target,
-  Filter
+  Filter,
+  Download,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
@@ -28,6 +31,11 @@ const Analytics: React.FC = () => {
   const [showChartPopup, setShowChartPopup] = useState(false);
   const [popupData, setPopupData] = useState<any>(null);
   const [popupType, setPopupType] = useState<'ring' | 'bar'>('ring');
+  const [selectedAccount, setSelectedAccount] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [customDateRange, setCustomDateRange] = useState<{start: Date | null, end: Date | null}>({start: null, end: null});
+  const [showDetailedView, setShowDetailedView] = useState(false);
 
   // Calculate analytics data
   const analyticsData = useMemo(() => {
@@ -35,28 +43,44 @@ const Analytics: React.FC = () => {
     let startDate: Date;
     let endDate: Date;
 
-    switch (selectedPeriod) {
-      case 'lastMonth':
-        startDate = startOfMonth(subMonths(currentDate, 1));
-        endDate = endOfMonth(subMonths(currentDate, 1));
-        break;
-      case 'last3Months':
-        startDate = startOfMonth(subMonths(currentDate, 3));
-        endDate = endOfMonth(currentDate);
-        break;
-      case 'last6Months':
-        startDate = startOfMonth(subMonths(currentDate, 6));
-        endDate = endOfMonth(currentDate);
-        break;
-      default: // thisMonth
-        startDate = startOfMonth(currentDate);
-        endDate = endOfMonth(currentDate);
+    // Use custom date range if set, otherwise use period selection
+    if (customDateRange.start && customDateRange.end) {
+      startDate = customDateRange.start;
+      endDate = customDateRange.end;
+    } else {
+      switch (selectedPeriod) {
+        case 'lastMonth':
+          startDate = startOfMonth(subMonths(currentDate, 1));
+          endDate = endOfMonth(subMonths(currentDate, 1));
+          break;
+        case 'last3Months':
+          startDate = startOfMonth(subMonths(currentDate, 3));
+          endDate = endOfMonth(currentDate);
+          break;
+        case 'last6Months':
+          startDate = startOfMonth(subMonths(currentDate, 6));
+          endDate = endOfMonth(currentDate);
+          break;
+        default: // thisMonth
+          startDate = startOfMonth(currentDate);
+          endDate = endOfMonth(currentDate);
+      }
     }
 
-    const periodTransactions = transactions.filter(t => {
+    let periodTransactions = transactions.filter(t => {
       const transactionDate = new Date(t.date);
       return transactionDate >= startDate && transactionDate <= endDate;
     });
+
+    // Apply account filter
+    if (selectedAccount !== 'all') {
+      periodTransactions = periodTransactions.filter(t => t.accountId === selectedAccount);
+    }
+
+    // Apply category filter
+    if (selectedCategory !== 'all') {
+      periodTransactions = periodTransactions.filter(t => t.category === selectedCategory);
+    }
 
     const income = periodTransactions
       .filter(t => t.type === 'income')
@@ -87,7 +111,7 @@ const Analytics: React.FC = () => {
       categoryBreakdown,
       period: { startDate, endDate }
     };
-  }, [transactions, selectedPeriod]);
+  }, [transactions, selectedPeriod, selectedAccount, selectedCategory, customDateRange]);
 
   // Get period label
   const getPeriodLabel = () => {
@@ -97,6 +121,53 @@ const Analytics: React.FC = () => {
       case 'last6Months': return 'Last 6 Months';
       default: return 'This Month';
     }
+  };
+
+  // Export analytics data
+  const exportAnalyticsData = () => {
+    const exportData = {
+      period: getPeriodLabel(),
+      dateRange: {
+        start: analyticsData.period.startDate.toISOString().split('T')[0],
+        end: analyticsData.period.endDate.toISOString().split('T')[0]
+      },
+      filters: {
+        account: selectedAccount === 'all' ? 'All Accounts' : accounts.find(a => a.id === selectedAccount)?.name || 'Unknown',
+        category: selectedCategory === 'all' ? 'All Categories' : selectedCategory
+      },
+      summary: {
+        income: analyticsData.income,
+        expenses: analyticsData.expenses,
+        netIncome: analyticsData.netIncome,
+        transactionCount: analyticsData.transactionCount,
+        savingsRate: analyticsData.income > 0 ? (analyticsData.netIncome / analyticsData.income) * 100 : 0
+      },
+      categoryBreakdown: analyticsData.categoryBreakdown,
+      accounts: accounts.map(acc => ({
+        name: acc.name,
+        type: acc.type,
+        balance: acc.balance,
+        currency: acc.currency
+      })),
+      goals: goals.map(goal => ({
+        name: goal.name,
+        currentAmount: goal.currentAmount,
+        targetAmount: goal.targetAmount,
+        progress: goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0,
+        targetDate: goal.targetDate
+      }))
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `analytics-export-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -119,13 +190,41 @@ const Analytics: React.FC = () => {
           </div>
           <div className="flex items-center space-x-2">
             <button 
+              onClick={() => setShowDetailedView(!showDetailedView)}
+              className={`p-2 rounded-full transition-all duration-200 hover:scale-105 ${
+                showDetailedView ? 'bg-green-500 text-white' : ''
+              }`}
+              style={{ 
+                backgroundColor: showDetailedView ? 'var(--success)' : 'var(--background-secondary)',
+                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
+              }}
+              title={showDetailedView ? 'Switch to Simple View' : 'Switch to Detailed View'}
+            >
+              {showDetailedView ? <EyeOff size={16} style={{ color: 'white' }} /> : <Eye size={16} style={{ color: 'var(--text-primary)' }} />}
+            </button>
+            <button 
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className={`p-2 rounded-full transition-all duration-200 hover:scale-105 ${
+                showAdvancedFilters ? 'bg-blue-500 text-white' : ''
+              }`}
+              style={{ 
+                backgroundColor: showAdvancedFilters ? 'var(--primary)' : 'var(--background-secondary)',
+                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
+              }}
+              title="Advanced Filters"
+            >
+              <Filter size={16} style={{ color: showAdvancedFilters ? 'white' : 'var(--text-primary)' }} />
+            </button>
+            <button 
+              onClick={exportAnalyticsData}
               className="p-2 rounded-full transition-all duration-200 hover:scale-105"
               style={{ 
                 backgroundColor: 'var(--background-secondary)',
                 boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
               }}
+              title="Export Analytics Data"
             >
-              <Filter size={16} style={{ color: 'var(--text-primary)' }} />
+              <Download size={16} style={{ color: 'var(--text-primary)' }} />
             </button>
             <button 
               className="p-2 rounded-full transition-all duration-200 hover:scale-105"
@@ -133,6 +232,7 @@ const Analytics: React.FC = () => {
                 backgroundColor: 'var(--background-secondary)',
                 boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
               }}
+              title="Calendar View"
             >
               <Calendar size={16} style={{ color: 'var(--text-primary)' }} />
             </button>
@@ -180,6 +280,89 @@ const Analytics: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* Advanced Filters */}
+        {showAdvancedFilters && (
+          <div 
+            className="p-4 rounded-2xl slide-in-up"
+            style={{
+              backgroundColor: 'var(--background)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <h3 className="text-lg font-heading mb-4">Advanced Filters</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Account Filter */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Account
+                </label>
+                <select
+                  value={selectedAccount}
+                  onChange={(e) => setSelectedAccount(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Accounts</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} ({account.type.replace('_', ' ')})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Category Filter */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Category
+                </label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Categories</option>
+                  {Array.from(new Set(transactions.map(t => t.category))).map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Custom Date Range */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Custom Date Range
+                </label>
+                <div className="flex space-x-2">
+                  <input
+                    type="date"
+                    value={customDateRange.start ? customDateRange.start.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value ? new Date(e.target.value) : null }))}
+                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Start Date"
+                  />
+                  <input
+                    type="date"
+                    value={customDateRange.end ? customDateRange.end.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value ? new Date(e.target.value) : null }))}
+                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="End Date"
+                  />
+                </div>
+                {(customDateRange.start || customDateRange.end) && (
+                  <button
+                    onClick={() => setCustomDateRange({start: null, end: null})}
+                    className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Clear Custom Range
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Key Metrics */}
         <div className="grid grid-cols-2 gap-3 slide-in-up">
@@ -402,6 +585,142 @@ const Analytics: React.FC = () => {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Goal Progress Analytics */}
+        {goals.length > 0 && (
+          <div 
+            className="p-4 rounded-2xl slide-in-up"
+            style={{
+              backgroundColor: 'var(--background)',
+              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            }}
+          >
+            <h3 className="text-lg font-heading mb-4">Goal Progress</h3>
+            <div className="space-y-4">
+              {goals.slice(0, 5).map((goal) => {
+                const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
+                const isCompleted = progress >= 100;
+                
+                return (
+                  <div key={goal.id} className="p-3 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {goal.name}
+                      </h4>
+                      <span className="text-sm font-numbers" style={{ color: 'var(--text-secondary)' }}>
+                        {formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          isCompleted ? 'bg-green-500' : 'bg-blue-500'
+                        }`}
+                        style={{ width: `${Math.min(progress, 100)}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                        {progress.toFixed(1)}% Complete
+                      </span>
+                      {goal.targetDate && (
+                        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                          Due: {format(new Date(goal.targetDate), 'MMM dd, yyyy')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Net Worth Tracking */}
+        <div 
+          className="p-4 rounded-2xl slide-in-up"
+          style={{
+            backgroundColor: 'var(--background)',
+            boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+          }}
+        >
+          <h3 className="text-lg font-heading mb-4">Net Worth Overview</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Total Assets
+              </h4>
+              <p className="text-2xl font-numbers text-green-600">
+                {formatCurrency(accounts.reduce((sum, acc) => sum + acc.balance, 0))}
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Account Distribution
+              </h4>
+              <div className="space-y-2">
+                {accounts.slice(0, 3).map((account) => (
+                  <div key={account.id} className="flex items-center justify-between">
+                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      {account.name}
+                    </span>
+                    <span className="text-sm font-numbers">
+                      {formatCurrency(account.balance)}
+                    </span>
+                  </div>
+                ))}
+                {accounts.length > 3 && (
+                  <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    +{accounts.length - 3} more accounts
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Spending Trends */}
+        <div 
+          className="p-4 rounded-2xl slide-in-up"
+          style={{
+            backgroundColor: 'var(--background)',
+            boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+          }}
+        >
+          <h3 className="text-lg font-heading mb-4">Spending Trends</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'var(--background-secondary)' }}>
+              <h4 className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                Average Daily Spending
+              </h4>
+              <p className="text-xl font-numbers">
+                {formatCurrency(analyticsData.expenses / Math.max(1, analyticsData.period.endDate.getDate()))}
+              </p>
+            </div>
+            <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'var(--background-secondary)' }}>
+              <h4 className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                Largest Transaction
+              </h4>
+              <p className="text-xl font-numbers">
+                {analyticsData.transactionCount > 0 
+                  ? formatCurrency(Math.max(...transactions.map(t => t.amount)))
+                  : formatCurrency(0)
+                }
+              </p>
+            </div>
+            <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'var(--background-secondary)' }}>
+              <h4 className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                Transaction Frequency
+              </h4>
+              <p className="text-xl font-numbers">
+                {analyticsData.transactionCount > 0 
+                  ? `${(analyticsData.transactionCount / Math.max(1, analyticsData.period.endDate.getDate())).toFixed(1)}/day`
+                  : '0/day'
+                }
+              </p>
+            </div>
           </div>
         </div>
 

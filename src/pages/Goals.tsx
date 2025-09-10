@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Target, Calendar, Plus, ArrowUpDown, TrendingUp, Edit3, Trash2, AlertCircle, CheckCircle, PiggyBank, TrendingDown, Eye, ArrowLeft } from 'lucide-react';
-import { format, differenceInDays } from 'date-fns';
+import React, { useState, useMemo } from 'react';
+import { Target, Calendar, Plus, ArrowUpDown, TrendingUp, Edit3, Trash2, AlertCircle, CheckCircle, PiggyBank, TrendingDown, Eye, ArrowLeft, BarChart3, PieChart, DollarSign, Clock, TrendingUp as TrendUp } from 'lucide-react';
+import { format, differenceInDays, startOfMonth, endOfMonth } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { calculatePercentage, sanitizeFinancialData } from '../utils/validation';
@@ -13,11 +13,14 @@ import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { Goal } from '../types';
 import { ProgressBar } from '../components/analytics/ProgressBar';
+import { RingChart } from '../components/analytics/RingChart';
+import { BarChart } from '../components/analytics/BarChart';
+import { AnalyticsEngine } from '../utils/analytics-engine';
 
 const Goals: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { goals, addGoal, updateGoal, deleteGoal, addTransaction, accounts, transactions, fundGoalFromAccount, contributeToGoal, withdrawGoalToAccount, handleGoalCompletion } = useFinance();
+  const { goals, addGoal, updateGoal, deleteGoal, addTransaction, accounts, transactions, fundGoalFromAccount, contributeToGoal, withdrawGoalToAccount, handleGoalCompletion, bills, liabilities, budgets, userCategories } = useFinance();
   const { formatCurrency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -31,6 +34,50 @@ const Goals: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'upcoming'>('active');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [completedGoal, setCompletedGoal] = useState<Goal | null>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
+
+  // Initialize analytics engine
+  const analyticsEngine = useMemo(() => {
+    return new AnalyticsEngine(
+      transactions,
+      accounts,
+      goals,
+      bills,
+      liabilities,
+      budgets,
+      userCategories
+    );
+  }, [transactions, accounts, goals, bills, liabilities, budgets, userCategories]);
+
+  // Get date range based on selected period
+  const getDateRange = () => {
+    const now = new Date();
+    switch (selectedPeriod) {
+      case 'lastMonth':
+        return {
+          start: startOfMonth(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
+          end: endOfMonth(new Date(now.getFullYear(), now.getMonth() - 1, 1))
+        };
+      case 'last3Months':
+        return {
+          start: startOfMonth(new Date(now.getFullYear(), now.getMonth() - 3, 1)),
+          end: endOfMonth(now)
+        };
+      default:
+        return {
+          start: startOfMonth(now),
+          end: endOfMonth(now)
+        };
+    }
+  };
+
+  const { start: startDate, end: endDate } = getDateRange();
+
+  // Get goal analytics
+  const goalAnalytics = useMemo(() => {
+    return analyticsEngine.getGoalAnalytics();
+  }, [analyticsEngine]);
 
   // Find emergency fund goal
   const emergencyFund = goals.find(g => g.category.toLowerCase() === 'emergency');
@@ -343,6 +390,152 @@ const Goals: React.FC = () => {
               />
             </div>
           </div>
+        </div>
+
+        {/* Goal Analytics Section */}
+        <div className="card-neumorphic p-4 slide-in-up">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
+              Goal Analytics
+            </h2>
+            <div className="flex items-center space-x-2">
+              <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value)}
+                className="px-3 py-1 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+              >
+                <option value="thisMonth">This Month</option>
+                <option value="lastMonth">Last Month</option>
+                <option value="last3Months">Last 3 Months</option>
+              </select>
+              <button
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+              >
+                <BarChart3 size={16} className={showAnalytics ? 'text-blue-600' : 'text-gray-600'} />
+              </button>
+            </div>
+          </div>
+
+          {showAnalytics && (
+            <div className="space-y-6">
+              {/* Goal Progress Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Contributions by Account */}
+                <div>
+                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Contributions by Account
+                  </h3>
+                  <div className="space-y-3">
+                    {goalAnalytics.slice(0, 3).map((goal) => (
+                      <div key={goal.goalId} className="p-3 rounded-lg bg-gray-50">
+                        <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                          {goal.goalName}
+                        </h4>
+                        <div className="space-y-2">
+                          {goal.contributionsByAccount.map((contrib, index) => (
+                            <div key={index} className="flex items-center justify-between text-sm">
+                              <span style={{ color: 'var(--text-secondary)' }}>{contrib.accountName}</span>
+                              <span className="font-numbers">{formatCurrency(contrib.amount)} {contrib.currency}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Contributions by Category */}
+                <div>
+                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Contributions by Category
+                  </h3>
+                  {goalAnalytics.length > 0 ? (
+                    <RingChart
+                      data={goalAnalytics[0].contributionsByCategory.map((cat, index) => ({
+                        label: cat.category,
+                        value: cat.amount,
+                        color: `hsl(${120 + index * 30}, 60%, 50%)`
+                      }))}
+                      size={150}
+                      strokeWidth={12}
+                      interactive={true}
+                    />
+                  ) : (
+                    <div className="text-center py-8">
+                      <PieChart size={48} className="text-gray-400 mx-auto mb-4" />
+                      <p className="text-sm text-gray-500">No contribution data</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Cross-Currency Contributions */}
+              {goalAnalytics.some(goal => goal.crossCurrencyContributions.length > 0) && (
+                <div>
+                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Cross-Currency Contributions
+                  </h3>
+                  <div className="space-y-3">
+                    {goalAnalytics
+                      .filter(goal => goal.crossCurrencyContributions.length > 0)
+                      .map((goal) => (
+                        <div key={goal.goalId} className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                          <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                            {goal.goalName}
+                          </h4>
+                          <div className="space-y-2">
+                            {goal.crossCurrencyContributions.map((contrib, index) => (
+                              <div key={index} className="flex items-center justify-between text-sm">
+                                <span style={{ color: 'var(--text-secondary)' }}>
+                                  {formatCurrency(contrib.originalAmount)} {contrib.originalCurrency}
+                                </span>
+                                <span className="text-blue-600">→</span>
+                                <span className="font-numbers">
+                                  {formatCurrency(contrib.convertedAmount)} {contrib.convertedCurrency}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Goal Completion Predictions */}
+              <div>
+                <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                  Completion Predictions
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {goalAnalytics
+                    .filter(goal => goal.predictedCompletionDate)
+                    .map((goal) => (
+                      <div key={goal.goalId} className="p-3 rounded-lg bg-green-50 border border-green-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                            {goal.goalName}
+                          </h4>
+                          <span className="text-xs text-green-600">
+                            {goal.progressPercentage.toFixed(1)}% Complete
+                          </span>
+                        </div>
+                        <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          <div className="flex items-center space-x-2">
+                            <Clock size={14} />
+                            <span>
+                              Predicted completion: {format(goal.predictedCompletionDate!, 'MMM dd, yyyy')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tab Navigation */}

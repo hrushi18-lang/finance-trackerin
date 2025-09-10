@@ -47,7 +47,8 @@ const AddTransaction: React.FC = () => {
     liabilities,
     updateGoal,
     updateBill,
-    updateLiability
+    updateLiability,
+    transferBetweenAccounts
   } = useFinance();
   const [transactionType, setTransactionType] = useState<'income' | 'expense' | 'transfer'>('expense');
   const [isSplitTransaction, setIsSplitTransaction] = useState(false);
@@ -200,24 +201,71 @@ const AddTransaction: React.FC = () => {
           await addTransaction(transactionData);
         }
       } else {
-        // Create the complete transaction object
-        const transactionData = {
-          type: data.type as 'income' | 'expense',
-          amount: finalAmount,
-          description: data.description,
-          category: data.category,
-          date: new Date(data.date),
-          accountId: data.accountId,
-          affectsBalance: affectsBalance,
-          status: isScheduled ? 'scheduled' as const : 'completed' as const,
-          currencyCode: displayCurrency,
-          originalAmount: originalAmount,
-          originalCurrency: originalCurrency,
-          exchangeRateUsed: exchangeRateUsed
-        };
+        // Handle transfer transactions
+        if (data.type === 'transfer' && data.transferToAccountId) {
+          // Get source and destination accounts
+          const fromAccount = accounts.find(acc => acc.id === data.accountId);
+          const toAccount = accounts.find(acc => acc.id === data.transferToAccountId);
+          
+          if (!fromAccount || !toAccount) {
+            setError('Invalid account selection for transfer');
+            setIsSubmitting(false);
+            return;
+          }
 
-        // Submit the main transaction
-        await addTransaction(transactionData);
+          // Check if conversion is needed
+          const needsConv = needsConversion(fromAccount.currency, toAccount.currency);
+          let convertedAmount = finalAmount;
+          let exchangeRate = 1.0;
+
+          if (needsConv) {
+            const converted = convertCurrency(finalAmount, fromAccount.currency, toAccount.currency);
+            if (converted === null) {
+              setError('Unable to convert currency for transfer');
+              setIsSubmitting(false);
+              return;
+            }
+            convertedAmount = converted;
+            exchangeRate = convertCurrency(1, fromAccount.currency, toAccount.currency) || 1.0;
+          }
+
+          // Use the new transferBetweenAccounts function
+          await transferBetweenAccounts({
+            fromAccountId: data.accountId,
+            toAccountId: data.transferToAccountId,
+            amount: finalAmount,
+            fromCurrency: fromAccount.currency,
+            toCurrency: toAccount.currency,
+            convertedAmount: convertedAmount,
+            exchangeRate: exchangeRate,
+            description: data.description,
+            transferType: 'manual',
+            status: 'completed',
+            notes: `Transfer via Add Transaction modal`
+          });
+
+          // Show success message
+          console.log(`✅ Transfer completed: ${formatCurrency(finalAmount, fromAccount.currency)} → ${formatCurrency(convertedAmount, toAccount.currency)}`);
+        } else {
+          // Create the complete transaction object for income/expense
+          const transactionData = {
+            type: data.type as 'income' | 'expense',
+            amount: finalAmount,
+            description: data.description,
+            category: data.category,
+            date: new Date(data.date),
+            accountId: data.accountId,
+            affectsBalance: affectsBalance,
+            status: isScheduled ? 'scheduled' as const : 'completed' as const,
+            currencyCode: displayCurrency,
+            originalAmount: originalAmount,
+            originalCurrency: originalCurrency,
+            exchangeRateUsed: exchangeRateUsed
+          };
+
+          // Submit the main transaction
+          await addTransaction(transactionData);
+        }
 
         // Handle linked entities
         if (linkedGoalId && type === 'expense') {
@@ -540,27 +588,29 @@ const AddTransaction: React.FC = () => {
               )}
             </div>
 
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-medium text-forest-300 mb-2">
-                Category
-              </label>
-              <CategorySelector
-                key={`category-${watch('type')}`}
-                value={watch('category')}
-                onChange={(category) => setValue('category', category)}
-                type="transaction"
-                transactionType={watch('type')}
-                placeholder="Select a category"
-                error={errors.category?.message}
-              />
-            </div>
+            {/* Category - Hidden for transfers */}
+            {transactionType !== 'transfer' && (
+              <div>
+                <label className="block text-sm font-medium text-forest-300 mb-2">
+                  Category
+                </label>
+                <CategorySelector
+                  key={`category-${watch('type')}`}
+                  value={watch('category')}
+                  onChange={(category) => setValue('category', category)}
+                  type="transaction"
+                  transactionType={watch('type')}
+                  placeholder="Select a category"
+                  error={errors.category?.message}
+                />
+              </div>
+            )}
 
             {/* Account Selection */}
             <div className="bg-forest-800/30 rounded-xl p-4 border border-forest-600/20">
               <label className="block text-sm font-medium text-forest-300 mb-3 flex items-center">
                 <CreditCard size={16} className="mr-2" />
-                Select Bank Account
+                {transactionType === 'transfer' ? 'From Account' : 'Select Bank Account'}
               </label>
               <select
                 {...register('accountId', { required: 'Please select an account' })}
@@ -611,6 +661,54 @@ const AddTransaction: React.FC = () => {
                     {errors.transferToAccountId.message}
                   </p>
                 )}
+
+                {/* Transfer Conversion Display */}
+                {(() => {
+                  const fromAccount = accounts.find(acc => acc.id === watch('accountId'));
+                  const toAccount = accounts.find(acc => acc.id === watch('transferToAccountId'));
+                  const amount = watch('amount') || 0;
+                  
+                  if (fromAccount && toAccount && amount > 0) {
+                    const needsConv = needsConversion(fromAccount.currency, toAccount.currency);
+                    if (needsConv) {
+                      const convertedAmount = convertCurrency(amount, fromAccount.currency, toAccount.currency);
+                      const exchangeRate = convertCurrency(1, fromAccount.currency, toAccount.currency) || 1.0;
+                      
+                      return (
+                        <div className="mt-3 bg-blue-100 border border-blue-200 rounded-lg p-3">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                              <span className="text-white text-xs">💱</span>
+                            </div>
+                            <span className="text-sm font-medium text-blue-800">Currency Conversion</span>
+                          </div>
+                          <div className="text-sm text-blue-700">
+                            <p className="font-medium">
+                              {formatCurrency(amount, fromAccount.currency)} → {formatCurrency(convertedAmount || 0, toAccount.currency)}
+                            </p>
+                            <p className="text-xs mt-1">
+                              Exchange Rate: 1 {fromAccount.currency} = {exchangeRate.toFixed(4)} {toAccount.currency}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="mt-3 bg-green-100 border border-green-200 rounded-lg p-3">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
+                              <span className="text-white text-xs">✓</span>
+                            </div>
+                            <span className="text-sm font-medium text-green-800">
+                              Same Currency - No conversion needed
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+                  }
+                  return null;
+                })()}
               </div>
             )}
 

@@ -20,34 +20,54 @@ export interface FinancialAccount {
   createdAt: Date;
   updatedAt: Date;
   
-  // Enhanced fields from database
+  // Account Management Features
+  isPrimary?: boolean;
+  isArchived?: boolean;
+  deletedAt?: Date;
+  lastActivityAt?: Date;
+  description?: string;
+  tags?: string[];
+  priority?: number;
+  color?: string;
+  notes?: string;
+  status?: 'active' | 'inactive' | 'suspended' | 'closed';
+  openedAt?: Date;
+  closedAt?: Date;
+  creditLimit?: number;
+  minimumBalance?: number;
+  interestRate?: number;
+  monthlyFee?: number;
   routingNumber?: string;
+  iban?: string;
+  swiftCode?: string;
+  accountHolderName?: string;
+  accountHolderType?: 'individual' | 'joint' | 'business' | 'trust';
+  isVerified?: boolean;
+  lastSyncedAt?: Date;
+  syncSource?: string;
+  externalId?: string;
+  metadata?: Record<string, any>;
+  
+  // Legacy fields for backward compatibility
   cardLastFour?: string;
   cardType?: string;
   spendingLimit?: number;
   monthlyLimit?: number;
   dailyLimit?: number;
-  isPrimary?: boolean;
-  notes?: string;
   accountTypeCustom?: string;
   isLiability?: boolean;
   outstandingBalance?: number;
-  creditLimit?: number;
   minimumDue?: number;
   dueDate?: Date;
-  interestRate?: number;
   isBalanceHidden?: boolean;
   linkedBankAccountId?: string;
   autoSync?: boolean;
-  lastSyncedAt?: Date;
   exchangeRate?: number;
   homeCurrency?: string;
   currency?: string;
   subtypeId?: string;
-  status?: string;
   accountNumberMasked?: string;
   lastActivityDate?: Date;
-  accountHolderName?: string;
   jointAccount?: boolean;
   accountAgeDays?: number;
   riskLevel?: string;
@@ -620,4 +640,83 @@ export interface DebtRepaymentStrategy {
   totalPaid: number;
   payoffDate: Date;
   debtPlans: DebtPaymentPlan[];
+}
+
+// Account Management Interfaces
+export interface AccountTransfer {
+  id: string;
+  userId: string;
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  fromCurrency: string;
+  toCurrency: string;
+  convertedAmount?: number;
+  exchangeRate?: number;
+  description?: string;
+  transferType: 'manual' | 'scheduled' | 'recurring' | 'auto';
+  status: 'pending' | 'completed' | 'failed' | 'cancelled';
+  createdAt: Date;
+  completedAt?: Date;
+  notes?: string;
+}
+
+export interface AccountAnalytics {
+  id: string;
+  accountId: string;
+  userId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  totalIncome: number;
+  totalExpenses: number;
+  netFlow: number;
+  transactionCount: number;
+  averageTransactionAmount: number;
+  largestTransaction: number;
+  smallestTransaction: number;
+  mostCommonCategory?: string;
+  mostCommonMerchant?: string;
+  balanceTrend: 'increasing' | 'decreasing' | 'stable' | 'volatile';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AccountGoal {
+  id: string;
+  accountId: string;
+  userId: string;
+  goalType: 'balance_target' | 'savings_rate' | 'spending_limit' | 'transaction_limit';
+  targetValue: number;
+  currentValue: number;
+  targetDate?: Date;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AccountSummary {
+  accountId: string;
+  accountName: string;
+  currentBalance: number;
+  currency: string;
+  lastActivity?: Date;
+  transactionCount: number;
+  totalIncome: number;
+  totalExpenses: number;
+  netFlow: number;
+}
+
+export interface FinancialHealthScore {
+  overallScore: number;
+  healthStatus: 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
+  components: {
+    liquidity: { score: number; ratio: number };
+    debtToIncome: { score: number; ratio: number };
+    savingsRate: { score: number; rate: number };
+    emergencyFund: { score: number; coverage: number };
+    billPayment: { score: number; rate: number };
+    goalProgress: { score: number; progress: number };
+  };
+  recommendations: string[];
+  lastUpdated: Date;
 }

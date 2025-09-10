@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FinancialAccount } from '../../lib/finance-manager';
 import { formatCurrency, getCurrencyInfo } from '../../utils/currency-converter';
+import { AccountActionsMenu } from './AccountActionsMenu';
 import { 
   CreditCard, 
   Wallet, 
@@ -16,17 +18,31 @@ interface AccountCardProps {
   account: FinancialAccount;
   onEdit?: (account: FinancialAccount) => void;
   onDelete?: (account: FinancialAccount) => void;
-  showBalance?: boolean;
+  onDuplicate?: (account: FinancialAccount) => void;
+  onTransfer?: (account: FinancialAccount) => void;
+  onViewHistory?: (account: FinancialAccount) => void;
+  onViewAnalytics?: (account: FinancialAccount) => void;
   onToggleVisibility?: (account: FinancialAccount) => void;
+  onTogglePin?: (account: FinancialAccount) => void;
+  onArchive?: (account: FinancialAccount) => void;
+  showBalance?: boolean;
 }
 
 export const AccountCard: React.FC<AccountCardProps> = ({
   account,
   onEdit,
   onDelete,
-  showBalance = true,
-  onToggleVisibility
+  onDuplicate,
+  onTransfer,
+  onViewHistory,
+  onViewAnalytics,
+  onToggleVisibility,
+  onTogglePin,
+  onArchive,
+  showBalance = true
 }) => {
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const navigate = useNavigate();
   const getAccountIcon = (type: FinancialAccount['type']) => {
     switch (type) {
       case 'bank_savings':
@@ -77,13 +93,18 @@ export const AccountCard: React.FC<AccountCardProps> = ({
     ).join(' ');
   };
 
+  const handleCardClick = () => {
+    navigate(`/accounts/${account.id}`);
+  };
+
   return (
     <div
-      className="p-4 rounded-2xl transition-all duration-200 hover:scale-105"
+      className="relative p-4 rounded-2xl transition-all duration-200 hover:scale-105 cursor-pointer"
       style={{
         backgroundColor: 'var(--background)',
         boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
       }}
+      onClick={handleCardClick}
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-3">
@@ -108,7 +129,10 @@ export const AccountCard: React.FC<AccountCardProps> = ({
         <div className="flex items-center space-x-2">
           {onToggleVisibility && (
             <button
-              onClick={() => onToggleVisibility(account)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleVisibility(account);
+              }}
               className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
             >
               {account.is_visible ? (
@@ -122,7 +146,10 @@ export const AccountCard: React.FC<AccountCardProps> = ({
           <div className="flex space-x-1">
             {onEdit && (
               <button
-                onClick={() => onEdit(account)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(account);
+                }}
                 className="px-2 py-1 text-xs rounded-lg hover:bg-gray-100 transition-colors"
                 style={{ color: 'var(--text-secondary)' }}
               >
@@ -131,7 +158,10 @@ export const AccountCard: React.FC<AccountCardProps> = ({
             )}
             {onDelete && (
               <button
-                onClick={() => onDelete(account)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(account);
+                }}
                 className="px-2 py-1 text-xs rounded-lg hover:bg-red-100 transition-colors text-red-600"
               >
                 Delete
@@ -163,6 +193,23 @@ export const AccountCard: React.FC<AccountCardProps> = ({
             {account.platform}
           </p>
         </div>
+      )}
+
+      {/* Actions Menu */}
+      {showActionsMenu && (
+        <AccountActionsMenu
+          account={account}
+          onEdit={onEdit || (() => {})}
+          onDuplicate={onDuplicate || (() => {})}
+          onTransfer={onTransfer || (() => {})}
+          onViewHistory={onViewHistory || (() => {})}
+          onViewAnalytics={onViewAnalytics || (() => {})}
+          onToggleVisibility={onToggleVisibility || (() => {})}
+          onTogglePin={onTogglePin || (() => {})}
+          onArchive={onArchive || (() => {})}
+          onDelete={onDelete || (() => {})}
+          onClose={() => setShowActionsMenu(false)}
+        />
       )}
     </div>
   );

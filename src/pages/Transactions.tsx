@@ -4,6 +4,9 @@ import { TransactionList } from '../components/transactions/TransactionList';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { TransactionForm } from '../components/transactions/TransactionForm';
+import { RingChart } from '../components/analytics/RingChart';
+import { BarChart } from '../components/analytics/BarChart';
+import { AnalyticsEngine } from '../utils/analytics-engine';
 import { 
   ArrowLeft, 
   Plus, 
@@ -13,13 +16,18 @@ import {
   Filter,
   Download,
   Calendar,
-  DollarSign
+  DollarSign,
+  BarChart3,
+  PieChart,
+  Search,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 
 const Transactions: React.FC = () => {
-  const { transactions, accounts, isLoading, error } = useFinance();
+  const { transactions, accounts, isLoading, error, goals, bills, liabilities, budgets, userCategories } = useFinance();
   const navigate = useNavigate();
   
   const [showTransactionForm, setShowTransactionForm] = useState(false);
@@ -29,6 +37,21 @@ const Transactions: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState('this_month');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showDetailedView, setShowDetailedView] = useState(false);
+
+  // Initialize analytics engine
+  const analyticsEngine = useMemo(() => {
+    return new AnalyticsEngine(
+      transactions,
+      accounts,
+      goals,
+      bills,
+      liabilities,
+      budgets,
+      userCategories
+    );
+  }, [transactions, accounts, goals, bills, liabilities, budgets, userCategories]);
 
   // Calculate financial metrics
   const financialMetrics = useMemo(() => {
@@ -229,10 +252,232 @@ const Transactions: React.FC = () => {
             >
               Add
             </Button>
-          </div>
         </div>
+      </div>
 
-        {/* Financial Metrics */}
+      {/* Transaction Analytics Section */}
+      <div className="px-4 mb-6">
+        <div className="card-neumorphic p-4 slide-in-up">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
+              Transaction Analytics
+            </h2>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowDetailedView(!showDetailedView)}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title={showDetailedView ? 'Hide Detailed View' : 'Show Detailed View'}
+              >
+                {showDetailedView ? <EyeOff size={16} className="text-gray-600" /> : <Eye size={16} className="text-gray-600" />}
+              </button>
+              <button
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+              >
+                <BarChart3 size={16} className={showAnalytics ? 'text-blue-600' : 'text-gray-600'} />
+              </button>
+            </div>
+          </div>
+
+          {showAnalytics && (
+            <div className="space-y-6">
+              {/* Transaction Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-green-800">Total Income</h3>
+                    <TrendingUp size={16} className="text-green-600" />
+                  </div>
+                  <p className="text-2xl font-numbers text-green-900">${financialMetrics.totalIncome.toFixed(2)}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-red-800">Total Expenses</h3>
+                    <TrendingDown size={16} className="text-red-600" />
+                  </div>
+                  <p className="text-2xl font-numbers text-red-900">${financialMetrics.totalExpenses.toFixed(2)}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-blue-800">Net Income</h3>
+                    <DollarSign size={16} className="text-blue-600" />
+                  </div>
+                  <p className={`text-2xl font-numbers ${financialMetrics.netIncome >= 0 ? 'text-blue-900' : 'text-red-900'}`}>
+                    ${financialMetrics.netIncome.toFixed(2)}
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-purple-50 border border-purple-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-purple-800">Transactions</h3>
+                    <ArrowLeftRight size={16} className="text-purple-600" />
+                  </div>
+                  <p className="text-2xl font-numbers text-purple-900">{filteredTransactions.length}</p>
+                </div>
+              </div>
+
+              {/* Category Breakdown */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Spending by Category
+                  </h3>
+                  {(() => {
+                    const categoryData = filteredTransactions
+                      .filter(t => t.type === 'expense')
+                      .reduce((acc, t) => {
+                        acc[t.category] = (acc[t.category] || 0) + t.amount;
+                        return acc;
+                      }, {} as Record<string, number>);
+
+                    const chartData = Object.entries(categoryData).map(([category, amount], index) => ({
+                      label: category,
+                      value: amount,
+                      color: `hsl(${120 + index * 30}, 60%, 50%)`
+                    }));
+
+                    return chartData.length > 0 ? (
+                      <RingChart
+                        data={chartData}
+                        size={180}
+                        strokeWidth={15}
+                        interactive={true}
+                      />
+                    ) : (
+                      <div className="text-center py-8">
+                        <PieChart size={48} className="text-gray-400 mx-auto mb-4" />
+                        <p className="text-sm text-gray-500">No spending data for this period</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Monthly Trends */}
+                <div>
+                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Monthly Trends
+                  </h3>
+                  {(() => {
+                    const monthlyData = filteredTransactions.reduce((acc, t) => {
+                      const month = format(new Date(t.date), 'MMM yyyy');
+                      if (!acc[month]) {
+                        acc[month] = { income: 0, expenses: 0 };
+                      }
+                      if (t.type === 'income') {
+                        acc[month].income += t.amount;
+                      } else {
+                        acc[month].expenses += t.amount;
+                      }
+                      return acc;
+                    }, {} as Record<string, { income: number; expenses: number }>);
+
+                    const chartData = Object.entries(monthlyData).map(([month, data]) => ({
+                      month,
+                      income: data.income,
+                      spending: data.expenses
+                    }));
+
+                    return chartData.length > 0 ? (
+                      <BarChart
+                        data={chartData}
+                        interactive={true}
+                      />
+                    ) : (
+                      <div className="text-center py-8">
+                        <BarChart3 size={48} className="text-gray-400 mx-auto mb-4" />
+                        <p className="text-sm text-gray-500">No trend data available</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Account Breakdown */}
+              {showDetailedView && (
+                <div>
+                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Transactions by Account
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {accounts.map((account) => {
+                      const accountTransactions = filteredTransactions.filter(t => 
+                        t.account_id === account.id || t.target_account_id === account.id
+                      );
+                      const accountIncome = accountTransactions
+                        .filter(t => t.type === 'income')
+                        .reduce((sum, t) => sum + t.amount, 0);
+                      const accountExpenses = accountTransactions
+                        .filter(t => t.type === 'expense')
+                        .reduce((sum, t) => sum + t.amount, 0);
+
+                      return (
+                        <div key={account.id} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                              {account.name}
+                            </h4>
+                            <span className="text-xs text-gray-500">{accountTransactions.length} txns</span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-sm">
+                              <span style={{ color: 'var(--text-secondary)' }}>Income</span>
+                              <span className="font-numbers text-green-600">+${accountIncome.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span style={{ color: 'var(--text-secondary)' }}>Expenses</span>
+                              <span className="font-numbers text-red-600">-${accountExpenses.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span style={{ color: 'var(--text-secondary)' }}>Net</span>
+                              <span className={`font-numbers ${accountIncome - accountExpenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {accountIncome - accountExpenses >= 0 ? '+' : ''}${(accountIncome - accountExpenses).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Large Transactions */}
+              {showDetailedView && (
+                <div>
+                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Recent Large Transactions
+                  </h3>
+                  <div className="space-y-2">
+                    {filteredTransactions
+                      .filter(t => Math.abs(t.amount) >= 100)
+                      .slice(0, 5)
+                      .map((transaction) => (
+                        <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                          <div>
+                            <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                              {transaction.description}
+                            </p>
+                            <p className="text-xs text-gray-500">{transaction.category} • {accounts.find(a => a.id === transaction.account_id)?.name}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-sm font-numbers ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                              {transaction.type === 'income' ? '+' : '-'}${Math.abs(transaction.amount).toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {format(transaction.date, 'MMM dd')}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Financial Metrics */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div
             className="p-4 rounded-2xl"

@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Calendar, Bell, Plus, Edit3, Trash2, AlertTriangle, CheckCircle, Clock, CreditCard, Zap, Play, Pause, Target, DollarSign, AlertCircle, TrendingUp, TrendingDown, Eye, ArrowLeft } from 'lucide-react';
-import { format, differenceInDays, addDays, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
+import React, { useState, useMemo } from 'react';
+import { Calendar, Bell, Plus, Edit3, Trash2, AlertTriangle, CheckCircle, Clock, CreditCard, Zap, Play, Pause, Target, DollarSign, AlertCircle, TrendingUp, TrendingDown, Eye, ArrowLeft, BarChart3, PieChart, Calendar as CalendarIcon, TrendingUp as TrendUp } from 'lucide-react';
+import { format, differenceInDays, addDays, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '../components/common/Modal';
 import { EnhancedBillForm } from '../components/forms/EnhancedBillForm';
 import { BillPaymentForm } from '../components/forms/BillPaymentForm';
 import { Button } from '../components/common/Button';
+import { RingChart } from '../components/analytics/RingChart';
+import { BarChart } from '../components/analytics/BarChart';
+import { AnalyticsEngine } from '../utils/analytics-engine';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
@@ -15,7 +18,7 @@ const Bills: React.FC = () => {
   const { 
     bills, addBill, updateBill, deleteBill, addTransaction, accounts, liabilities, transactions, 
     payBillFromAccount, updateLiability, updateBillStage, handleBillCompletion, createVariableAmountBill, 
-    createIncomeBill, payBillFromMultipleAccounts 
+    createIncomeBill, payBillFromMultipleAccounts, goals, budgets, userCategories
   } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
@@ -27,6 +30,50 @@ const Bills: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'current' | 'upcoming' | 'overdue' | 'paid' | 'all'>('current');
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
+
+  // Initialize analytics engine
+  const analyticsEngine = useMemo(() => {
+    return new AnalyticsEngine(
+      transactions,
+      accounts,
+      goals,
+      bills,
+      liabilities,
+      budgets,
+      userCategories
+    );
+  }, [transactions, accounts, goals, bills, liabilities, budgets, userCategories]);
+
+  // Get date range based on selected period
+  const getDateRange = () => {
+    const now = new Date();
+    switch (selectedPeriod) {
+      case 'lastMonth':
+        return {
+          start: startOfMonth(subMonths(now, 1)),
+          end: endOfMonth(subMonths(now, 1))
+        };
+      case 'last3Months':
+        return {
+          start: startOfMonth(subMonths(now, 3)),
+          end: endOfMonth(now)
+        };
+      default:
+        return {
+          start: startOfMonth(now),
+          end: endOfMonth(now)
+        };
+    }
+  };
+
+  const { start: startDate, end: endDate } = getDateRange();
+
+  // Get bill analytics
+  const billAnalytics = useMemo(() => {
+    return analyticsEngine.getBillAnalytics();
+  }, [analyticsEngine]);
 
   // Enhanced bill filtering and categorization
   const categorizedBills = {
@@ -269,6 +316,181 @@ const Bills: React.FC = () => {
             <Plus size={16} />
             <span>Add Bill</span>
           </button>
+        </div>
+      </div>
+
+      {/* Bill Analytics Section */}
+      <div className="px-4 mb-6">
+        <div className="card-neumorphic p-4 slide-in-up">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
+              Bill Analytics
+            </h2>
+            <div className="flex items-center space-x-2">
+              <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value)}
+                className="px-3 py-1 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+              >
+                <option value="thisMonth">This Month</option>
+                <option value="lastMonth">Last Month</option>
+                <option value="last3Months">Last 3 Months</option>
+              </select>
+              <button
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+              >
+                <BarChart3 size={16} className={showAnalytics ? 'text-blue-600' : 'text-gray-600'} />
+              </button>
+            </div>
+          </div>
+
+          {showAnalytics && (
+            <div className="space-y-6">
+              {/* Bill Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-blue-800">Total Bills</h3>
+                    <Bell size={16} className="text-blue-600" />
+                  </div>
+                  <p className="text-2xl font-numbers text-blue-900">{billAnalytics.totalBills}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-green-800">Paid This Month</h3>
+                    <CheckCircle size={16} className="text-green-600" />
+                  </div>
+                  <p className="text-2xl font-numbers text-green-900">{billAnalytics.paidThisMonth}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-yellow-800">Upcoming</h3>
+                    <Clock size={16} className="text-yellow-600" />
+                  </div>
+                  <p className="text-2xl font-numbers text-yellow-900">{billAnalytics.upcomingBills}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-red-800">Overdue</h3>
+                    <AlertTriangle size={16} className="text-red-600" />
+                  </div>
+                  <p className="text-2xl font-numbers text-red-900">{billAnalytics.overdueBills}</p>
+                </div>
+              </div>
+
+              {/* Bill Distribution by Category */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Bills by Category
+                  </h3>
+                  {billAnalytics.categoryBreakdown.length > 0 ? (
+                    <RingChart
+                      data={billAnalytics.categoryBreakdown.map((cat, index) => ({
+                        label: cat.category,
+                        value: cat.amount,
+                        color: `hsl(${120 + index * 30}, 60%, 50%)`
+                      }))}
+                      size={180}
+                      strokeWidth={15}
+                      interactive={true}
+                    />
+                  ) : (
+                    <div className="text-center py-8">
+                      <PieChart size={48} className="text-gray-400 mx-auto mb-4" />
+                      <p className="text-sm text-gray-500">No bill data for this period</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Monthly Payment Trends */}
+                <div>
+                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Monthly Payment Trends
+                  </h3>
+                  {billAnalytics.monthlyTrends.length > 0 ? (
+                    <BarChart
+                      data={billAnalytics.monthlyTrends.map(trend => ({
+                        month: trend.month,
+                        paid: trend.paidAmount,
+                        due: trend.dueAmount
+                      }))}
+                      interactive={true}
+                    />
+                  ) : (
+                    <div className="text-center py-8">
+                      <BarChart3 size={48} className="text-gray-400 mx-auto mb-4" />
+                      <p className="text-sm text-gray-500">No trend data available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Upcoming Bills Calendar */}
+              <div>
+                <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                  Upcoming Bills Calendar
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {billAnalytics.upcomingBillsList.slice(0, 6).map((bill) => (
+                    <div key={bill.id} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                          {bill.name}
+                        </h4>
+                        <span className="text-xs text-gray-500">{bill.frequency}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span style={{ color: 'var(--text-secondary)' }}>Amount</span>
+                          <span className="font-numbers">{formatCurrency(bill.amount)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span style={{ color: 'var(--text-secondary)' }}>Due Date</span>
+                          <span className="text-xs">{format(bill.nextDueDate, 'MMM dd')}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span style={{ color: 'var(--text-secondary)' }}>Days Left</span>
+                          <span className={`text-xs ${bill.daysUntilDue <= 3 ? 'text-red-600' : bill.daysUntilDue <= 7 ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {bill.daysUntilDue} days
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Payment History */}
+              {billAnalytics.paymentHistory.length > 0 && (
+                <div>
+                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Recent Payments
+                  </h3>
+                  <div className="space-y-2">
+                    {billAnalytics.paymentHistory.slice(0, 5).map((payment) => (
+                      <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                        <div>
+                          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                            {payment.billName}
+                          </p>
+                          <p className="text-xs text-gray-500">{payment.accountName}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-numbers">{formatCurrency(payment.amount)}</p>
+                          <p className="text-xs text-gray-500">
+                            {format(payment.paymentDate, 'MMM dd')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       

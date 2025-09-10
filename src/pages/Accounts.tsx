@@ -1,16 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Filter, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Plus, Search, Filter, Eye, EyeOff, ArrowLeft, BarChart3, PieChart, TrendingUp, TrendingDown, DollarSign, Calendar, Clock } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { AccountCard } from '../components/accounts/AccountCard';
 import { AccountForm } from '../components/accounts/AccountForm';
 import { GoalsVaultManager } from '../components/accounts/GoalsVaultManager';
+import { TransferModal } from '../components/accounts/TransferModal';
+import { RingChart } from '../components/analytics/RingChart';
+import { BarChart } from '../components/analytics/BarChart';
+import { AnalyticsEngine } from '../utils/analytics-engine';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { useEnhancedCurrency } from '../contexts/EnhancedCurrencyContext';
 import { useNavigate } from 'react-router-dom';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 import { CurrencySelector } from '../components/currency/CurrencySelector';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
 const Accounts: React.FC = () => {
   const navigate = useNavigate();
@@ -19,6 +24,22 @@ const Accounts: React.FC = () => {
     addAccount, 
     updateAccount, 
     deleteAccount,
+    duplicateAccount,
+    archiveAccount,
+    restoreAccount,
+    softDeleteAccount,
+    toggleAccountVisibility,
+    toggleAccountPin,
+    transferBetweenAccounts,
+    getAccountSummary,
+    getAccountTransfers,
+    getAccountAnalytics,
+    transactions,
+    goals,
+    bills,
+    liabilities,
+    budgets,
+    userCategories,
     isLoading,
     error 
   } = useFinance();
@@ -36,6 +57,60 @@ const Accounts: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<any>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferFromAccount, setTransferFromAccount] = useState<any>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<string>('all');
+  const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
+
+  // Initialize analytics engine
+  const analyticsEngine = useMemo(() => {
+    return new AnalyticsEngine(
+      transactions,
+      accounts,
+      goals,
+      bills,
+      liabilities,
+      budgets,
+      userCategories
+    );
+  }, [transactions, accounts, goals, bills, liabilities, budgets, userCategories]);
+
+  // Get date range based on selected period
+  const getDateRange = () => {
+    const now = new Date();
+    switch (selectedPeriod) {
+      case 'lastMonth':
+        return {
+          start: startOfMonth(subMonths(now, 1)),
+          end: endOfMonth(subMonths(now, 1))
+        };
+      case 'last3Months':
+        return {
+          start: startOfMonth(subMonths(now, 3)),
+          end: endOfMonth(now)
+        };
+      default:
+        return {
+          start: startOfMonth(now),
+          end: endOfMonth(now)
+        };
+    }
+  };
+
+  const { start: startDate, end: endDate } = getDateRange();
+
+  // Get account analytics
+  const accountAnalytics = useMemo(() => {
+    if (selectedAccount === 'all') {
+      return accounts.map(account => 
+        analyticsEngine.getAccountAnalytics(account.id, startDate, endDate)
+      ).filter(Boolean);
+    } else {
+      const analytics = analyticsEngine.getAccountAnalytics(selectedAccount, startDate, endDate);
+      return analytics ? [analytics] : [];
+    }
+  }, [analyticsEngine, selectedAccount, startDate, endDate, accounts]);
 
   // Filter accounts based on search and visibility
   const filteredAccounts = useMemo(() => {
@@ -121,6 +196,71 @@ const Accounts: React.FC = () => {
     }
   };
 
+  // New handler functions for account actions
+  const handleDuplicateAccount = async (account: any) => {
+    try {
+      await duplicateAccount(account.id);
+    } catch (error) {
+      console.error('Error duplicating account:', error);
+    }
+  };
+
+  const handleTransfer = (account: any) => {
+    setTransferFromAccount(account);
+    setShowTransferModal(true);
+  };
+
+  const handleTransferSubmit = async (transferData: any) => {
+    try {
+      await transferBetweenAccounts({
+        fromAccountId: transferData.fromAccountId,
+        toAccountId: transferData.toAccountId,
+        amount: transferData.amount,
+        fromCurrency: transferData.fromCurrency,
+        toCurrency: transferData.toCurrency,
+        convertedAmount: transferData.convertedAmount,
+        exchangeRate: transferData.exchangeRate,
+        description: transferData.description,
+        transferType: 'manual',
+        status: 'completed',
+        notes: transferData.notes
+      });
+      setShowTransferModal(false);
+    } catch (error) {
+      console.error('Error processing transfer:', error);
+    }
+  };
+
+  const handleViewHistory = (account: any) => {
+    // Navigate to transaction history filtered by account
+    navigate(`/transactions?account=${account.id}`);
+  };
+
+  const handleViewAnalytics = (account: any) => {
+    // Navigate to analytics page filtered by account
+    navigate(`/analytics?account=${account.id}`);
+  };
+
+  const handleTogglePin = async (account: any) => {
+    try {
+      await toggleAccountPin(account.id);
+    } catch (error) {
+      console.error('Error updating account pin status:', error);
+    }
+  };
+
+  const handleArchiveAccount = async (account: any) => {
+    try {
+      await archiveAccount(account.id);
+    } catch (error) {
+      console.error('Error archiving account:', error);
+    }
+  };
+
+  const handleEditAccount = (account: any) => {
+    setEditingAccount(account);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
@@ -192,6 +332,158 @@ const Accounts: React.FC = () => {
         </div>
       </div>
 
+      {/* Account Analytics Section */}
+      <div className="px-4 mb-6">
+        <div className="card-neumorphic p-4 slide-in-up">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
+              Account Analytics
+            </h2>
+            <div className="flex items-center space-x-2">
+              <select
+                value={selectedAccount}
+                onChange={(e) => setSelectedAccount(e.target.value)}
+                className="px-3 py-1 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+              >
+                <option value="all">All Accounts</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value)}
+                className="px-3 py-1 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+              >
+                <option value="thisMonth">This Month</option>
+                <option value="lastMonth">Last Month</option>
+                <option value="last3Months">Last 3 Months</option>
+              </select>
+              <button
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+              >
+                <BarChart3 size={16} className={showAnalytics ? 'text-blue-600' : 'text-gray-600'} />
+              </button>
+            </div>
+          </div>
+
+          {showAnalytics && (
+            <div className="space-y-6">
+              {/* Account Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {accountAnalytics.slice(0, 4).map((analytics) => (
+                  <div key={analytics.accountId} className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {analytics.accountName}
+                      </h3>
+                      <span className="text-xs text-gray-500">{analytics.currency}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span style={{ color: 'var(--text-secondary)' }}>Balance</span>
+                        <span className="font-numbers">{formatCurrency(analytics.balance)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span style={{ color: 'var(--text-secondary)' }}>Net Flow</span>
+                        <span className={`font-numbers ${analytics.netFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {analytics.netFlow >= 0 ? '+' : ''}{formatCurrency(analytics.netFlow)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span style={{ color: 'var(--text-secondary)' }}>Transactions</span>
+                        <span className="font-numbers">{analytics.transactionCount}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Category Breakdown */}
+              {accountAnalytics.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                      Spending by Category
+                    </h3>
+                    {accountAnalytics[0].categoryBreakdown.length > 0 ? (
+                      <RingChart
+                        data={accountAnalytics[0].categoryBreakdown.map((cat, index) => ({
+                          label: cat.category,
+                          value: cat.amount,
+                          color: `hsl(${120 + index * 30}, 60%, 50%)`
+                        }))}
+                        size={180}
+                        strokeWidth={15}
+                        interactive={true}
+                      />
+                    ) : (
+                      <div className="text-center py-8">
+                        <PieChart size={48} className="text-gray-400 mx-auto mb-4" />
+                        <p className="text-sm text-gray-500">No spending data for this period</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Monthly Trend */}
+                  <div>
+                    <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                      Monthly Trend
+                    </h3>
+                    {accountAnalytics[0].monthlyTrend.length > 0 ? (
+                      <BarChart
+                        data={accountAnalytics[0].monthlyTrend.map(trend => ({
+                          month: trend.month,
+                          income: trend.income,
+                          spending: trend.expenses
+                        }))}
+                        interactive={true}
+                      />
+                    ) : (
+                      <div className="text-center py-8">
+                        <BarChart3 size={48} className="text-gray-400 mx-auto mb-4" />
+                        <p className="text-sm text-gray-500">No trend data available</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Largest Transactions */}
+              {accountAnalytics.length > 0 && accountAnalytics[0].largestTransactions.length > 0 && (
+                <div>
+                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Largest Transactions
+                  </h3>
+                  <div className="space-y-2">
+                    {accountAnalytics[0].largestTransactions.map((transaction) => (
+                      <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                        <div>
+                          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                            {transaction.description}
+                          </p>
+                          <p className="text-xs text-gray-500">{transaction.category}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-numbers">{formatCurrency(transaction.amount)}</p>
+                          <p className="text-xs text-gray-500">
+                            {format(transaction.date, 'MMM dd')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="px-6 space-y-6">
         {/* Search and Filters */}
         <div className="flex items-center space-x-3">
@@ -255,80 +547,20 @@ const Accounts: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredAccounts.map((account) => (
-                <div
+                <AccountCard
                   key={account.id}
-                  className="p-4 rounded-2xl cursor-pointer transition-all duration-200 hover:scale-105"
-                  style={{
-                    backgroundColor: 'var(--background-secondary)',
-                    boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-                  }}
-                  onClick={() => navigate(`/accounts/${account.id}`)}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <LuxuryCategoryIcon 
-                        category={account.type === 'bank_current' ? 'Primary Banking' : 
-                                 account.type === 'bank_savings' ? 'Savings' :
-                                 account.type === 'credit_card' ? 'Credit' :
-                                 account.type === 'digital_wallet' ? 'Digital Wallet' : 'Other Account'}
-                        size={20}
-                        variant="luxury"
-                      />
-                      <div>
-                        <h3 className="font-heading text-sm" style={{ color: 'var(--text-primary)' }}>
-                          {account.name}
-                        </h3>
-                        <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
-                          {account.institution || account.platform || 'Personal Account'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => setEditingAccount(account)}
-                        className="p-1 rounded-lg transition-colors hover:bg-gray-100"
-                        style={{ color: 'var(--text-tertiary)' }}
-                      >
-                        <Filter size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleToggleVisibility(account)}
-                        className="p-1 rounded-lg transition-colors hover:bg-gray-100"
-                        style={{ color: 'var(--text-tertiary)' }}
-                      >
-                        {account.is_visible !== false ? <Eye size={14} /> : <EyeOff size={14} />}
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <p className="text-lg font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
-                          {formatCurrencyEnhanced(account.balance || 0, account.currency_code || 'USD')}
-                        </p>
-                        {account.currency_code && account.currency_code !== displayCurrency && (
-                          <span className="text-xs text-gray-500">
-                            ({formatCurrencyEnhanced(
-                              convertAmount(account.balance || 0, account.currency_code, displayCurrency) || account.balance || 0,
-                              displayCurrency
-                            )})
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
-                        {account.type?.replace('_', ' ').toUpperCase() || 'ACCOUNT'} • {account.currency_code || 'USD'}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteAccount(account)}
-                      className="p-2 rounded-lg transition-colors hover:bg-red-50"
-                      style={{ color: 'var(--error)' }}
-                    >
-                      <Filter size={14} />
-                    </button>
-                  </div>
-                </div>
+                  account={account}
+                  onEdit={handleEditAccount}
+                  onDelete={handleDeleteAccount}
+                  onDuplicate={handleDuplicateAccount}
+                  onTransfer={handleTransfer}
+                  onViewHistory={handleViewHistory}
+                  onViewAnalytics={handleViewAnalytics}
+                  onToggleVisibility={handleToggleVisibility}
+                  onTogglePin={handleTogglePin}
+                  onArchive={handleArchiveAccount}
+                  showBalance={true}
+                />
               ))}
             </div>
           )}
@@ -346,6 +578,20 @@ const Accounts: React.FC = () => {
         account={editingAccount}
         loading={false}
       />
+
+      {/* Transfer Modal */}
+      {transferFromAccount && (
+        <TransferModal
+          isOpen={showTransferModal}
+          onClose={() => {
+            setShowTransferModal(false);
+            setTransferFromAccount(null);
+          }}
+          fromAccount={transferFromAccount}
+          accounts={accounts}
+          onTransfer={handleTransferSubmit}
+        />
+      )}
     </div>
   );
 };
