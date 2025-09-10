@@ -50,6 +50,7 @@ import Bills from './pages/Bills';
 import ProfileNew from './pages/ProfileNew';
 import CurrencyDemo from './pages/CurrencyDemo';
 import FontTest from './pages/FontTest';
+import ContextTest from './pages/ContextTest';
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -361,6 +362,15 @@ function App() {
                                 element={
                                   <ProtectedRoute>
                                     <FontTest />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/context-test" 
+                                element={
+                                  <ProtectedRoute>
+                                    <ContextTest />
                                   </ProtectedRoute>
                                 } 
                               />

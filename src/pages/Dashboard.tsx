@@ -35,7 +35,13 @@ import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const { formatCurrency } = useInternationalization();
+  const internationalization = useInternationalization();
+  const { formatCurrency } = internationalization;
+  
+  // Debug logging
+  console.log('Dashboard - formatCurrency:', typeof formatCurrency);
+  console.log('Dashboard - internationalization:', internationalization);
+  
   const { 
     accounts, 
     transactions, 
@@ -287,7 +293,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-center">
               <div className="text-3xl font-numbers mb-2" style={{ color: 'var(--text-primary)' }}>
-                {formatCurrency(totalBalance)}
+                {formatCurrency ? formatCurrency(totalBalance) : `$${totalBalance.toLocaleString()}`}
               </div>
               <div className="text-sm text-gray-500">Across {accounts.length} account{accounts.length !== 1 ? 's' : ''}</div>
             </div>
@@ -303,7 +309,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-center">
               <div className="text-3xl font-numbers mb-2" style={{ color: 'var(--text-primary)' }}>
-                {formatCurrency(netWorth)}
+                {formatCurrency ? formatCurrency(netWorth) : `$${netWorth.toLocaleString()}`}
               </div>
               <div className="text-sm text-gray-500">Assets - Liabilities</div>
             </div>
