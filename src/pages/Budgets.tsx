@@ -256,13 +256,12 @@ const Budgets: React.FC = () => {
         title={editingBudget ? "Edit Budget" : "Add Budget"}
       >
         <BudgetForm
-          budget={editingBudget ? budgets.find(b => b.id === editingBudget) : undefined}
+          initialData={editingBudget ? budgets.find(b => b.id === editingBudget) : undefined}
           onSubmit={editingBudget ? handleEditBudget : handleAddBudget}
           onCancel={() => {
             setShowModal(false);
             setEditingBudget(null);
           }}
-          isSubmitting={isSubmitting}
         />
       </Modal>
 

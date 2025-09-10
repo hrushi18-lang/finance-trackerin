@@ -74,7 +74,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         current_amount: toNumber(sanitizedData.currentAmount),
         target_date: new Date(data.targetDate),
         category: sanitizedData.category,
-        account_id: sanitizedData.accountIds?.[0] || '', // Use first selected account
+        account_id: sanitizedData.accountIds?.[0] || undefined, // Use first selected account or undefined
       };
       
       // Validate using schema

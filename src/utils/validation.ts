@@ -89,7 +89,7 @@ export const goalSchema = z.object({
     .min(1, 'Category is required')
     .max(50, 'Category too long')
     .transform(sanitizeInput),
-  account_id: z.string().uuid('Invalid account ID'),
+  account_id: z.string().uuid('Invalid account ID').optional(),
   priority: z.enum(['low', 'medium', 'high']).default('medium'),
   is_achieved: z.boolean().default(false)
 });

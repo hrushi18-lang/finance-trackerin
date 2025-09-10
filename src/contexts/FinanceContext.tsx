@@ -2915,8 +2915,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         user_id: user.id,
         category: budgetData.category,
         amount: budgetData.amount,
-        spent: budgetData.spent,
-        period: budgetData.period
+        spent: budgetData.spent || 0,
+        period: budgetData.period,
+        account_id: budgetData.accountId,
+        activity_scope: budgetData.activityScope || 'general',
+        account_ids: budgetData.accountIds || [],
+        target_category: budgetData.targetCategory,
+        currency_code: budgetData.currencyCode || 'USD',
+        start_date: budgetData.startDate?.toISOString().split('T')[0],
+        end_date: budgetData.endDate?.toISOString().split('T')[0]
       })
       .select()
       .single();
@@ -2930,6 +2937,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       amount: Number(data.amount),
       spent: Number(data.spent || 0),
       period: data.period,
+      accountId: data.account_id,
+      activityScope: data.activity_scope || 'general',
+      accountIds: data.account_ids || [],
+      targetCategory: data.target_category,
+      currencyCode: data.currency_code || 'USD',
+      startDate: data.start_date ? new Date(data.start_date) : new Date(),
+      endDate: data.end_date ? new Date(data.end_date) : undefined,
       createdAt: new Date(data.created_at)
     };
 
