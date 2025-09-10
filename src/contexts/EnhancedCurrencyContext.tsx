@@ -323,12 +323,31 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
       }));
 
       // Insert rates (ignore conflicts for same day)
-      await supabase
+      const { error: upsertError } = await supabase
         .from('exchange_rates')
         .upsert(rateEntries, { 
           onConflict: 'from_currency,to_currency,created_at',
           ignoreDuplicates: true 
         });
+
+      if (upsertError) {
+        console.error('Error saving rates to database:', upsertError);
+        // Fallback: try individual inserts with conflict handling
+        for (const entry of rateEntries) {
+          try {
+            await supabase
+              .from('exchange_rates')
+              .insert(entry)
+              .select()
+              .single();
+          } catch (insertError: any) {
+            // Ignore duplicate key errors
+            if (insertError?.code !== '23505') {
+              console.warn('Failed to insert rate entry:', insertError);
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Error saving rates to database:', error);
     }

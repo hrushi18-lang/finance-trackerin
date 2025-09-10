@@ -42,17 +42,41 @@ const AccountDetail: React.FC = () => {
   const [showSchedulePayment, setShowSchedulePayment] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState('Oct 2023');
+  const [showMenu, setShowMenu] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterType, setFilterType] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
 
   // Find the current account
   const account = useMemo(() => {
     return accounts.find(acc => acc.id === accountId);
   }, [accounts, accountId]);
 
-  // Get transactions for this account
+  // Get transactions for this account with filtering
   const accountTransactions = useMemo(() => {
     if (!account) return [];
-    return getAccountTransactions(account.id);
-  }, [account, getAccountTransactions]);
+    let transactions = getAccountTransactions(account.id);
+    
+    // Apply search filter
+    if (searchTerm) {
+      transactions = transactions.filter(transaction =>
+        transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.category.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Apply type filter
+    if (filterType) {
+      transactions = transactions.filter(transaction => transaction.type === filterType);
+    }
+    
+    // Apply category filter
+    if (filterCategory) {
+      transactions = transactions.filter(transaction => transaction.category === filterCategory);
+    }
+    
+    return transactions;
+  }, [account, getAccountTransactions, searchTerm, filterType, filterCategory]);
 
   // Filter transactions based on search
   const filteredTransactions = useMemo(() => {
@@ -148,6 +172,7 @@ const AccountDetail: React.FC = () => {
               </div>
             </div>
             <button
+              onClick={() => setShowMenu(!showMenu)}
               className="p-2 rounded-xl transition-all duration-200 hover:scale-105"
               style={{ backgroundColor: 'var(--background-secondary)' }}
             >
@@ -443,6 +468,16 @@ const AccountDetail: React.FC = () => {
             </h3>
             <div className="flex items-center space-x-2">
               <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`p-2 rounded-lg transition-colors ${showFilters ? 'bg-primary-500 text-white' : ''}`}
+                style={{ 
+                  backgroundColor: showFilters ? 'var(--primary)' : 'var(--background-secondary)',
+                  color: showFilters ? 'white' : 'var(--text-secondary)'
+                }}
+              >
+                <Filter size={16} />
+              </button>
+              <button
                 onClick={() => setShowHistoricalTransaction(true)}
                 className="p-2 rounded-lg transition-colors"
                 style={{ 
@@ -545,6 +580,106 @@ const AccountDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Filter Panel */}
+      {showFilters && (
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                Type
+              </label>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="">All Types</option>
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+                <option value="transfer">Transfer</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                Category
+              </label>
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="">All Categories</option>
+                {Array.from(new Set(accountTransactions.map(t => t.category))).map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end mt-4 space-x-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setFilterType('');
+                setFilterCategory('');
+                setShowFilters(false);
+              }}
+            >
+              Clear
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => setShowFilters(false)}
+            >
+              Apply
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Three Dots Menu */}
+      {showMenu && (
+        <div className="fixed inset-0 z-50" onClick={() => setShowMenu(false)}>
+          <div className="absolute top-16 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48">
+            <button
+              onClick={() => {
+                setShowMenu(false);
+                navigate(`/accounts/${accountId}/edit`);
+              }}
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              Edit Account
+            </button>
+            <button
+              onClick={() => {
+                setShowMenu(false);
+                navigate(`/accounts/${accountId}/transfer`);
+              }}
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              Transfer Money
+            </button>
+            <button
+              onClick={() => {
+                setShowMenu(false);
+                navigate(`/accounts/${accountId}/analytics`);
+              }}
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              View Analytics
+            </button>
+            <button
+              onClick={() => {
+                setShowMenu(false);
+                // Add export functionality
+              }}
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              Export Data
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Add Transaction Modal */}
       <Modal

@@ -17,59 +17,92 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [initializationError, setInitializationError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
   useEffect(() => {
+    // Set a maximum loading timeout for mobile
+    const timeoutId = setTimeout(() => {
+      if (!isInitialized) {
+        console.warn('App initialization timeout - forcing initialization');
+        setLoadingTimeout(true);
+        setIsInitialized(true);
+      }
+    }, 10000); // 10 second timeout
+
     const initializeApp = async () => {
       try {
-        if (isAuthenticated && user) {
-          // Set user ID for analytics and monitoring
-          const userId = user.id;
-          
-          // Set up analytics and audit logging
-          analytics.setUserId(userId);
-          analytics.setUserProperties({
-            user_id: userId,
-            email: user.email,
-            name: user.user_metadata?.name || user.email,
-            platform: 'web',
-            app_version: '1.0.0'
-          });
+        // Mobile-optimized initialization with timeout protection
+        const initPromise = new Promise<void>((resolve) => {
+          if (isAuthenticated && user) {
+            // Lightweight initialization for mobile
+            const userId = user.id;
+            
+            // Non-blocking analytics setup
+            try {
+              analytics.setUserId(userId);
+              analytics.setUserProperties({
+                user_id: userId,
+                email: user.email,
+                name: user.user_metadata?.name || user.email,
+                platform: 'mobile',
+                app_version: '1.0.0'
+              });
+            } catch (analyticsError) {
+              console.warn('Analytics setup failed:', analyticsError);
+            }
 
-          // Set up error monitoring
-          errorMonitoring.setUserId(userId);
-          errorMonitoring.setSeverityThreshold('medium');
+            // Non-blocking error monitoring
+            try {
+              errorMonitoring.setUserId(userId);
+              errorMonitoring.setSeverityThreshold('medium');
+            } catch (monitoringError) {
+              console.warn('Error monitoring setup failed:', monitoringError);
+            }
 
-          // Log user login
-          auditLogger.logUser(userId, 'login', {
-            platform: 'web',
-            user_agent: navigator.userAgent,
-            timestamp: new Date().toISOString()
-          });
+            // Non-blocking audit logging
+            try {
+              auditLogger.logUser(userId, 'login', {
+                platform: 'mobile',
+                user_agent: navigator.userAgent,
+                timestamp: new Date().toISOString()
+              });
+            } catch (auditError) {
+              console.warn('Audit logging failed:', auditError);
+            }
 
-          // For now, assume user is not new (onboarding will handle this)
-          setIsNewUser(false);
+            setIsNewUser(false);
+            resolve();
+          } else {
+            // Clear user data when not authenticated
+            try {
+              analytics.clearUserData();
+              errorMonitoring.setUserId(null);
+            } catch (error) {
+              console.warn('Error clearing user data:', error);
+            }
+            resolve();
+          }
+        });
 
-          // Track app initialization
-          analytics.trackEngagement('app_initialized', {
-            feature: 'app_startup',
-            is_new_user: false
-          });
+        // Race between initialization and timeout
+        await Promise.race([
+          initPromise,
+          new Promise(resolve => setTimeout(resolve, 5000)) // 5 second max
+        ]);
 
-          setIsInitialized(true);
-        } else {
-          // Clear user data when not authenticated
-          analytics.clearUserData();
-          errorMonitoring.setUserId(null);
-          setIsInitialized(true);
-        }
+        setIsInitialized(true);
+        clearTimeout(timeoutId);
       } catch (error) {
         console.error('Error initializing app:', error);
         setInitializationError(error instanceof Error ? error.message : 'Initialization failed');
-        setIsInitialized(true); // Still show the app even if initialization fails
+        setIsInitialized(true); // Always show the app even if initialization fails
+        clearTimeout(timeoutId);
       }
     };
 
     initializeApp();
+
+    return () => clearTimeout(timeoutId);
   }, [isAuthenticated, user]);
 
   // Handle routing after initialization
@@ -107,8 +140,14 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   if (!isInitialized) {
     return (
       <LoadingScreen 
-        message="Initializing your financial app..." 
-        submessage="Loading your data and setting up the app..."
+        message={loadingTimeout ? "Taking longer than expected..." : "Initializing your financial app..."} 
+        submessage={loadingTimeout ? "Please wait, we're almost ready..." : "Loading your data and setting up the app..."}
+        showRetry={loadingTimeout}
+        onRetry={() => {
+          setLoadingTimeout(false);
+          setIsInitialized(false);
+          window.location.reload();
+        }}
       />
     );
   }

@@ -19,6 +19,8 @@ import RouteHandler from './components/RouteHandler';
 import { AppInitializer } from './components/AppInitializer';
 import { AccessibilityEnhancements, useKeyboardNavigation } from './components/common/AccessibilityEnhancements';
 import { FontLoader, FontLoadingIndicator } from './components/common/FontLoader';
+import { MobileLoadingGuard } from './components/common/MobileLoadingGuard';
+import { MobileErrorRecovery } from './components/common/MobileErrorRecovery';
 import { fontLoader } from './utils/fontLoader';
 import { registerSW } from './utils/registerSW';
 import './styles/accessibility.css';
@@ -79,17 +81,27 @@ function App() {
 
   // Initialize font loading and service worker
   useEffect(() => {
-    // Simple font loading for mobile
+    // Mobile-optimized font loading
     const loadFonts = async () => {
       try {
-        // Add fonts-loaded class after a short delay to ensure fonts are loaded
-        setTimeout(() => {
-          document.body.classList.add('fonts-loaded');
-          document.body.classList.remove('fonts-loading');
-        }, 1000);
+        // Immediate fallback for mobile
+        document.body.classList.add('fonts-loaded');
+        document.body.classList.remove('fonts-loading');
         
-        // Also try the complex loader as fallback
-        await fontLoader.preloadCriticalFonts();
+        // Try to load fonts in background (non-blocking)
+        if (window.navigator.userAgent.includes('Mobile')) {
+          // Mobile: Use system fonts immediately, load custom fonts in background
+          setTimeout(async () => {
+            try {
+              await fontLoader.preloadCriticalFonts();
+            } catch (error) {
+              console.warn('Background font loading failed:', error);
+            }
+          }, 100);
+        } else {
+          // Desktop: Try to load fonts normally
+          await fontLoader.preloadCriticalFonts();
+        }
       } catch (error) {
         console.warn('Font loading failed, using system fonts:', error);
         // Ensure fonts-loaded class is added even if loading fails
@@ -108,23 +120,25 @@ function App() {
         <ToastProvider>
           <ThemeProvider>
             <FontLoader>
-              <AuthProvider>
-                <ProfileProvider>
-                  <InternationalizationProvider>
-                    <EnhancedCurrencyProvider>
-                      <PersonalizationProvider>
-                        <FinanceProvider>
-                        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                          <AppInitializer>
-                          <RouteHandler>
-                            <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-                              {/* Font Loading Indicator */}
-                              <FontLoadingIndicator />
-                              
-                              {/* Accessibility Enhancements */}
-                              <div className="fixed top-4 right-4 z-50">
-                                <AccessibilityEnhancements />
-                              </div>
+              <MobileErrorRecovery>
+                <MobileLoadingGuard>
+                <AuthProvider>
+                  <ProfileProvider>
+                    <InternationalizationProvider>
+                      <EnhancedCurrencyProvider>
+                        <PersonalizationProvider>
+                          <FinanceProvider>
+                          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                            <AppInitializer>
+                            <RouteHandler>
+                              <div className="min-h-screen" data-app-content style={{ backgroundColor: 'var(--background)' }}>
+                                {/* Font Loading Indicator */}
+                                <FontLoadingIndicator />
+                                
+                                {/* Accessibility Enhancements */}
+                                <div className="fixed top-4 right-4 z-50">
+                                  <AccessibilityEnhancements />
+                                </div>
 
 
                             {/* Main Content */}
@@ -409,12 +423,14 @@ function App() {
                           </AppInitializer>
                         </Router>
                         <ReactQueryDevtools initialIsOpen={false} />
-                        </FinanceProvider>
-                      </PersonalizationProvider>
-                    </EnhancedCurrencyProvider>
-                  </InternationalizationProvider>
-                </ProfileProvider>
-              </AuthProvider>
+                          </FinanceProvider>
+                        </PersonalizationProvider>
+                      </EnhancedCurrencyProvider>
+                    </InternationalizationProvider>
+                  </ProfileProvider>
+                  </AuthProvider>
+                </MobileLoadingGuard>
+              </MobileErrorRecovery>
             </FontLoader>
           </ThemeProvider>
         </ToastProvider>

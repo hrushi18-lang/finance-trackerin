@@ -76,7 +76,7 @@ const Cards: React.FC = () => {
       color: 'var(--primary)',
       items: activeGoals,
       emptyMessage: 'No goals set',
-      emptyAction: () => navigate('/create-goal'),
+      emptyAction: () => navigate('/goals/create'),
       emptyActionText: 'Create Goal'
     },
     {
