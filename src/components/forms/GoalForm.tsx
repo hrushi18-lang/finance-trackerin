@@ -84,6 +84,14 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         ...validatedData,
         targetDate: new Date(data.targetDate),
         currencyCode: goalCurrency,
+        // Add scoping fields
+        activityScope: data.activityScope,
+        accountIds: data.accountIds,
+        targetCategory: data.targetCategory,
+        goalType: data.activityScope === 'account_specific' ? 'account_specific' : 
+                 data.activityScope === 'category_based' ? 'category_based' : 'general_savings',
+        priority: 'medium',
+        status: 'active'
       });
       
     } catch (error: any) {

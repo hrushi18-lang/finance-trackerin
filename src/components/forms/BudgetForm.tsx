@@ -87,6 +87,11 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
         ...validatedData,
         categoryId: categoryId || '', // Added categoryId
         spent: initialData?.spent || 0,
+        // Add scoping fields
+        activityScope: data.activityScope,
+        accountIds: data.accountIds,
+        targetCategory: data.targetCategory,
+        currencyCode: 'USD' // Default currency
       });
       
     } catch (error: any) {

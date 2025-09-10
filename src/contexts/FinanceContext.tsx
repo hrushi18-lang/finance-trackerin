@@ -1039,6 +1039,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       updatedAt: new Date(goal.updated_at),
       // Activity scope and account linking
       activityScope: goal.activity_scope || 'general',
+      accountIds: goal.account_ids || [],
+      targetCategory: goal.target_category,
+      currencyCode: goal.currency_code || 'USD',
       linkedAccountsCount: goal.linked_accounts_count || 0,
       // New completion and management fields
       completionDate: goal.completion_date ? new Date(goal.completion_date) : undefined,
@@ -1154,6 +1157,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       amount: Number(budget.amount),
       spent: Number(budget.spent || 0),
       period: budget.period,
+      // Add scoping fields
+      accountId: budget.account_id,
+      activityScope: budget.activity_scope || 'general',
+      accountIds: budget.account_ids || [],
+      targetCategory: budget.target_category,
+      currencyCode: budget.currency_code || 'USD',
+      startDate: budget.start_date ? new Date(budget.start_date) : new Date(),
+      endDate: budget.end_date ? new Date(budget.end_date) : undefined,
       createdAt: new Date(budget.created_at),
       updatedAt: new Date(budget.updated_at)
     }));

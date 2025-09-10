@@ -500,7 +500,15 @@ export interface Budget {
   period: 'weekly' | 'monthly' | 'yearly';
   userId: string;
   accountId?: string; // Link budgets to specific accounts
+  // Scoping fields
+  activityScope?: 'general' | 'account_specific' | 'category_based';
+  accountIds?: string[];
+  targetCategory?: string;
+  currencyCode?: string;
+  startDate?: Date;
+  endDate?: Date;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export interface Notification {
