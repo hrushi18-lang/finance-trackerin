@@ -18,7 +18,7 @@ import OnboardingWrapper from './components/OnboardingWrapper';
 import RouteHandler from './components/RouteHandler';
 import { AppInitializer } from './components/AppInitializer';
 import { AccessibilityEnhancements, useKeyboardNavigation } from './components/common/AccessibilityEnhancements';
-import { FontLoader, FontLoadingIndicator, FontStatus } from './components/common/FontLoader';
+import { FontLoader, FontLoadingIndicator } from './components/common/FontLoader';
 import { fontLoader } from './utils/fontLoader';
 import { registerSW } from './utils/registerSW';
 import './styles/accessibility.css';
@@ -101,9 +101,6 @@ function App() {
                             <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
                               {/* Font Loading Indicator */}
                               <FontLoadingIndicator />
-                              
-                              {/* Font Status (Development Only) */}
-                              <FontStatus />
                               
                               {/* Accessibility Enhancements */}
                               <div className="fixed top-4 right-4 z-50">

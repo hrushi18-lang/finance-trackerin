@@ -35,12 +35,7 @@ import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const internationalization = useInternationalization();
-  const { formatCurrency } = internationalization;
-  
-  // Debug logging
-  console.log('Dashboard - formatCurrency:', typeof formatCurrency);
-  console.log('Dashboard - internationalization:', internationalization);
+  const { formatCurrency } = useInternationalization();
   
   const { 
     accounts, 
