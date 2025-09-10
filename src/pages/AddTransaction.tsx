@@ -31,7 +31,7 @@ interface SplitFormData {
   description: string;
 }
 
-const AddTransaction: React.FC = () => {
+export const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currency, formatCurrency } = useInternationalization();
@@ -659,5 +659,3 @@ const AddTransaction: React.FC = () => {
     </div>
   );
 };
-
-export default AddTransaction;

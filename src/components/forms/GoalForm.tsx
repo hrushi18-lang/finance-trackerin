@@ -18,9 +18,7 @@ interface GoalFormData {
   currentAmount: number;
   targetDate: string;
   category: string;
-  activityScope: 'general' | 'account_specific' | 'category_based';
-  accountIds: string[];
-  targetCategory?: string;
+  accountId?: string;
 }
 
 interface GoalFormProps {
@@ -49,9 +47,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       targetAmount: initialData?.targetAmount || undefined,
       targetDate: initialData?.targetDate || '',
       category: initialData?.category || '',
-      activityScope: initialData?.activityScope || 'general',
-      accountIds: initialData?.accountIds || [],
-      targetCategory: initialData?.targetCategory || ''
+      accountId: initialData?.accountId || ''
     },
   });
 
@@ -178,56 +174,6 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         />
       </div>
 
-      {/* Activity Scope Selection */}
-      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <label className="block text-sm font-medium text-gray-300 mb-3">
-          Goal Type
-        </label>
-        <div className="space-y-3">
-          <div className="flex items-center space-x-3">
-            <input
-              type="radio"
-              id="general"
-              value="general"
-              {...register('activityScope')}
-              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
-            />
-            <label htmlFor="general" className="text-sm text-gray-300">
-              <span className="font-medium">General Goal</span>
-              <span className="block text-xs text-gray-400">Not tied to any specific account</span>
-            </label>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            <input
-              type="radio"
-              id="account_specific"
-              value="account_specific"
-              {...register('activityScope')}
-              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
-            />
-            <label htmlFor="account_specific" className="text-sm text-gray-300">
-              <span className="font-medium">Account-Specific Goal</span>
-              <span className="block text-xs text-gray-400">Linked to one or more specific accounts</span>
-            </label>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            <input
-              type="radio"
-              id="category_based"
-              value="category_based"
-              {...register('activityScope')}
-              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
-            />
-            <label htmlFor="category_based" className="text-sm text-gray-300">
-              <span className="font-medium">Category-Based Goal</span>
-              <span className="block text-xs text-gray-400">For a specific spending category</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
         <label className="block text-sm font-medium text-gray-300 mb-2">
           Category
@@ -241,55 +187,25 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         />
       </div>
 
-      {/* Account Selection - Only show if account_specific is selected */}
-      {watch('activityScope') === 'account_specific' && (
-        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-          <label className="block text-sm font-medium text-gray-300 mb-3">
-            Select Accounts (Multiple Selection)
-          </label>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {(accounts || []).map((account) => (
-              <div key={account.id} className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id={`account-${account.id}`}
-                  value={account.id}
-                  {...register('accountIds')}
-                  className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
-                />
-                <label htmlFor={`account-${account.id}`} className="text-sm text-gray-300 flex-1">
-                  <span className="font-medium">{account.name}</span>
-                  <span className="block text-xs text-gray-400">
-                    {currency.symbol}{account.balance.toLocaleString()} • {account.type}
-                  </span>
-                </label>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-gray-400 mt-2">
-            Select one or more accounts to link this goal to. You can change this later.
-          </p>
-        </div>
-      )}
-
-      {/* Target Category - Only show if category_based is selected */}
-      {watch('activityScope') === 'category_based' && (
-        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Target Category
-          </label>
-          <CategorySelector
-            value={watch('targetCategory')}
-            onChange={(category) => setValue('targetCategory', category)}
-            type="expense"
-            placeholder="Select spending category"
-            error={errors.targetCategory?.message}
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            This goal will track spending for the selected category across all accounts.
-          </p>
-        </div>
-      )}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Link to Account (Optional)
+        </label>
+        <select
+          {...register('accountId')}
+          className="block w-full rounded-xl border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
+        >
+          <option value="" className="bg-black/90">No specific account</option>
+          {(accounts || []).map((account) => (
+            <option key={account.id} value={account.id} className="bg-black/90">
+              {account.name} - {currency.symbol}{account.balance.toLocaleString()}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-400 mt-1">
+          Link this goal to a specific payment method for better tracking
+        </p>
+      </div>
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
         <Input

@@ -28,9 +28,6 @@ interface EnhancedLiabilityFormData {
   affectsCreditScore: boolean;
   autoGenerateBills: boolean;
   billGenerationDay: number;
-  activityScope: 'general' | 'account_specific' | 'category_based';
-  accountIds: string[];
-  targetCategory?: string;
 }
 
 interface EnhancedLiabilityFormProps {
@@ -60,9 +57,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({
       providesFunds: true,
       affectsCreditScore: true,
       autoGenerateBills: true,
-      billGenerationDay: 1,
-      activityScope: 'general',
-      accountIds: []
+      billGenerationDay: 1
     }
   });
 
@@ -471,110 +466,6 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({
               className="bg-black/20 border-white/20 text-white"
             />
           </div>
-
-          {/* Activity Scope Selection */}
-          <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-            <label className="block text-sm font-medium text-gray-300 mb-3">
-              Liability Type
-            </label>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <input
-                  type="radio"
-                  id="general"
-                  value="general"
-                  {...register('activityScope')}
-                  className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
-                />
-                <label htmlFor="general" className="text-sm text-gray-300">
-                  <span className="font-medium">General Liability</span>
-                  <span className="block text-xs text-gray-400">Not tied to any specific account</span>
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <input
-                  type="radio"
-                  id="account_specific"
-                  value="account_specific"
-                  {...register('activityScope')}
-                  className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
-                />
-                <label htmlFor="account_specific" className="text-sm text-gray-300">
-                  <span className="font-medium">Account-Specific Liability</span>
-                  <span className="block text-xs text-gray-400">Linked to one or more specific accounts</span>
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <input
-                  type="radio"
-                  id="category_based"
-                  value="category_based"
-                  {...register('activityScope')}
-                  className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
-                />
-                <label htmlFor="category_based" className="text-sm text-gray-300">
-                  <span className="font-medium">Category-Based Liability</span>
-                  <span className="block text-xs text-gray-400">For a specific spending category</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Account Selection - Only show if account_specific is selected */}
-          {watch('activityScope') === 'account_specific' && (
-            <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-              <label className="block text-sm font-medium text-gray-300 mb-3">
-                Select Accounts (Multiple Selection)
-              </label>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {(accounts || []).map((account) => (
-                  <div key={account.id} className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      id={`account-${account.id}`}
-                      value={account.id}
-                      {...register('accountIds')}
-                      className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
-                    />
-                    <label htmlFor={`account-${account.id}`} className="text-sm text-gray-300 flex-1">
-                      <span className="font-medium">{account.name}</span>
-                      <span className="block text-xs text-gray-400">
-                        {formatCurrency(account.balance)} • {account.type}
-                      </span>
-                    </label>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-gray-400 mt-2">
-                Select one or more accounts to link this liability to. You can change this later.
-              </p>
-            </div>
-          )}
-
-          {/* Target Category - Only show if category_based is selected */}
-          {watch('activityScope') === 'category_based' && (
-            <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Target Category
-              </label>
-              <select
-                {...register('targetCategory')}
-                className="block w-full rounded-lg border-white/20 bg-black/20 text-white py-3 px-4"
-              >
-                <option value="">Select spending category</option>
-                <option value="debt_payment" className="bg-black/90">Debt Payment</option>
-                <option value="loan_payment" className="bg-black/90">Loan Payment</option>
-                <option value="credit_card" className="bg-black/90">Credit Card</option>
-                <option value="mortgage" className="bg-black/90">Mortgage</option>
-                <option value="other" className="bg-black/90">Other</option>
-              </select>
-              <p className="text-xs text-gray-400 mt-1">
-                This liability will track spending for the selected category across all accounts.
-              </p>
-            </div>
-          )}
 
           {/* Account Selection */}
           {providesFunds && (

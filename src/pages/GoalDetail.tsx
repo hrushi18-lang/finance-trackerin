@@ -17,7 +17,7 @@ import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 
-const GoalDetail: React.FC = () => {
+export const GoalDetail: React.FC = () => {
   const { goalId } = useParams<{ goalId: string }>();
   const navigate = useNavigate();
   const { 
@@ -25,8 +25,7 @@ const GoalDetail: React.FC = () => {
     transactions, 
     accounts,
     updateGoal,
-    addTransaction,
-    getGoalTransactions
+    addTransaction
   } = useFinance();
   const { formatCurrency } = useInternationalization();
   
@@ -42,8 +41,11 @@ const GoalDetail: React.FC = () => {
   // Get transactions related to this goal
   const goalTransactions = useMemo(() => {
     if (!goal) return [];
-    return getGoalTransactions(goal.id);
-  }, [goal, getGoalTransactions]);
+    return transactions.filter(t => 
+      // t.linkedGoalId === goal.id || 
+      (goal.goalType === 'account_specific' && t.accountId === goal.accountId && t.type === 'income')
+    );
+  }, [transactions, goal]);
 
   // Calculate goal analytics
   const goalAnalytics = useMemo(() => {
@@ -503,5 +505,3 @@ const GoalDetail: React.FC = () => {
     </div>
   );
 };
-
-export default GoalDetail;

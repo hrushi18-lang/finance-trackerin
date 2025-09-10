@@ -20,9 +20,8 @@ import { format, isAfter, isBefore, differenceInDays, addDays } from 'date-fns';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
-import { FlexibleBillPaymentForm } from '../components/forms/FlexibleBillPaymentForm';
 
-const BillDetail: React.FC = () => {
+export const BillDetail: React.FC = () => {
   const { billId } = useParams<{ billId: string }>();
   const navigate = useNavigate();
   const { 
@@ -31,15 +30,14 @@ const BillDetail: React.FC = () => {
     accounts,
     updateBill,
     addTransaction,
-    getBillTransactions,
-    payBillFlexible,
-    getBillPaymentHistory,
     isLoading 
   } = useFinance();
   const { formatCurrency } = useInternationalization();
   
   const [showPayBill, setShowPayBill] = useState(false);
   const [showEditBill, setShowEditBill] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [selectedAccount, setSelectedAccount] = useState('');
 
   // Find the current bill
   const bill = useMemo(() => {
@@ -49,8 +47,11 @@ const BillDetail: React.FC = () => {
   // Get transactions related to this bill
   const billTransactions = useMemo(() => {
     if (!bill) return [];
-    return getBillTransactions(bill.id);
-  }, [bill, getBillTransactions]);
+    return transactions.filter(t => 
+      t.linkedBillId === bill.id || 
+      (bill.billCategory === 'account_specific' && t.accountId === bill.accountId && t.type === 'expense' && t.category === bill.category)
+    );
+  }, [transactions, bill]);
 
   // Calculate bill analytics
   const billAnalytics = useMemo(() => {
@@ -81,21 +82,60 @@ const BillDetail: React.FC = () => {
 
   // Get account info for account-specific bills
   const account = useMemo(() => {
-    if (!bill || bill.billCategory !== 'account_specific' || !bill.defaultAccountId) return null;
-    return accounts.find(a => a.id === bill.defaultAccountId);
+    if (!bill || bill.billCategory !== 'account_specific' || !bill.accountId) return null;
+    return accounts.find(a => a.id === bill.accountId);
   }, [bill, accounts]);
 
-  const handlePayBill = async (paymentData: {
-    amount: number;
-    accountId: string;
-    description: string;
-    paymentType: 'full' | 'partial' | 'extra' | 'skip';
-    skipReason?: string;
-  }) => {
-    if (!bill) return;
+  const handlePayBill = async () => {
+    if (!bill || !paymentAmount || !selectedAccount) return;
 
     try {
-      await payBillFlexible(bill.id, paymentData);
+      const amount = parseFloat(paymentAmount);
+      if (isNaN(amount) || amount <= 0) return;
+
+      // Add payment transaction
+      await addTransaction({
+        type: 'expense',
+        amount: amount,
+        description: `Payment for ${bill.title}`,
+        category: bill.category,
+        date: new Date(),
+        accountId: selectedAccount,
+        affectsBalance: true,
+        status: 'completed',
+        linkedBillId: bill.id
+      });
+
+      // Update bill
+      const nextDueDate = new Date(bill.nextDueDate);
+      switch (bill.frequency) {
+        case 'weekly':
+          nextDueDate.setDate(nextDueDate.getDate() + 7);
+          break;
+        case 'bi_weekly':
+          nextDueDate.setDate(nextDueDate.getDate() + 14);
+          break;
+        case 'monthly':
+          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+          break;
+        case 'quarterly':
+          nextDueDate.setMonth(nextDueDate.getMonth() + 3);
+          break;
+        case 'semi_annual':
+          nextDueDate.setMonth(nextDueDate.getMonth() + 6);
+          break;
+        case 'annual':
+          nextDueDate.setFullYear(nextDueDate.getFullYear() + 1);
+          break;
+      }
+
+      await updateBill(bill.id, {
+        lastPaidDate: new Date(),
+        nextDueDate: nextDueDate
+      });
+
+      setPaymentAmount('');
+      setSelectedAccount('');
       setShowPayBill(false);
     } catch (error) {
       console.error('Error paying bill:', error);
@@ -452,17 +492,57 @@ const BillDetail: React.FC = () => {
         isOpen={showPayBill}
         onClose={() => setShowPayBill(false)}
         title="Pay Bill"
-        size="lg"
       >
-        <FlexibleBillPaymentForm
-          bill={bill}
-          accounts={accounts}
-          onSubmit={handlePayBill}
-          onCancel={() => setShowPayBill(false)}
-        />
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+              Amount
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={paymentAmount}
+              onChange={(e) => setPaymentAmount(e.target.value)}
+              className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder={bill.amount.toString()}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+              Payment Account
+            </label>
+            <select
+              value={selectedAccount}
+              onChange={(e) => setSelectedAccount(e.target.value)}
+              className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select an account</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name} - {formatCurrency(account.balance || 0)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex space-x-4">
+            <Button
+              onClick={() => setShowPayBill(false)}
+              variant="outline"
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePayBill}
+              className="flex-1"
+              disabled={!paymentAmount || !selectedAccount || parseFloat(paymentAmount) <= 0}
+            >
+              Pay Bill
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
 };
-
-export default BillDetail;

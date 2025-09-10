@@ -8,7 +8,7 @@ import { useInternationalization } from '../contexts/InternationalizationContext
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { Budget } from '../types';
 
-const Budgets: React.FC = () => {
+export const Budgets: React.FC = () => {
   const { budgets, addBudget, updateBudget, deleteBudget, transactions } = useFinance();
   const { currency, formatCurrency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
@@ -296,5 +296,3 @@ const Budgets: React.FC = () => {
     </div>
   );
 };
-
-export default Budgets;

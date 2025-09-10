@@ -4,13 +4,12 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { AccountCard } from '../components/accounts/AccountCard';
 import { AccountForm } from '../components/accounts/AccountForm';
-import { GoalsVaultManager } from '../components/accounts/GoalsVaultManager';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { useNavigate } from 'react-router-dom';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 
-const Accounts: React.FC = () => {
+export const Accounts: React.FC = () => {
   const navigate = useNavigate();
   const { 
     accounts, 
@@ -198,9 +197,6 @@ const Accounts: React.FC = () => {
           </Button>
         </div>
 
-        {/* Goals Vault Manager */}
-        <GoalsVaultManager />
-
         {/* Accounts List */}
         <div className="space-y-4">
           {filteredAccounts.length === 0 ? (
@@ -321,5 +317,3 @@ const Accounts: React.FC = () => {
     </div>
   );
 };
-
-export default Accounts;

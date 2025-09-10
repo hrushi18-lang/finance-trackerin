@@ -22,17 +22,13 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
 
-const AccountDetail: React.FC = () => {
+export const AccountDetail: React.FC = () => {
   const { accountId } = useParams<{ accountId: string }>();
   const navigate = useNavigate();
   const { 
     accounts, 
     transactions, 
-    goals,
-    bills,
-    liabilities,
     addTransaction,
-    getAccountTransactions,
     isLoading 
   } = useFinance();
   const { formatCurrency } = useInternationalization();
@@ -51,8 +47,8 @@ const AccountDetail: React.FC = () => {
   // Get transactions for this account
   const accountTransactions = useMemo(() => {
     if (!account) return [];
-    return getAccountTransactions(account.id);
-  }, [account, getAccountTransactions]);
+    return transactions.filter(t => t.account_id === account.id);
+  }, [transactions, account]);
 
   // Filter transactions based on search
   const filteredTransactions = useMemo(() => {
@@ -242,145 +238,6 @@ const AccountDetail: React.FC = () => {
                 <p className={`text-sm font-numbers font-bold ${monthlyAnalytics.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(monthlyAnalytics.net)}
                 </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Linked Activities */}
-        <div>
-          <h3 className="text-lg font-heading font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            Linked Activities
-          </h3>
-          <div 
-            className="p-6 rounded-2xl"
-            style={{
-              backgroundColor: 'var(--background-secondary)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
-          >
-            <div className="space-y-4">
-              {/* Goals */}
-              <div>
-                <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                  Goals ({goals.filter(g => g.accountId === account?.id).length})
-                </h4>
-                <div className="space-y-2">
-                  {goals.filter(g => g.accountId === account?.id).slice(0, 3).map((goal) => (
-                    <div key={goal.id} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--background)' }}>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                          <span className="text-purple-600 text-sm">🎯</span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{goal.title}</p>
-                          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                            {formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>
-                          {Math.round((goal.currentAmount / goal.targetAmount) * 100)}%
-                        </p>
-                        <div className="w-16 h-1 bg-gray-200 rounded-full mt-1">
-                          <div 
-                            className="h-1 bg-purple-500 rounded-full"
-                            style={{ width: `${Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {goals.filter(g => g.accountId === account?.id).length > 3 && (
-                    <button 
-                      onClick={() => navigate('/goals')}
-                      className="text-sm text-blue-600 hover:text-blue-700"
-                    >
-                      View all {goals.filter(g => g.accountId === account?.id).length} goals
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Bills */}
-              <div>
-                <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                  Bills ({bills.filter(b => b.defaultAccountId === account?.id).length})
-                </h4>
-                <div className="space-y-2">
-                  {bills.filter(b => b.defaultAccountId === account?.id).slice(0, 3).map((bill) => (
-                    <div key={bill.id} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--background)' }}>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
-                          <span className="text-orange-600 text-sm">📄</span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{bill.title}</p>
-                          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                            {formatCurrency(bill.amount)} • {bill.frequency}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                          Due {format(new Date(bill.nextDueDate), 'MMM dd')}
-                        </p>
-                        <p className={`text-xs font-medium ${new Date(bill.nextDueDate) < new Date() ? 'text-red-600' : 'text-green-600'}`}>
-                          {new Date(bill.nextDueDate) < new Date() ? 'Overdue' : 'Upcoming'}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                  {bills.filter(b => b.defaultAccountId === account?.id).length > 3 && (
-                    <button 
-                      onClick={() => navigate('/bills')}
-                      className="text-sm text-blue-600 hover:text-blue-700"
-                    >
-                      View all {bills.filter(b => b.defaultAccountId === account?.id).length} bills
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Liabilities */}
-              <div>
-                <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                  Liabilities ({liabilities.filter(l => l.accountId === account?.id).length})
-                </h4>
-                <div className="space-y-2">
-                  {liabilities.filter(l => l.accountId === account?.id).slice(0, 3).map((liability) => (
-                    <div key={liability.id} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--background)' }}>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
-                          <span className="text-red-600 text-sm">💳</span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{liability.name}</p>
-                          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                            {formatCurrency(liability.remainingAmount)} remaining
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                          {liability.interestRate}% APR
-                        </p>
-                        <p className="text-xs font-medium text-red-600">
-                          {liability.status}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                  {liabilities.filter(l => l.accountId === account?.id).length > 3 && (
-                    <button 
-                      onClick={() => navigate('/liabilities')}
-                      className="text-sm text-blue-600 hover:text-blue-700"
-                    >
-                      View all {liabilities.filter(l => l.accountId === account?.id).length} liabilities
-                    </button>
-                  )}
-                </div>
               </div>
             </div>
           </div>
@@ -617,5 +474,3 @@ const AccountDetail: React.FC = () => {
     </div>
   );
 };
-
-export default AccountDetail;

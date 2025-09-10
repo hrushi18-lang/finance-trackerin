@@ -25,7 +25,7 @@ import {
 import { format } from 'date-fns';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 
-const Dashboard: React.FC = () => {
+export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { 
     accounts, 
@@ -521,5 +521,3 @@ const Dashboard: React.FC = () => {
     </div>
   );
 };
-
-export default Dashboard;

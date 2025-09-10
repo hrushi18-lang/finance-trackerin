@@ -18,7 +18,7 @@ import { RingChart } from '../components/analytics/RingChart';
 import { BarChart } from '../components/analytics/BarChart';
 import { ChartPopup } from '../components/analytics/ChartPopup';
 
-const Analytics: React.FC = () => {
+export const Analytics: React.FC = () => {
   const navigate = useNavigate();
   const { formatCurrency } = useInternationalization();
   const { transactions, accounts, goals, budgets } = useFinance();
@@ -447,5 +447,3 @@ const Analytics: React.FC = () => {
     </div>
   );
 };
-
-export default Analytics;

@@ -19,53 +19,6 @@ export interface FinancialAccount {
   userId: string;
   createdAt: Date;
   updatedAt: Date;
-  
-  // Enhanced fields from database
-  routingNumber?: string;
-  cardLastFour?: string;
-  cardType?: string;
-  spendingLimit?: number;
-  monthlyLimit?: number;
-  dailyLimit?: number;
-  isPrimary?: boolean;
-  notes?: string;
-  accountTypeCustom?: string;
-  isLiability?: boolean;
-  outstandingBalance?: number;
-  creditLimit?: number;
-  minimumDue?: number;
-  dueDate?: Date;
-  interestRate?: number;
-  isBalanceHidden?: boolean;
-  linkedBankAccountId?: string;
-  autoSync?: boolean;
-  lastSyncedAt?: Date;
-  exchangeRate?: number;
-  homeCurrency?: string;
-  currency?: string;
-  subtypeId?: string;
-  status?: string;
-  accountNumberMasked?: string;
-  lastActivityDate?: Date;
-  accountHolderName?: string;
-  jointAccount?: boolean;
-  accountAgeDays?: number;
-  riskLevel?: string;
-  interestEarnedYtd?: number;
-  feesPaidYtd?: number;
-  averageMonthlyBalance?: number;
-  accountHealthScore?: number;
-  autoCategorize?: boolean;
-  requireApproval?: boolean;
-  maxDailyTransactions?: number;
-  maxDailyAmount?: number;
-  twoFactorEnabled?: boolean;
-  biometricEnabled?: boolean;
-  accountNotes?: string;
-  externalAccountId?: string;
-  institutionLogoUrl?: string;
-  accountColor?: string;
-  sortOrder?: number;
 }
 
 export interface Transaction {
@@ -155,15 +108,6 @@ export interface Goal {
   status: 'active' | 'paused' | 'completed' | 'cancelled';
   createdAt: Date;
   updatedAt: Date;
-  // New completion and management fields
-  completionDate?: Date;
-  withdrawalDate?: Date;
-  withdrawalAmount: number;
-  isWithdrawn: boolean;
-  completionAction: 'waiting' | 'withdrawn' | 'extended' | 'customized' | 'archived' | 'deleted';
-  originalTargetAmount?: number;
-  extendedTargetAmount?: number;
-  completionNotes?: string;
 }
 
 export interface Liability {
@@ -182,6 +126,37 @@ export interface Liability {
   accountId?: string;
 }
 
+export interface EnhancedLiability {
+  id: string;
+  userId: string;
+  name: string;
+  liabilityType: 'personal_loan' | 'student_loan' | 'auto_loan' | 'mortgage' | 'credit_card' | 'bnpl' | 'installment' | 'other';
+  description?: string;
+  totalAmount: number;
+  remainingAmount: number;
+  interestRate: number;
+  monthlyPayment?: number;
+  minimumPayment?: number;
+  paymentDay: number;
+  loanTermMonths?: number;
+  remainingTermMonths?: number;
+  startDate: Date;
+  dueDate?: Date;
+  nextPaymentDate?: Date;
+  linkedAssetId?: string;
+  isSecured: boolean;
+  disbursementAccountId?: string;
+  defaultPaymentAccountId?: string;
+  providesFunds: boolean;
+  affectsCreditScore: boolean;
+  status: 'active' | 'paid_off' | 'defaulted' | 'restructured' | 'closed';
+  isActive: boolean;
+  // autoGenerateBills: boolean; // Removed as per schema
+  autoGenerateBills: boolean;
+  billGenerationDay: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface Asset {
   id: string;
@@ -230,8 +205,6 @@ export interface Bill { // Renamed from Bill to EnhancedBill
   notes?: string;
   priority: 'low' | 'medium' | 'high';
   status: 'active' | 'paused' | 'completed' | 'cancelled';
-  activityScope: 'general' | 'account_specific' | 'category_based';
-  accountIds: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -294,8 +267,36 @@ export interface NotificationItem {
   updatedAt: Date;
 }
 
-// Export enhanced liability types
-export * from './enhanced_liabilities';
+export interface EnhancedLiability {
+  id: string;
+  userId: string;
+  name: string;
+  liabilityType: 'personal_loan' | 'student_loan' | 'auto_loan' | 'mortgage' | 'credit_card' | 'bnpl' | 'installment' | 'other';
+  description?: string;
+  totalAmount: number;
+  remainingAmount: number;
+  interestRate: number;
+  monthlyPayment?: number;
+  minimumPayment?: number;
+  paymentDay: number;
+  loanTermMonths?: number;
+  remainingTermMonths?: number;
+  startDate: Date;
+  dueDate?: Date;
+  nextPaymentDate?: Date;
+  linkedAssetId?: string;
+  isSecured: boolean;
+  disbursementAccountId?: string;
+  defaultPaymentAccountId?: string;
+  providesFunds: boolean;
+  affectsCreditScore: boolean;
+  status: 'active' | 'paid_off' | 'defaulted' | 'restructured' | 'closed';
+  isActive: boolean;
+  autoGenerateBills: boolean;
+  billGenerationDay: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface Asset {
   id: string;
@@ -336,17 +337,6 @@ export interface Bill {
   reminderDaysBefore: number;
   sendDueDateReminder: boolean;
   sendOverdueReminder: boolean;
-  // Missing fields from database
-  billCategory: 'account_specific' | 'category_based' | 'general_expense';
-  isRecurring: boolean;
-  notes?: string;
-  paymentMethod?: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'active' | 'paused' | 'completed' | 'cancelled';
-  activityScope: 'general' | 'account_specific' | 'category_based';
-  accountIds: string[];
-  targetCategory?: string;
-  linkedAccountsCount: number;
   createdAt: Date;
   updatedAt: Date;
 }

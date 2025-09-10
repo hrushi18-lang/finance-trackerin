@@ -10,7 +10,7 @@ import { useInternationalization } from '../contexts/InternationalizationContext
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 import { DebtStrategyTool } from '../components/liabilities/DebtStrategyTool';
 
-const Liabilities: React.FC = () => {
+export const Liabilities: React.FC = () => {
   const { liabilities, addLiability, updateLiability, deleteLiability, addTransaction, accounts, repayLiabilityFromAccount } = useFinance();
   const { currency, formatCurrency } = useInternationalization();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,7 +35,7 @@ const Liabilities: React.FC = () => {
         name: liability.name,
         liabilityType: liability.liabilityType,
         description: liability.description,
-        totalAmount: liability.totalAmount || liability.remainingAmount,
+        totalAmount: liability.totalAmount,
         remainingAmount: liability.remainingAmount,
         interestRate: liability.interestRate,
         monthlyPayment: liability.monthlyPayment || liability.minimumPayment || 0,
@@ -48,16 +48,7 @@ const Liabilities: React.FC = () => {
         nextPaymentDate: liability.dueDate ? new Date(liability.dueDate) : undefined,
         linkedAssetId: liability.linkedAssetId,
         status: 'active',
-        isActive: true,
-        affectsCreditScore: liability.affectsCreditScore || false,
-        isSecured: liability.isSecured || false,
-        providesFunds: liability.providesFunds || false,
-        autoGenerateBills: liability.autoGenerateBills || false,
-        billGenerationDay: liability.billGenerationDay || 1,
-        activityScope: liability.activityScope || 'general',
-        accountIds: liability.accountIds || [],
-        targetCategory: liability.targetCategory,
-        priority: liability.priority || 'medium'
+        isActive: true
       });
       
       setShowModal(false);
@@ -492,5 +483,3 @@ const Liabilities: React.FC = () => {
     </div>
   );
 };
-
-export default Liabilities;

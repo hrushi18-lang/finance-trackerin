@@ -28,7 +28,7 @@ const LiabilityDetail: React.FC<LiabilityDetailProps> = () => {
     deleteLiability, 
     addTransaction,
     getLiabilityTransactions,
-    repayLiabilityFromAccount
+    getLiabilityPaymentHistory
   } = useFinance();
 
   const [liability, setLiability] = useState<any>(null);
@@ -43,17 +43,18 @@ const LiabilityDetail: React.FC<LiabilityDetailProps> = () => {
       const foundLiability = liabilities.find(l => l.id === id);
       if (foundLiability) {
         setLiability(foundLiability);
-        setSelectedAccount(foundLiability.defaultPaymentAccountId || '');
+        setSelectedAccount(foundLiability.account_id || '');
         
         // Get liability-specific transactions
         const liabilityTrans = getLiabilityTransactions(id);
         setLiabilityTransactions(liabilityTrans);
         
-        // Get payment history (same as transactions for now)
-        setPaymentHistory(liabilityTrans);
+        // Get payment history
+        const history = getLiabilityPaymentHistory(id);
+        setPaymentHistory(history);
       }
     }
-  }, [id, liabilities, getLiabilityTransactions]);
+  }, [id, liabilities, getLiabilityTransactions, getLiabilityPaymentHistory]);
 
   const handleEditLiability = (updatedLiability: any) => {
     updateLiability(updatedLiability);
@@ -68,28 +69,19 @@ const LiabilityDetail: React.FC<LiabilityDetailProps> = () => {
     }
   };
 
-  const handleAddPayment = async (transaction: any) => {
-    try {
-      if (!liability || !selectedAccount) {
-        throw new Error('Liability or account not selected');
-      }
-
-      // Use repayLiabilityFromAccount to properly update both transaction and liability
-      await repayLiabilityFromAccount(
-        selectedAccount,
-        liability.id,
-        transaction.amount,
-        transaction.description || `Payment for ${liability.name}`
-      );
-      
-      setIsPaymentModalOpen(false);
-      
-      // Refresh data
-      const liabilityTrans = getLiabilityTransactions(liability.id);
-      setLiabilityTransactions(liabilityTrans);
-    } catch (error) {
-      console.error('Error adding payment:', error);
-    }
+  const handleAddPayment = (transaction: any) => {
+    const newTransaction = {
+      ...transaction,
+      liability_id: liability?.id,
+      account_id: selectedAccount,
+      type: 'payment'
+    };
+    addTransaction(newTransaction);
+    setIsPaymentModalOpen(false);
+    
+    // Refresh data
+    const liabilityTrans = getLiabilityTransactions(liability?.id);
+    setLiabilityTransactions(liabilityTrans);
   };
 
   if (!liability) {
