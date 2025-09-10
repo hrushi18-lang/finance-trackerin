@@ -150,14 +150,14 @@ body {
 
 /* Typography Classes - Exact Font Specifications */
 .font-heading {
-  font-family: var(--font-heading);
+  font-family: 'Archivo Black', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   font-weight: 900;
   color: var(--text-primary);
   letter-spacing: -0.025em;
 }
 
 .font-numbers {
-  font-family: var(--font-numbers);
+  font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: var(--text-primary);
@@ -165,14 +165,14 @@ body {
 }
 
 .font-titles {
-  font-family: var(--font-titles);
+  font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   font-weight: 500;
   color: var(--text-primary);
   letter-spacing: -0.025em;
 }
 
 .font-description {
-  font-family: var(--font-description);
+  font-family: 'Playfair Display', 'Times New Roman', 'Times', serif;
   font-weight: 400;
   color: var(--text-secondary);
   font-style: normal;

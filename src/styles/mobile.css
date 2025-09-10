@@ -38,16 +38,25 @@
   /* Apply custom fonts when loaded */
   .fonts-loaded .font-heading {
     font-family: 'Archivo Black', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+    font-weight: 900;
   }
   
-  .fonts-loaded .font-numbers,
+  .fonts-loaded .font-numbers {
+    font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  
   .fonts-loaded .font-titles,
   .fonts-loaded .font-body {
     font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+    font-weight: 500;
   }
   
   .fonts-loaded .font-description {
     font-family: 'Playfair Display', 'Times New Roman', 'Times', serif !important;
+    font-weight: 400;
+    font-style: normal;
   }
 }
 

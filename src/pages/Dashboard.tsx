@@ -30,10 +30,12 @@ import {
   Clock
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subDays } from 'date-fns';
+import { useInternationalization } from '../contexts/InternationalizationContext';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const { formatCurrency } = useInternationalization();
   const { 
     accounts, 
     transactions, 
@@ -285,7 +287,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-center">
               <div className="text-3xl font-numbers mb-2" style={{ color: 'var(--text-primary)' }}>
-                {formatCurrency(dashboardData.totalBalance)}
+                {formatCurrency(totalBalance)}
               </div>
               <div className="text-sm text-gray-500">Across {accounts.length} account{accounts.length !== 1 ? 's' : ''}</div>
             </div>
@@ -301,7 +303,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-center">
               <div className="text-3xl font-numbers mb-2" style={{ color: 'var(--text-primary)' }}>
-                {formatCurrency(dashboardData.netWorth)}
+                {formatCurrency(netWorth)}
               </div>
               <div className="text-sm text-gray-500">Assets - Liabilities</div>
             </div>
