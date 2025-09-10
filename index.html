@@ -7,14 +7,72 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     
-    <!-- Load Google Fonts directly -->
+    <!-- Load Google Fonts with mobile optimization -->
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black:wght@400&family=Playfair+Display:wght@400;500;600;700&display=swap&subset=latin" rel="stylesheet">
     
-    <!-- Fallback fonts for immediate rendering -->
+    <!-- Mobile font optimization and fallbacks -->
     <style>
-      /* System font stack as ultimate fallback */
+      /* Critical font loading for mobile */
+      @font-face {
+        font-family: 'Archivo';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: local('Archivo'), local('Archivo-Regular');
+      }
+      
+      @font-face {
+        font-family: 'Archivo Black';
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        src: local('Archivo Black'), local('Archivo-Black');
+      }
+      
+      @font-face {
+        font-family: 'Playfair Display';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: local('Playfair Display'), local('PlayfairDisplay-Regular');
+      }
+      
+      /* System font stack as immediate fallback */
       .font-fallback {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      }
+      
+      /* Mobile font loading states */
+      .fonts-loading {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      }
+      
+      .fonts-loaded {
+        font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      }
+      
+      /* Prevent font flash on mobile */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+      
+      /* Mobile-specific font optimizations */
+      @media screen and (max-width: 768px) {
+        body {
+          font-size: 16px;
+          line-height: 1.5;
+          -webkit-text-size-adjust: 100%;
+          text-size-adjust: 100%;
+        }
+        
+        /* Ensure consistent font rendering on mobile */
+        * {
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
       }
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />

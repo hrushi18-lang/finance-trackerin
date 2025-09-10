@@ -3,6 +3,8 @@
  * Handles graceful font loading with fallbacks for mobile deployment
  */
 
+import { mobileFontLoader } from './mobileFontLoader';
+
 interface FontConfig {
   family: string;
   weights: number[];
@@ -135,14 +137,31 @@ class FontLoader {
   /**
    * Preload critical fonts for better performance
    */
-  preloadCriticalFonts(): void {
+  async preloadCriticalFonts(): Promise<void> {
+    // Use mobile font loader for mobile devices
+    if (this.isMobileDevice()) {
+      await mobileFontLoader.preloadCriticalFonts();
+      return;
+    }
+
+    // Use standard font loading for desktop
     const criticalFonts = [
       { family: 'Archivo', weights: [400, 500, 600, 700] },
       { family: 'Archivo Black', weights: [400] },
       { family: 'Playfair Display', weights: [400, 500, 600, 700] }
     ];
 
-    this.loadGoogleFonts(criticalFonts);
+    await this.loadGoogleFonts(criticalFonts);
+  }
+
+  /**
+   * Check if device is mobile
+   */
+  private isMobileDevice(): boolean {
+    if (typeof window === 'undefined') return false;
+    
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           window.innerWidth <= 768;
   }
 
   /**

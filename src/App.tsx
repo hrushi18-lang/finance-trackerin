@@ -18,9 +18,11 @@ import OnboardingWrapper from './components/OnboardingWrapper';
 import RouteHandler from './components/RouteHandler';
 import { AppInitializer } from './components/AppInitializer';
 import { AccessibilityEnhancements, useKeyboardNavigation } from './components/common/AccessibilityEnhancements';
+import { FontLoader, FontLoadingIndicator, FontStatus } from './components/common/FontLoader';
 import { fontLoader } from './utils/fontLoader';
 import { registerSW } from './utils/registerSW';
 import './styles/accessibility.css';
+import './styles/mobile.css';
 
 // Import pages directly to avoid lazy loading issues
 import Auth from './pages/Auth';
@@ -47,6 +49,7 @@ import ThemeSettings from './pages/ThemeSettings';
 import Bills from './pages/Bills';
 import ProfileNew from './pages/ProfileNew';
 import CurrencyDemo from './pages/CurrencyDemo';
+import FontTest from './pages/FontTest';
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -84,20 +87,27 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <ThemeProvider>
-            <AuthProvider>
-              <ProfileProvider>
-                <InternationalizationProvider>
-                  <EnhancedCurrencyProvider>
-                    <PersonalizationProvider>
-                      <FinanceProvider>
-                      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                        <AppInitializer>
-                        <RouteHandler>
-                          <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-                            {/* Accessibility Enhancements */}
-                            <div className="fixed top-4 right-4 z-50">
-                              <AccessibilityEnhancements />
-                            </div>
+            <FontLoader>
+              <AuthProvider>
+                <ProfileProvider>
+                  <InternationalizationProvider>
+                    <EnhancedCurrencyProvider>
+                      <PersonalizationProvider>
+                        <FinanceProvider>
+                        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                          <AppInitializer>
+                          <RouteHandler>
+                            <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
+                              {/* Font Loading Indicator */}
+                              <FontLoadingIndicator />
+                              
+                              {/* Font Status (Development Only) */}
+                              <FontStatus />
+                              
+                              {/* Accessibility Enhancements */}
+                              <div className="fixed top-4 right-4 z-50">
+                                <AccessibilityEnhancements />
+                              </div>
 
 
                             {/* Main Content */}
@@ -347,6 +357,15 @@ function App() {
                               />
                               
                               <Route 
+                                path="/font-test" 
+                                element={
+                                  <ProtectedRoute>
+                                    <FontTest />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
                                 path="/theme-settings" 
                                 element={
                                   <ProtectedRoute>
@@ -360,16 +379,17 @@ function App() {
                               </Routes>
                             </div>
                           </div>
-                        </RouteHandler>
-                        </AppInitializer>
-                      </Router>
-                      <ReactQueryDevtools initialIsOpen={false} />
-                      </FinanceProvider>
-                    </PersonalizationProvider>
-                  </EnhancedCurrencyProvider>
-                </InternationalizationProvider>
-              </ProfileProvider>
-            </AuthProvider>
+                          </RouteHandler>
+                          </AppInitializer>
+                        </Router>
+                        <ReactQueryDevtools initialIsOpen={false} />
+                        </FinanceProvider>
+                      </PersonalizationProvider>
+                    </EnhancedCurrencyProvider>
+                  </InternationalizationProvider>
+                </ProfileProvider>
+              </AuthProvider>
+            </FontLoader>
           </ThemeProvider>
         </ToastProvider>
       </QueryClientProvider>
