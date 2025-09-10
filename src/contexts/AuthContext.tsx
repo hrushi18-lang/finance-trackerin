@@ -7,16 +7,12 @@ import { Preferences } from '@capacitor/preferences';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
-  registerWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   authError: string | null;
   clearAuthError: () => void;
   authStatus: 'idle' | 'loading' | 'success' | 'error';
-  authMessage: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -66,10 +62,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [authMessage, setAuthMessage] = useState<string | null>(null);
 
   const clearAuthError = () => setAuthError(null);
-  const clearAuthMessage = () => setAuthMessage(null);
 
   useEffect(() => {
     // Check for existing session
@@ -255,13 +249,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('Login successful:', data);
       setAuthStatus('success');
 
-        // Get user profile
-        if (data.user) {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', data.user.id)
-            .maybeSingle(); // Use maybeSingle instead of single
+      // Get user profile
+      if (data.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .maybeSingle(); // Use maybeSingle instead of single
           
         if (profileError) {
           console.error('Error fetching profile after login:', profileError);
@@ -273,14 +267,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 .insert([
                   {
                     id: data.user.id,
-                    user_id: data.user.id,
                     email: data.user.email,
                     name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-                    monthly_income: 0,
-                    primary_currency: 'USD',
-                    display_currency: 'USD',
-                    auto_convert: true,
-                    show_original_amounts: true,
                   }
                 ])
                 .select()
@@ -418,47 +406,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const loginWithGoogle = async () => {
-    setAuthStatus('loading');
-    setAuthError(null);
-    setAuthMessage('Redirecting to Google...');
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        }
-      });
-
-      if (error) {
-        console.error('Google login error:', error);
-        setAuthError(error.message);
-        setAuthStatus('error');
-        setAuthMessage(null);
-        throw error;
-      }
-
-      // The OAuth flow will redirect, so we don't need to handle success here
-      setAuthMessage('Please complete authentication in the popup window...');
-    } catch (error: any) {
-      console.error('Google login error:', error);
-      setAuthError(error.message || 'Google login failed');
-      setAuthStatus('error');
-      setAuthMessage(null);
-      throw error;
-    }
-  };
-
-  const registerWithGoogle = async () => {
-    // For Google OAuth, sign up and sign in are the same
-    return loginWithGoogle();
-  };
-
   const logout = async () => {
     setLoading(true);
     try {
@@ -478,16 +425,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value = {
     user,
     loading,
-    isAuthenticated: !!user,
     login,
     register,
-    loginWithGoogle,
-    registerWithGoogle,
     logout,
     authError,
     clearAuthError,
     authStatus,
-    authMessage,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

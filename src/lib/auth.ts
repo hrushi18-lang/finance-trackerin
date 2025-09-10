@@ -5,6 +5,7 @@
 
 import { supabase } from './supabase';
 import { Database } from '../types/supabase';
+import { offlineStorage } from './offline-storage';
 
 export interface UserProfile {
   id: string;
@@ -56,6 +57,7 @@ class AuthManager {
           await this.loadUserProfile(session.user.id);
         } else if (event === 'SIGNED_OUT') {
           this.updateAuthState({ user: null, loading: false, error: null });
+          await offlineStorage.clearLocalData();
         }
       });
     } catch (error) {
@@ -68,23 +70,28 @@ class AuthManager {
 
   private async loadUserProfile(userId: string) {
     try {
-      // Get profile from Supabase
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // Try to get profile from local storage first
+      let profile = await offlineStorage.getById<UserProfile>('profiles', userId);
+      
+      if (!profile) {
+        // If not in local storage, fetch from Supabase
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
 
-      let profile;
-      if (error) {
-        // If profile doesn't exist, create it
-        const { data: authUser } = await supabase.auth.getUser();
-        if (authUser.user) {
-          profile = await this.createUserProfile(authUser.user);
+        if (error) {
+          // If profile doesn't exist, create it
+          const { data: authUser } = await supabase.auth.getUser();
+          if (authUser.user) {
+            profile = await this.createUserProfile(authUser.user);
+          }
+        } else {
+          profile = data;
+          // Save to local storage
+          await offlineStorage.saveToLocal('profiles', profile);
         }
-      } else {
-        profile = data;
-        // Save to local storage
       }
 
       this.updateAuthState({ 
@@ -101,17 +108,11 @@ class AuthManager {
   }
 
   private async createUserProfile(authUser: any): Promise<UserProfile> {
-    const profile = {
+    const profile: UserProfile = {
       id: authUser.id,
-      user_id: authUser.id,
       email: authUser.email || '',
       name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
       avatar_url: authUser.user_metadata?.avatar_url || null,
-      monthly_income: 0,
-      primary_currency: 'USD',
-      display_currency: 'USD',
-      auto_convert: true,
-      show_original_amounts: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -142,6 +143,8 @@ class AuthManager {
       console.warn('Error creating profile in Supabase:', error);
     }
 
+    // Save to local storage regardless
+    await offlineStorage.saveToLocal('profiles', profile);
     return profile;
   }
 
@@ -245,7 +248,7 @@ class AuthManager {
       };
 
       // Update in Supabase if online
-      // Always update in Supabase for online-only mode
+      if (offlineStorage.isOnlineMode()) {
         const { error } = await supabase
           .from('profiles')
           .update(updates)
@@ -254,8 +257,10 @@ class AuthManager {
         if (error) {
           console.warn('Failed to update profile in Supabase:', error);
         }
+      }
 
       // Update locally
+      await offlineStorage.saveToLocal('profiles', updatedProfile);
       this.updateAuthState({ user: updatedProfile });
 
       return { success: true };
@@ -283,40 +288,6 @@ class AuthManager {
       const errorMessage = error instanceof Error ? error.message : 'Reset failed';
       return { success: false, error: errorMessage };
     }
-  }
-
-  async signInWithGoogle() {
-    this.updateAuthState({ loading: true, error: null });
-
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        }
-      });
-
-      if (error) {
-        this.updateAuthState({ error: error.message, loading: false });
-        return { success: false, error: error.message };
-      }
-
-      // The OAuth flow will redirect, so we don't need to handle success here
-      return { success: true };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Google sign in failed';
-      this.updateAuthState({ error: errorMessage, loading: false });
-      return { success: false, error: errorMessage };
-    }
-  }
-
-  async signUpWithGoogle() {
-    // For Google OAuth, sign up and sign in are the same
-    return this.signInWithGoogle();
   }
 
   // State management

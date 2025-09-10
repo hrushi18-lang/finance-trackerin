@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChevronDown, Plus, X, Search } from 'lucide-react';
 import { Button } from './Button';
 import { Input } from './Input';
-import { getCategoryColor, getCategoryIcon, getAllCategories, addCustomCategory, getCustomCategories, DEFAULT_CATEGORIES } from '../../utils/categories';
-import { useFinance } from '../../contexts/FinanceContext';
+import { getCategoryColor, getCategoryIcon, getAllCategories, addCustomCategory } from '../../utils/categories';
 
 interface CategorySelectorProps {
   value: string;
@@ -12,7 +11,6 @@ interface CategorySelectorProps {
   placeholder?: string;
   className?: string;
   error?: string;
-  transactionType?: 'income' | 'expense' | 'transfer';
 }
 
 export const CategorySelector: React.FC<CategorySelectorProps> = ({
@@ -21,53 +19,14 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   type,
   placeholder = 'Select category',
   className = '',
-  error,
-  transactionType
+  error
 }) => {
-  const { addUserCategory, userCategories } = useFinance();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newCategory, setNewCategory] = useState('');
-  const [isAdding, setIsAdding] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Reset search term when transaction type changes
-  useEffect(() => {
-    setSearchTerm('');
-    setIsLoading(true);
-    // Simulate a brief loading state to show the interface is updating
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [transactionType]);
-
-  // Get categories based on type and transaction type
-  const getFilteredCategories = () => {
-    if (type === 'transaction' && transactionType) {
-      const baseCategories = transactionType === 'income' 
-        ? DEFAULT_CATEGORIES.TRANSACTION.INCOME
-        : transactionType === 'expense'
-        ? DEFAULT_CATEGORIES.TRANSACTION.EXPENSE
-        : [...DEFAULT_CATEGORIES.TRANSACTION.INCOME, ...DEFAULT_CATEGORIES.TRANSACTION.EXPENSE];
-      
-      // Get user categories from database
-      const userCategoriesForType = userCategories.filter(cat => cat.type === transactionType);
-      const userCategoryNames = userCategoriesForType.map(cat => cat.name);
-      
-      return [...baseCategories, ...userCategoryNames];
-    }
-    
-    // For non-transaction types, get default + user categories
-    const defaultCategories = getAllCategories(type);
-    const userCategoriesForType = userCategories.filter(cat => cat.type === type);
-    const userCategoryNames = userCategoriesForType.map(cat => cat.name);
-    
-    return [...defaultCategories, ...userCategoryNames];
-  };
-
-  const categories = getFilteredCategories();
+  const categories = getAllCategories(type);
   const filteredCategories = categories.filter(category =>
     category.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -78,28 +37,13 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
     setSearchTerm('');
   };
 
-  const handleAddCategory = async () => {
+  const handleAddCategory = () => {
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
-      try {
-        setIsAdding(true);
-        const categoryType = type === 'transaction' && transactionType ? transactionType : type as any;
-        await addUserCategory({
-          name: newCategory.trim(),
-          type: categoryType,
-          color: getCategoryColor(newCategory.trim()),
-          icon: getCategoryIcon(newCategory.trim()),
-          isActive: true
-        });
-        onChange(newCategory.trim());
-        setNewCategory('');
-        setShowAddForm(false);
-        setIsOpen(false);
-      } catch (error) {
-        console.error('Error adding category:', error);
-        alert(`Failed to add category: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      } finally {
-        setIsAdding(false);
-      }
+      addCustomCategory(newCategory.trim(), type);
+      onChange(newCategory.trim());
+      setNewCategory('');
+      setShowAddForm(false);
+      setIsOpen(false);
     }
   };
 
@@ -114,16 +58,13 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        disabled={isLoading}
         className={`w-full bg-black/40 border border-white/20 text-white rounded-lg px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-primary-500/20 ${
           error ? 'border-red-500' : ''
-        } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+        }`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            {isLoading ? (
-              <span className="text-gray-400">Loading categories...</span>
-            ) : value ? (
+            {value ? (
               <>
                 <div 
                   className="w-3 h-3 rounded-full"
@@ -202,10 +143,10 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                     type="button"
                     size="sm"
                     onClick={handleAddCategory}
-                    disabled={!newCategory.trim() || categories.includes(newCategory.trim()) || isAdding}
+                    disabled={!newCategory.trim() || categories.includes(newCategory.trim())}
                     className="flex-1"
                   >
-                    {isAdding ? 'Adding...' : 'Add'}
+                    Add
                   </Button>
                   <Button
                     type="button"

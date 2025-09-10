@@ -5,7 +5,7 @@ import {
   BarChart3, 
   CreditCard, 
   Calendar, 
-  Building2,
+  User,
   Plus,
   Grid3X3
 } from 'lucide-react';
@@ -20,7 +20,7 @@ export const BottomNavigation: React.FC = () => {
     { path: '/overview', icon: BarChart3, label: 'Overview' },
     { path: '/cards', icon: Grid3X3, label: 'Cards' },
     { path: '/transactions', icon: Calendar, label: 'Transactions' },
-    { path: '/accounts', icon: Building2, label: 'Accounts' },
+    { path: '/profile', icon: User, label: 'Profile' },
   ];
 
   const handleTabClick = (path: string) => {
@@ -31,15 +31,14 @@ export const BottomNavigation: React.FC = () => {
   const isActive = (path: string) => activeTab === path;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50">
-      <div
-        className="px-6 py-4 mx-auto max-w-4xl rounded-t-3xl"
-        style={{
+    <div className="fixed bottom-4 left-4 right-4 z-50">
+      <div 
+        className="px-6 py-4 mx-auto max-w-4xl rounded-3xl"
+        style={{ 
           backgroundColor: 'var(--primary)',
-          boxShadow: '0 -8px 32px rgba(0,0,0,0.12), 0 -2px 8px rgba(0,0,0,0.08)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: 'none'
+          backdropFilter: 'blur(20px)'
         }}
       >
         <div className="flex items-center justify-between relative">

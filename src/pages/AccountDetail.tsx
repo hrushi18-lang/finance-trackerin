@@ -21,7 +21,6 @@ import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
-import AccountSettings from '../components/accounts/AccountSettings';
 
 const AccountDetail: React.FC = () => {
   const { accountId } = useParams<{ accountId: string }>();
@@ -184,8 +183,6 @@ const AccountDetail: React.FC = () => {
       </div>
 
       <div className="px-6 space-y-6">
-        {/* Account Settings */}
-        <AccountSettings account={account} />
         {/* Spending Analytics */}
         <div>
           <div className="flex items-center justify-between mb-4">

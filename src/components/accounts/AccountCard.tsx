@@ -1,169 +1,166 @@
-import React, { useState, useEffect } from 'react';
-import { Building, Smartphone, CreditCard, PiggyBank, Eye, EyeOff, MoreHorizontal } from 'lucide-react';
-import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
-import { useProfile } from '../../contexts/ProfileContext';
+import React from 'react';
+import { FinancialAccount } from '../../lib/finance-manager';
+import { 
+  CreditCard, 
+  Wallet, 
+  Building2, 
+  PiggyBank, 
+  Banknote,
+  TrendingUp,
+  Eye,
+  EyeOff
+} from 'lucide-react';
 
 interface AccountCardProps {
-  account: {
-    id: string;
-    name: string;
-    type: string;
-    balance: number;
-    currency: string;
-    institution?: string;
-    isVisible: boolean;
-  };
-  onEdit?: () => void;
-  onDelete?: () => void;
-  onToggleVisibility?: () => void;
-  className?: string;
+  account: FinancialAccount;
+  onEdit?: (account: FinancialAccount) => void;
+  onDelete?: (account: FinancialAccount) => void;
+  showBalance?: boolean;
+  onToggleVisibility?: (account: FinancialAccount) => void;
 }
 
-const AccountCard: React.FC<AccountCardProps> = ({
+export const AccountCard: React.FC<AccountCardProps> = ({
   account,
   onEdit,
   onDelete,
-  onToggleVisibility,
-  className = ""
+  showBalance = true,
+  onToggleVisibility
 }) => {
-  const { convertAmount, formatCurrency, getCurrencyInfo } = useEnhancedCurrency();
-  const { userProfile } = useProfile();
-  const [convertedBalance, setConvertedBalance] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const currencyInfo = getCurrencyInfo(account.currency);
-  const primaryCurrency = userProfile?.primaryCurrency || 'USD';
-
-  // Convert balance to primary currency
-  useEffect(() => {
-    const convertBalance = async () => {
-      if (account.currency === primaryCurrency) {
-        setConvertedBalance(account.balance);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const converted = await convertAmount(account.balance, account.currency, primaryCurrency);
-        setConvertedBalance(converted);
-      } catch (error) {
-        console.error('Failed to convert balance:', error);
-        setConvertedBalance(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    convertBalance();
-  }, [account.balance, account.currency, primaryCurrency, convertAmount]);
-
-  const getAccountIcon = (type: string) => {
+  const getAccountIcon = (type: FinancialAccount['type']) => {
     switch (type) {
       case 'bank_savings':
       case 'bank_current':
       case 'bank_student':
-        return <Building className="w-5 h-5" />;
+        return <Building2 size={20} />;
       case 'digital_wallet':
-        return <Smartphone className="w-5 h-5" />;
+        return <Wallet size={20} />;
+      case 'cash':
+        return <Banknote size={20} />;
       case 'credit_card':
-        return <CreditCard className="w-5 h-5" />;
-      case 'goals_vault':
-        return <PiggyBank className="w-5 h-5" />;
+        return <CreditCard size={20} />;
+      case 'investment':
+        return <TrendingUp size={20} />;
       default:
-        return <Building className="w-5 h-5" />;
+        return <PiggyBank size={20} />;
     }
   };
 
-  const getAccountTypeColor = (type: string) => {
+  const getAccountColor = (type: FinancialAccount['type']) => {
     switch (type) {
       case 'bank_savings':
+        return 'text-green-600';
       case 'bank_current':
+        return 'text-blue-600';
       case 'bank_student':
-        return 'text-blue-600 bg-blue-50';
+        return 'text-purple-600';
       case 'digital_wallet':
-        return 'text-purple-600 bg-purple-50';
+        return 'text-orange-600';
+      case 'cash':
+        return 'text-yellow-600';
       case 'credit_card':
-        return 'text-red-600 bg-red-50';
-      case 'goals_vault':
-        return 'text-green-600 bg-green-50';
+        return 'text-red-600';
+      case 'investment':
+        return 'text-indigo-600';
       default:
-        return 'text-gray-600 bg-gray-50';
+        return 'text-gray-600';
     }
   };
 
-  const formatAccountBalance = (amount: number, currency: string) => {
-    return formatCurrency(amount, currency, true);
+  const formatBalance = (balance: number, currency: string = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(balance);
   };
 
-  const showConversion = account.currency !== primaryCurrency && convertedBalance !== null;
+  const formatAccountType = (type: FinancialAccount['type']) => {
+    return type.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
 
   return (
-    <div className={`bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 ${className}`}>
-      <div className="flex items-start justify-between mb-3">
+    <div
+      className="p-4 rounded-2xl transition-all duration-200 hover:scale-105"
+      style={{
+        backgroundColor: 'var(--background)',
+        boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+      }}
+    >
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-3">
-          <div className={`p-2 rounded-lg ${getAccountTypeColor(account.type)}`}>
+          <div className={`p-2 rounded-lg ${getAccountColor(account.type)}`} style={{ backgroundColor: 'var(--background-secondary)' }}>
             {getAccountIcon(account.type)}
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 text-sm">{account.name}</h3>
-            {account.institution && (
-              <p className="text-xs text-gray-500">{account.institution}</p>
-            )}
+            <h3 className="font-heading text-sm" style={{ color: 'var(--text-primary)' }}>
+              {account.name}
+            </h3>
+            <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+              {formatAccountType(account.type)}
+            </p>
           </div>
         </div>
         
-        <div className="flex items-center space-x-1">
-          {!account.isVisible && (
-            <EyeOff className="w-4 h-4 text-gray-400" />
+        <div className="flex items-center space-x-2">
+          {onToggleVisibility && (
+            <button
+              onClick={() => onToggleVisibility(account)}
+              className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              {account.is_visible ? (
+                <Eye size={16} style={{ color: 'var(--text-secondary)' }} />
+              ) : (
+                <EyeOff size={16} style={{ color: 'var(--text-tertiary)' }} />
+              )}
+            </button>
           )}
-          <MoreHorizontal className="w-4 h-4 text-gray-400" />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        {/* Native Currency Balance */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500">Balance</span>
-          <div className="text-right">
-            <div className="font-semibold text-gray-900">
-              {formatAccountBalance(account.balance, account.currency)}
-            </div>
-            {currencyInfo && (
-              <div className="text-xs text-gray-500 flex items-center space-x-1">
-                <span>{currencyInfo.flag_emoji}</span>
-                <span>{currencyInfo.name}</span>
-              </div>
+          
+          <div className="flex space-x-1">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(account)}
+                className="px-2 py-1 text-xs rounded-lg hover:bg-gray-100 transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                Edit
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={() => onDelete(account)}
+                className="px-2 py-1 text-xs rounded-lg hover:bg-red-100 transition-colors text-red-600"
+              >
+                Delete
+              </button>
             )}
           </div>
         </div>
-
-        {/* Converted Balance (if different currency) */}
-        {showConversion && (
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-            <span className="text-xs text-gray-500">In {primaryCurrency}</span>
-            <div className="text-right">
-              {isLoading ? (
-                <div className="text-sm text-gray-400">Converting...</div>
-              ) : (
-                <div className="font-medium text-gray-700">
-                  {formatAccountBalance(convertedBalance!, primaryCurrency)}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Account Type Badge */}
-        <div className="flex items-center justify-between pt-2">
-          <span className="text-xs text-gray-500">Type</span>
-          <span className="text-xs font-medium text-gray-600 capitalize">
-            {account.type.replace('_', ' ')}
-          </span>
-        </div>
       </div>
+
+      {showBalance && account.is_visible && (
+        <div className="mb-3">
+          <p className="text-2xl font-heading" style={{ color: 'var(--text-primary)' }}>
+            {formatBalance(account.balance, account.currency)}
+          </p>
+        </div>
+      )}
+
+      {account.institution && (
+        <div className="mb-2">
+          <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+            {account.institution}
+          </p>
+        </div>
+      )}
+
+      {account.platform && (
+        <div>
+          <p className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
+            {account.platform}
+          </p>
+        </div>
+      )}
     </div>
   );
 };
-
-export { AccountCard };
-export default AccountCard;

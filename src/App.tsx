@@ -1,25 +1,23 @@
-import { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from './contexts/AuthContext';
 import { FinanceProvider } from './contexts/FinanceContext';
-import { ProfileProvider } from './contexts/ProfileContext';
 import { InternationalizationProvider } from './contexts/InternationalizationContext';
-import { EnhancedCurrencyProvider } from './contexts/EnhancedCurrencyContext';
+import { CurrencyConversionProvider } from './contexts/CurrencyConversionContext';
 import { PersonalizationProvider } from './contexts/PersonalizationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/common/Toast';
+import { LoadingScreen } from './components/common/LoadingScreen';
 import { ErrorFallback } from './components/common/ErrorFallback';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { BottomNavigation } from './components/layout/BottomNavigation';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import OnboardingWrapper from './components/OnboardingWrapper';
-import RouteHandler from './components/RouteHandler';
+import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
+import { SyncStatus } from './components/sync/SyncStatus';
 import { AppInitializer } from './components/AppInitializer';
 import { AccessibilityEnhancements, useKeyboardNavigation } from './components/common/AccessibilityEnhancements';
-import { fontLoader } from './utils/fontLoader';
-import { registerSW } from './utils/registerSW';
 import './styles/accessibility.css';
 
 // Import pages directly to avoid lazy loading issues
@@ -27,12 +25,12 @@ import Auth from './pages/Auth';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import AddTransaction from './pages/AddTransaction';
+import Transactions from './pages/Transactions';
 import TransactionsCalendar from './pages/TransactionsCalendar';
 import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
 import Goals from './pages/Goals';
 import Liabilities from './pages/Liabilities';
-import { EnhancedLiabilities } from './pages/EnhancedLiabilities';
 import Budgets from './pages/Budgets';
 import Overview from './pages/Overview';
 import Cards from './pages/Cards';
@@ -46,7 +44,6 @@ import Settings from './pages/Settings';
 import ThemeSettings from './pages/ThemeSettings';
 import Bills from './pages/Bills';
 import ProfileNew from './pages/ProfileNew';
-import CurrencyDemo from './pages/CurrencyDemo';
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -73,45 +70,48 @@ function App() {
   // Enable keyboard navigation
   useKeyboardNavigation();
 
-  // Initialize font loading and service worker
-  useEffect(() => {
-    fontLoader.preloadCriticalFonts();
-    registerSW();
-  }, []);
-
   return (
     <ErrorBoundary fallback={<ErrorFallback />}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <ThemeProvider>
             <AuthProvider>
-              <ProfileProvider>
-                <InternationalizationProvider>
-                  <EnhancedCurrencyProvider>
-                    <PersonalizationProvider>
-                      <FinanceProvider>
-                      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                        <AppInitializer>
-                        <RouteHandler>
-                          <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-                            {/* Accessibility Enhancements */}
-                            <div className="fixed top-4 right-4 z-50">
-                              <AccessibilityEnhancements />
-                            </div>
+              <InternationalizationProvider>
+                <CurrencyConversionProvider>
+                  <PersonalizationProvider>
+                    <FinanceProvider>
+                    <AppInitializer>
+                      <Router>
+                        <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
+                          {/* Accessibility Enhancements */}
+                          <div className="fixed top-4 right-4 z-50">
+                            <AccessibilityEnhancements />
+                          </div>
 
+                          {/* Sync Status Indicator */}
+                          <div className="fixed top-4 left-4 z-50">
+                            <SyncStatus />
+                          </div>
 
-                            {/* Main Content */}
-                            <div className="relative z-10">
-                              <Routes>
+                          {/* Main Content */}
+                          <div className="relative z-10">
+                            <Routes>
                               {/* Public Routes */}
                               <Route path="/auth" element={<Auth />} />
                               
-                              {/* Onboarding Route - Only for new users */}
+                              {/* Onboarding Route */}
                               <Route 
                                 path="/onboarding" 
                                 element={
                                   <ProtectedRoute>
-                                    <OnboardingWrapper />
+                                    <OnboardingFlow 
+                                      onComplete={() => {
+                                        // Always redirect to dashboard after onboarding
+                                        // Use SPA navigation instead of hard reload
+                                        const navigateEvent = new CustomEvent('app:navigate', { detail: { to: '/dashboard' } });
+                                        window.dispatchEvent(navigateEvent);
+                                      }} 
+                                    />
                                   </ProtectedRoute>
                                 } 
                               />
@@ -248,16 +248,6 @@ function App() {
                               />
                               
                               <Route 
-                                path="/liabilities/enhanced" 
-                                element={
-                                  <ProtectedRoute>
-                                    <EnhancedLiabilities />
-                                    <BottomNavigation />
-                                  </ProtectedRoute>
-                                } 
-                              />
-                              
-                              <Route 
                                 path="/budgets" 
                                 element={
                                   <ProtectedRoute>
@@ -338,15 +328,6 @@ function App() {
                               />
                               
                               <Route 
-                                path="/currency-demo" 
-                                element={
-                                  <ProtectedRoute>
-                                    <CurrencyDemo />
-                                  </ProtectedRoute>
-                                } 
-                              />
-                              
-                              <Route 
                                 path="/theme-settings" 
                                 element={
                                   <ProtectedRoute>
@@ -358,17 +339,15 @@ function App() {
                               {/* Catch all route */}
                               <Route path="*" element={<Navigate to="/" replace />} />
                               </Routes>
-                            </div>
                           </div>
-                        </RouteHandler>
-                        </AppInitializer>
+                        </div>
                       </Router>
                       <ReactQueryDevtools initialIsOpen={false} />
-                      </FinanceProvider>
-                    </PersonalizationProvider>
-                  </EnhancedCurrencyProvider>
-                </InternationalizationProvider>
-              </ProfileProvider>
+                    </AppInitializer>
+                    </FinanceProvider>
+                  </PersonalizationProvider>
+                </CurrencyConversionProvider>
+              </InternationalizationProvider>
             </AuthProvider>
           </ThemeProvider>
         </ToastProvider>

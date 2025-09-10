@@ -27,10 +27,12 @@ import {
   Palette
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import CustomCategoriesManager from '../components/settings/CustomCategoriesManager';
+import { financeManager } from '../lib/finance-manager';
+import { offlineStorage } from '../lib/offline-storage';
 
 const Settings: React.FC = () => {
   const { user, signOut } = useAuth();
+  const { syncData } = useFinance();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   
@@ -40,7 +42,6 @@ const Settings: React.FC = () => {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
-  const [showCustomCategories, setShowCustomCategories] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -60,8 +61,7 @@ const Settings: React.FC = () => {
   const handleSyncData = async () => {
     setIsSyncing(true);
     try {
-      // Data sync not needed in online-only mode
-      console.log('Data sync not needed in online-only mode');
+      await syncData();
       // Show success message
     } catch (error) {
       console.error('Error syncing data:', error);
@@ -73,8 +73,7 @@ const Settings: React.FC = () => {
 
   const handleExportData = async () => {
     try {
-      // Export functionality not available in online-only mode
-      const data = { message: 'Export not available in online-only mode' };
+      const data = await financeManager.exportAllData();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -96,8 +95,7 @@ const Settings: React.FC = () => {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      // Import functionality not available in online-only mode
-      console.log('Import functionality not available in online-only mode');
+      await financeManager.importAllData(data);
       // Show success message
     } catch (error) {
       console.error('Error importing data:', error);
@@ -107,11 +105,10 @@ const Settings: React.FC = () => {
 
   const handleClearOfflineData = async () => {
     try {
-      // Clear any cached data
-      console.log('Offline data clearing not needed in online-only mode');
+      await offlineStorage.clear();
       // Show success message
     } catch (error) {
-      console.error('Error clearing data:', error);
+      console.error('Error clearing offline data:', error);
     }
   };
 
@@ -194,17 +191,6 @@ const Settings: React.FC = () => {
       ]
     },
     {
-      title: 'Categories',
-      items: [
-        {
-          icon: <Edit size={20} />,
-          title: 'Custom Categories',
-          subtitle: 'Manage your custom income and expense categories',
-          onClick: () => setShowCustomCategories(true)
-        }
-      ]
-    },
-    {
       title: 'Appearance',
       items: [
         {
@@ -244,12 +230,6 @@ const Settings: React.FC = () => {
           title: 'About',
           subtitle: 'App version and information',
           onClick: () => {}
-        },
-        {
-          icon: <Database size={20} />,
-          title: 'Currency Demo',
-          subtitle: 'Test multi-currency features and live exchange rates',
-          onClick: () => navigate('/currency-demo')
         }
       ]
     },
@@ -663,16 +643,6 @@ const Settings: React.FC = () => {
             </div>
           </div>
         </div>
-      </Modal>
-
-      {/* Custom Categories Modal */}
-      <Modal
-        isOpen={showCustomCategories}
-        onClose={() => setShowCustomCategories(false)}
-        title="Custom Categories"
-        size="lg"
-      >
-        <CustomCategoriesManager />
       </Modal>
     </div>
   );

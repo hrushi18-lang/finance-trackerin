@@ -74,7 +74,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div 
         ref={modalRef}
         className={`relative w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl shadow-xl animate-slide-up sm:animate-scale-in ${className}`} 
-        style={{ backgroundColor: 'var(--background)', paddingBottom: '80px' }}
+        style={{ backgroundColor: 'var(--background)' }}
       >
         {/* Mobile drag handle */}
         <div className="flex justify-center pt-3 pb-2 sm:hidden">

@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
-import { useEnhancedCurrency } from '../contexts/EnhancedCurrencyContext';
 import { format, isBefore, differenceInDays } from 'date-fns';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 import { Button } from '../components/common/Button';
@@ -30,7 +29,6 @@ const GoalDetail: React.FC = () => {
     getGoalTransactions
   } = useFinance();
   const { formatCurrency } = useInternationalization();
-  const { convertAmount } = useEnhancedCurrency();
   
   const [showAddContribution, setShowAddContribution] = useState(false);
   const [showEditGoal, setShowEditGoal] = useState(false);
@@ -94,47 +92,22 @@ const GoalDetail: React.FC = () => {
       const amount = parseFloat(contributionAmount);
       if (isNaN(amount) || amount <= 0) return;
 
-      const targetAccount = accounts.find(acc => acc.id === goal.accountId) || accounts[0];
-      if (!targetAccount) return;
-
-      // Convert amount to account currency if needed
-      let finalAmount = amount;
-      let originalAmount = amount;
-      let originalCurrency = 'USD'; // Default currency for user input
-      let exchangeRateUsed = 1.0;
-
-      if (targetAccount.currency !== 'USD') {
-        try {
-          const amountInMinorUnits = Math.round(amount * 100);
-          const result = await convertAmount(amountInMinorUnits, 'USD', targetAccount.currency);
-          if (result) {
-            finalAmount = result.convertedAmount / 100;
-            exchangeRateUsed = result.fxRate;
-          }
-        } catch (error) {
-          console.error('Currency conversion error:', error);
-        }
-      }
-
       // Add transaction
       await addTransaction({
         type: 'income',
-        amount: finalAmount,
+        amount: amount,
         description: `Contribution to ${goal.title}`,
         category: 'Goal Contribution',
         date: new Date(),
-        accountId: targetAccount.id,
+        accountId: goal.accountId || accounts[0]?.id,
         affectsBalance: true,
         status: 'completed',
-        currencyCode: targetAccount.currency,
-        originalAmount: originalAmount,
-        originalCurrency: originalCurrency,
-        exchangeRateUsed: exchangeRateUsed
+        // linkedGoalId: goal.id
       });
 
-      // Update goal with converted amount
+      // Update goal
       await updateGoal(goal.id, {
-        currentAmount: goal.currentAmount + finalAmount
+        currentAmount: goal.currentAmount + amount
       });
 
       setContributionAmount('');

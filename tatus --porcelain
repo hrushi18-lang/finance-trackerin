@@ -8,5 +8,3 @@
 [33m55c8860[m Added 20250821183430_spring_coast.sql
 [33m6f3c880[m Update repository with latest changes - enhanced database features, mobile deployment, and documentation
 [33mbc240ec[m 	new file:   src/components/AppInitializer.tsx 	modified:   src/App.tsx
-package.json
-supabase/migrations/20250131000000_multi_currency_support.sql

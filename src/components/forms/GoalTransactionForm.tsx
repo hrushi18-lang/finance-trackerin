@@ -430,7 +430,7 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
           <Input
             label="Amount"
             type="number"
-            step="any"
+            step="0.01"
             icon={<CurrencyIcon currencyCode={currency.code} className={transactionType === 'add' ? 'text-success-400' : 'text-warning-400'} />}
             {...register('amount', {
               required: 'Amount is required',
