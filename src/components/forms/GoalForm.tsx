@@ -66,12 +66,19 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       // Sanitize numeric fields
       const sanitizedData = sanitizeFinancialData(data, ['targetAmount', 'currentAmount']);
       
+      // Transform to snake_case for validation
+      const validationData = {
+        title: sanitizedData.title,
+        description: sanitizedData.description,
+        target_amount: toNumber(sanitizedData.targetAmount),
+        current_amount: toNumber(sanitizedData.currentAmount),
+        target_date: new Date(data.targetDate),
+        category: sanitizedData.category,
+        account_id: sanitizedData.accountIds?.[0] || '', // Use first selected account
+      };
+      
       // Validate using schema
-      const validatedData = validateGoal({
-        ...sanitizedData,
-        targetAmount: toNumber(sanitizedData.targetAmount),
-        currentAmount: toNumber(sanitizedData.currentAmount),
-      });
+      const validatedData = validateGoal(validationData);
       
       await onSubmit({
         ...validatedData,

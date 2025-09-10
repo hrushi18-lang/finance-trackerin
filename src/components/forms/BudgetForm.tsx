@@ -69,10 +69,19 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
       
       // Sanitize and validate data
       const sanitizedData = sanitizeFinancialData(data, ['amount']);
-      const validatedData = validateBudget({
-        ...sanitizedData,
+      
+      // Transform to snake_case for validation
+      const validationData = {
+        category: sanitizedData.category,
         amount: toNumber(sanitizedData.amount),
-      });
+        spent: 0, // New budget starts with 0 spent
+        period: sanitizedData.period,
+        start_date: new Date(), // Start from today
+        end_date: new Date(Date.now() + (sanitizedData.period === 'weekly' ? 7 : sanitizedData.period === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000), // Calculate end date
+        account_id: sanitizedData.accountIds?.[0] || undefined, // Use first selected account
+      };
+      
+      const validatedData = validateBudget(validationData);
       
       await onSubmit({
         ...validatedData,
