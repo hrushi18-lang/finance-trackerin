@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFinance } from '../contexts/FinanceContext';
-import { financeManager } from '../lib/finance-manager';
 import { AccountCard } from '../components/accounts/AccountCard';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
@@ -31,11 +30,9 @@ const Dashboard: React.FC = () => {
     accounts, 
     transactions, 
     goals, 
-    budgets, 
     liabilities, 
     bills,
-    isLoading,
-    error 
+    addAccount
   } = useFinance();
   
   const [showAccountForm, setShowAccountForm] = useState(false);
@@ -50,14 +47,14 @@ const Dashboard: React.FC = () => {
   const totalExpenses = transactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + (t.amount || 0), 0);
-  const netWorth = totalBalance - liabilities.reduce((sum, l) => sum + (l.remaining_amount || 0), 0);
+  const netWorth = totalBalance - liabilities.reduce((sum, l) => sum + (l.remainingAmount || 0), 0);
   
-  const activeGoals = goals.filter(g => !g.is_archived);
-  const totalGoalProgress = activeGoals.reduce((sum, g) => sum + ((g.current_amount || 0) / g.target_amount), 0);
+  const activeGoals = goals.filter(g => !(g as any).is_archived);
+  const totalGoalProgress = activeGoals.reduce((sum, g) => sum + ((g.currentAmount || 0) / g.targetAmount), 0);
   const averageGoalProgress = activeGoals.length > 0 ? totalGoalProgress / activeGoals.length : 0;
 
   const upcomingBills = bills.filter(b => 
-    new Date(b.due_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    new Date(b.dueDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   );
 
   const recentTransactions = transactions
@@ -72,6 +69,15 @@ const Dashboard: React.FC = () => {
   const handleEditAccount = (account: any) => {
     setSelectedAccount(account);
     setShowAccountForm(true);
+  };
+
+  const handleAccountSubmit = async (data: any) => {
+    try {
+      await addAccount(data);
+      setShowAccountForm(false);
+    } catch (error) {
+      console.error('Error creating account:', error);
+    }
   };
 
   const handleQuickAction = (action: string) => {
@@ -93,33 +99,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--primary)' }}></div>
-          <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: 'var(--background)' }}>
-        <div className="text-center">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-xl font-heading mb-2" style={{ color: 'var(--text-primary)' }}>Something went wrong</h2>
-          <p className="text-sm font-body mb-4" style={{ color: 'var(--text-secondary)' }}>
-            {error.message}
-          </p>
-          <Button variant="primary" onClick={() => window.location.reload()}>
-            Try Again
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--background)' }}>
@@ -128,7 +107,7 @@ const Dashboard: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
             <div>
             <h1 className="text-2xl font-heading" style={{ color: 'var(--text-primary)' }}>
-              Welcome back, {user?.user_metadata?.name || 'User'}!
+              Welcome back, {user?.email || 'User'}!
               </h1>
             <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
               {format(new Date(), 'EEEE, MMMM do, yyyy')}
@@ -277,7 +256,7 @@ const Dashboard: React.FC = () => {
               </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {accounts.map((account) => (
+            {accounts.map((account: any) => (
               <AccountCard
                 key={account.id}
                 account={account}
@@ -333,7 +312,7 @@ const Dashboard: React.FC = () => {
                     {goal.description || 'Untitled Goal'}
                   </h3>
                   <span className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
-                    {Math.round(((goal.current_amount || 0) / goal.target_amount) * 100)}%
+                    {Math.round(((goal.currentAmount || 0) / goal.targetAmount) * 100)}%
                 </span>
               </div>
                 <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
@@ -341,13 +320,13 @@ const Dashboard: React.FC = () => {
                     className="h-2 rounded-full transition-all duration-300"
                     style={{
                       backgroundColor: 'var(--primary)',
-                      width: `${Math.min(((goal.current_amount || 0) / goal.target_amount) * 100, 100)}%`
+                      width: `${Math.min(((goal.currentAmount || 0) / goal.targetAmount) * 100, 100)}%`
                     }}
                   />
                 </div>
                 <div className="flex items-center justify-between text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
-                  <span>${(goal.current_amount || 0).toLocaleString()}</span>
-                  <span>${(goal.target_amount || 0).toLocaleString()}</span>
+                  <span>${(goal.currentAmount || 0).toLocaleString()}</span>
+                  <span>${(goal.targetAmount || 0).toLocaleString()}</span>
                 </div>
               </div>
             ))}
@@ -430,6 +409,7 @@ const Dashboard: React.FC = () => {
       <AccountForm
         isOpen={showAccountForm}
         onClose={() => setShowAccountForm(false)}
+        onSubmit={handleAccountSubmit}
         account={selectedAccount}
         loading={false}
       />

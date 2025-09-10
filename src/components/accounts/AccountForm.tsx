@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';
-import { CurrencySelector } from '../currency/CurrencySelector';
-import { CurrencyInput } from '../currency/CurrencyInput';
-import { LiveRateDisplay } from '../currency/LiveRateDisplay';
-import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
+import { formatCurrency, getCurrencyInfo } from '../../utils/currency-converter';
 import { FinancialAccount, CreateAccountData } from '../../lib/finance-manager';
 
 interface AccountFormProps {
@@ -23,7 +20,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
   account,
   loading = false
 }) => {
-  const { displayCurrency, formatCurrency } = useEnhancedCurrency();
+  // Using simple currency system
   const [formData, setFormData] = useState<CreateAccountData>({
     name: '',
     type: 'bank_savings',
@@ -31,7 +28,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
     institution: '',
     platform: '',
     account_number: '',
-    currency: displayCurrency
+    currency: 'USD'
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -55,7 +52,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
         institution: '',
         platform: '',
         account_number: '',
-        currency: displayCurrency
+        currency: 'USD'
       });
     }
     setErrors({});
@@ -167,15 +164,19 @@ export const AccountForm: React.FC<AccountFormProps> = ({
             </span>
           </div>
           
-          <CurrencyInput
-            value={formData.balance}
-            currencyCode={formData.currency}
-            onValueChange={(value) => handleInputChange('balance', value)}
-            onCurrencyChange={(currency) => handleInputChange('currency', currency)}
-            placeholder="Enter current balance"
-            error={!!errors.balance}
-            className="w-full"
-          />
+          <div className="flex items-center space-x-2">
+            <span className="text-lg font-semibold text-gray-600">
+              {formatCurrency(1, formData.currency).charAt(0)}
+            </span>
+            <Input
+              type="number"
+              placeholder="0.00"
+              value={formData.balance || ''}
+              onChange={(e) => handleInputChange('balance', parseFloat(e.target.value) || 0)}
+              error={!!errors.balance}
+              className="flex-1"
+            />
+          </div>
           
           <div className="mt-2 space-y-1">
             <p className="text-xs text-gray-600">
@@ -189,26 +190,30 @@ export const AccountForm: React.FC<AccountFormProps> = ({
 
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-            Currency
+            Account Currency
           </label>
-          <CurrencySelector
+          <select
             value={formData.currency}
-            onChange={(currency) => handleInputChange('currency', currency)}
-            showFlag={true}
-            showFullName={true}
-            popularOnly={false}
-          />
-          {formData.currency !== displayCurrency && (
-            <div className="mt-2">
-              <LiveRateDisplay
-                fromCurrency={formData.currency}
-                toCurrency={displayCurrency}
-                amount={formData.balance}
-                showTrend={true}
-                showLastUpdated={true}
-              />
-            </div>
-          )}
+            onChange={(e) => handleInputChange('currency', e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            style={{
+              backgroundColor: 'var(--background)',
+              color: 'var(--text-primary)',
+              borderColor: 'var(--border)'
+            }}
+          >
+            <option value="USD">🇺🇸 USD - US Dollar</option>
+            <option value="EUR">🇪🇺 EUR - Euro</option>
+            <option value="GBP">🇬🇧 GBP - British Pound</option>
+            <option value="INR">🇮🇳 INR - Indian Rupee</option>
+            <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
+            <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
+            <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
+            <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Choose the currency for this specific account
+          </p>
         </div>
 
         <div>

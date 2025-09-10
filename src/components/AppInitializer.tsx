@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useFinance } from '../contexts/FinanceContext';
 import { LoadingScreen } from './common/LoadingScreen';
 import { analytics } from '../utils/analytics';
 import { auditLogger } from '../utils/auditLogger';
@@ -15,7 +14,6 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
-  const { accounts, goals, bills, liabilities, userCategories, loading } = useFinance();
   const [isInitialized, setIsInitialized] = useState(false);
   const [initializationError, setInitializationError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
@@ -48,27 +46,13 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
             timestamp: new Date().toISOString()
           });
 
-          // Determine if user is new based on existing data
-          const hasExistingData = accounts.length > 0 || goals.length > 0 || bills.length > 0 || liabilities.length > 0 || userCategories.length > 0;
-          console.log('AppInitializer - Data counts:', {
-            accounts: accounts.length,
-            goals: goals.length,
-            bills: bills.length,
-            liabilities: liabilities.length,
-            userCategories: userCategories.length,
-            hasExistingData
-          });
-          setIsNewUser(!hasExistingData);
+          // For now, assume user is not new (onboarding will handle this)
+          setIsNewUser(false);
 
           // Track app initialization
           analytics.trackEngagement('app_initialized', {
             feature: 'app_startup',
-            is_new_user: !hasExistingData,
-            has_accounts: accounts.length > 0,
-            has_goals: goals.length > 0,
-            has_bills: bills.length > 0,
-            has_liabilities: liabilities.length > 0,
-            has_custom_categories: userCategories.length > 0
+            is_new_user: false
           });
 
           setIsInitialized(true);
@@ -86,7 +70,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     };
 
     initializeApp();
-  }, [isAuthenticated, user, accounts, goals, bills, liabilities, userCategories]);
+  }, [isAuthenticated, user]);
 
   // Handle routing after initialization
   useEffect(() => {
@@ -104,50 +88,21 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
         return;
       }
 
-      // Wait for data loading to complete before making routing decisions
-      if (loading) {
-        console.log('AppInitializer - Data still loading, waiting...');
+      // Redirect to dashboard if on root path
+      if (location.pathname === '/') {
+        navigate('/dashboard');
         return;
       }
-
-      // Check if user has existing data
-      const hasExistingData = accounts.length > 0 || goals.length > 0 || bills.length > 0 || liabilities.length > 0 || userCategories.length > 0;
       
       console.log('AppInitializer - Routing decision:', {
         currentPath: location.pathname,
-        hasExistingData,
-        accounts: accounts.length,
-        goals: goals.length,
-        bills: bills.length,
-        liabilities: liabilities.length,
-        userCategories: userCategories.length,
-        loading
+        isAuthenticated,
+        hasUser: !!user
       });
-
-      // If user is new (no existing data) and not already on onboarding
-      if (!hasExistingData && location.pathname !== '/onboarding') {
-        console.log('AppInitializer - Redirecting to onboarding (new user)');
-        navigate('/onboarding');
-        return;
-      }
-
-      // If user has existing data and is on onboarding, redirect to dashboard
-      if (hasExistingData && location.pathname === '/onboarding') {
-        console.log('AppInitializer - Redirecting to dashboard (existing user on onboarding)');
-        navigate('/dashboard');
-        return;
-      }
-
-      // If user is on root path and has data, redirect to dashboard
-      if (hasExistingData && location.pathname === '/') {
-        console.log('AppInitializer - Redirecting to dashboard (existing user on root)');
-        navigate('/dashboard');
-        return;
-      }
     };
 
     handleRouting();
-  }, [isInitialized, isAuthenticated, user, accounts, goals, bills, liabilities, userCategories, loading, location.pathname, navigate]);
+  }, [isInitialized, isAuthenticated, user, location.pathname, navigate]);
 
   if (!isInitialized) {
     return (
@@ -159,7 +114,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   }
 
   // Show loading screen while data is being loaded after authentication
-  if (isAuthenticated && user && loading) {
+  if (isAuthenticated && user && !isInitialized) {
     return (
       <LoadingScreen 
         message="Welcome back!" 

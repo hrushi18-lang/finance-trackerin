@@ -4,7 +4,7 @@ import { Calendar, Bell, CreditCard, AlertCircle } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
-import { CurrencyIcon } from '../common/CurrencyIcon';
+import { formatCurrency, getCurrencyInfo } from '../../utils/currency-converter';
 import { useFinance } from '../../contexts/FinanceContext';
 
 interface BillFormData {
@@ -15,6 +15,7 @@ interface BillFormData {
   startDate: string;
   accountId: string;
   reminderDays: number;
+  currencyCode: string;
 }
 
 interface BillFormProps {
@@ -37,6 +38,7 @@ export const BillForm: React.FC<BillFormProps> = ({
   const { accounts } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [billCurrency, setBillCurrency] = useState(initialData?.currencyCode || 'USD');
   
   const { register, handleSubmit, watch, formState: { errors } } = useForm<BillFormData>({
     defaultValues: initialData || {
@@ -62,7 +64,8 @@ export const BillForm: React.FC<BillFormProps> = ({
         dayOfWeek: undefined,
         dayOfMonth: undefined,
         monthOfYear: undefined,
-        maxOccurrences: undefined
+        maxOccurrences: undefined,
+        currencyCode: billCurrency
       };
       
       await onSubmit(formattedData);
@@ -108,19 +111,41 @@ export const BillForm: React.FC<BillFormProps> = ({
       />
 
       {/* Amount */}
-      <Input
-        label="Amount"
-        type="number"
-        step="0.01"
-        placeholder="e.g., 500"
-        icon={<CurrencyIcon currencycode={currency.code} className="text-success-400" />}
-        {...register('amount', {
-          required: 'Amount is required',
-          min: { value: 0.01, message: 'Amount must be greater than 0' }
-        })}
-        error={errors.amount?.message}
-        className="bg-black/20 border-white/20 text-white"
-      />
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-gray-300">Amount</label>
+        <div className="flex items-center space-x-2">
+          <span className="text-lg font-semibold text-gray-300">
+            {getCurrencyInfo(billCurrency)?.symbol || '$'}
+          </span>
+          <Input
+            type="number"
+            step="0.01"
+            placeholder="e.g., 500"
+            {...register('amount', {
+              required: 'Amount is required',
+              min: { value: 0.01, message: 'Amount must be greater than 0' }
+            })}
+            error={errors.amount?.message}
+            className="flex-1 bg-black/20 border-white/20 text-white"
+          />
+        </div>
+        
+        {/* Currency Selection */}
+        <select
+          value={billCurrency}
+          onChange={(e) => setBillCurrency(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-white/20 bg-black/20 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+        >
+          <option value="USD">🇺🇸 USD - US Dollar</option>
+          <option value="EUR">🇪🇺 EUR - Euro</option>
+          <option value="GBP">🇬🇧 GBP - British Pound</option>
+          <option value="INR">🇮🇳 INR - Indian Rupee</option>
+          <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
+          <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
+          <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
+          <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
+        </select>
+      </div>
 
       {/* Category */}
       <div>

@@ -1587,9 +1587,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         balance: accountData.balance,
         institution: accountData.institution,
         platform: accountData.platform,
-        account_number: accountData.accountNumber,
+        account_number: accountData.account_number,
         is_visible: accountData.isVisible,
-        currencycode: accountData.currencyCode,
+        currency: accountData.currency,
         
         // Enhanced fields
         routing_number: accountData.routingNumber,
@@ -1612,8 +1612,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         auto_sync: accountData.autoSync,
         last_synced_at: accountData.lastSyncedAt?.toISOString(),
         exchange_rate: accountData.exchangeRate,
-        home_currency: accountData.homeCurrency,
-        currency: accountData.currency,
         subtype_id: accountData.subtypeId,
         status: accountData.status,
         account_number_masked: accountData.accountNumberMasked,
@@ -1795,7 +1793,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         affects_balance: transactionData.affectsBalance ?? true,
         reason: transactionData.reason || null,
         transfer_to_account_id: transactionData.transferToAccountId || null,
-        status: transactionData.status || 'completed'
+        status: transactionData.status || 'completed',
+        // Currency fields
+        currency_code: transactionData.currencyCode || 'USD',
+        original_amount: transactionData.originalAmount || transactionData.amount,
+        original_currency: transactionData.originalCurrency || 'USD',
+        exchange_rate_used: transactionData.exchangeRateUsed || 1.0
       })
       .select()
       .single();
@@ -1950,7 +1953,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         priority: goalData.priority,
         status: goalData.status,
         activity_scope: goalData.activityScope || 'general',
-        linked_accounts_count: goalData.linkedAccountsCount || 0
+        linked_accounts_count: goalData.linkedAccountsCount || 0,
+        currency_code: goalData.currencyCode || 'USD'
       })
       .select()
       .single();
@@ -2740,6 +2744,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         activity_scope: billData.activityScope || 'general',
         target_category: billData.targetCategory,
         linked_accounts_count: billData.accountIds?.length || 0,
+        currency_code: billData.currencyCode || 'USD',
         // Enhanced fields
         bill_category: billData.billCategory || 'general_expense',
         is_recurring: billData.isRecurring || false,
@@ -2747,8 +2752,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         payment_method: billData.paymentMethod,
         priority: billData.priority || 'medium',
         status: billData.status || 'active',
-        // New multi-currency support
-        currency_code: billData.currencyCode || 'USD',
         // Income bills support
         is_income: billData.isIncome || false,
         // Bill staging support

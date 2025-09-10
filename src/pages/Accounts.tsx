@@ -11,7 +11,6 @@ import { useEnhancedCurrency } from '../contexts/EnhancedCurrencyContext';
 import { useNavigate } from 'react-router-dom';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 import { CurrencySelector } from '../components/currency/CurrencySelector';
-import { LiveRateDisplay } from '../components/currency/LiveRateDisplay';
 
 const Accounts: React.FC = () => {
   const navigate = useNavigate();

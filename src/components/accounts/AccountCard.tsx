@@ -1,5 +1,6 @@
 import React from 'react';
 import { FinancialAccount } from '../../lib/finance-manager';
+import { formatCurrency, getCurrencyInfo } from '../../utils/currency-converter';
 import { 
   CreditCard, 
   Wallet, 
@@ -67,10 +68,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   };
 
   const formatBalance = (balance: number, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency
-    }).format(balance);
+    return formatCurrency(balance, currency);
   };
 
   const formatAccountType = (type: FinancialAccount['type']) => {
@@ -96,9 +94,14 @@ export const AccountCard: React.FC<AccountCardProps> = ({
             <h3 className="font-heading text-sm" style={{ color: 'var(--text-primary)' }}>
               {account.name}
             </h3>
-            <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
-              {formatAccountType(account.type)}
-            </p>
+            <div className="flex items-center space-x-2">
+              <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+                {formatAccountType(account.type)}
+              </p>
+              <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                {getCurrencyInfo(account.currency)?.flag} {account.currency}
+              </span>
+            </div>
           </div>
         </div>
         

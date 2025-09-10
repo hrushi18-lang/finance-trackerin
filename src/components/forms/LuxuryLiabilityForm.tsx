@@ -6,7 +6,6 @@ import { useFinance } from '../../contexts/FinanceContext';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { CurrencyInput } from '../currency/CurrencyInput';
-import { LiveRateDisplay } from '../currency/LiveRateDisplay';
 import { LiabilityType, getLiabilityBehavior } from '../../lib/liability-behaviors';
 
 interface LuxuryLiabilityFormProps {
@@ -370,14 +369,7 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
                   }
                 </p>
               </div>
-              <LiveRateDisplay
-                fromCurrency={formData.currencyCode}
-                toCurrency={displayCurrency}
-                amount={1}
-                compact={true}
-                showTrend={true}
-                showLastUpdated={false}
-              />
+              {/* LiveRateDisplay removed for simplified currency system */}
             </div>
           </div>
         )}

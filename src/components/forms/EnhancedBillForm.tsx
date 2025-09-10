@@ -8,7 +8,6 @@ import { useInternationalization } from '../../contexts/InternationalizationCont
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { CurrencyInput } from '../currency/CurrencyInput';
-import { LiveRateDisplay } from '../currency/LiveRateDisplay';
 import { useFinance } from '../../contexts/FinanceContext';
 
 interface EnhancedBillFormData {
@@ -319,14 +318,7 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
                 }
               </p>
             </div>
-            <LiveRateDisplay
-              fromCurrency={billCurrency}
-              toCurrency={displayCurrency}
-              amount={1}
-              compact={true}
-              showTrend={true}
-              showLastUpdated={false}
-            />
+            {/* LiveRateDisplay removed for simplified currency system */}
           </div>
         </div>
       )}

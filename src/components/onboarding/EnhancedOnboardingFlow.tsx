@@ -4,7 +4,6 @@ import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { CurrencySelector } from '../currency/CurrencySelector';
 import { CurrencyInput } from '../currency/CurrencyInput';
-import { LiveRateDisplay } from '../currency/LiveRateDisplay';
 import { PerformanceOptimizer } from '../common/PerformanceOptimizer';
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { useFinance } from '../../contexts/FinanceContext';

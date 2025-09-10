@@ -146,6 +146,7 @@ export interface Goal {
   category: string;
   accountId?: string;
   goalType: 'account_specific' | 'category_based' | 'general_savings';
+  currencyCode: string;
   targetCategory?: string; // For category-based goals
   periodType: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
   customPeriodDays?: number; // For custom periods
@@ -211,6 +212,7 @@ export interface Bill { // Enhanced Bill interface with all new features
   billType: 'fixed' | 'variable' | 'one_time' | 'liability_linked';
   amount: number;
   estimatedAmount?: number;
+  currencyCode: string;
   frequency: 'weekly' | 'bi_weekly' | 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'custom' | 'one_time';
   customFrequencyDays?: number;
   dueDate: Date;
@@ -348,6 +350,7 @@ export interface Bill {
   billType: 'fixed' | 'variable' | 'one_time' | 'liability_linked';
   amount: number;
   estimatedAmount?: number;
+  currencyCode: string;
   frequency: 'weekly' | 'bi_weekly' | 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'custom' | 'one_time';
   customFrequencyDays?: number;
   dueDate: Date;

@@ -7,9 +7,7 @@ import { Button } from '../components/common/Button';
 import { CategorySelector } from '../components/common/CategorySelector';
 import { toNumber } from '../utils/validation';
 import { useFinance } from '../contexts/FinanceContext';
-import { useEnhancedCurrency } from '../contexts/EnhancedCurrencyContext';
-import { CurrencyInput } from '../components/currency/CurrencyInput';
-import { LiveRateDisplay } from '../components/currency/LiveRateDisplay';
+import { convertCurrency, formatCurrency, needsConversion, getCurrencyInfo } from '../utils/currency-converter';
 
 interface TransactionFormData {
   type: 'income' | 'expense' | 'transfer';
@@ -38,7 +36,8 @@ interface SplitFormData {
 const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { displayCurrency, formatCurrency, convertAmount, saveConversionLog } = useEnhancedCurrency();
+  // Get display currency from user profile (simplified)
+  const displayCurrency = 'USD'; // This should come from user profile
   const { 
     addTransaction, 
     userCategories, 
@@ -56,6 +55,7 @@ const AddTransaction: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transactionCurrency, setTransactionCurrency] = useState(displayCurrency);
+  const [selectedAccount, setSelectedAccount] = useState<FinancialAccount | null>(null);
   const [showLinkOptions, setShowLinkOptions] = useState(false);
   
   // Handle location state for historical and scheduled transactions
@@ -150,7 +150,7 @@ const AddTransaction: React.FC = () => {
       let exchangeRateUsed = 1.0;
       
       if (transactionCurrency !== displayCurrency) {
-        const convertedAmount = convertAmount(data.amount, transactionCurrency, displayCurrency);
+        const convertedAmount = convertCurrency(data.amount, transactionCurrency, displayCurrency);
         if (convertedAmount === null) {
           setError('Unable to convert currency. Please try again.');
           setIsSubmitting(false);
@@ -158,18 +158,10 @@ const AddTransaction: React.FC = () => {
         }
         
         finalAmount = convertedAmount;
-        exchangeRateUsed = convertAmount(1, transactionCurrency, displayCurrency) || 1.0;
+        exchangeRateUsed = convertCurrency(1, transactionCurrency, displayCurrency) || 1.0;
         
         // Log the conversion
-        await saveConversionLog({
-          from_currency: transactionCurrency,
-          to_currency: displayCurrency,
-          original_amount: originalAmount,
-          converted_amount: finalAmount,
-          exchange_rate: exchangeRateUsed,
-          conversion_fee: 0, // No fee for now
-          transaction_id: undefined // Will be set after transaction is created
-        });
+        console.log(`🔄 Currency conversion: ${formatCurrency(originalAmount, originalCurrency)} → ${formatCurrency(finalAmount, displayCurrency)}`);
       }
       
       if (isSplitTransaction) {
@@ -187,7 +179,7 @@ const AddTransaction: React.FC = () => {
         for (const split of splits) {
           const splitAmount = toNumber(split.amount);
           const convertedSplitAmount = transactionCurrency !== displayCurrency 
-            ? convertAmount(splitAmount, transactionCurrency, displayCurrency) || splitAmount
+            ? convertCurrency(splitAmount, transactionCurrency, displayCurrency) || splitAmount
             : splitAmount;
             
           const transactionData = {
@@ -407,17 +399,61 @@ const AddTransaction: React.FC = () => {
                 </div>
               </div>
               
-              <CurrencyInput
-                value={typeof watch('amount') === 'number' ? watch('amount') : ''}
-                currency={transactionCurrency}
-                onValueChange={(value) => setValue('amount', typeof value === 'number' ? value : 0)}
-                onCurrencyChange={setTransactionCurrency}
-                placeholder="Enter amount"
-                showConversion={transactionCurrency !== displayCurrency}
-                targetCurrency={displayCurrency}
-                error={errors.amount?.message}
-                className="w-full text-lg"
-              />
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <span className="text-lg font-semibold text-forest-300">
+                    {getCurrencyInfo(transactionCurrency)?.symbol || '$'}
+                  </span>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={typeof watch('amount') === 'number' ? watch('amount') : ''}
+                    onChange={(e) => setValue('amount', parseFloat(e.target.value) || 0)}
+                    error={errors.amount?.message}
+                    className="flex-1 text-lg"
+                    style={{
+                      backgroundColor: 'var(--background)',
+                      color: 'var(--text-primary)',
+                      borderColor: 'var(--border)'
+                    }}
+                  />
+                </div>
+                
+                {/* Currency Selection */}
+                <select
+                  value={transactionCurrency}
+                  onChange={(e) => setTransactionCurrency(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-forest-600/30 bg-forest-800/50 text-white focus:outline-none focus:ring-2 focus:ring-forest-500"
+                >
+                  <option value="USD">🇺🇸 USD - US Dollar</option>
+                  <option value="EUR">🇪🇺 EUR - Euro</option>
+                  <option value="GBP">🇬🇧 GBP - British Pound</option>
+                  <option value="INR">🇮🇳 INR - Indian Rupee</option>
+                  <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
+                  <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
+                  <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
+                  <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
+                </select>
+                
+                {/* Smart Conversion Display */}
+                {(() => {
+                  const selectedAccount = accounts.find(acc => acc.id === watch('accountId'));
+                  if (selectedAccount && needsConversion(selectedAccount.currency, transactionCurrency)) {
+                    const convertedAmount = convertCurrency(watch('amount') || 0, transactionCurrency, selectedAccount.currency);
+                    return (
+                      <div className="bg-blue-100 border border-blue-200 rounded-lg p-3">
+                        <p className="text-sm text-blue-800">
+                          <span className="font-medium">Smart Conversion:</span> {formatCurrency(watch('amount') || 0, transactionCurrency)} → {formatCurrency(convertedAmount || 0, selectedAccount.currency)}
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                          This will be converted to {selectedAccount.currency} for your {selectedAccount.name} account
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
               
               {/* Quick Amount Buttons */}
               <div className="mt-4">
@@ -480,20 +516,12 @@ const AddTransaction: React.FC = () => {
                     <h4 className="text-sm font-medium text-blue-600 mb-1">Live Conversion</h4>
                     <p className="text-xs text-gray-600">
                       {formatCurrency(watch('amount') || 0, transactionCurrency)} = {' '}
-                      {convertAmount(watch('amount') || 0, transactionCurrency, displayCurrency) 
-                        ? formatCurrency(convertAmount(watch('amount') || 0, transactionCurrency, displayCurrency)!, displayCurrency)
+                      {convertCurrency(watch('amount') || 0, transactionCurrency, displayCurrency) 
+                        ? formatCurrency(convertCurrency(watch('amount') || 0, transactionCurrency, displayCurrency)!, displayCurrency)
                         : 'N/A'
                       }
                     </p>
                   </div>
-                  <LiveRateDisplay
-                    fromCurrency={transactionCurrency}
-                    toCurrency={displayCurrency}
-                    amount={1}
-                    compact={true}
-                    showTrend={true}
-                    showLastUpdated={false}
-                  />
                 </div>
               </div>
             )}
@@ -541,7 +569,7 @@ const AddTransaction: React.FC = () => {
                 <option value="">Choose your bank account...</option>
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.name} ({account.type.replace('_', ' ')}) - {formatCurrency(account.balance, displayCurrency)}
+                    {account.name} ({account.type.replace('_', ' ')}) - {formatCurrency(account.balance, account.currency)} {account.currency}
                   </option>
                 ))}
               </select>

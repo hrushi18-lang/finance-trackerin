@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowUpDown } from 'lucide-react';
 import { CurrencySelector } from './CurrencySelector';
-import { LiveRateDisplay } from './LiveRateDisplay';
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 
 interface CurrencyInputProps {
@@ -210,17 +209,7 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
         </div>
       )}
 
-      {/* Live Rate Display */}
-      {showLiveRate && currency !== effectiveTargetCurrency && (
-        <LiveRateDisplay
-          fromCurrency={currency}
-          toCurrency={effectiveTargetCurrency}
-          amount={1}
-          compact={true}
-          showTrend={true}
-          showLastUpdated={false}
-        />
-      )}
+      {/* Live Rate Display - Removed for simplified currency system */}
 
       {/* Error Message */}
       {error && (

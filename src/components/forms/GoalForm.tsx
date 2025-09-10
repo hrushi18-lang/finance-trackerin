@@ -7,10 +7,7 @@ import { Button } from '../common/Button';
 import { CategorySelector } from '../common/CategorySelector';
 import { Goal } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
-import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
-import { CurrencyIcon } from '../common/CurrencyIcon';
-import { CurrencyInput } from '../currency/CurrencyInput';
-import { LiveRateDisplay } from '../currency/LiveRateDisplay';
+import { formatCurrency, getCurrencyInfo } from '../../utils/currency-converter';
 import { AlertCircle } from 'lucide-react';
 import { useFinance } from '../../contexts/FinanceContext';
 
@@ -41,11 +38,10 @@ export const GoalForm: React.FC<GoalFormProps> = ({
   initialData
 }) => {
   const { currency } = useInternationalization();
-  const { displayCurrency, formatCurrency, convertAmount } = useEnhancedCurrency();
   const { accounts } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [goalCurrency, setGoalCurrency] = useState(initialData?.currencyCode || displayCurrency);
+  const [goalCurrency, setGoalCurrency] = useState(initialData?.currencyCode || 'USD');
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<GoalFormData>({
     defaultValues: {
@@ -58,7 +54,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       activityScope: initialData?.activityScope || 'general',
       accountIds: initialData?.accountIds || [],
       targetCategory: initialData?.targetCategory || '',
-      currencyCode: initialData?.currencyCode || displayCurrency
+      currencyCode: initialData?.currencyCode || 'USD'
     },
   });
 
@@ -170,17 +166,37 @@ export const GoalForm: React.FC<GoalFormProps> = ({
           </div>
         </div>
         
-        <CurrencyInput
-          value={watch('targetAmount')}
-          currency={goalCurrency}
-          onValueChange={(value) => setValue('targetAmount', value)}
-          onCurrencyChange={setGoalCurrency}
-          placeholder="Enter target amount"
-          showConversion={goalCurrency !== displayCurrency}
-          targetCurrency={displayCurrency}
-          error={errors.targetAmount?.message}
-          className="w-full text-lg"
-        />
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2">
+            <span className="text-lg font-semibold text-gray-600">
+              {getCurrencyInfo(goalCurrency)?.symbol || '$'}
+            </span>
+            <Input
+              type="number"
+              placeholder="0.00"
+              value={watch('targetAmount') || ''}
+              onChange={(e) => setValue('targetAmount', parseFloat(e.target.value) || 0)}
+              error={errors.targetAmount?.message}
+              className="flex-1 text-lg"
+            />
+          </div>
+          
+          {/* Currency Selection */}
+          <select
+            value={goalCurrency}
+            onChange={(e) => setGoalCurrency(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="USD">🇺🇸 USD - US Dollar</option>
+            <option value="EUR">🇪🇺 EUR - Euro</option>
+            <option value="GBP">🇬🇧 GBP - British Pound</option>
+            <option value="INR">🇮🇳 INR - Indian Rupee</option>
+            <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
+            <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
+            <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
+            <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
+          </select>
+        </div>
         
         {/* Quick Amount Buttons */}
         <div className="mt-4">
@@ -251,48 +267,26 @@ export const GoalForm: React.FC<GoalFormProps> = ({
           </div>
         </div>
         
-        <CurrencyInput
-          value={watch('currentAmount')}
-          currency={goalCurrency}
-          onValueChange={(value) => setValue('currentAmount', value)}
-          onCurrencyChange={setGoalCurrency}
-          placeholder="Enter current amount"
-          showConversion={goalCurrency !== displayCurrency}
-          targetCurrency={displayCurrency}
-          error={errors.currentAmount?.message}
-          className="w-full text-lg"
-        />
+        <div className="flex items-center space-x-2">
+          <span className="text-lg font-semibold text-gray-600">
+            {getCurrencyInfo(goalCurrency)?.symbol || '$'}
+          </span>
+          <Input
+            type="number"
+            placeholder="0.00"
+            value={watch('currentAmount') || ''}
+            onChange={(e) => setValue('currentAmount', parseFloat(e.target.value) || 0)}
+            error={errors.currentAmount?.message}
+            className="flex-1 text-lg"
+          />
+        </div>
         
         <p className="text-xs text-gray-500 mt-2">
           Leave as 0 if you're starting fresh
         </p>
       </div>
 
-      {/* Live Rate Display */}
-      {goalCurrency !== displayCurrency && watch('targetAmount') && (
-        <div className="bg-gradient-to-r from-blue-500/20 to-green-500/20 rounded-xl p-4 border border-blue-500/30">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-medium text-blue-400 mb-1">Live Conversion</h4>
-              <p className="text-xs text-gray-300">
-                {formatCurrency(watch('targetAmount') || 0, goalCurrency)} = {' '}
-                {convertAmount(watch('targetAmount') || 0, goalCurrency, displayCurrency) 
-                  ? formatCurrency(convertAmount(watch('targetAmount') || 0, goalCurrency, displayCurrency)!, displayCurrency)
-                  : 'N/A'
-                }
-              </p>
-            </div>
-            <LiveRateDisplay
-              fromCurrency={goalCurrency}
-              toCurrency={displayCurrency}
-              amount={1}
-              compact={true}
-              showTrend={true}
-              showLastUpdated={false}
-            />
-          </div>
-        </div>
-      )}
+      {/* Conversion preview removed for simplified currency system */}
 
       {/* Activity Scope Selection */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
