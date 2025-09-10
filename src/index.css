@@ -150,32 +150,41 @@ body {
 
 /* Typography Classes - Exact Font Specifications */
 .font-heading {
-  font-family: 'Archivo Black', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: var(--font-heading);
   font-weight: 900;
   color: var(--text-primary);
   letter-spacing: -0.025em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .font-numbers {
-  font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: var(--font-numbers);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.025em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .font-titles {
-  font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: var(--font-primary);
   font-weight: 500;
   color: var(--text-primary);
   letter-spacing: -0.025em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .font-description {
-  font-family: 'Playfair Display', 'Times New Roman', 'Times', serif;
+  font-family: var(--font-description);
   font-weight: 400;
   color: var(--text-secondary);
   font-style: normal;
+  letter-spacing: 0.025em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Legacy support - map old classes to new specifications */

@@ -79,7 +79,26 @@ function App() {
 
   // Initialize font loading and service worker
   useEffect(() => {
-    fontLoader.preloadCriticalFonts();
+    // Simple font loading for mobile
+    const loadFonts = async () => {
+      try {
+        // Add fonts-loaded class after a short delay to ensure fonts are loaded
+        setTimeout(() => {
+          document.body.classList.add('fonts-loaded');
+          document.body.classList.remove('fonts-loading');
+        }, 1000);
+        
+        // Also try the complex loader as fallback
+        await fontLoader.preloadCriticalFonts();
+      } catch (error) {
+        console.warn('Font loading failed, using system fonts:', error);
+        // Ensure fonts-loaded class is added even if loading fails
+        document.body.classList.add('fonts-loaded');
+        document.body.classList.remove('fonts-loading');
+      }
+    };
+    
+    loadFonts();
     registerSW();
   }, []);
 

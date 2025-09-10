@@ -73,8 +73,15 @@ class FontLoader {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = url;
-      link.onload = () => resolve();
-      link.onerror = () => reject(new Error('Failed to load font stylesheet'));
+      link.onload = () => {
+        console.log('Font stylesheet loaded successfully');
+        resolve();
+      };
+      link.onerror = (error) => {
+        console.warn('Font stylesheet loading failed:', error);
+        // Don't reject, just resolve to continue with fallbacks
+        resolve();
+      };
       
       document.head.appendChild(link);
     });
@@ -94,6 +101,7 @@ class FontLoader {
    */
   private enableFallbackFonts(): void {
     document.documentElement.classList.add('fonts-fallback');
+    console.log('Using system fallback fonts due to network issues');
   }
 
   /**

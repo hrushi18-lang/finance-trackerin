@@ -75,22 +75,32 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         target_date: new Date(data.targetDate),
         category: sanitizedData.category,
         account_id: sanitizedData.accountIds?.[0] || undefined, // Use first selected account or undefined
+        // Add missing fields for validation
+        activity_scope: data.activityScope,
+        account_ids: data.accountIds || [],
+        target_category: data.targetCategory || undefined,
       };
       
       // Validate using schema
       const validatedData = validateGoal(validationData);
       
       await onSubmit({
-        ...validatedData,
+        // Map validated snake_case data to camelCase for the API
+        title: validatedData.title,
+        description: validatedData.description,
+        targetAmount: validatedData.target_amount,
+        currentAmount: validatedData.current_amount,
         targetDate: new Date(data.targetDate),
+        category: validatedData.category,
+        accountId: validatedData.account_id,
         currencyCode: goalCurrency,
-        // Add scoping fields
-        activityScope: data.activityScope,
-        accountIds: data.accountIds,
-        targetCategory: data.targetCategory,
-        goalType: data.activityScope === 'account_specific' ? 'account_specific' : 
-                 data.activityScope === 'category_based' ? 'category_based' : 'general_savings',
-        priority: 'medium',
+        // Add scoping fields from validated data
+        activityScope: validatedData.activity_scope,
+        accountIds: validatedData.account_ids || [],
+        targetCategory: validatedData.target_category,
+        goalType: validatedData.activity_scope === 'account_specific' ? 'account_specific' : 
+                 validatedData.activity_scope === 'category_based' ? 'category_based' : 'general_savings',
+        priority: validatedData.priority,
         status: 'active'
       });
       

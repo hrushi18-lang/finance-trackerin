@@ -90,28 +90,62 @@ export const goalSchema = z.object({
     .max(50, 'Category too long')
     .transform(sanitizeInput),
   account_id: z.string().uuid('Invalid account ID').optional(),
+  // Add missing fields for account-specific and category-based goals
+  activity_scope: z.enum(['general', 'account_specific', 'category_based']).default('general'),
+  account_ids: z.array(z.string().uuid('Invalid account ID')).optional(),
+  target_category: z.string().optional(),
   priority: z.enum(['low', 'medium', 'high']).default('medium'),
   is_achieved: z.boolean().default(false)
 });
 
 export const billSchema = z.object({
-  name: z.string()
-    .min(1, 'Bill name is required')
-    .max(100, 'Name too long')
+  title: z.string()
+    .min(1, 'Bill title is required')
+    .max(100, 'Title too long')
     .transform(sanitizeInput),
+  description: z.string()
+    .max(500, 'Description too long')
+    .transform(sanitizeInput)
+    .optional(),
   amount: z.number()
     .positive('Amount must be greater than 0')
     .max(999999999.99, 'Amount too large')
     .refine(validateAmount, 'Invalid amount'),
+  estimated_amount: z.number()
+    .min(0, 'Estimated amount cannot be negative')
+    .max(999999999.99, 'Amount too large')
+    .refine(validateAmount, 'Invalid amount')
+    .optional(),
   due_date: z.date(),
   category: z.string()
     .min(1, 'Category is required')
     .max(50, 'Category too long')
     .transform(sanitizeInput),
-  account_id: z.string().uuid('Invalid account ID'),
-  is_paid: z.boolean().default(false),
-  is_recurring: z.boolean().default(false),
-  recurring_frequency: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
+  bill_type: z.enum(['fixed', 'variable', 'one_time', 'liability_linked']).default('fixed'),
+  frequency: z.enum(['weekly', 'bi_weekly', 'monthly', 'quarterly', 'semi_annual', 'annual', 'custom', 'one_time']).default('monthly'),
+  custom_frequency_days: z.number()
+    .min(1, 'Custom frequency must be at least 1 day')
+    .max(365, 'Custom frequency cannot exceed 365 days')
+    .optional(),
+  default_account_id: z.string().uuid('Invalid account ID').optional(),
+  is_income: z.boolean().default(false),
+  is_variable_amount: z.boolean().default(false),
+  min_amount: z.number()
+    .min(0, 'Minimum amount cannot be negative')
+    .max(999999999.99, 'Amount too large')
+    .refine(validateAmount, 'Invalid amount')
+    .optional(),
+  max_amount: z.number()
+    .min(0, 'Maximum amount cannot be negative')
+    .max(999999999.99, 'Amount too large')
+    .refine(validateAmount, 'Invalid amount')
+    .optional(),
+  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+  status: z.enum(['active', 'paused', 'completed', 'cancelled']).default('active'),
+  // Add missing fields for account-specific and category-based bills
+  activity_scope: z.enum(['general', 'account_specific', 'category_based']).default('general'),
+  account_ids: z.array(z.string().uuid('Invalid account ID')).optional(),
+  target_category: z.string().optional(),
   notes: z.string()
     .max(500, 'Notes too long')
     .transform(sanitizeInput)
@@ -147,7 +181,11 @@ export const liabilitySchema = z.object({
   notes: z.string()
     .max(500, 'Notes too long')
     .transform(sanitizeInput)
-    .optional()
+    .optional(),
+  // Add missing fields for account-specific and category-based liabilities
+  activity_scope: z.enum(['general', 'account_specific', 'category_based']).default('general'),
+  account_ids: z.array(z.string().uuid('Invalid account ID')).optional(),
+  target_category: z.string().optional()
 });
 
 export const budgetSchema = z.object({
@@ -166,7 +204,11 @@ export const budgetSchema = z.object({
   period: z.enum(['weekly', 'monthly', 'yearly']).default('monthly'),
   start_date: z.date(),
   end_date: z.date(),
-  account_id: z.string().uuid('Invalid account ID').optional()
+  account_id: z.string().uuid('Invalid account ID').optional(),
+  // Add missing fields for account-specific and category-based budgets
+  activity_scope: z.enum(['general', 'account_specific', 'category_based']).default('general'),
+  account_ids: z.array(z.string().uuid('Invalid account ID')).optional(),
+  target_category: z.string().optional()
 });
 
 // Validation helper functions

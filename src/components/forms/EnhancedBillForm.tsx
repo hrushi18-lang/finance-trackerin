@@ -9,6 +9,7 @@ import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { CurrencyInput } from '../currency/CurrencyInput';
 import { useFinance } from '../../contexts/FinanceContext';
+import { validateBill, sanitizeFinancialData, toNumber } from '../../utils/validation';
 
 interface EnhancedBillFormData {
   title: string;
@@ -110,14 +111,58 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
       setIsSubmitting(true);
       setError(null);
       
+      // Sanitize numeric fields
+      const sanitizedData = sanitizeFinancialData(data, [
+        'amount', 
+        'estimatedAmount', 
+        'customFrequencyDays',
+        'minAmount',
+        'maxAmount'
+      ]);
+      
+      // Prepare validation data with snake_case fields
+      const validationData = {
+        ...sanitizedData,
+        title: sanitizedData.title,
+        description: sanitizedData.description,
+        amount: toNumber(sanitizedData.amount),
+        estimated_amount: sanitizedData.estimatedAmount ? toNumber(sanitizedData.estimatedAmount) : undefined,
+        due_date: new Date(data.dueDate),
+        category: sanitizedData.category,
+        bill_type: sanitizedData.billType,
+        frequency: sanitizedData.frequency,
+        custom_frequency_days: sanitizedData.customFrequencyDays ? toNumber(sanitizedData.customFrequencyDays) : undefined,
+        default_account_id: sanitizedData.defaultAccountId,
+        is_income: sanitizedData.isIncome,
+        is_variable_amount: sanitizedData.isVariableAmount,
+        min_amount: sanitizedData.minAmount ? toNumber(sanitizedData.minAmount) : undefined,
+        max_amount: sanitizedData.maxAmount ? toNumber(sanitizedData.maxAmount) : undefined,
+        priority: sanitizedData.priority,
+        status: sanitizedData.status,
+        // Add scoping fields
+        activity_scope: sanitizedData.activityScope,
+        account_ids: sanitizedData.accountIds || [],
+        target_category: sanitizedData.targetCategory,
+        notes: sanitizedData.notes
+      };
+
+      // Validate using schema
+      const validatedData = validateBill(validationData);
+      
       const formattedData = {
         ...data,
-        amount: Number(data.amount),
-        estimatedAmount: data.estimatedAmount ? Number(data.estimatedAmount) : undefined,
-        customFrequencyDays: data.customFrequencyDays ? Number(data.customFrequencyDays) : undefined,
-        dueDate: new Date(data.dueDate),
-        nextDueDate: new Date(data.dueDate),
-        currencyCode: billCurrency
+        title: validatedData.title,
+        description: validatedData.description,
+        amount: validatedData.amount,
+        estimatedAmount: validatedData.estimated_amount,
+        customFrequencyDays: validatedData.custom_frequency_days,
+        dueDate: validatedData.due_date,
+        nextDueDate: validatedData.due_date, // Use same date for next due date initially
+        currencyCode: billCurrency,
+        // Add scoping fields from validated data
+        activityScope: validatedData.activity_scope,
+        accountIds: validatedData.account_ids || [],
+        targetCategory: validatedData.target_category
       };
       
       await onSubmit(formattedData);

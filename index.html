@@ -8,58 +8,38 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     
     <!-- Load Google Fonts with mobile optimization -->
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black:wght@400&family=Playfair+Display:wght@400;500;600;700&display=swap&subset=latin" rel="stylesheet">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black:wght@400&family=Playfair+Display:wght@400;500;600;700&display=swap&subset=latin" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black:wght@400&family=Playfair+Display:wght@400;500;600;700&display=swap&subset=latin" rel="stylesheet"></noscript>
     
-    <!-- Mobile font optimization and fallbacks -->
+    <!-- Mobile-first font optimization -->
     <style>
-      /* Critical font loading for mobile */
-      @font-face {
-        font-family: 'Archivo';
-        font-style: normal;
-        font-weight: 400 700;
-        font-display: swap;
-        src: local('Archivo'), local('Archivo-Regular');
+      /* Mobile-first font system with immediate fallbacks */
+      :root {
+        --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        --font-heading: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        --font-numbers: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        --font-description: 'Times New Roman', 'Times', serif;
       }
       
-      @font-face {
-        font-family: 'Archivo Black';
-        font-style: normal;
-        font-weight: 400;
-        font-display: swap;
-        src: local('Archivo Black'), local('Archivo-Black');
-      }
-      
-      @font-face {
-        font-family: 'Playfair Display';
-        font-style: normal;
-        font-weight: 400 700;
-        font-display: swap;
-        src: local('Playfair Display'), local('PlayfairDisplay-Regular');
-      }
-      
-      /* System font stack as immediate fallback */
-      .font-fallback {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-      }
-      
-      /* Mobile font loading states */
-      .fonts-loading {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      }
-      
+      /* Apply custom fonts when loaded */
       .fonts-loaded {
-        font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        --font-primary: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        --font-heading: 'Archivo Black', 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        --font-numbers: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        --font-description: 'Playfair Display', 'Times New Roman', 'Times', serif;
       }
       
-      /* Prevent font flash on mobile */
+      /* Base font styles */
       body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        font-family: var(--font-primary);
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         text-rendering: optimizeLegibility;
+        font-size: 16px;
+        line-height: 1.5;
       }
       
-      /* Mobile-specific font optimizations */
+      /* Mobile-specific optimizations */
       @media screen and (max-width: 768px) {
         body {
           font-size: 16px;
@@ -68,17 +48,46 @@
           text-size-adjust: 100%;
         }
         
-        /* Ensure consistent font rendering on mobile */
+        /* Ensure all text is visible on mobile */
         * {
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
+          text-rendering: optimizeLegibility;
+        }
+        
+        /* Force system fonts for critical mobile elements */
+        .mobile-critical {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+        }
+      }
+      
+      /* Font loading states */
+      .fonts-loading {
+        font-family: var(--font-primary);
+      }
+      
+      .fonts-loaded {
+        font-family: var(--font-primary);
+      }
+      
+      /* Ensure text is always visible */
+      .text-visible {
+        color: #000 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+      
+      /* Dark mode text visibility */
+      @media (prefers-color-scheme: dark) {
+        .text-visible {
+          color: #fff !important;
         }
       }
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="format-detection" content="telephone=no">
     <meta name="msapplication-tap-highlight" content="no">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.supabase.co https://api.exchangerate-api.com https://api.fixer.io https://www.googletagmanager.com; img-src 'self' data: https:; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com; script-src-elem 'self' 'unsafe-inline' https://www.googletagmanager.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.exchangerate-api.com https://api.fixer.io https://www.googletagmanager.com; img-src 'self' data: https:; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com; script-src-elem 'self' 'unsafe-inline' https://www.googletagmanager.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
     <title>FinTrack - Smart Financial Management</title>
     <meta name="description" content="Comprehensive financial management with multi-account tracking, smart recurring transactions, and AI-powered insights">
     <meta name="theme-color" content="#2563eb">

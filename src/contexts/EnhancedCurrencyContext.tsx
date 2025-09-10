@@ -245,7 +245,14 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
       // Try multiple APIs for reliability
       // Primary API: ExchangeRate-API (free tier: 1500 requests/month)
       try {
-        const response = await fetch(`https://api.exchangerate-api.com/v4/latest/USD`);
+        const response = await fetch(`https://api.exchangerate-api.com/v4/latest/USD`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+          mode: 'cors',
+          credentials: 'omit'
+        });
         if (response.ok) {
           const data = await response.json();
           rates = data.rates;
@@ -254,13 +261,20 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
           console.log('✅ Primary API (ExchangeRate-API) successful');
         }
       } catch (error) {
-        console.log('❌ Primary API failed, trying backup...');
+        console.log('❌ Primary API failed, trying backup...', error);
       }
 
       // Backup API: Fixer.io (free tier: 1000 requests/month)
       if (!rates) {
         try {
-          const response = await fetch(`https://api.fixer.io/latest?base=USD`);
+          const response = await fetch(`https://api.fixer.io/latest?base=USD`, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+            },
+            mode: 'cors',
+            credentials: 'omit'
+          });
           if (response.ok) {
             const data = await response.json();
             rates = data.rates;
@@ -269,7 +283,7 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
             console.log('✅ Backup API (Fixer.io) successful');
           }
         } catch (error) {
-          console.log('❌ Backup API failed, using fallback rates');
+          console.log('❌ Backup API failed, using fallback rates', error);
         }
       }
 
@@ -277,7 +291,7 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
       if (!rates) {
         rates = fallbackRates;
         source = 'fallback';
-        console.log('⚠️ Using fallback exchange rates');
+        console.log('⚠️ Using fallback exchange rates - external APIs blocked by CSP or network issues');
       }
 
       // Ensure USD is always 1.0

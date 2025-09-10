@@ -1433,10 +1433,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) return;
     
     const { data, error } = await supabase
-      .from('category_hierarchy')
+      .from('user_categories')
       .select('*')
       .eq('user_id', user.id)
-      .order('sort_order', { ascending: true });
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
 
     if (error) {
       console.error('Error loading user categories:', error);
@@ -2250,6 +2251,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setGoals(prev => [newGoal, ...prev]);
+
+    // Create account links for account-specific goals
+    if (goalData.activityScope === 'account_specific' && goalData.accountIds && goalData.accountIds.length > 0) {
+      const accountLinks = goalData.accountIds.map((accountId, index) => ({
+        activity_type: 'goal',
+        activity_id: data.id,
+        account_id: accountId,
+        user_id: user.id,
+        is_primary: index === 0
+      }));
+
+      await supabase
+        .from('activity_account_links')
+        .insert(accountLinks);
+    }
   };
 
   const updateGoal = async (id: string, updates: Partial<Goal>) => {
@@ -2436,6 +2452,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       .insert({
         user_id: user.id,
         name: liabilityData.name,
+        type: liabilityData.liabilityType,
         liability_type: liabilityData.liabilityType,
         description: liabilityData.description,
         liability_status: liabilityData.liabilityStatus || 'new',
@@ -2474,7 +2491,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type_specific_data: liabilityData.typeSpecificData || {},
         currency_code: liabilityData.currencyCode || 'USD',
         activity_scope: liabilityData.activityScope || 'general',
-        target_category: liabilityData.targetCategory,
         priority: liabilityData.priority || 'medium'
       })
       .select()
@@ -2909,26 +2925,84 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addBudget = async (budgetData: Omit<Budget, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
-    const { data, error } = await supabase
-      .from('budgets')
-      .insert({
-        user_id: user.id,
-        category: budgetData.category,
-        amount: budgetData.amount,
-        spent: budgetData.spent || 0,
-        period: budgetData.period,
-        account_id: budgetData.accountId,
-        activity_scope: budgetData.activityScope || 'general',
-        account_ids: budgetData.accountIds || [],
-        target_category: budgetData.targetCategory,
-        currency_code: budgetData.currencyCode || 'USD',
-        start_date: budgetData.startDate?.toISOString().split('T')[0],
-        end_date: budgetData.endDate?.toISOString().split('T')[0]
-      })
-      .select()
-      .single();
+    let data: any;
+    let error: any;
 
-    if (error) throw error;
+    // Handle different budget types based on activity scope
+    if (budgetData.activityScope === 'account_specific' && budgetData.accountIds && budgetData.accountIds.length > 0) {
+      // Create account-specific budgets
+      const accountBudgetPromises = budgetData.accountIds.map(accountId => 
+        supabase
+          .from('account_budgets')
+          .insert({
+            user_id: user.id,
+            account_id: accountId,
+            category: budgetData.category,
+            amount: budgetData.amount,
+            spent: budgetData.spent || 0,
+            period: budgetData.period,
+            start_date: budgetData.startDate?.toISOString().split('T')[0],
+            end_date: budgetData.endDate?.toISOString().split('T')[0],
+            is_active: true
+          })
+          .select()
+          .single()
+      );
+
+      const results = await Promise.all(accountBudgetPromises);
+      const failedResult = results.find(result => result.error);
+      
+      if (failedResult) {
+        throw failedResult.error;
+      }
+
+      // Use the first result for the main budget object
+      data = results[0].data;
+    } else if (budgetData.activityScope === 'category_based' && budgetData.targetCategory) {
+      // Create category-based budgets
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('user_categories')
+        .select('id')
+        .eq('name', budgetData.targetCategory)
+        .eq('user_id', user.id)
+        .single();
+
+      if (categoryError) throw categoryError;
+
+      const { data: categoryBudgetData, error: categoryBudgetError } = await supabase
+        .from('category_budgets')
+        .insert({
+          user_id: user.id,
+          category_id: categoryData.id,
+          amount: budgetData.amount,
+          period: budgetData.period,
+          alert_threshold: 80, // 80% threshold
+          rollover_unused: false
+        })
+        .select()
+        .single();
+
+      if (categoryBudgetError) throw categoryBudgetError;
+      data = categoryBudgetData;
+    } else {
+      // Create general budgets
+      const { data: generalData, error: generalError } = await supabase
+        .from('budgets')
+        .insert({
+          user_id: user.id,
+          category: budgetData.category,
+          amount: budgetData.amount,
+          spent: budgetData.spent || 0,
+          period: budgetData.period,
+          activity_scope: budgetData.activityScope || 'general',
+          linked_accounts_count: budgetData.accountIds?.length || 0
+        })
+        .select()
+        .single();
+
+      if (generalError) throw generalError;
+      data = generalData;
+    }
 
     const newBudget: Budget = {
       id: data.id,
@@ -2938,10 +3012,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       spent: Number(data.spent || 0),
       period: data.period,
       accountId: data.account_id,
-      activityScope: data.activity_scope || 'general',
-      accountIds: data.account_ids || [],
-      targetCategory: data.target_category,
-      currencyCode: data.currency_code || 'USD',
+      activityScope: budgetData.activityScope || 'general',
+      accountIds: budgetData.accountIds || [],
+      targetCategory: budgetData.targetCategory,
+      currencyCode: budgetData.currencyCode || 'USD',
       startDate: data.start_date ? new Date(data.start_date) : new Date(),
       endDate: data.end_date ? new Date(data.end_date) : undefined,
       createdAt: new Date(data.created_at)
@@ -2989,41 +3063,41 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) throw new Error('User not authenticated');
 
     const { data, error } = await supabase
-      .from('recurring_transactions')
+      .from('bills')
       .insert({
         user_id: user.id,
-        type: billData.isIncome ? 'income' : 'expense',
-        amount: billData.amount,
+        title: billData.title,
+        description: billData.description,
         category: billData.category,
-        description: billData.description || billData.title,
+        bill_type: billData.billType,
+        amount: billData.amount,
+        estimated_amount: billData.estimatedAmount,
         frequency: billData.frequency,
-        start_date: billData.dueDate.toISOString().split('T')[0],
-        end_date: billData.endDate?.toISOString().split('T')[0],
-        next_occurrence_date: billData.nextDueDate.toISOString().split('T')[0],
-        last_processed_date: billData.lastPaidDate?.toISOString().split('T')[0],
+        custom_frequency_days: billData.customFrequencyDays,
+        due_date: billData.dueDate.toISOString().split('T')[0],
+        next_due_date: billData.nextDueDate.toISOString().split('T')[0],
+        last_paid_date: billData.lastPaidDate?.toISOString().split('T')[0],
+        default_account_id: billData.defaultAccountId,
+        auto_pay: billData.autoPay,
+        linked_liability_id: billData.linkedLiabilityId,
+        is_emi: billData.isEmi,
         is_active: billData.isActive,
-        account_id: billData.defaultAccountId,
-        // Map additional fields
-        day_of_month: billData.dueDate.getDate(),
-        max_occurrences: billData.maxOccurrences,
-        current_occurrences: 0,
-        // Store additional bill data in metadata
-        metadata: {
-          billType: billData.billType,
-          estimatedAmount: billData.estimatedAmount,
-          customFrequencyDays: billData.customFrequencyDays,
-          autoPay: billData.autoPay,
-          linkedLiabilityId: billData.linkedLiabilityId,
-          isEmi: billData.isEmi,
-          isEssential: billData.isEssential,
-          reminderDaysBefore: billData.reminderDaysBefore,
-          sendDueDateReminder: billData.sendDueDateReminder,
-          sendOverdueReminder: billData.sendOverdueReminder,
-          activityScope: billData.activityScope || 'general',
-          targetCategory: billData.targetCategory,
-          accountIds: billData.accountIds || [],
-          isIncome: billData.isIncome || false
-        }
+        is_essential: billData.isEssential,
+        reminder_days_before: billData.reminderDaysBefore,
+        send_due_date_reminder: billData.sendDueDateReminder,
+        send_overdue_reminder: billData.sendOverdueReminder,
+        activity_scope: billData.activityScope || 'general',
+        target_category: billData.targetCategory,
+        linked_accounts_count: billData.accountIds?.length || 0,
+        currency_code: billData.currencyCode || 'USD',
+        is_income: billData.isIncome || false,
+        is_variable_amount: billData.isVariableAmount || false,
+        min_amount: billData.minAmount,
+        max_amount: billData.maxAmount,
+        priority: billData.priority || 'medium',
+        status: billData.status || 'active',
+        payment_method: billData.paymentMethod,
+        notes: billData.notes
       })
       .select()
       .single();
@@ -3033,53 +3107,53 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newBill: Bill = {
       id: data.id,
       userId: data.user_id,
-      title: data.description, // Use description as title since recurring_transactions doesn't have title
+      title: data.title,
       description: data.description,
       category: data.category,
-      billType: data.metadata?.billType || 'fixed',
+      billType: data.bill_type,
       amount: Number(data.amount),
-      estimatedAmount: data.metadata?.estimatedAmount || Number(data.amount),
+      estimatedAmount: data.estimated_amount ? Number(data.estimated_amount) : undefined,
       frequency: data.frequency,
-      customFrequencyDays: data.metadata?.customFrequencyDays,
-      dueDate: new Date(data.start_date),
-      nextDueDate: new Date(data.next_occurrence_date),
-      lastPaidDate: data.last_processed_date ? new Date(data.last_processed_date) : undefined,
-      defaultAccountId: data.account_id,
-      autoPay: data.metadata?.autoPay || false,
-      linkedLiabilityId: data.metadata?.linkedLiabilityId,
-      isEmi: data.metadata?.isEmi || false,
+      customFrequencyDays: data.custom_frequency_days,
+      dueDate: new Date(data.due_date),
+      nextDueDate: new Date(data.next_due_date),
+      lastPaidDate: data.last_paid_date ? new Date(data.last_paid_date) : undefined,
+      defaultAccountId: data.default_account_id,
+      autoPay: data.auto_pay || false,
+      linkedLiabilityId: data.linked_liability_id,
+      isEmi: data.is_emi || false,
       isActive: data.is_active,
-      isEssential: data.metadata?.isEssential || false,
-      reminderDaysBefore: data.metadata?.reminderDaysBefore || 3,
-      sendDueDateReminder: data.metadata?.sendDueDateReminder || false,
-      sendOverdueReminder: data.metadata?.sendOverdueReminder || false,
-      billCategory: 'general_expense',
-      targetCategory: data.metadata?.targetCategory,
-      isRecurring: true, // All recurring_transactions are recurring
-      paymentMethod: 'bank_transfer',
-      notes: '',
-      priority: 'medium',
-      status: 'active',
-      activityScope: data.metadata?.activityScope || 'general',
-      accountIds: data.metadata?.accountIds || [],
-      linkedAccountsCount: data.metadata?.accountIds?.length || 0,
+      isEssential: data.is_essential || false,
+      reminderDaysBefore: data.reminder_days_before || 3,
+      sendDueDateReminder: data.send_due_date_reminder || false,
+      sendOverdueReminder: data.send_overdue_reminder || false,
+      billCategory: data.bill_category || 'general_expense',
+      targetCategory: data.target_category,
+      isRecurring: data.is_recurring || false,
+      paymentMethod: data.payment_method || 'bank_transfer',
+      notes: data.notes || '',
+      priority: data.priority || 'medium',
+      status: data.status || 'active',
+      activityScope: data.activity_scope || 'general',
+      accountIds: [], // Will be loaded separately from activity_account_links
+      linkedAccountsCount: data.linked_accounts_count || 0,
       // New fields
-      currencyCode: 'USD',
-      isIncome: data.type === 'income',
-      billStage: 'pending',
-      movedToDate: undefined,
-      stageReason: undefined,
-      isVariableAmount: false,
-      minAmount: undefined,
-      maxAmount: undefined,
-      completionAction: 'continue',
-      completionDate: undefined,
-      completionNotes: undefined,
-      originalAmount: undefined,
-      extendedAmount: undefined,
-      isArchived: false,
-      archivedDate: undefined,
-      archivedReason: undefined,
+      currencyCode: data.currency_code || 'USD',
+      isIncome: data.is_income || false,
+      billStage: data.bill_stage || 'pending',
+      movedToDate: data.moved_to_date ? new Date(data.moved_to_date) : undefined,
+      stageReason: data.stage_reason,
+      isVariableAmount: data.is_variable_amount || false,
+      minAmount: data.min_amount ? Number(data.min_amount) : undefined,
+      maxAmount: data.max_amount ? Number(data.max_amount) : undefined,
+      completionAction: data.completion_action || 'continue',
+      completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
+      completionNotes: data.completion_notes,
+      originalAmount: data.original_amount ? Number(data.original_amount) : undefined,
+      extendedAmount: data.extended_amount ? Number(data.extended_amount) : undefined,
+      isArchived: data.is_archived || false,
+      archivedDate: data.archived_date ? new Date(data.archived_date) : undefined,
+      archivedReason: data.archived_reason,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };

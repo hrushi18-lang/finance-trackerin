@@ -100,37 +100,51 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
         'monthlyPayment'
       ]);
       
-      // Validate using schema
-      const validatedData = validateLiability({
+      // Prepare validation data with snake_case fields
+      const validationData = {
         ...sanitizedData,
-        totalAmount: toNumber(sanitizedData.totalAmount),
-        remainingAmount: toNumber(sanitizedData.remainingAmount),
-        interestRate: toNumber(sanitizedData.interestRate),
-        monthlyPayment: toNumber(sanitizedData.monthlyPayment),
-      });
+        total_amount: toNumber(sanitizedData.totalAmount),
+        remaining_amount: toNumber(sanitizedData.remainingAmount),
+        interest_rate: toNumber(sanitizedData.interestRate),
+        monthly_payment: toNumber(sanitizedData.monthlyPayment),
+        due_date: data.due_date ? new Date(data.due_date) : undefined,
+        category: 'Debt Payment', // Default category
+        account_id: data.accountId || '', // This should be provided by the form
+        // Add missing fields for validation
+        activity_scope: 'general', // Default to general for this form
+        account_ids: [],
+        target_category: undefined
+      };
+
+      // Validate using schema
+      const validatedData = validateLiability(validationData);
       
       // For purchase type, addAsIncome should always be false
       const effectiveAddAsIncome = selectedType === 'purchase' ? false : addAsIncome;
       
       await onSubmit({
+        // Map validated snake_case data to camelCase for the API
         name: validatedData.name,
-        liabilityType: validatedData.type, // Map old 'type' to new 'liabilityType'
-        description: validatedData.description,
-        totalAmount: validatedData.totalAmount,
-        remainingAmount: validatedData.remainingAmount,
-        interestRate: validatedData.interestRate,
-        monthlyPayment: validatedData.monthlyPayment,
-        minimumPayment: validatedData.minimumPayment,
-        paymentDay: validatedData.paymentDay,
-        loanTermMonths: validatedData.loanTermMonths,
-        startDate: new Date(validatedData.start_date),
+        liabilityType: data.type, // Use original type from form
+        description: data.description,
+        totalAmount: validatedData.total_amount,
+        remainingAmount: validatedData.remaining_amount,
+        interestRate: validatedData.interest_rate,
+        monthlyPayment: validatedData.monthly_payment,
+        minimumPayment: data.minimumPayment,
+        paymentDay: data.paymentDay,
+        loanTermMonths: data.loanTermMonths,
+        startDate: new Date(data.start_date),
         dueDate: validatedData.due_date ? new Date(validatedData.due_date) : undefined,
-        nextPaymentDate: validatedData.nextPaymentDate ? new Date(validatedData.nextPaymentDate) : undefined,
-        linkedAssetId: validatedData.linkedAssetId,
-        isSecured: validatedData.isSecured,
-        providesFunds: validatedData.providesFunds,
-        due_date: typeof data.due_date === 'string' ? new Date(data.due_date) : data.due_date,
-        start_date: typeof data.start_date === 'string' ? new Date(data.start_date) : data.start_date,
+        nextPaymentDate: data.nextPaymentDate ? new Date(data.nextPaymentDate) : undefined,
+        linkedAssetId: data.linkedAssetId,
+        isSecured: data.isSecured,
+        providesFunds: data.providesFunds,
+        // Add scoping fields from validated data
+        activityScope: validatedData.activity_scope,
+        accountIds: validatedData.account_ids || [],
+        targetCategory: validatedData.target_category,
+        // Additional fields
         linkedPurchaseId: data.linkedPurchaseId || undefined,
       }, effectiveAddAsIncome);
       

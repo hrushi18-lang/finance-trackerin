@@ -3,10 +3,10 @@ import { useForm } from 'react-hook-form';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { Select } from '../common/Select';
+import { CategorySelector } from '../common/CategorySelector';
 import { useFinance } from '../../contexts/FinanceContext';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { sanitizeFinancialData, toNumber } from '../../utils/validation';
-import { DEFAULT_CATEGORIES } from '../../utils/categories';
 
 interface AccountBudgetFormData {
   accountId: string;
@@ -104,15 +104,13 @@ export const AccountBudgetForm: React.FC<AccountBudgetFormProps> = ({
         <label className="block text-sm font-medium mb-2 text-black">
           Category *
         </label>
-        <select
-          {...register('category', { required: 'Please select a category' })}
-          className="modal-input w-full"
-        >
-          <option value="">Select a category</option>
-          {DEFAULT_CATEGORIES.TRANSACTION.EXPENSE.map(category => (
-            <option key={category} value={category}>{category}</option>
-          ))}
-        </select>
+        <CategorySelector
+          value={watch('category')}
+          onChange={(category) => setValue('category', category)}
+          type="budget"
+          placeholder="Select a category"
+          error={errors.category?.message}
+        />
         {errors.category && (
           <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>
         )}

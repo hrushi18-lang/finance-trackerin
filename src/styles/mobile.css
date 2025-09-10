@@ -16,7 +16,7 @@
 /* Mobile font optimization */
 @media screen and (max-width: 768px) {
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-family: var(--font-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -26,37 +26,49 @@
     text-size-adjust: 100%;
   }
   
-  /* Ensure all text uses system fonts until custom fonts load */
+  /* Ensure all text is visible and uses proper fonts */
   .font-heading,
   .font-numbers,
   .font-titles,
   .font-description,
   .font-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+    font-family: var(--font-primary) !important;
+    color: inherit !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
   /* Apply custom fonts when loaded */
   .fonts-loaded .font-heading {
-    font-family: 'Archivo Black', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+    font-family: var(--font-heading) !important;
     font-weight: 900;
   }
   
   .fonts-loaded .font-numbers {
-    font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+    font-family: var(--font-numbers) !important;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
   
   .fonts-loaded .font-titles,
   .fonts-loaded .font-body {
-    font-family: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+    font-family: var(--font-primary) !important;
     font-weight: 500;
   }
   
   .fonts-loaded .font-description {
-    font-family: 'Playfair Display', 'Times New Roman', 'Times', serif !important;
+    font-family: var(--font-description) !important;
     font-weight: 400;
     font-style: normal;
+  }
+  
+  /* Force visibility for all text elements */
+  h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, textarea, label {
+    color: inherit !important;
+    opacity: 1 !important;
+    visibility: visible !important;
   }
 }
 

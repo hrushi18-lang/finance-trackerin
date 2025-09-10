@@ -87,6 +87,11 @@ class MobileFontLoader {
         this.loadedFonts.add(fontFamily);
       }
       return success;
+    } catch (error) {
+      console.warn(`Font loading failed for ${fontFamily}:`, error);
+      // Mark as loaded even if failed to prevent retry loops
+      this.loadedFonts.add(fontFamily);
+      return false;
     } finally {
       this.loadingPromises.delete(fontFamily);
     }
@@ -102,27 +107,39 @@ class MobileFontLoader {
     }
 
     try {
+      // First check if font is already available
+      if (document.fonts.check(`16px "${fontFamily}"`)) {
+        console.log(`✅ Font already available: ${fontFamily}`);
+        this.updateBodyClass();
+        return true;
+      }
+
       // Try to load the font with different weights
       const weights = this.getFontWeights(fontFamily);
       const loadPromises = weights.map(weight => 
         document.fonts.load(`${weight} 16px "${fontFamily}"`)
       );
 
-      await Promise.all(loadPromises);
+      // Use Promise.allSettled to handle individual failures gracefully
+      const results = await Promise.allSettled(loadPromises);
       
-      // Verify the font is actually loaded
-      const isLoaded = document.fonts.check(`16px "${fontFamily}"`);
+      // Check if any font weight loaded successfully
+      const hasSuccessfulLoad = results.some(result => result.status === 'fulfilled');
       
-      if (isLoaded) {
+      if (hasSuccessfulLoad) {
         console.log(`✅ Font loaded: ${fontFamily}`);
         this.updateBodyClass();
         return true;
       } else {
-        console.warn(`⚠️ Font verification failed: ${fontFamily}`);
+        console.warn(`⚠️ Font verification failed: ${fontFamily}, using fallback`);
+        // Don't fail completely, just use fallback
+        this.updateBodyClass();
         return false;
       }
     } catch (error) {
-      console.error(`❌ Failed to load font ${fontFamily}:`, error);
+      console.warn(`⚠️ Font loading error for ${fontFamily}:`, error);
+      // Don't fail completely, just use fallback
+      this.updateBodyClass();
       return false;
     }
   }

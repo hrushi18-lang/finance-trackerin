@@ -34,6 +34,9 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    strictPort: true
+    strictPort: true,
+    headers: {
+      'Content-Security-Policy': "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://qbskidyauxehvswgckrv.supabase.co https://api.exchangerate-api.com https://api.fixer.io https://v6.exchangerate-api.com https://api.exchangeratesapi.io; img-src 'self' data: blob: https:; font-src 'self' data:;"
+    }
   }
 });

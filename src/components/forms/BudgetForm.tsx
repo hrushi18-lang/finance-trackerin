@@ -79,18 +79,28 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
         start_date: new Date(), // Start from today
         end_date: new Date(Date.now() + (sanitizedData.period === 'weekly' ? 7 : sanitizedData.period === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000), // Calculate end date
         account_id: sanitizedData.accountIds?.[0] || undefined, // Use first selected account
+        // Add missing fields for validation
+        activity_scope: data.activityScope,
+        account_ids: data.accountIds || [],
+        target_category: data.targetCategory || undefined,
       };
       
       const validatedData = validateBudget(validationData);
       
       await onSubmit({
-        ...validatedData,
+        // Map validated snake_case data to camelCase for the API
+        category: validatedData.category,
+        amount: validatedData.amount,
+        period: validatedData.period,
+        startDate: validatedData.start_date,
+        endDate: validatedData.end_date,
+        accountId: validatedData.account_id,
         categoryId: categoryId || '', // Added categoryId
         spent: initialData?.spent || 0,
-        // Add scoping fields
-        activityScope: data.activityScope,
-        accountIds: data.accountIds,
-        targetCategory: data.targetCategory,
+        // Add scoping fields from validated data
+        activityScope: validatedData.activity_scope,
+        accountIds: validatedData.account_ids || [],
+        targetCategory: validatedData.target_category,
         currencyCode: 'USD' // Default currency
       });
       

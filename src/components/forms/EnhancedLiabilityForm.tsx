@@ -6,6 +6,7 @@ import { Button } from '../common/Button';
 import { useFinance } from '../../contexts/FinanceContext';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
+import { validateLiability, sanitizeFinancialData, toNumber } from '../../utils/validation';
 
 interface EnhancedLiabilityFormData {
   name: string;
@@ -145,17 +146,49 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({
       setIsSubmitting(true);
       setError(null);
       
+      // Sanitize numeric fields
+      const sanitizedData = sanitizeFinancialData(data, [
+        'totalAmount', 
+        'remainingAmount', 
+        'interestRate', 
+        'monthlyPayment',
+        'minimumPayment'
+      ]);
+      
+      // Prepare validation data with snake_case fields
+      const validationData = {
+        ...sanitizedData,
+        total_amount: toNumber(sanitizedData.totalAmount),
+        remaining_amount: toNumber(sanitizedData.remainingAmount),
+        interest_rate: toNumber(sanitizedData.interestRate),
+        monthly_payment: toNumber(sanitizedData.monthlyPayment),
+        due_date: data.dueDate ? new Date(data.dueDate) : undefined,
+        category: 'Debt Payment', // Default category
+        account_id: data.defaultPaymentAccountId || '', // Use default payment account
+        // Add scoping fields
+        activity_scope: data.activityScope,
+        account_ids: data.accountIds || [],
+        target_category: data.targetCategory
+      };
+
+      // Validate using schema
+      const validatedData = validateLiability(validationData);
+      
       const formattedData = {
         ...data,
-        totalAmount: Number(data.totalAmount),
-        remainingAmount: Number(data.remainingAmount),
-        interestRate: Number(data.interestRate),
-        monthlyPayment: data.monthlyPayment ? Number(data.monthlyPayment) : undefined,
+        totalAmount: validatedData.total_amount,
+        remainingAmount: validatedData.remaining_amount,
+        interestRate: validatedData.interest_rate,
+        monthlyPayment: validatedData.monthly_payment,
         minimumPayment: data.minimumPayment ? Number(data.minimumPayment) : undefined,
         loanTermMonths: data.loanTermMonths ? Number(data.loanTermMonths) : undefined,
         startDate: new Date(data.startDate),
-        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-        nextPaymentDate: data.dueDate ? new Date(data.dueDate) : undefined
+        dueDate: validatedData.due_date ? new Date(validatedData.due_date) : undefined,
+        nextPaymentDate: data.dueDate ? new Date(data.dueDate) : undefined,
+        // Add scoping fields from validated data
+        activityScope: validatedData.activity_scope,
+        accountIds: validatedData.account_ids || [],
+        targetCategory: validatedData.target_category
       };
 
       await onSubmit(formattedData);
