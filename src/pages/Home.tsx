@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Bell, 
   Settings, 
@@ -29,7 +29,6 @@ import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
-import { useEnhancedCurrency } from '../contexts/EnhancedCurrencyContext';
 import { useSwipeGestures } from '../hooks/useMobileGestures';
 import { format } from 'date-fns';
 
@@ -37,7 +36,6 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { formatCurrency, currency } = useInternationalization();
-  const { convertAmount, primaryCurrency } = useEnhancedCurrency();
   const { 
     accounts, 
     transactions, 
@@ -51,8 +49,6 @@ const Home: React.FC = () => {
 
   const [hideBalance, setHideBalance] = useState(false);
   const [currentAccountPage, setCurrentAccountPage] = useState(0);
-  const [netWorth, setNetWorth] = useState(0);
-  const [isCalculating, setIsCalculating] = useState(false);
 
   // Swipe gestures for accounts
   const { elementRef: accountsRef } = useSwipeGestures({
@@ -71,79 +67,12 @@ const Home: React.FC = () => {
     velocityThreshold: 0.3
   });
 
-  // Calculate net worth with proper currency conversion
-  useEffect(() => {
-    const calculateNetWorth = async () => {
-      if (!convertAmount || accounts.length === 0) {
-        console.log('⚠️ Missing convertAmount function or no accounts');
-        return;
-      }
-      
-      console.log('🔍 Calculating net worth with currency conversion');
-      console.log('Primary currency:', primaryCurrency);
-      console.log('Accounts:', accounts.map(a => ({ name: a.name, balance: a.balance, currency: a.currency })));
-      
-      setIsCalculating(true);
-      try {
-        let totalAssets = 0;
-        
-        // Convert each account balance to primary currency
-        for (const account of accounts) {
-          console.log(`Processing account ${account.name}: ${account.balance} ${account.currency}`);
-          
-          if (account.currency === primaryCurrency) {
-            totalAssets += account.balance || 0;
-            console.log(`Same currency, adding directly: ${account.balance}`);
-          } else {
-            // Convert to minor units for conversion
-            const balanceInMinorUnits = Math.round((account.balance || 0) * 100);
-            const converted = await convertAmount(balanceInMinorUnits, account.currency, primaryCurrency);
-            console.log(`Converted ${account.balance} ${account.currency} to ${converted} ${primaryCurrency}`);
-            if (converted !== null) {
-              // Convert back to major units
-              totalAssets += converted / 100;
-            } else {
-              console.warn(`⚠️ Conversion failed for ${account.name}, using original amount`);
-              // Fallback: use original amount if conversion fails
-              totalAssets += account.balance || 0;
-            }
-          }
-        }
-        
-        // Convert liabilities to primary currency
-        let totalLiabilities = 0;
-        for (const liability of liabilities) {
-          if (liability.currency === primaryCurrency) {
-            totalLiabilities += liability.remaining_amount || 0;
-          } else {
-            // Convert to minor units for conversion
-            const liabilityInMinorUnits = Math.round((liability.remaining_amount || 0) * 100);
-            const converted = await convertAmount(liabilityInMinorUnits, liability.currency, primaryCurrency);
-            if (converted !== null) {
-              // Convert back to major units
-              totalLiabilities += converted / 100;
-            } else {
-              // Fallback: use original amount if conversion fails
-              totalLiabilities += liability.remaining_amount || 0;
-            }
-          }
-        }
-        
-        console.log(`Total assets: ${totalAssets}, Total liabilities: ${totalLiabilities}, Net worth: ${totalAssets - totalLiabilities}`);
-        setNetWorth(totalAssets - totalLiabilities);
-      } catch (error) {
-        console.error('Error calculating net worth:', error);
-        // Fallback to simple calculation
-        const totalAssets = accounts.reduce((sum, account) => sum + (account.balance || 0), 0);
-        const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.remaining_amount || 0), 0);
-        setNetWorth(totalAssets - totalLiabilities);
-      } finally {
-        setIsCalculating(false);
-      }
-    };
-    
-    calculateNetWorth();
-  }, [accounts, liabilities, convertAmount, primaryCurrency]);
+  // Calculate net worth
+  const netWorth = useMemo(() => {
+    const totalAssets = accounts.reduce((sum, account) => sum + (account.balance || 0), 0);
+    const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.remaining_amount || 0), 0);
+    return totalAssets - totalLiabilities;
+  }, [accounts, liabilities]);
 
   // Calculate net worth change (mock data for now)
   const netWorthChange = useMemo(() => {
@@ -287,7 +216,7 @@ const Home: React.FC = () => {
             <p className="text-sm font-body mb-3" style={{ color: 'var(--text-secondary)' }}>Net Worth</p>
             <div className="mb-3">
               <span className="text-4xl font-numbers" style={{ color: 'var(--text-primary)' }}>
-                {hideBalance ? '••••••' : isCalculating ? 'Calculating...' : formatCurrency(netWorth, primaryCurrency)}
+                {hideBalance ? '••••••' : formatCurrency(netWorth)}
               </span>
             </div>
             <div className="flex items-center justify-center space-x-2">
@@ -371,15 +300,10 @@ const Home: React.FC = () => {
                           </div>
                           <div className="text-right">
                             <div className="text-lg font-numbers" style={{ color: 'var(--text-primary)' }}>
-                              {hideBalance ? '••••••' : formatCurrency(account.balance || 0, account.currency)}
+                              {hideBalance ? '••••••' : formatCurrency(account.balance || 0)}
                             </div>
                             <div className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
                               {account.currency}
-                              {account.currency !== primaryCurrency && (
-                                <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                                  ≈ {formatCurrency(account.balance || 0, primaryCurrency)}
-                                </div>
-                              )}
                             </div>
                           </div>
                         </div>

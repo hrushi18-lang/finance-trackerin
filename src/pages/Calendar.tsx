@@ -14,7 +14,8 @@ import {
   Eye,
   EyeOff,
   Filter,
-  Search
+  Search,
+  X
 } from 'lucide-react';
 import { 
   format, 
@@ -52,7 +53,7 @@ interface CalendarEvent {
   paidDate?: Date;
 }
 
-export const Calendar: React.FC = () => {
+const Calendar: React.FC = () => {
   const { 
     transactions, 
     goals, 
@@ -77,6 +78,8 @@ export const Calendar: React.FC = () => {
     showPending: true,
     showOverdue: true
   });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'upcoming' | 'overdue' | 'completed' | 'this_week' | 'this_month'>('all');
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -93,7 +96,7 @@ export const Calendar: React.FC = () => {
           id: `transaction-${transaction.id}`,
           type: 'transaction',
           title: transaction.description,
-          amount: transaction.amount,
+          amount: transaction.type === 'expense' ? -transaction.amount : transaction.amount,
           date: new Date(transaction.date),
           status: 'completed',
           category: transaction.category,
@@ -124,26 +127,25 @@ export const Calendar: React.FC = () => {
       });
     }
 
-    // Add bills (recurring transactions)
+    // Add bills with due dates
     if (filters.showBills) {
-      recurringTransactions.forEach(bill => {
-        if (bill.type === 'expense' && bill.frequency) {
-          // Generate bill dates for the current month
-          const billDate = new Date(bill.nextDueDate || bill.date);
+      bills.forEach(bill => {
+        if (bill.isActive && bill.nextDueDate) {
+          const billDate = new Date(bill.nextDueDate);
           const isOverdue = isAfter(new Date(), billDate);
-          const isPaid = bill.isPaid;
+          const isPaid = bill.lastPaidDate && new Date(bill.lastPaidDate) >= billDate;
           
           events.push({
             id: `bill-${bill.id}`,
             type: 'bill',
-            title: bill.description,
-            amount: bill.amount,
+            title: bill.title,
+            amount: -bill.amount, // Negative for expenses
             date: billDate,
             status: isPaid ? 'completed' : (isOverdue ? 'overdue' : 'pending'),
             category: bill.category,
-            description: bill.description,
+            description: `${bill.description || ''} | ${bill.frequency} | ${bill.autoPay ? 'Auto-pay' : 'Manual'}`,
             isPaid: isPaid,
-            paidDate: isPaid ? new Date() : undefined
+            paidDate: isPaid ? new Date(bill.lastPaidDate!) : undefined
           });
         }
       });
@@ -179,9 +181,40 @@ export const Calendar: React.FC = () => {
       if (!filters.showPending && event.status === 'pending') return false;
       if (!filters.showOverdue && event.status === 'overdue') return false;
       
-      return true;
+      // Apply search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesTitle = event.title.toLowerCase().includes(searchLower);
+        const matchesCategory = event.category?.toLowerCase().includes(searchLower);
+        const matchesDescription = event.description?.toLowerCase().includes(searchLower);
+        if (!matchesTitle && !matchesCategory && !matchesDescription) return false;
+      }
+      
+      // Apply filter type
+      const now = new Date();
+      const eventDate = event.date;
+      
+      switch (filterType) {
+        case 'upcoming':
+          return isAfter(eventDate, now) && event.status === 'pending';
+        case 'overdue':
+          return event.status === 'overdue';
+        case 'completed':
+          return event.status === 'completed';
+        case 'this_week':
+          const weekStart = startOfDay(now);
+          const weekEnd = endOfDay(addDays(now, 7));
+          return eventDate >= weekStart && eventDate <= weekEnd;
+        case 'this_month':
+          const monthStart = startOfMonth(now);
+          const monthEnd = endOfMonth(now);
+          return eventDate >= monthStart && eventDate <= monthEnd;
+        case 'all':
+        default:
+          return true;
+      }
     });
-  }, [transactions, goals, bills, liabilities, recurringTransactions, accounts, filters]);
+  }, [transactions, goals, bills, liabilities, recurringTransactions, accounts, filters, searchTerm, filterType]);
 
   // Group events by date
   const eventsByDate = useMemo(() => {
@@ -344,90 +377,197 @@ export const Calendar: React.FC = () => {
       <header className="bg-black/20 backdrop-blur-md px-4 py-4 sm:py-6 sticky top-0 z-30 border-b border-white/10">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-white">Financial Calendar</h1>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="p-2 rounded-xl bg-black/20 backdrop-blur-md hover:bg-black/30 transition-colors border border-white/10"
-            >
-              <Filter size={20} className="text-gray-300" />
-            </button>
-          </div>
+                      <div className="flex items-center space-x-2">
+              {(searchTerm || filterType !== 'all' || Object.values(filters).some(v => !v)) && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFilterType('all');
+                    setFilters({
+                      showTransactions: true,
+                      showGoals: true,
+                      showBills: true,
+                      showLiabilities: true,
+                      showCompleted: true,
+                      showPending: true,
+                      showOverdue: true
+                    });
+                  }}
+                  className="p-2 rounded-xl bg-red-600/20 backdrop-blur-md hover:bg-red-600/30 transition-colors border border-red-500/20"
+                  title="Clear all filters"
+                >
+                  <X size={20} className="text-red-300" />
+                </button>
+              )}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="p-2 rounded-xl bg-black/20 backdrop-blur-md hover:bg-black/30 transition-colors border border-white/10"
+              >
+                <Filter size={20} className="text-gray-300" />
+              </button>
+            </div>
         </div>
         <PageNavigation />
       </header>
       
       <div className="px-4 py-6">
-        {/* Filters */}
+        {/* Enhanced Filters */}
         {showFilters && (
           <div className="bg-black/20 backdrop-blur-md rounded-2xl p-6 mb-6 border border-white/10">
-            <h3 className="text-lg font-semibold text-white mb-4">Filters</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <label className="flex items-center space-x-2">
+            <h3 className="text-lg font-semibold text-white mb-4">Filters & Search</h3>
+            
+            {/* Search Bar */}
+            <div className="mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input
-                  type="checkbox"
-                  checked={filters.showTransactions}
-                  onChange={(e) => setFilters(prev => ({ ...prev, showTransactions: e.target.checked }))}
-                  className="rounded"
+                  type="text"
+                  placeholder="Search activities, categories, descriptions..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-black/30 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <span className="text-sm text-gray-300">Transactions</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={filters.showGoals}
-                  onChange={(e) => setFilters(prev => ({ ...prev, showGoals: e.target.checked }))}
-                  className="rounded"
-                />
-                <span className="text-sm text-gray-300">Goals</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={filters.showBills}
-                  onChange={(e) => setFilters(prev => ({ ...prev, showBills: e.target.checked }))}
-                  className="rounded"
-                />
-                <span className="text-sm text-gray-300">Bills</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={filters.showLiabilities}
-                  onChange={(e) => setFilters(prev => ({ ...prev, showLiabilities: e.target.checked }))}
-                  className="rounded"
-                />
-                <span className="text-sm text-gray-300">Liabilities</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={filters.showCompleted}
-                  onChange={(e) => setFilters(prev => ({ ...prev, showCompleted: e.target.checked }))}
-                  className="rounded"
-                />
-                <span className="text-sm text-gray-300">Completed</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={filters.showPending}
-                  onChange={(e) => setFilters(prev => ({ ...prev, showPending: e.target.checked }))}
-                  className="rounded"
-                />
-                <span className="text-sm text-gray-300">Pending</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={filters.showOverdue}
-                  onChange={(e) => setFilters(prev => ({ ...prev, showOverdue: e.target.checked }))}
-                  className="rounded"
-                />
-                <span className="text-sm text-gray-300">Overdue</span>
-              </label>
+              </div>
+            </div>
+
+            {/* Filter Type Buttons */}
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-gray-300 mb-3">Quick Filters</h4>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'all', label: 'All Activities', icon: CalendarIcon },
+                  { key: 'upcoming', label: 'Upcoming', icon: Clock },
+                  { key: 'overdue', label: 'Overdue', icon: AlertCircle },
+                  { key: 'completed', label: 'Completed', icon: CheckCircle },
+                  { key: 'this_week', label: 'This Week', icon: TrendingUp },
+                  { key: 'this_month', label: 'This Month', icon: Target }
+                ].map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setFilterType(key as any)}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      filterType === key
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-black/30 text-gray-300 hover:bg-black/50'
+                    }`}
+                  >
+                    <Icon size={16} />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Activity Type Filters */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-gray-300 mb-3">Activity Types</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={filters.showTransactions}
+                    onChange={(e) => setFilters(prev => ({ ...prev, showTransactions: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-300">Transactions</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={filters.showGoals}
+                    onChange={(e) => setFilters(prev => ({ ...prev, showGoals: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-300">Goals</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={filters.showBills}
+                    onChange={(e) => setFilters(prev => ({ ...prev, showBills: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-300">Bills</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={filters.showLiabilities}
+                    onChange={(e) => setFilters(prev => ({ ...prev, showLiabilities: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-300">Liabilities</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Status Filters */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-300 mb-3">Status</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={filters.showCompleted}
+                    onChange={(e) => setFilters(prev => ({ ...prev, showCompleted: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-300">Completed</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={filters.showPending}
+                    onChange={(e) => setFilters(prev => ({ ...prev, showPending: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-300">Pending</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={filters.showOverdue}
+                    onChange={(e) => setFilters(prev => ({ ...prev, showOverdue: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-300">Overdue</span>
+                </label>
+              </div>
             </div>
           </div>
         )}
+
+        {/* Results Summary */}
+        <div className="bg-black/20 backdrop-blur-md rounded-2xl p-4 mb-6 border border-white/10">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4">
+              <h3 className="text-lg font-semibold text-white">
+                {calendarEvents.length} Activities
+              </h3>
+              <div className="flex flex-wrap items-center space-x-2">
+                {searchTerm && (
+                  <span className="text-sm text-gray-300">
+                    matching "{searchTerm}"
+                  </span>
+                )}
+                {filterType !== 'all' && (
+                  <span className="text-sm text-blue-400 capitalize">
+                    • {filterType.replace('_', ' ')}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-300">
+              <span>Tx: {calendarEvents.filter(e => e.type === 'transaction').length}</span>
+              <span>•</span>
+              <span>Goals: {calendarEvents.filter(e => e.type === 'goal').length}</span>
+              <span>•</span>
+              <span>Bills: {calendarEvents.filter(e => e.type === 'bill').length}</span>
+              <span>•</span>
+              <span>Liab: {calendarEvents.filter(e => e.type === 'liability').length}</span>
+            </div>
+          </div>
+        </div>
 
         {/* Month Navigation */}
         <div className="flex items-center justify-between mb-6">
@@ -601,7 +741,7 @@ export const Calendar: React.FC = () => {
                             ? 'text-green-400' 
                             : 'text-red-400'
                         }`}>
-                          {event.type === 'transaction' && event.amount > 0 ? '+' : ''}
+                          {event.type === 'transaction' && event.amount > 0 ? '+' : '-'}
                           {formatCurrency(Math.abs(event.amount))}
                         </p>
                       )}
@@ -655,3 +795,5 @@ export const Calendar: React.FC = () => {
     </div>
   );
 };
+
+export default Calendar;

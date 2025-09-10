@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { ArrowRight, ArrowLeft, Check, Building2, Target, CreditCard, FileText } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, Building2, Target, CreditCard, FileText, Globe } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { AccountForm } from '../accounts/AccountForm';
+import { CurrencySelector } from '../currency/CurrencySelector';
+import { LiveRateDisplay } from '../currency/LiveRateDisplay';
+import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { financeManager, CreateAccountData } from '../../lib/finance-manager';
 
 interface OnboardingStep {
@@ -18,6 +21,7 @@ interface OnboardingFlowProps {
 }
 
 export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
+  const { displayCurrency, updateUserPreferences, supportedCurrencies } = useEnhancedCurrency();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [userData, setUserData] = useState({
@@ -26,7 +30,11 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
     monthlyIncome: 0,
     hasAccounts: false,
     hasGoals: false,
-    hasBudgets: false
+    hasBudgets: false,
+    primaryCurrency: displayCurrency,
+    displayCurrency: displayCurrency,
+    autoConvert: true,
+    showOriginalAmounts: true
   });
 
   const handleNext = () => {
@@ -45,6 +53,23 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
 
   const markStepComplete = (stepId: string) => {
     setCompletedSteps(prev => new Set([...prev, stepId]));
+  };
+
+  const handleCurrencyComplete = async () => {
+    try {
+      await updateUserPreferences({
+        primary_currency: userData.primaryCurrency,
+        display_currency: userData.displayCurrency,
+        auto_convert: userData.autoConvert,
+        show_original_amounts: userData.showOriginalAmounts,
+        preferred_currencies: [userData.primaryCurrency, 'USD', 'EUR', 'GBP']
+      });
+      markStepComplete('currency');
+    } catch (error) {
+      console.error('Error saving currency preferences:', error);
+      // Still mark as complete to not block the flow
+      markStepComplete('currency');
+    }
   };
 
   const handleCreateAccount = async (data: CreateAccountData) => {
@@ -100,8 +125,110 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
             <div className="flex items-center space-x-3">
               <Check size={16} style={{ color: 'var(--success)' }} />
               <span className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
+                Multi-currency support with live exchange rates
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Check size={16} style={{ color: 'var(--success)' }} />
+              <span className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
                 Works offline, syncs online
               </span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'currency',
+      title: 'Choose your currency',
+      description: 'Select your primary currency for financial tracking',
+      icon: <Globe size={24} />,
+      component: (
+        <div className="space-y-6">
+          <div className="text-center">
+            <p className="text-sm font-body mb-4" style={{ color: 'var(--text-secondary)' }}>
+              Choose your primary currency. You can always change this later and add support for multiple currencies.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <CurrencySelector
+              label="Primary Currency"
+              value={userData.primaryCurrency}
+              onChange={(currency) => setUserData(prev => ({ 
+                ...prev, 
+                primaryCurrency: currency,
+                displayCurrency: currency 
+              }))}
+              showFlag={true}
+              showFullName={true}
+              popularOnly={false}
+            />
+            
+            <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">Multi-Currency Support</h4>
+              <p className="text-xs text-blue-600 mb-3">
+                FinTrack supports {supportedCurrencies.length} currencies with live exchange rates. 
+                You can create accounts, goals, and transactions in any supported currency.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {supportedCurrencies.slice(0, 8).map((currency) => (
+                  <span key={currency.code} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-md">
+                    {currency.flag_emoji} {currency.code}
+                  </span>
+                ))}
+                <span className="text-xs text-blue-600 px-2 py-1">
+                  +{supportedCurrencies.length - 8} more
+                </span>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <label className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  checked={userData.autoConvert}
+                  onChange={(e) => setUserData(prev => ({ ...prev, autoConvert: e.target.checked }))}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-body" style={{ color: 'var(--text-primary)' }}>
+                  Automatically convert amounts to my primary currency
+                </span>
+              </label>
+              
+              <label className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  checked={userData.showOriginalAmounts}
+                  onChange={(e) => setUserData(prev => ({ ...prev, showOriginalAmounts: e.target.checked }))}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-body" style={{ color: 'var(--text-primary)' }}>
+                  Show original amounts alongside converted amounts
+                </span>
+              </label>
+            </div>
+            
+            {userData.primaryCurrency !== 'USD' && (
+              <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                <LiveRateDisplay
+                  fromCurrency={userData.primaryCurrency}
+                  toCurrency="USD"
+                  amount={100}
+                  showTrend={true}
+                  showLastUpdated={true}
+                />
+              </div>
+            )}
+            
+            <div className="text-center">
+              <button
+                onClick={handleCurrencyComplete}
+                className="text-sm font-body hover:underline"
+                style={{ color: 'var(--text-tertiary)' }}
+              >
+                Save currency preferences
+              </button>
             </div>
           </div>
         </div>
@@ -334,6 +461,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
             <div className="flex items-center space-x-3">
               <Check size={16} style={{ color: 'var(--success)' }} />
               <span className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
+                Currency preferences set ({userData.primaryCurrency})
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Check size={16} style={{ color: 'var(--success)' }} />
+              <span className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
                 Offline mode enabled
               </span>
             </div>
@@ -345,7 +478,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
 
   const currentStepData = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;
-  const canProceed = currentStep === 0 || currentStep === 1 || completedSteps.has(currentStepData.id) || isLastStep;
+  const canProceed = currentStep === 0 || currentStep === 1 || currentStep === 2 || completedSteps.has(currentStepData.id) || isLastStep;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: 'var(--background)' }}>

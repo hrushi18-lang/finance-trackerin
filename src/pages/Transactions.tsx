@@ -18,7 +18,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 
-export const Transactions: React.FC = () => {
+const Transactions: React.FC = () => {
   const { transactions, accounts, isLoading, error } = useFinance();
   const navigate = useNavigate();
   
@@ -409,3 +409,5 @@ export const Transactions: React.FC = () => {
     </div>
   );
 };
+
+export default Transactions;

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFinance } from '../contexts/FinanceContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { Input } from '../components/common/Input';
@@ -22,15 +23,15 @@ import {
   LogOut,
   Edit,
   Save,
-  X
+  X,
+  Palette
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { financeManager } from '../lib/finance-manager';
-import { offlineStorage } from '../lib/offline-storage';
+import CustomCategoriesManager from '../components/settings/CustomCategoriesManager';
 
-export const Settings: React.FC = () => {
+const Settings: React.FC = () => {
   const { user, signOut } = useAuth();
-  const { syncData } = useFinance();
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -39,7 +40,7 @@ export const Settings: React.FC = () => {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showCustomCategories, setShowCustomCategories] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -59,7 +60,8 @@ export const Settings: React.FC = () => {
   const handleSyncData = async () => {
     setIsSyncing(true);
     try {
-      await syncData();
+      // Data sync not needed in online-only mode
+      console.log('Data sync not needed in online-only mode');
       // Show success message
     } catch (error) {
       console.error('Error syncing data:', error);
@@ -71,7 +73,8 @@ export const Settings: React.FC = () => {
 
   const handleExportData = async () => {
     try {
-      const data = await financeManager.exportAllData();
+      // Export functionality not available in online-only mode
+      const data = { message: 'Export not available in online-only mode' };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -93,7 +96,8 @@ export const Settings: React.FC = () => {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      await financeManager.importAllData(data);
+      // Import functionality not available in online-only mode
+      console.log('Import functionality not available in online-only mode');
       // Show success message
     } catch (error) {
       console.error('Error importing data:', error);
@@ -103,10 +107,11 @@ export const Settings: React.FC = () => {
 
   const handleClearOfflineData = async () => {
     try {
-      await offlineStorage.clear();
+      // Clear any cached data
+      console.log('Offline data clearing not needed in online-only mode');
       // Show success message
     } catch (error) {
-      console.error('Error clearing offline data:', error);
+      console.error('Error clearing data:', error);
     }
   };
 
@@ -189,19 +194,36 @@ export const Settings: React.FC = () => {
       ]
     },
     {
+      title: 'Categories',
+      items: [
+        {
+          icon: <Edit size={20} />,
+          title: 'Custom Categories',
+          subtitle: 'Manage your custom income and expense categories',
+          onClick: () => setShowCustomCategories(true)
+        }
+      ]
+    },
+    {
       title: 'Appearance',
       items: [
+        {
+          icon: <Palette size={20} />,
+          title: 'Theme Settings',
+          subtitle: 'Choose your preferred theme and colors',
+          onClick: () => navigate('/theme-settings')
+        },
         {
           icon: isDarkMode ? <Moon size={20} /> : <Sun size={20} />,
           title: 'Dark Mode',
           subtitle: isDarkMode ? 'Dark theme enabled' : 'Light theme enabled',
-          onClick: () => setIsDarkMode(!isDarkMode),
+          onClick: toggleDarkMode,
           rightElement: (
             <div className={`w-12 h-6 rounded-full transition-colors ${
-              isDarkMode ? 'bg-gray-600' : 'bg-gray-300'
+              isDarkMode ? 'bg-blue-600' : 'bg-gray-300'
             }`}>
               <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                isDarkMode ? 'translate-x-6' : 'translate-x-0.5'
+                isDarkMode ? 'translate-x-7' : 'translate-x-0.5'
               } mt-0.5`} />
             </div>
           )
@@ -222,6 +244,12 @@ export const Settings: React.FC = () => {
           title: 'About',
           subtitle: 'App version and information',
           onClick: () => {}
+        },
+        {
+          icon: <Database size={20} />,
+          title: 'Currency Demo',
+          subtitle: 'Test multi-currency features and live exchange rates',
+          onClick: () => navigate('/currency-demo')
         }
       ]
     },
@@ -636,6 +664,18 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Custom Categories Modal */}
+      <Modal
+        isOpen={showCustomCategories}
+        onClose={() => setShowCustomCategories(false)}
+        title="Custom Categories"
+        size="lg"
+      >
+        <CustomCategoriesManager />
+      </Modal>
     </div>
   );
 };
+
+export default Settings;

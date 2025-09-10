@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
-import { authManager } from '../../lib/auth';
+import { useAuth } from '../../contexts/AuthContext';
+import { Chrome } from 'lucide-react';
 
 interface AuthFormProps {
   mode: 'signin' | 'signup' | 'reset';
@@ -10,66 +11,81 @@ interface AuthFormProps {
 }
 
 export const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) => {
+  const { 
+    login, 
+    register, 
+    loginWithGoogle, 
+    registerWithGoogle, 
+    authStatus, 
+    authError, 
+    authMessage,
+    clearAuthError 
+  } = useAuth();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
     name: ''
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [localSuccess, setLocalSuccess] = useState<string | null>(null);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    setError(null);
+    setLocalError(null);
+    clearAuthError();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setLocalError(null);
+    setLocalSuccess(null);
 
     try {
-      let result;
-
       switch (mode) {
         case 'signup':
           if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match');
-            setLoading(false);
+            setLocalError('Passwords do not match');
             return;
           }
-          result = await authManager.signUp(formData.email, formData.password, formData.name);
+          await register(formData.email, formData.password, formData.name);
+          setLocalSuccess('Account created successfully! Please check your email to verify your account.');
           break;
         
         case 'signin':
-          result = await authManager.signIn(formData.email, formData.password);
+          await login(formData.email, formData.password);
+          setLocalSuccess('Welcome back!');
+          onSuccess?.();
           break;
         
         case 'reset':
-          result = await authManager.resetPassword(formData.email);
+          // TODO: Implement password reset
+          setLocalSuccess('Password reset functionality coming soon!');
           break;
         
         default:
           throw new Error('Invalid mode');
       }
-
-      if (result.success) {
-        if (mode === 'reset') {
-          setSuccess(result.message || 'Password reset email sent');
-        } else {
-          setSuccess('Success!');
-          onSuccess?.();
-        }
-      } else {
-        setError(result.error || 'An error occurred');
-      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
+      setLocalError(err instanceof Error ? err.message : 'An error occurred');
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setLocalError(null);
+    setLocalSuccess(null);
+    clearAuthError();
+
+    try {
+      if (mode === 'signup') {
+        await registerWithGoogle();
+      } else {
+        await loginWithGoogle();
+      }
+      // The OAuth flow will handle the redirect
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Google authentication failed');
     }
   };
 
@@ -140,15 +156,15 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSucces
           />
         )}
 
-        {error && (
+        {(localError || authError) && (
           <div className="p-3 rounded-lg text-sm" style={{ backgroundColor: 'var(--error)', color: 'white' }}>
-            {error}
+            {localError || authError}
           </div>
         )}
 
-        {success && (
+        {(localSuccess || authMessage) && (
           <div className="p-3 rounded-lg text-sm" style={{ backgroundColor: 'var(--success)', color: 'white' }}>
-            {success}
+            {localSuccess || authMessage}
           </div>
         )}
 
@@ -157,14 +173,46 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSucces
           variant="primary"
           size="lg"
           fullWidth
-          loading={loading}
-          disabled={!isFormValid() || loading}
+          loading={authStatus === 'loading'}
+          disabled={!isFormValid() || authStatus === 'loading'}
         >
           {mode === 'signin' && 'Sign In'}
           {mode === 'signup' && 'Create Account'}
           {mode === 'reset' && 'Send Reset Email'}
         </Button>
       </form>
+
+      {/* Google OAuth Section */}
+      {mode !== 'reset' && (
+        <>
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t" style={{ borderColor: 'var(--border)' }} />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2" style={{ backgroundColor: 'var(--background)', color: 'var(--text-secondary)' }}>
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            fullWidth
+            loading={authStatus === 'loading'}
+            disabled={authStatus === 'loading'}
+            onClick={handleGoogleAuth}
+            className="flex items-center justify-center space-x-2"
+          >
+            <Chrome size={20} />
+            <span>
+              {mode === 'signin' ? 'Sign in with Google' : 'Sign up with Google'}
+            </span>
+          </Button>
+        </>
+      )}
 
       <div className="mt-6 text-center space-y-2">
         {mode === 'signin' && (

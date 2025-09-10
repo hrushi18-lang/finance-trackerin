@@ -256,7 +256,7 @@ export const FlexibleBillPaymentForm: React.FC<FlexibleBillPaymentFormProps> = (
               </span>
               <input
                 type="number"
-                step="0.01"
+                step="any"
                 min="0"
                 {...register('amount', { 
                   required: 'Payment amount is required',

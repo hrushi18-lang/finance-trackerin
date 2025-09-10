@@ -15,37 +15,51 @@ export interface Database {
       profiles: {
         Row: {
           id: string
+          user_id: string
+          email: string
+          name: string
           avatar_url: string | null
+          age: number | null
+          country: string | null
+          profession: string | null
+          monthly_income: number
+          primary_currency: string
+          display_currency: string
+          auto_convert: boolean
+          show_original_amounts: boolean
           created_at: string
-          email: string | null
-          name: string | null
-          updated_at: string | null
-          financial_preferences: Json | null
-          financial_status: 'active' | 'suspended' | 'archived' | 'deleted'
-          last_active_at: string | null
-          subscription_tier: 'free' | 'premium' | 'enterprise'
+          updated_at: string
         }
         Insert: {
           id: string
+          user_id: string
           email: string
           name: string
           avatar_url?: string | null
+          age?: number | null
+          country?: string | null
+          profession?: string | null
+          monthly_income?: number
+          primary_currency?: string
+          display_currency?: string
+          auto_convert?: boolean
+          show_original_amounts?: boolean
           created_at?: string
-          updated_at?: string | null
-          financial_preferences?: Json | null
-          financial_status?: 'active' | 'suspended' | 'archived' | 'deleted'
-          last_active_at?: string | null
-          subscription_tier?: 'free' | 'premium' | 'enterprise'
+          updated_at?: string
         }
         Update: {
-          avatar_url?: string | null
           email?: string
           name?: string
-          updated_at?: string | null
-          financial_preferences?: Json | null
-          financial_status?: 'active' | 'suspended' | 'archived' | 'deleted'
-          last_active_at?: string | null
-          subscription_tier?: 'free' | 'premium' | 'enterprise'
+          avatar_url?: string | null
+          age?: number | null
+          country?: string | null
+          profession?: string | null
+          monthly_income?: number
+          primary_currency?: string
+          display_currency?: string
+          auto_convert?: boolean
+          show_original_amounts?: boolean
+          updated_at?: string
         }
       }
       financial_accounts: {

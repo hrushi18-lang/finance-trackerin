@@ -7,7 +7,10 @@ import { Button } from '../common/Button';
 import { CategorySelector } from '../common/CategorySelector';
 import { Goal } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
+import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
+import { CurrencyInput } from '../currency/CurrencyInput';
+import { LiveRateDisplay } from '../currency/LiveRateDisplay';
 import { AlertCircle } from 'lucide-react';
 import { useFinance } from '../../contexts/FinanceContext';
 
@@ -18,7 +21,10 @@ interface GoalFormData {
   currentAmount: number;
   targetDate: string;
   category: string;
-  accountId?: string;
+  activityScope: 'general' | 'account_specific' | 'category_based';
+  accountIds: string[];
+  targetCategory?: string;
+  currencyCode: string;
 }
 
 interface GoalFormProps {
@@ -35,9 +41,11 @@ export const GoalForm: React.FC<GoalFormProps> = ({
   initialData
 }) => {
   const { currency } = useInternationalization();
+  const { displayCurrency, formatCurrency, convertAmount } = useEnhancedCurrency();
   const { accounts } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [goalCurrency, setGoalCurrency] = useState(initialData?.currencyCode || displayCurrency);
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<GoalFormData>({
     defaultValues: {
@@ -47,7 +55,10 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       targetAmount: initialData?.targetAmount || undefined,
       targetDate: initialData?.targetDate || '',
       category: initialData?.category || '',
-      accountId: initialData?.accountId || ''
+      activityScope: initialData?.activityScope || 'general',
+      accountIds: initialData?.accountIds || [],
+      targetCategory: initialData?.targetCategory || '',
+      currencyCode: initialData?.currencyCode || displayCurrency
     },
   });
 
@@ -69,6 +80,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       await onSubmit({
         ...validatedData,
         targetDate: new Date(data.targetDate),
+        currencyCode: goalCurrency,
       });
       
     } catch (error: any) {
@@ -142,36 +154,194 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         />
       </div>
 
-      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input
-          label="Target Amount"
-          type="number"
-          step="0.01"
-          icon={<CurrencyIcon currencyCode={currency.code} className="text-green-400" />}
-          {...register('targetAmount', {
-            required: 'Target amount is required',
-            min: { value: 1, message: 'Target amount must be greater than 0' },
-          })}
+      {/* Target Amount - Enhanced */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
+        <div className="flex items-center space-x-2 mb-4">
+          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+            <span className="text-purple-600 text-lg">🎯</span>
+          </div>
+          <div>
+            <label className="text-lg font-semibold text-gray-800">
+              Target Amount *
+            </label>
+            <p className="text-sm text-gray-600">
+              How much do you want to save?
+            </p>
+          </div>
+        </div>
+        
+        <CurrencyInput
+          value={watch('targetAmount')}
+          currency={goalCurrency}
+          onValueChange={(value) => setValue('targetAmount', value)}
+          onCurrencyChange={setGoalCurrency}
+          placeholder="Enter target amount"
+          showConversion={goalCurrency !== displayCurrency}
+          targetCurrency={displayCurrency}
           error={errors.targetAmount?.message}
-          className="bg-black/40 border-white/20 text-white"
-          placeholder={`e.g., 5000`}
+          className="w-full text-lg"
         />
+        
+        {/* Quick Amount Buttons */}
+        <div className="mt-4">
+          <p className="text-sm text-gray-600 mb-2">Quick amounts:</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 10000)}
+              className="text-xs"
+            >
+              ₹10K
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 50000)}
+              className="text-xs"
+            >
+              ₹50K
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 100000)}
+              className="text-xs"
+            >
+              ₹1L
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 500000)}
+              className="text-xs"
+            >
+              ₹5L
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 1000000)}
+              className="text-xs"
+            >
+              ₹10L
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input
-          label="Current Amount"
-          type="number"
-          step="0.01"
-          icon={<CurrencyIcon currencyCode={currency.code} className="text-yellow-400" />}
-          {...register('currentAmount', {
-            min: { value: 0, message: 'Current amount cannot be negative' },
-          })}
+      {/* Current Amount - Enhanced */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border-2 border-green-200">
+        <div className="flex items-center space-x-2 mb-4">
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+            <span className="text-green-600 text-lg">💰</span>
+          </div>
+          <div>
+            <label className="text-lg font-semibold text-gray-800">
+              Current Amount
+            </label>
+            <p className="text-sm text-gray-600">
+              How much have you already saved?
+            </p>
+          </div>
+        </div>
+        
+        <CurrencyInput
+          value={watch('currentAmount')}
+          currency={goalCurrency}
+          onValueChange={(value) => setValue('currentAmount', value)}
+          onCurrencyChange={setGoalCurrency}
+          placeholder="Enter current amount"
+          showConversion={goalCurrency !== displayCurrency}
+          targetCurrency={displayCurrency}
           error={errors.currentAmount?.message}
-          className="bg-black/40 border-white/20 text-white"
-          placeholder="0"
-          helpText="How much have you already saved towards this goal?"
+          className="w-full text-lg"
         />
+        
+        <p className="text-xs text-gray-500 mt-2">
+          Leave as 0 if you're starting fresh
+        </p>
+      </div>
+
+      {/* Live Rate Display */}
+      {goalCurrency !== displayCurrency && watch('targetAmount') && (
+        <div className="bg-gradient-to-r from-blue-500/20 to-green-500/20 rounded-xl p-4 border border-blue-500/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium text-blue-400 mb-1">Live Conversion</h4>
+              <p className="text-xs text-gray-300">
+                {formatCurrency(watch('targetAmount') || 0, goalCurrency)} = {' '}
+                {convertAmount(watch('targetAmount') || 0, goalCurrency, displayCurrency) 
+                  ? formatCurrency(convertAmount(watch('targetAmount') || 0, goalCurrency, displayCurrency)!, displayCurrency)
+                  : 'N/A'
+                }
+              </p>
+            </div>
+            <LiveRateDisplay
+              fromCurrency={goalCurrency}
+              toCurrency={displayCurrency}
+              amount={1}
+              compact={true}
+              showTrend={true}
+              showLastUpdated={false}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Activity Scope Selection */}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <label className="block text-sm font-medium text-gray-300 mb-3">
+          Goal Type
+        </label>
+        <div className="space-y-3">
+          <div className="flex items-center space-x-3">
+            <input
+              type="radio"
+              id="general"
+              value="general"
+              {...register('activityScope')}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
+            />
+            <label htmlFor="general" className="text-sm text-gray-300">
+              <span className="font-medium">General Goal</span>
+              <span className="block text-xs text-gray-400">Not tied to any specific account</span>
+            </label>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <input
+              type="radio"
+              id="account_specific"
+              value="account_specific"
+              {...register('activityScope')}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
+            />
+            <label htmlFor="account_specific" className="text-sm text-gray-300">
+              <span className="font-medium">Account-Specific Goal</span>
+              <span className="block text-xs text-gray-400">Linked to one or more specific accounts</span>
+            </label>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <input
+              type="radio"
+              id="category_based"
+              value="category_based"
+              {...register('activityScope')}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
+            />
+            <label htmlFor="category_based" className="text-sm text-gray-300">
+              <span className="font-medium">Category-Based Goal</span>
+              <span className="block text-xs text-gray-400">For a specific spending category</span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
@@ -187,25 +357,55 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         />
       </div>
 
-      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
-          Link to Account (Optional)
-        </label>
-        <select
-          {...register('accountId')}
-          className="block w-full rounded-xl border-white/20 bg-black/40 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
-        >
-          <option value="" className="bg-black/90">No specific account</option>
-          {(accounts || []).map((account) => (
-            <option key={account.id} value={account.id} className="bg-black/90">
-              {account.name} - {currency.symbol}{account.balance.toLocaleString()}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-400 mt-1">
-          Link this goal to a specific payment method for better tracking
-        </p>
-      </div>
+      {/* Account Selection - Only show if account_specific is selected */}
+      {watch('activityScope') === 'account_specific' && (
+        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+          <label className="block text-sm font-medium text-gray-300 mb-3">
+            Select Accounts (Multiple Selection)
+          </label>
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {(accounts || []).map((account) => (
+              <div key={account.id} className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id={`account-${account.id}`}
+                  value={account.id}
+                  {...register('accountIds')}
+                  className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
+                />
+                <label htmlFor={`account-${account.id}`} className="text-sm text-gray-300 flex-1">
+                  <span className="font-medium">{account.name}</span>
+                  <span className="block text-xs text-gray-400">
+                    {currency.symbol}{account.balance.toLocaleString()} • {account.type}
+                  </span>
+                </label>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            Select one or more accounts to link this goal to. You can change this later.
+          </p>
+        </div>
+      )}
+
+      {/* Target Category - Only show if category_based is selected */}
+      {watch('activityScope') === 'category_based' && (
+        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Target Category
+          </label>
+          <CategorySelector
+            value={watch('targetCategory')}
+            onChange={(category) => setValue('targetCategory', category)}
+            type="expense"
+            placeholder="Select spending category"
+            error={errors.targetCategory?.message}
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            This goal will track spending for the selected category across all accounts.
+          </p>
+        </div>
+      )}
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
         <Input

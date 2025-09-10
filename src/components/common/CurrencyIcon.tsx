@@ -2,18 +2,18 @@ import React from 'react';
 import { DollarSign, Euro, PoundSterling, Pen as Yen, Bitcoin, CreditCard } from 'lucide-react';
 
 interface CurrencyIconProps {
-  currencycode: string;
+  currencyCode: string;
   size?: number;
   className?: string;
 }
 
 export const CurrencyIcon: React.FC<CurrencyIconProps> = ({ 
-  currencycode, 
+  currencyCode, 
   size = 18, 
   className = "text-gray-400" 
 }) => {
   // Map currency codes to appropriate icons
-  switch (currencycode) {
+  switch (currencyCode) {
     case 'USD':
     case 'AUD':
     case 'CAD':
