@@ -1,44 +1,52 @@
-import React, { Suspense } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider } from './contexts/AuthContext';
 import { FinanceProvider } from './contexts/FinanceContext';
+import { ProfileProvider } from './contexts/ProfileContext';
 import { InternationalizationProvider } from './contexts/InternationalizationContext';
-import { CurrencyConversionProvider } from './contexts/CurrencyConversionContext';
+import { EnhancedCurrencyProvider } from './contexts/EnhancedCurrencyContext';
 import { PersonalizationProvider } from './contexts/PersonalizationContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/common/Toast';
-import { LoadingScreen } from './components/common/LoadingScreen';
 import { ErrorFallback } from './components/common/ErrorFallback';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { BottomNavigation } from './components/layout/BottomNavigation';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
-import { SyncStatus } from './components/sync/SyncStatus';
+import OnboardingWrapper from './components/OnboardingWrapper';
+import RouteHandler from './components/RouteHandler';
 import { AppInitializer } from './components/AppInitializer';
 import { AccessibilityEnhancements, useKeyboardNavigation } from './components/common/AccessibilityEnhancements';
+import { fontLoader } from './utils/fontLoader';
+import { registerSW } from './utils/registerSW';
 import './styles/accessibility.css';
 
-// Lazy load pages for better performance
-const Auth = React.lazy(() => import('./pages/Auth').then(module => ({ default: module.Auth })));
-const Home = React.lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
-const Dashboard = React.lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
-const AddTransaction = React.lazy(() => import('./pages/AddTransaction').then(module => ({ default: module.AddTransaction })));
-const Transactions = React.lazy(() => import('./pages/Transactions').then(module => ({ default: module.Transactions })));
-const Analytics = React.lazy(() => import('./pages/Analytics').then(module => ({ default: module.Analytics })));
-const Calendar = React.lazy(() => import('./pages/Calendar').then(module => ({ default: module.Calendar })));
-const Goals = React.lazy(() => import('./pages/Goals').then(module => ({ default: module.Goals })));
-const Liabilities = React.lazy(() => import('./pages/Liabilities').then(module => ({ default: module.Liabilities })));
-const Budgets = React.lazy(() => import('./pages/Budgets').then(module => ({ default: module.Budgets })));
-const Overview = React.lazy(() => import('./pages/Overview').then(module => ({ default: module.Overview })));
-const Accounts = React.lazy(() => import('./pages/Accounts').then(module => ({ default: module.Accounts })));
-const AccountDetail = React.lazy(() => import('./pages/AccountDetail').then(module => ({ default: module.AccountDetail })));
-const CreateGoal = React.lazy(() => import('./pages/CreateGoal').then(module => ({ default: module.CreateGoal })));
-const CreateBill = React.lazy(() => import('./pages/CreateBill').then(module => ({ default: module.CreateBill })));
-const GoalDetail = React.lazy(() => import('./pages/GoalDetail').then(module => ({ default: module.GoalDetail })));
-const BillDetail = React.lazy(() => import('./pages/BillDetail').then(module => ({ default: module.BillDetail })));
-const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
-const Bills = React.lazy(() => import('./pages/Bills').then(module => ({ default: module.Bills })));
+// Import pages directly to avoid lazy loading issues
+import Auth from './pages/Auth';
+import Home from './pages/Home';
+import Dashboard from './pages/Dashboard';
+import AddTransaction from './pages/AddTransaction';
+import TransactionsCalendar from './pages/TransactionsCalendar';
+import Analytics from './pages/Analytics';
+import Calendar from './pages/Calendar';
+import Goals from './pages/Goals';
+import Liabilities from './pages/Liabilities';
+import { EnhancedLiabilities } from './pages/EnhancedLiabilities';
+import Budgets from './pages/Budgets';
+import Overview from './pages/Overview';
+import Cards from './pages/Cards';
+import Accounts from './pages/Accounts';
+import AccountDetail from './pages/AccountDetail';
+import CreateGoal from './pages/CreateGoal';
+import CreateBill from './pages/CreateBill';
+import GoalDetail from './pages/GoalDetail';
+import BillDetail from './pages/BillDetail';
+import Settings from './pages/Settings';
+import ThemeSettings from './pages/ThemeSettings';
+import Bills from './pages/Bills';
+import ProfileNew from './pages/ProfileNew';
+import CurrencyDemo from './pages/CurrencyDemo';
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -65,48 +73,45 @@ function App() {
   // Enable keyboard navigation
   useKeyboardNavigation();
 
+  // Initialize font loading and service worker
+  useEffect(() => {
+    fontLoader.preloadCriticalFonts();
+    registerSW();
+  }, []);
+
   return (
     <ErrorBoundary fallback={<ErrorFallback />}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <AuthProvider>
-            <InternationalizationProvider>
-              <CurrencyConversionProvider>
-                <PersonalizationProvider>
-                  <FinanceProvider>
-                    <AppInitializer>
-                      <Router>
-                        <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-                          {/* Accessibility Enhancements */}
-                          <div className="fixed top-4 right-4 z-50">
-                            <AccessibilityEnhancements />
-                          </div>
+          <ThemeProvider>
+            <AuthProvider>
+              <ProfileProvider>
+                <InternationalizationProvider>
+                  <EnhancedCurrencyProvider>
+                    <PersonalizationProvider>
+                      <FinanceProvider>
+                      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                        <AppInitializer>
+                        <RouteHandler>
+                          <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
+                            {/* Accessibility Enhancements */}
+                            <div className="fixed top-4 right-4 z-50">
+                              <AccessibilityEnhancements />
+                            </div>
 
-                          {/* Sync Status Indicator */}
-                          <div className="fixed top-4 left-4 z-50">
-                            <SyncStatus />
-                          </div>
 
-                          {/* Main Content */}
-                          <div className="relative z-10">
-                            <Suspense fallback={<LoadingScreen message="Loading your financial dashboard..." />}>
+                            {/* Main Content */}
+                            <div className="relative z-10">
                               <Routes>
                               {/* Public Routes */}
                               <Route path="/auth" element={<Auth />} />
                               
-                              {/* Onboarding Route */}
+                              {/* Onboarding Route - Only for new users */}
                               <Route 
                                 path="/onboarding" 
                                 element={
                                   <ProtectedRoute>
-                                    <OnboardingFlow 
-                                      onComplete={() => {
-                                        // Always redirect to dashboard after onboarding
-                                        // Use SPA navigation instead of hard reload
-                                        const navigateEvent = new CustomEvent('app:navigate', { detail: { to: '/dashboard' } });
-                                        window.dispatchEvent(navigateEvent);
-                                      }} 
-                                    />
+                                    <OnboardingWrapper />
                                   </ProtectedRoute>
                                 } 
                               />
@@ -156,7 +161,17 @@ function App() {
                                 path="/transactions" 
                                 element={
                                   <ProtectedRoute>
-                                    <Transactions />
+                                    <TransactionsCalendar />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/cards" 
+                                element={
+                                  <ProtectedRoute>
+                                    <Cards />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
@@ -233,6 +248,16 @@ function App() {
                               />
                               
                               <Route 
+                                path="/liabilities/enhanced" 
+                                element={
+                                  <ProtectedRoute>
+                                    <EnhancedLiabilities />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
                                 path="/budgets" 
                                 element={
                                   <ProtectedRoute>
@@ -257,6 +282,16 @@ function App() {
                                 element={
                                   <ProtectedRoute>
                                     <AccountDetail />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+
+                              <Route 
+                                path="/profile" 
+                                element={
+                                  <ProtectedRoute>
+                                    <ProfileNew />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
@@ -302,20 +337,40 @@ function App() {
                                 } 
                               />
                               
+                              <Route 
+                                path="/currency-demo" 
+                                element={
+                                  <ProtectedRoute>
+                                    <CurrencyDemo />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/theme-settings" 
+                                element={
+                                  <ProtectedRoute>
+                                    <ThemeSettings />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
                               {/* Catch all route */}
                               <Route path="*" element={<Navigate to="/" replace />} />
                               </Routes>
-                            </Suspense>
+                            </div>
                           </div>
-                        </div>
+                        </RouteHandler>
+                        </AppInitializer>
                       </Router>
                       <ReactQueryDevtools initialIsOpen={false} />
-                    </AppInitializer>
-                  </FinanceProvider>
-                </PersonalizationProvider>
-              </CurrencyConversionProvider>
-            </InternationalizationProvider>
-          </AuthProvider>
+                      </FinanceProvider>
+                    </PersonalizationProvider>
+                  </EnhancedCurrencyProvider>
+                </InternationalizationProvider>
+              </ProfileProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </ToastProvider>
       </QueryClientProvider>
     </ErrorBoundary>
