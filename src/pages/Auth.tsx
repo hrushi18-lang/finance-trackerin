@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthForm } from '../components/auth/AuthForm';
 import { authManager } from '../lib/auth';
 
-export const Auth: React.FC = () => {
+const Auth: React.FC = () => {
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signin');
   const navigate = useNavigate();
 
@@ -71,3 +71,5 @@ export const Auth: React.FC = () => {
     </div>
   );
 };
+
+export default Auth;

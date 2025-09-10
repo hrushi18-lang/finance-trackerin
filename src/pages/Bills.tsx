@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Bell, Plus, Edit3, Trash2, AlertTriangle, CheckCircle, Clock, CreditCard, Zap, Play, Pause, Target, DollarSign, AlertCircle, TrendingUp, TrendingDown, Eye } from 'lucide-react';
+import { Calendar, Bell, Plus, Edit3, Trash2, AlertTriangle, CheckCircle, Clock, CreditCard, Zap, Play, Pause, Target, DollarSign, AlertCircle, TrendingUp, TrendingDown, Eye, ArrowLeft } from 'lucide-react';
 import { format, differenceInDays, addDays, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '../components/common/Modal';
@@ -10,9 +10,13 @@ import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 
-export const Bills: React.FC = () => {
+const Bills: React.FC = () => {
   const navigate = useNavigate();
-  const { bills, addBill, updateBill, deleteBill, addTransaction, accounts, liabilities, transactions, payBillFromAccount, updateLiability } = useFinance();
+  const { 
+    bills, addBill, updateBill, deleteBill, addTransaction, accounts, liabilities, transactions, 
+    payBillFromAccount, updateLiability, updateBillStage, handleBillCompletion, createVariableAmountBill, 
+    createIncomeBill, payBillFromMultipleAccounts 
+  } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
   const [editingBill, setEditingBill] = useState<any>(null);
@@ -22,13 +26,17 @@ export const Bills: React.FC = () => {
   const [selectedBill, setSelectedBill] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'overdue' | 'paid' | 'all'>('upcoming');
+  const [activeTab, setActiveTab] = useState<'current' | 'upcoming' | 'overdue' | 'paid' | 'all'>('current');
 
   // Enhanced bill filtering and categorization
   const categorizedBills = {
     upcoming: bills.filter(bill => {
       const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
-      return daysUntilDue >= 0 && daysUntilDue <= 30 && bill.isActive;
+      return daysUntilDue >= 0 && daysUntilDue <= 15 && bill.isActive;
+    }),
+    current: bills.filter(bill => {
+      const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
+      return daysUntilDue >= 0 && daysUntilDue <= 3 && bill.isActive;
     }),
     overdue: bills.filter(bill => {
       const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
@@ -112,6 +120,99 @@ export const Bills: React.FC = () => {
     }
   };
 
+  const handleBillStageChange = async (billId: string, stage: 'paid' | 'moved' | 'failed' | 'stopped') => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      
+      let reason = '';
+      let movedToDate: Date | undefined;
+      
+      if (stage === 'moved') {
+        reason = prompt('Reason for moving this bill:') || 'Moved by user';
+        const newDate = prompt('New due date (YYYY-MM-DD):');
+        if (newDate) {
+          movedToDate = new Date(newDate);
+        }
+      } else if (stage === 'failed') {
+        reason = prompt('Reason for failure:') || 'Payment failed';
+      } else if (stage === 'stopped') {
+        reason = prompt('Reason for stopping:') || 'Stopped by user';
+      }
+      
+      await updateBillStage(billId, stage, reason, movedToDate);
+    } catch (error: any) {
+      console.error('Error updating bill stage:', error);
+      setError(error.message || 'Failed to update bill stage. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleBillCompletionAction = async (billId: string) => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      
+      const action = prompt('What would you like to do?\n1. Continue\n2. Extend\n3. Archive\n4. Delete\n\nEnter 1-4:');
+      
+      switch (action) {
+        case '1':
+          await handleBillCompletion(billId, 'continue');
+          break;
+        case '2':
+          const newAmount = prompt('New amount (optional):');
+          const newDueDate = prompt('New due date (YYYY-MM-DD, optional):');
+          await handleBillCompletion(billId, 'extend', 
+            newAmount ? parseFloat(newAmount) : undefined,
+            newDueDate ? new Date(newDueDate) : undefined,
+            'Extended by user'
+          );
+          break;
+        case '3':
+          const archiveReason = prompt('Reason for archiving:') || 'Archived by user';
+          await handleBillCompletion(billId, 'archive', undefined, undefined, archiveReason);
+          break;
+        case '4':
+          const deleteReason = prompt('Reason for deletion:') || 'Deleted by user';
+          await handleBillCompletion(billId, 'delete', undefined, undefined, deleteReason);
+          break;
+        default:
+          console.log('Invalid action selected');
+      }
+    } catch (error: any) {
+      console.error('Error handling bill completion:', error);
+      setError(error.message || 'Failed to handle bill completion. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAmountChange = async (billId: string) => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      
+      const bill = bills.find(b => b.id === billId);
+      if (!bill) return;
+      
+      const newAmount = prompt(`Enter new amount for "${bill.title}" (current: ${formatCurrency(bill.amount, bill.currencyCode)}):`);
+      if (newAmount && !isNaN(parseFloat(newAmount))) {
+        const amount = parseFloat(newAmount);
+        if (amount > 0) {
+          await updateBill(billId, { amount: amount });
+        } else {
+          alert('Amount must be greater than 0');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error updating bill amount:', error);
+      setError(error.message || 'Failed to update bill amount. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handlePayBill = async (paymentData: any) => {
     if (!selectedBill) return;
     
@@ -152,7 +253,15 @@ export const Bills: React.FC = () => {
       {/* Immersive Header */}
       <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-heading">Bills & Payments</h1>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/cards')}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft size={20} className="text-gray-600" />
+            </button>
+            <h1 className="text-2xl font-heading">Bills & Payments</h1>
+          </div>
           <button
             onClick={() => navigate('/bills/create')}
             className="btn-primary flex items-center space-x-2 px-4 py-2"
@@ -204,7 +313,8 @@ export const Bills: React.FC = () => {
         {bills.length > 0 && (
           <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
             {[
-              { key: 'upcoming', label: 'Upcoming', count: categorizedBills.upcoming.length },
+              { key: 'current', label: 'Current (3 days)', count: categorizedBills.current.length },
+              { key: 'upcoming', label: 'Upcoming (15 days)', count: categorizedBills.upcoming.length },
               { key: 'overdue', label: 'Overdue', count: categorizedBills.overdue.length },
               { key: 'paid', label: 'Paid', count: categorizedBills.paid.length },
               { key: 'all', label: 'All', count: categorizedBills.all.length }
@@ -256,28 +366,79 @@ export const Bills: React.FC = () => {
                         >
                           <Eye size={14} />
                         </button>
-                        <button
-                          onClick={() => {
-                            setSelectedBill(bill);
-                            setShowPaymentModal(true);
-                          }}
-                          className="px-3 py-1 rounded-full text-xs font-medium transition-colors"
-                          style={{ backgroundColor: 'var(--success)', color: 'white' }}
-                        >
-                          Pay
-                        </button>
+                        
+                        {/* Bill staging buttons */}
+                        {bill.billStage === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedBill(bill);
+                                setShowPaymentModal(true);
+                              }}
+                              className="px-3 py-1 rounded-full text-xs font-medium transition-colors bg-green-500 hover:bg-green-600 text-white"
+                              title="Mark as Paid"
+                            >
+                              Pay
+                            </button>
+                            <button
+                              onClick={() => handleBillStageChange(bill.id, 'moved')}
+                              className="px-2 py-1 rounded-full text-xs font-medium transition-colors bg-blue-500 hover:bg-blue-600 text-white"
+                              title="Move to Later Date"
+                            >
+                              Move
+                            </button>
+                            <button
+                              onClick={() => handleBillStageChange(bill.id, 'failed')}
+                              className="px-2 py-1 rounded-full text-xs font-medium transition-colors bg-red-500 hover:bg-red-600 text-white"
+                              title="Mark as Failed"
+                            >
+                              Failed
+                            </button>
+                            <button
+                              onClick={() => handleBillStageChange(bill.id, 'stopped')}
+                              className="px-2 py-1 rounded-full text-xs font-medium transition-colors bg-gray-500 hover:bg-gray-600 text-white"
+                              title="Stop Bill"
+                            >
+                              Stop
+                            </button>
+                          </>
+                        )}
+                        
+                        {/* Variable amount adjustment button */}
+                        {bill.isVariableAmount && (
+                          <button
+                            onClick={() => handleAmountChange(bill.id)}
+                            className="px-2 py-1 rounded-full text-xs font-medium transition-colors bg-purple-500 hover:bg-purple-600 text-white"
+                            title="Adjust Amount"
+                          >
+                            Adjust
+                          </button>
+                        )}
+                        
+                        {bill.billStage === 'paid' && (
+                          <button
+                            onClick={() => handleBillCompletionAction(bill.id)}
+                            className="px-3 py-1 rounded-full text-xs font-medium transition-colors bg-purple-500 hover:bg-purple-600 text-white"
+                            title="Handle Completion"
+                          >
+                            Complete
+                          </button>
+                        )}
+                        
                         <button
                           onClick={() => {
                             setEditingBill(bill);
                             setShowModal(true);
                           }}
                           className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+                          title="Edit Bill"
                         >
                           <Edit3 size={14} />
                         </button>
                         <button
                           onClick={() => handleDeleteBill(bill.id)}
                           className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-full hover:bg-gray-100"
+                          title="Delete Bill"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -286,10 +447,20 @@ export const Bills: React.FC = () => {
                     
                     <div className="grid grid-cols-2 gap-4 mb-3">
                       <div>
-                        <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Amount</p>
-                        <p className="text-lg font-numbers">
-                          {formatCurrency(bill.amount)}
+                        <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>
+                          {bill.isIncome ? 'Income Amount' : 'Amount'}
+                          {bill.isVariableAmount && ' (Variable)'}
                         </p>
+                        <div className="flex items-center space-x-2">
+                          <p className="text-lg font-numbers">
+                            {bill.isIncome ? '+' : '-'}{formatCurrency(bill.amount, bill.currencyCode)}
+                          </p>
+                          {bill.isVariableAmount && bill.minAmount && bill.maxAmount && (
+                            <span className="text-xs text-gray-500">
+                              ({formatCurrency(bill.minAmount, bill.currencyCode)} - {formatCurrency(bill.maxAmount, bill.currencyCode)})
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Due Date</p>
@@ -297,6 +468,53 @@ export const Bills: React.FC = () => {
                           {format(new Date(bill.nextDueDate), 'MMM dd, yyyy')}
                         </p>
                       </div>
+                    </div>
+
+                    {/* New enhanced features display */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {/* Currency */}
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        {bill.currencyCode}
+                      </span>
+                      
+                      {/* Income/Expense indicator */}
+                      {bill.isIncome ? (
+                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                          Income
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                          Expense
+                        </span>
+                      )}
+                      
+                      {/* Bill stage */}
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        bill.billStage === 'paid' ? 'bg-green-100 text-green-800' :
+                        bill.billStage === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        bill.billStage === 'moved' ? 'bg-blue-100 text-blue-800' :
+                        bill.billStage === 'failed' ? 'bg-red-100 text-red-800' :
+                        bill.billStage === 'stopped' ? 'bg-gray-100 text-gray-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {bill.billStage.charAt(0).toUpperCase() + bill.billStage.slice(1)}
+                      </span>
+                      
+                      {/* Priority */}
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        bill.priority === 'high' ? 'bg-red-100 text-red-800' :
+                        bill.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {bill.priority.charAt(0).toUpperCase() + bill.priority.slice(1)} Priority
+                      </span>
+                      
+                      {/* Variable amount indicator */}
+                      {bill.isVariableAmount && (
+                        <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                          Variable
+                        </span>
+                      )}
                     </div>
                     
                     <div className="flex items-center justify-between">
@@ -443,3 +661,5 @@ export const Bills: React.FC = () => {
     </div>
   );
 };
+
+export default Bills;

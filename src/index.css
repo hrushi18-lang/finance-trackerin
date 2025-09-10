@@ -2,81 +2,207 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Strict Design Language - Olive Green + Soft Beige */
+/* Custom Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Theme System - Multiple Themes Support */
 :root {
-  /* Primary Colors */
-  --primary: #3e5725;
-  --primary-light: #5a7a3a;
-  --primary-dark: #2d3f1a;
+  /* Default Theme - Cool Blue + Neumorphic */
+  --primary: #2563eb;
+  --primary-light: #3b82f6;
+  --primary-dark: #1d4ed8;
   
   /* Background Colors */
-  --background: #fefcf8;
-  --background-secondary: #f5f5f0;
-  --background-tertiary: #f9f9f4;
+  --background: #F5F5DC; /* Cream background */
+  --background-secondary: #f8f8f0;
+  --background-tertiary: #f0f0e8;
   
   /* Surface Colors */
   --surface: #ffffff;
-  --surface-elevated: #fafafa;
-  --surface-pressed: #f0f0f0;
+  --surface-elevated: #f8fafc;
+  --surface-pressed: #e2e8f0;
   
   /* Text Colors */
-  --text-primary: #3e5725;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
   --text-inverse: #ffffff;
   
   /* Accent Colors */
-  --accent: #3e5725;
-  --accent-light: #5a7a3a;
-  --success: #3e5725;
+  --accent: #2563eb;
+  --accent-light: #3b82f6;
+  --success: #10b981;
   --error: #ef4444;
   --warning: #f59e0b;
   
   /* Border Colors */
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --border-dark: #cbd5e1;
+  
+  /* Shadow Colors */
+  --shadow-sm: 0 1px 2px 0 rgba(37, 99, 235, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(37, 99, 235, 0.1), 0 2px 4px -1px rgba(37, 99, 235, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -2px rgba(37, 99, 235, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(37, 99, 235, 0.1), 0 10px 10px -5px rgba(37, 99, 235, 0.04);
+  
+  /* Neumorphic Shadows */
+  --neumorphic-light: 8px 8px 16px rgba(255, 255, 255, 0.7), -8px -8px 16px rgba(37, 99, 235, 0.1);
+  --neumorphic-inset: inset 8px 8px 16px rgba(37, 99, 235, 0.1), inset -8px -8px 16px rgba(255, 255, 255, 0.7);
+  
+  /* Typography Variables - Exact Font Specifications */
+  --font-heading: 'Archivo Black', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-numbers: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-titles: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-description: 'Playfair Display', 'Times New Roman', 'Times', serif;
+}
+
+/* Olive Green Theme */
+[data-theme="olive"] {
+  --primary: #3e5725;
+  --primary-light: #5a7a3a;
+  --primary-dark: #2d3f1a;
+  
+  --background: #fefcf8;
+  --background-secondary: #f5f5f0;
+  --background-tertiary: #f9f9f4;
+  
+  --surface: #ffffff;
+  --surface-elevated: #fafafa;
+  --surface-pressed: #f0f0f0;
+  
+  --text-primary: #3e5725;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  
+  --accent: #3e5725;
+  --accent-light: #5a7a3a;
+  --success: #3e5725;
+  
   --border: #e5e7eb;
   --border-light: #f3f4f6;
   --border-dark: #d1d5db;
   
-  /* Shadow Colors */
   --shadow-sm: 0 1px 2px 0 rgba(62, 87, 37, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(62, 87, 37, 0.1), 0 2px 4px -1px rgba(62, 87, 37, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(62, 87, 37, 0.1), 0 4px 6px -2px rgba(62, 87, 37, 0.05);
   --shadow-xl: 0 20px 25px -5px rgba(62, 87, 37, 0.1), 0 10px 10px -5px rgba(62, 87, 37, 0.04);
   
-  /* Neumorphic Shadows */
   --neumorphic-light: 8px 8px 16px rgba(255, 255, 255, 0.7), -8px -8px 16px rgba(62, 87, 37, 0.1);
   --neumorphic-inset: inset 8px 8px 16px rgba(62, 87, 37, 0.1), inset -8px -8px 16px rgba(255, 255, 255, 0.7);
 }
 
 /* Global Background */
 body {
-  background: linear-gradient(135deg, #fefcf8 0%, #f5f5f0 50%, #f9f9f4 100%);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, var(--background) 0%, var(--background-secondary) 50%, var(--background-tertiary) 100%);
+  font-family: var(--font-titles);
   color: var(--text-primary);
+  transition: all 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Typography Classes */
+/* Font fallback styles - Exact Font Specifications */
+.fonts-fallback {
+  --font-heading: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-numbers: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-titles: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-description: 'Times New Roman', 'Times', serif;
+}
+
+/* Font loading states */
+.font-loading {
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.font-loaded {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Typography Classes - Exact Font Specifications */
 .font-heading {
-  font-family: 'Archivo Black', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-heading);
   font-weight: 900;
   color: var(--text-primary);
+  letter-spacing: -0.025em;
 }
 
 .font-numbers {
-  font-family: 'Archivo', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-numbers);
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: -0.025em;
 }
 
+.font-titles {
+  font-family: var(--font-titles);
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.025em;
+}
+
+.font-description {
+  font-family: var(--font-description);
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-style: normal;
+}
+
+/* Legacy support - map old classes to new specifications */
 .font-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-titles);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.font-body-light {
+  font-family: var(--font-titles);
+  font-weight: 400;
   color: var(--text-secondary);
 }
 
 .font-serif {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-description);
+  font-weight: 500;
   color: var(--text-primary);
+  font-style: italic;
+}
+
+.font-serif-light {
+  font-family: var(--font-description);
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
 /* Design System Classes */
@@ -259,10 +385,56 @@ html {
   min-width: 44px;
 }
 
-/* Fix for iOS input zoom */
+/* Mobile font optimizations */
 @media screen and (max-width: 768px) {
+  /* Prevent iOS input zoom */
   input, select, textarea {
     font-size: 16px !important;
+  }
+  
+  /* Optimize font rendering for mobile */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  }
+  
+  /* Ensure consistent font loading */
+  .font-heading, .font-body, .font-numbers {
+    font-display: swap;
+  }
+  
+  /* Mobile-specific font sizes */
+  .mobile-text-hero {
+    font-size: 2rem;
+    line-height: 1.1;
+    font-weight: 700;
+  }
+  
+  .mobile-text-display {
+    font-size: 1.5rem;
+    line-height: 1.2;
+    font-weight: 600;
+  }
+  
+  .mobile-text-lg {
+    font-size: 1.125rem;
+    line-height: 1.4;
+    font-weight: 500;
+  }
+  
+  /* Improve text readability on mobile */
+  p, span, div {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* Better font rendering on high DPI screens */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    body {
+      -webkit-font-smoothing: subpixel-antialiased;
+    }
   }
 }
 
@@ -319,10 +491,185 @@ html {
   }
 }
 
-/* Dark mode optimizations */
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: #0f172a;
-    color: #f8fafc;
+/* Dark mode styles */
+.dark {
+  --primary: #3b82f6;
+  --primary-light: #60a5fa;
+  --primary-dark: #1d4ed8;
+  
+  --background: #0f172a;
+  --background-secondary: #1e293b;
+  --background-tertiary: #334155;
+  
+  --surface: #1e293b;
+  --surface-elevated: #334155;
+  --surface-pressed: #475569;
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-inverse: #0f172a;
+  
+  --accent: #3b82f6;
+  --accent-light: #60a5fa;
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  
+  --border: #475569;
+  --border-light: #334155;
+  --border-dark: #64748b;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  
+  --neumorphic-light: 8px 8px 16px rgba(0, 0, 0, 0.3), -8px -8px 16px rgba(59, 130, 246, 0.1);
+  --neumorphic-inset: inset 8px 8px 16px rgba(0, 0, 0, 0.3), inset -8px -8px 16px rgba(59, 130, 246, 0.1);
+}
+
+.dark body {
+  background: linear-gradient(135deg, var(--background) 0%, var(--background-secondary) 50%, var(--background-tertiary) 100%);
+  color: var(--text-primary);
+}
+
+/* Dark mode for olive theme */
+.dark[data-theme="olive"] {
+  --primary: #5a7a3a;
+  --primary-light: #6b8a4a;
+  --primary-dark: #4a5d23;
+  
+  --background: #0f1419;
+  --background-secondary: #1a1f2e;
+  --background-tertiary: #2d3748;
+  
+  --surface: #1a1f2e;
+  --surface-elevated: #2d3748;
+  --surface-pressed: #4a5568;
+  
+  --text-primary: #f7fafc;
+  --text-secondary: #e2e8f0;
+  --text-tertiary: #a0aec0;
+  
+  --accent: #5a7a3a;
+  --accent-light: #6b8a4a;
+  --success: #5a7a3a;
+  
+  --border: #4a5568;
+  --border-light: #2d3748;
+  --border-dark: #718096;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  
+  --neumorphic-light: 8px 8px 16px rgba(0, 0, 0, 0.3), -8px -8px 16px rgba(90, 122, 58, 0.1);
+  --neumorphic-inset: inset 8px 8px 16px rgba(0, 0, 0, 0.3), inset -8px -8px 16px rgba(90, 122, 58, 0.1);
+}
+
+/* Mobile Gesture Animations */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
   }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes pull-refresh {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-in;
+}
+
+.animate-pull-refresh {
+  animation: pull-refresh 0.3s ease-out;
+}
+
+/* Pull to refresh indicator */
+.pull-refresh-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: white;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+}
+
+.pull-refresh-indicator.show {
+  transform: translateY(0);
+}
+
+/* Swipe indicators */
+.swipe-indicator {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 40px;
+  background: var(--primary);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.swipe-indicator.left {
+  left: 10px;
+}
+
+.swipe-indicator.right {
+  right: 10px;
+}
+
+.swipe-indicator.show {
+  opacity: 1;
 }

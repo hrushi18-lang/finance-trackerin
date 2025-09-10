@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, Calendar, Plus, ArrowUpDown, TrendingUp, Edit3, Trash2, AlertCircle, CheckCircle, PiggyBank, TrendingDown, Eye } from 'lucide-react';
+import { Target, Calendar, Plus, ArrowUpDown, TrendingUp, Edit3, Trash2, AlertCircle, CheckCircle, PiggyBank, TrendingDown, Eye, ArrowLeft } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -7,16 +7,17 @@ import { calculatePercentage, sanitizeFinancialData } from '../utils/validation'
 import { Modal } from '../components/common/Modal';
 import { GoalForm } from '../components/forms/GoalForm';
 import { GoalTransactionForm } from '../components/forms/GoalTransactionForm';
+import { GoalCompletionModal } from '../components/goals/GoalCompletionModal';
 import { Button } from '../components/common/Button';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { Goal } from '../types';
 import { ProgressBar } from '../components/analytics/ProgressBar';
 
-export const Goals: React.FC = () => {
+const Goals: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { goals, addGoal, updateGoal, deleteGoal, addTransaction, accounts, transactions, fundGoalFromAccount, withdrawGoalToAccount } = useFinance();
+  const { goals, addGoal, updateGoal, deleteGoal, addTransaction, accounts, transactions, fundGoalFromAccount, contributeToGoal, withdrawGoalToAccount, handleGoalCompletion } = useFinance();
   const { formatCurrency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -28,6 +29,8 @@ export const Goals: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'upcoming'>('active');
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completedGoal, setCompletedGoal] = useState<Goal | null>(null);
 
   // Find emergency fund goal
   const emergencyFund = goals.find(g => g.category.toLowerCase() === 'emergency');
@@ -47,6 +50,30 @@ export const Goals: React.FC = () => {
       const daysUntilTarget = differenceInDays(new Date(goal.targetDate), new Date());
       return daysUntilTarget <= 0 && goal.currentAmount < goal.targetAmount;
     })
+  };
+
+  // Check for newly completed goals and show completion modal
+  React.useEffect(() => {
+    const newlyCompletedGoals = goals.filter(goal => {
+      const progress = calculatePercentage(goal.currentAmount, goal.targetAmount);
+      return progress >= 100 && goal.completionAction === 'waiting';
+    });
+
+    if (newlyCompletedGoals.length > 0 && !showCompletionModal) {
+      const goal = newlyCompletedGoals[0];
+      setCompletedGoal(goal);
+      setShowCompletionModal(true);
+    }
+  }, [goals, showCompletionModal]);
+
+  // Handle goal completion
+  const handleGoalComplete = async (goalId: string) => {
+    try {
+      await handleGoalCompletion(goalId);
+      // The completion modal will be shown automatically via useEffect
+    } catch (err) {
+      console.error('Error completing goal:', err);
+    }
   };
 
   // Calculate goal statistics
@@ -259,7 +286,15 @@ export const Goals: React.FC = () => {
       {/* Immersive Header */}
       <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-heading">Financial Goals</h1>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/cards')}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft size={20} className="text-gray-600" />
+            </button>
+            <h1 className="text-2xl font-heading">Financial Goals</h1>
+          </div>
           <button
             onClick={() => navigate('/goals/create')}
             className="btn-primary flex items-center space-x-2 px-4 py-2"
@@ -420,6 +455,22 @@ export const Goals: React.FC = () => {
                       <CheckCircle size={16} />
                       <span className="text-sm font-medium">Goal Completed! 🎉</span>
                     </div>
+                    {goal.completionAction === 'waiting' && (
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleGoalComplete(goal.id)}
+                          size="sm"
+                          className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                        >
+                          Complete Goal
+                        </Button>
+                      </div>
+                    )}
+                    {goal.completionAction !== 'waiting' && (
+                      <div className="text-xs opacity-90">
+                        Status: {goal.completionAction.charAt(0).toUpperCase() + goal.completionAction.slice(1)}
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
@@ -577,7 +628,7 @@ export const Goals: React.FC = () => {
           <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-white mb-2">Are you sure?</h3>
           <p className="text-forest-300 mb-6">
-            This action cannot be undone. All progress and transaction history for this goal will be lost.
+            This will remove the goal from your active goals list. Your transaction history and progress data will be preserved for analytics purposes. Are you sure you want to continue?
           </p>
           <div className="flex space-x-4">
             <Button
@@ -598,6 +649,17 @@ export const Goals: React.FC = () => {
         </div>
       </Modal>
 
+      {/* Goal Completion Modal */}
+      {showCompletionModal && completedGoal && (
+        <GoalCompletionModal
+          goal={completedGoal}
+          onClose={() => {
+            setShowCompletionModal(false);
+            setCompletedGoal(null);
+          }}
+        />
+      )}
+
       {/* Error Toast */}
       {error && (
         <div className="fixed bottom-6 left-6 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg">
@@ -607,3 +669,5 @@ export const Goals: React.FC = () => {
     </div>
   );
 };
+
+export default Goals;
