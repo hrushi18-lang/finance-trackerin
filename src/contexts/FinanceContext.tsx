@@ -778,6 +778,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error('Error creating bill instance:', instanceError);
     }
 
+    // Record staging history for payment
+    const { error: historyError } = await supabase
+      .from('bill_staging_history')
+      .insert({
+        bill_id: billId,
+        user_id: user.id,
+        from_stage: bill.billStage || 'pending',
+        to_stage: paymentData.paymentType === 'full' ? 'paid' : 'partial',
+        stage_reason: `Payment: ${paymentData.paymentType} - ${paymentData.description || 'Bill payment'}`,
+        changed_by: 'user'
+      });
+
+    if (historyError) {
+      console.error('Error recording bill staging history:', historyError);
+    }
+
     // Update bill based on payment type
     let nextDueDate = new Date(bill.nextDueDate);
     let billStatus = bill.status;
@@ -859,6 +875,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (instanceError) {
       console.error('Error creating bill instance:', instanceError);
+    }
+
+    // Record staging history for skip
+    const { error: historyError } = await supabase
+      .from('bill_staging_history')
+      .insert({
+        bill_id: billId,
+        user_id: user.id,
+        from_stage: bill.billStage || 'pending',
+        to_stage: 'skipped',
+        stage_reason: `Skipped: ${reason || 'Skipped by user'}`,
+        changed_by: 'user'
+      });
+
+    if (historyError) {
+      console.error('Error recording bill staging history:', historyError);
     }
 
     // Update bill - advance to next due date
@@ -1478,7 +1510,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       transferDate: new Date(transfer.transfer_date),
       fromTransactionId: transfer.from_transaction_id,
       toTransactionId: transfer.to_transaction_id,
-      createdAt: new Date(transfer.created_at)
+      createdAt: new Date(transfer.created_at),
+      // Add missing required fields with defaults
+      fromCurrency: 'USD',
+      toCurrency: 'USD',
+      transferType: 'manual',
+      status: 'completed'
     }));
 
     setAccountTransfers(mappedTransfers);
@@ -1665,7 +1702,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         balance: accountData.balance || 0, // Ensure balance is never null
         institution: accountData.institution,
         platform: accountData.platform,
-        account_number: accountData.account_number,
+        account_number: accountData.accountNumber,
         is_visible: accountData.isVisible,
         currency: accountData.currency,
         
@@ -2057,14 +2094,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         from_account_id: fromAccountId,
         to_account_id: toAccountId,
         amount: amount,
-        from_currency: fromAccount.currencyCode,
-        to_currency: toAccount.currencyCode,
-        converted_amount: amount, // For now, assume same currency
-        exchange_rate: 1.0,
         description: description,
-        transfer_type: 'manual',
-        status: 'completed',
-        notes: null
+        transfer_date: new Date().toISOString().split('T')[0]
       })
       .select()
       .single();
@@ -2116,14 +2147,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         from_account_id: transferData.fromAccountId,
         to_account_id: transferData.toAccountId,
         amount: transferData.amount,
-        from_currency: transferData.fromCurrency,
-        to_currency: transferData.toCurrency,
-        converted_amount: transferData.convertedAmount,
-        exchange_rate: transferData.exchangeRate,
         description: transferData.description,
-        transfer_type: transferData.transferType,
-        status: transferData.status,
-        notes: transferData.notes
+        transfer_date: new Date().toISOString().split('T')[0]
       })
       .select()
       .single();
@@ -2231,10 +2256,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         transfer_to_account_id: transactionData.transferToAccountId || null,
         status: transactionData.status || 'completed',
         // Currency fields
-        currency_code: transactionData.currencyCode || 'USD',
-        original_amount: transactionData.originalAmount || transactionData.amount,
-        original_currency: transactionData.originalCurrency || 'USD',
-        exchange_rate_used: transactionData.exchangeRateUsed || 1.0,
+        currency_code: (transactionData as any).currencyCode || 'USD',
+        original_amount: (transactionData as any).originalAmount || transactionData.amount,
+        original_currency: (transactionData as any).originalCurrency || 'USD',
+        exchange_rate_used: (transactionData as any).exchangeRateUsed || 1.0,
         // Payment source tracking
         payment_source: (transactionData as any).paymentSource || null,
         source_entity_id: (transactionData as any).sourceEntityId || null,
@@ -2396,7 +2421,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         status: goalData.status || 'active',
         activity_scope: goalData.activityScope || 'general',
         linked_accounts_count: goalData.linkedAccountsCount || 0,
-        currency_code: goalData.currencyCode || 'USD'
+        currency_code: (goalData as any).currencyCode || 'USD'
       })
       .select()
       .single();
@@ -2431,14 +2456,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       completionAction: data.completion_action || 'waiting',
       originalTargetAmount: data.original_target_amount ? Number(data.original_target_amount) : undefined,
       extendedTargetAmount: data.extended_target_amount ? Number(data.extended_target_amount) : undefined,
-      completionNotes: data.completion_notes
+      completionNotes: data.completion_notes,
+      currencyCode: data.currency_code || 'USD'
     };
 
     setGoals(prev => [newGoal, ...prev]);
 
     // Create account links for account-specific goals
-    if (goalData.activityScope === 'account_specific' && goalData.accountIds && goalData.accountIds.length > 0) {
-      const accountLinks = goalData.accountIds.map((accountId, index) => ({
+    if (goalData.activityScope === 'account_specific' && (goalData as any).accountIds && (goalData as any).accountIds.length > 0) {
+      const accountLinks = (goalData as any).accountIds.map((accountId: any, index: number) => ({
         activity_type: 'goal',
         activity_id: data.id,
         account_id: accountId,
@@ -2638,7 +2664,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         name: liabilityData.name,
         type: liabilityData.liabilityType,
         liability_type: liabilityData.liabilityType,
-        description: liabilityData.description,
+        notes: liabilityData.description,
         liability_status: liabilityData.liabilityStatus || 'new',
         total_amount: liabilityData.totalAmount,
         remaining_amount: liabilityData.remainingAmount,
@@ -2649,7 +2675,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         loan_term_months: liabilityData.loanTermMonths,
         remaining_term_months: liabilityData.remainingTermMonths,
         start_date: liabilityData.startDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
-        due_date: liabilityData.dueDate?.toISOString().split('T')[0],
+        due_date: liabilityData.dueDate?.toISOString().split('T')[0] || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default to 1 year from now
         next_payment_date: liabilityData.nextPaymentDate?.toISOString().split('T')[0],
         linked_asset_id: liabilityData.linkedAssetId,
         is_secured: liabilityData.isSecured,
