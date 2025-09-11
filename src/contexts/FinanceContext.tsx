@@ -265,7 +265,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         loadDebtPayments(),
         loadTransactionSplits(),
         loadFinancialInsights(),
-        loadCalendarEvents()
+        // loadCalendarEvents() // Commented out until calendar events state is properly implemented
       ]);
 
       // Clean up any duplicate Goals Vault accounts
@@ -2856,8 +2856,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           .insert(eventData);
       }
 
-      // Reload calendar events to update the UI
-      await loadCalendarEvents();
+      // Calendar events will be loaded when needed
+      // await loadCalendarEvents();
     } catch (error) {
       console.error('Error creating liability calendar events:', error);
     }

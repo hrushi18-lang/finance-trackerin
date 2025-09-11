@@ -36,13 +36,13 @@ const Bills: React.FC = () => {
   // Initialize analytics engine
   const analyticsEngine = useMemo(() => {
     return new AnalyticsEngine(
-      transactions,
-      accounts,
-      goals,
-      bills,
-      liabilities,
-      budgets,
-      userCategories
+      transactions || [],
+      accounts || [],
+      goals || [],
+      bills || [],
+      liabilities || [],
+      budgets || [],
+      userCategories || []
     );
   }, [transactions, accounts, goals, bills, liabilities, budgets, userCategories]);
 
@@ -77,31 +77,31 @@ const Bills: React.FC = () => {
 
   // Enhanced bill filtering and categorization
   const categorizedBills = {
-    upcoming: bills.filter(bill => {
+    upcoming: bills?.filter(bill => {
       const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
       return daysUntilDue >= 0 && daysUntilDue <= 15 && bill.isActive;
-    }),
-    current: bills.filter(bill => {
+    }) || [],
+    current: bills?.filter(bill => {
       const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
       return daysUntilDue >= 0 && daysUntilDue <= 3 && bill.isActive;
-    }),
-    overdue: bills.filter(bill => {
+    }) || [],
+    overdue: bills?.filter(bill => {
       const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
       return daysUntilDue < 0 && bill.isActive;
-    }),
-    paid: bills.filter(bill => !bill.isActive || bill.lastPaidDate),
-    all: bills
+    }) || [],
+    paid: bills?.filter(bill => !bill.isActive || bill.lastPaidDate) || [],
+    all: bills || []
   };
 
   // Calculate bill statistics
   const billStats = {
-    totalBills: bills.length,
-    activeBills: bills.filter(b => b.isActive).length,
+    totalBills: bills?.length || 0,
+    activeBills: bills?.filter(b => b.isActive).length || 0,
     overdueBills: categorizedBills.overdue.length,
     upcomingBills: categorizedBills.upcoming.length,
     totalMonthlyAmount: bills
-      .filter(b => b.isActive && b.frequency === 'monthly')
-      .reduce((sum, bill) => sum + bill.amount, 0),
+      ?.filter(b => b.isActive && b.frequency === 'monthly')
+      .reduce((sum, bill) => sum + bill.amount, 0) || 0,
     totalAnnualAmount: bills
       .filter(b => b.isActive)
       .reduce((sum, bill) => {
@@ -501,7 +501,7 @@ const Bills: React.FC = () => {
             <h2 className="text-lg font-heading">Bill Overview</h2>
           </div>
           
-          {bills.length > 0 ? (
+          {bills && bills.length > 0 ? (
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
                 <p className="text-2xl font-numbers">{billStats.activeBills}</p>
@@ -532,7 +532,7 @@ const Bills: React.FC = () => {
         </div>
 
         {/* Tab Navigation */}
-        {bills.length > 0 && (
+        {bills && bills.length > 0 && (
           <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
             {[
               { key: 'current', label: 'Current (3 days)', count: categorizedBills.current.length },
@@ -560,7 +560,7 @@ const Bills: React.FC = () => {
         )}
 
         {/* Bills List */}
-        {bills.length > 0 && (
+        {bills && bills.length > 0 && (
           <div className="slide-in-up">
             <h3 className="text-lg font-heading mb-4">Your Bills</h3>
             <div className="space-y-3">
