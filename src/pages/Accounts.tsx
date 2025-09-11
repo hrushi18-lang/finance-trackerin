@@ -276,24 +276,24 @@ const Accounts: React.FC = () => {
 
   return (
     <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--background)' }}>
-      {/* Immersive Header */}
-      <div className="relative">
-        <div className="px-6 pt-6 pb-4">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
+      {/* Mobile-Optimized Header */}
+      <div className="sticky top-0 z-10" style={{ backgroundColor: 'var(--background)' }}>
+        <div className="px-4 pt-4 pb-3">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
               <button
                 onClick={() => navigate(-1)}
-                className="p-2 rounded-xl transition-all duration-200 hover:scale-105"
+                className="p-2 rounded-xl transition-all duration-200 active:scale-95"
                 style={{ backgroundColor: 'var(--background-secondary)' }}
               >
                 <ArrowLeft size={18} style={{ color: 'var(--text-secondary)' }} />
               </button>
               <div>
-                <h1 className="text-3xl font-heading font-bold" style={{ color: 'var(--text-primary)' }}>
+                <h1 className="text-xl font-heading font-bold" style={{ color: 'var(--text-primary)' }}>
                   Accounts
                 </h1>
-                <p className="text-sm font-body mt-1" style={{ color: 'var(--text-secondary)' }}>
-                  Manage your financial accounts
+                <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+                  {accounts.length} account{accounts.length !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
@@ -301,49 +301,56 @@ const Accounts: React.FC = () => {
               variant="primary"
               size="sm"
               onClick={() => setShowForm(true)}
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-1 px-3 py-2"
             >
-              <Plus size={16} />
-              <span>Add Account</span>
+              <Plus size={14} />
+              <span className="text-sm">Add</span>
             </Button>
           </div>
 
-          {/* Total Balance Hero Card */}
+          {/* Compact Total Balance Card */}
           <div 
-            className="relative overflow-hidden rounded-3xl p-8 mb-6"
+            className="relative overflow-hidden rounded-2xl p-4 mb-4"
             style={{
               background: 'linear-gradient(135deg, var(--primary) 0%, #2d5016 100%)',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.06)'
+              boxShadow: '0 8px 20px rgba(0,0,0,0.1)'
             }}
           >
             <div className="text-center text-white">
-              <p className="text-lg font-body mb-2 opacity-90">Total Net Worth</p>
-              <p className="text-4xl font-serif font-bold mb-2">
+              <p className="text-sm font-body mb-1 opacity-90">Total Net Worth</p>
+              <p className="text-2xl font-serif font-bold">
                 {formatCurrencyEnhanced(totalBalance, displayCurrency)}
               </p>
-              <p className="text-sm font-medium opacity-90">
-                {accounts.length} account{accounts.length !== 1 ? 's' : ''}
-              </p>
             </div>
-            {/* Decorative elements */}
-            <div className="absolute top-4 right-4 w-16 h-16 rounded-full opacity-10" style={{ backgroundColor: 'white' }}></div>
-            <div className="absolute bottom-4 left-4 w-12 h-12 rounded-full opacity-10" style={{ backgroundColor: 'white' }}></div>
+            {/* Simplified decorative elements */}
+            <div className="absolute top-2 right-2 w-8 h-8 rounded-full opacity-10" style={{ backgroundColor: 'white' }}></div>
           </div>
         </div>
       </div>
 
-      {/* Account Analytics Section */}
-      <div className="px-4 mb-6">
-        <div className="card-neumorphic p-4 slide-in-up">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
-              Account Analytics
+      {/* Mobile-Optimized Analytics Section */}
+      <div className="px-4 mb-4">
+        <div className="card-neumorphic p-3 slide-in-up">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-heading" style={{ color: 'var(--text-primary)' }}>
+              Analytics
             </h2>
-            <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className="p-2 rounded-lg active:bg-gray-100 transition-colors"
+              title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+            >
+              <BarChart3 size={16} className={showAnalytics ? 'text-blue-600' : 'text-gray-600'} />
+            </button>
+          </div>
+
+          {/* Mobile-friendly filter controls */}
+          {showAnalytics && (
+            <div className="mb-4 space-y-2">
               <select
                 value={selectedAccount}
                 onChange={(e) => setSelectedAccount(e.target.value)}
-                className="px-3 py-1 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+                className="w-full px-3 py-2 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
               >
                 <option value="all">All Accounts</option>
                 {accounts.map((account) => (
@@ -355,120 +362,85 @@ const Accounts: React.FC = () => {
               <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="px-3 py-1 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+                className="w-full px-3 py-2 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
               >
                 <option value="thisMonth">This Month</option>
                 <option value="lastMonth">Last Month</option>
                 <option value="last3Months">Last 3 Months</option>
               </select>
-              <button
-                onClick={() => setShowAnalytics(!showAnalytics)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
-              >
-                <BarChart3 size={16} className={showAnalytics ? 'text-blue-600' : 'text-gray-600'} />
-              </button>
             </div>
-          </div>
+          )}
 
           {showAnalytics && (
-            <div className="space-y-6">
-              {/* Account Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {accountAnalytics.slice(0, 4).map((analytics) => (
-                  <div key={analytics.accountId} className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+            <div className="space-y-4">
+              {/* Mobile Account Overview Cards */}
+              <div className="space-y-3">
+                {accountAnalytics.slice(0, 3).map((analytics) => (
+                  <div key={analytics.accountId} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                         {analytics.accountName}
                       </h3>
                       <span className="text-xs text-gray-500">{analytics.currency}</span>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span style={{ color: 'var(--text-secondary)' }}>Balance</span>
-                        <span className="font-numbers">{formatCurrency(analytics.balance)}</span>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="text-center">
+                        <p style={{ color: 'var(--text-secondary)' }}>Balance</p>
+                        <p className="font-numbers text-sm">{formatCurrency(analytics.balance)}</p>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span style={{ color: 'var(--text-secondary)' }}>Net Flow</span>
-                        <span className={`font-numbers ${analytics.netFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className="text-center">
+                        <p style={{ color: 'var(--text-secondary)' }}>Net Flow</p>
+                        <p className={`font-numbers text-sm ${analytics.netFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {analytics.netFlow >= 0 ? '+' : ''}{formatCurrency(analytics.netFlow)}
-                        </span>
+                        </p>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span style={{ color: 'var(--text-secondary)' }}>Transactions</span>
-                        <span className="font-numbers">{analytics.transactionCount}</span>
+                      <div className="text-center">
+                        <p style={{ color: 'var(--text-secondary)' }}>Transactions</p>
+                        <p className="font-numbers text-sm">{analytics.transactionCount}</p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Category Breakdown */}
-              {accountAnalytics.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
-                      Spending by Category
-                    </h3>
-                    {accountAnalytics[0].categoryBreakdown.length > 0 ? (
-                      <RingChart
-                        data={accountAnalytics[0].categoryBreakdown.map((cat, index) => ({
-                          label: cat.category,
-                          value: cat.amount,
-                          color: `hsl(${120 + index * 30}, 60%, 50%)`
-                        }))}
-                        size={180}
-                        strokeWidth={15}
-                        interactive={true}
-                      />
-                    ) : (
-                      <div className="text-center py-8">
-                        <PieChart size={48} className="text-gray-400 mx-auto mb-4" />
-                        <p className="text-sm text-gray-500">No spending data for this period</p>
+              {/* Simplified Category Breakdown for Mobile */}
+              {accountAnalytics.length > 0 && accountAnalytics[0].categoryBreakdown.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Top Categories
+                  </h3>
+                  <div className="space-y-2">
+                    {accountAnalytics[0].categoryBreakdown.slice(0, 5).map((cat, index) => (
+                      <div key={cat.category} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                        <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                          {cat.category}
+                        </span>
+                        <div className="text-right">
+                          <span className="text-sm font-numbers">{formatCurrency(cat.amount)}</span>
+                          <span className="text-xs text-gray-500 ml-2">({cat.percentage.toFixed(1)}%)</span>
+                        </div>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Monthly Trend */}
-                  <div>
-                    <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
-                      Monthly Trend
-                    </h3>
-                    {accountAnalytics[0].monthlyTrend.length > 0 ? (
-                      <BarChart
-                        data={accountAnalytics[0].monthlyTrend.map(trend => ({
-                          month: trend.month,
-                          income: trend.income,
-                          spending: trend.expenses
-                        }))}
-                        interactive={true}
-                      />
-                    ) : (
-                      <div className="text-center py-8">
-                        <BarChart3 size={48} className="text-gray-400 mx-auto mb-4" />
-                        <p className="text-sm text-gray-500">No trend data available</p>
-                      </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               )}
 
-              {/* Largest Transactions */}
+              {/* Mobile-friendly Largest Transactions */}
               {accountAnalytics.length > 0 && accountAnalytics[0].largestTransactions.length > 0 && (
                 <div>
-                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
-                    Largest Transactions
+                  <h3 className="text-sm font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    Recent Large Transactions
                   </h3>
                   <div className="space-y-2">
-                    {accountAnalytics[0].largestTransactions.map((transaction) => (
-                      <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                        <div>
-                          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                    {accountAnalytics[0].largestTransactions.slice(0, 3).map((transaction) => (
+                      <div key={transaction.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
                             {transaction.description}
                           </p>
                           <p className="text-xs text-gray-500">{transaction.category}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right ml-2">
                           <p className="text-sm font-numbers">{formatCurrency(transaction.amount)}</p>
                           <p className="text-xs text-gray-500">
                             {format(transaction.date, 'MMM dd')}
@@ -484,47 +456,52 @@ const Accounts: React.FC = () => {
         </div>
       </div>
 
-      <div className="px-6 space-y-6">
-        {/* Search and Filters */}
-        <div className="flex items-center space-x-3">
-          <div className="flex-1 relative">
+      <div className="px-4 space-y-4">
+        {/* Mobile-Optimized Search and Filters */}
+        <div className="space-y-3">
+          <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: 'var(--text-tertiary)' }} />
             <Input
               type="text"
               placeholder="Search accounts..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 w-full"
             />
           </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowHidden(!showHidden)}
-            className="flex items-center space-x-2"
-          >
-            {showHidden ? <EyeOff size={16} /> : <Eye size={16} />}
-            <span>{showHidden ? 'Hide' : 'Show'} Hidden</span>
-          </Button>
+          <div className="flex items-center justify-between">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowHidden(!showHidden)}
+              className="flex items-center space-x-1 px-3 py-2"
+            >
+              {showHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+              <span className="text-sm">{showHidden ? 'Hide' : 'Show'} Hidden</span>
+            </Button>
+            <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              {filteredAccounts.length} of {accounts.length} accounts
+            </div>
+          </div>
         </div>
 
         {/* Goals Vault Manager */}
         <GoalsVaultManager />
 
-        {/* Accounts List */}
-        <div className="space-y-4">
+        {/* Mobile-Optimized Accounts List */}
+        <div className="space-y-3">
           {filteredAccounts.length === 0 ? (
             <div
-              className="p-8 rounded-2xl text-center"
+              className="p-6 rounded-2xl text-center"
               style={{
                 backgroundColor: 'var(--background-secondary)',
                 boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
               }}
             >
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'var(--background)' }}>
-                <LuxuryCategoryIcon category="Primary Banking" size={24} variant="luxury" />
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: 'var(--background)' }}>
+                <LuxuryCategoryIcon category="Primary Banking" size={20} variant="luxury" />
               </div>
-              <h3 className="text-lg font-heading mb-2" style={{ color: 'var(--text-primary)' }}>
+              <h3 className="text-base font-heading mb-2" style={{ color: 'var(--text-primary)' }}>
                 {searchTerm ? 'No accounts found' : 'No accounts yet'}
               </h3>
               <p className="text-sm font-body mb-4" style={{ color: 'var(--text-secondary)' }}>
@@ -537,15 +514,15 @@ const Accounts: React.FC = () => {
                 <Button
                   variant="primary"
                   onClick={() => setShowForm(true)}
-                  className="flex items-center space-x-2 mx-auto"
+                  className="flex items-center space-x-2 mx-auto px-4 py-2"
                 >
-                  <Plus size={16} />
-                  <span>Add Account</span>
+                  <Plus size={14} />
+                  <span className="text-sm">Add Account</span>
                 </Button>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
               {filteredAccounts.map((account) => (
                 <AccountCard
                   key={account.id}
@@ -592,6 +569,16 @@ const Accounts: React.FC = () => {
           onTransfer={handleTransferSubmit}
         />
       )}
+
+      {/* Mobile Floating Action Button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <Button
+          onClick={() => setShowForm(true)}
+          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full p-4 shadow-lg active:scale-95 transition-all duration-200"
+        >
+          <Plus size={24} />
+        </Button>
+      </div>
     </div>
   );
 };

@@ -99,7 +99,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
 
   return (
     <div
-      className="relative p-4 rounded-2xl transition-all duration-200 hover:scale-105 cursor-pointer"
+      className="relative p-4 rounded-2xl transition-all duration-200 active:scale-95 cursor-pointer"
       style={{
         backgroundColor: 'var(--background)',
         boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
@@ -107,33 +107,33 @@ export const AccountCard: React.FC<AccountCardProps> = ({
       onClick={handleCardClick}
     >
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-3">
-          <div className={`p-2 rounded-lg ${getAccountColor(account.type)}`} style={{ backgroundColor: 'var(--background-secondary)' }}>
+        <div className="flex items-center space-x-3 flex-1 min-w-0">
+          <div className={`p-2 rounded-lg ${getAccountColor(account.type)} flex-shrink-0`} style={{ backgroundColor: 'var(--background-secondary)' }}>
             {getAccountIcon(account.type)}
           </div>
-          <div>
-            <h3 className="font-heading text-sm" style={{ color: 'var(--text-primary)' }}>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-heading text-sm truncate" style={{ color: 'var(--text-primary)' }}>
               {account.name}
             </h3>
-            <div className="flex items-center space-x-2">
-              <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+            <div className="flex items-center space-x-2 mt-1">
+              <p className="text-xs font-body truncate" style={{ color: 'var(--text-secondary)' }}>
                 {formatAccountType(account.type)}
               </p>
-              <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+              <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 flex-shrink-0">
                 {getCurrencyInfo(account.currency)?.flag} {account.currency}
               </span>
             </div>
           </div>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 flex-shrink-0">
           {onToggleVisibility && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleVisibility(account);
               }}
-              className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-lg active:bg-gray-100 transition-colors"
             >
               {account.is_visible ? (
                 <Eye size={16} style={{ color: 'var(--text-secondary)' }} />
@@ -143,57 +143,42 @@ export const AccountCard: React.FC<AccountCardProps> = ({
             </button>
           )}
           
-          <div className="flex space-x-1">
-            {onEdit && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(account);
-                }}
-                className="px-2 py-1 text-xs rounded-lg hover:bg-gray-100 transition-colors"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                Edit
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(account);
-                }}
-                className="px-2 py-1 text-xs rounded-lg hover:bg-red-100 transition-colors text-red-600"
-              >
-                Delete
-              </button>
-            )}
-          </div>
+          {onEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(account);
+              }}
+              className="px-3 py-2 text-xs rounded-lg active:bg-gray-100 transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              Edit
+            </button>
+          )}
         </div>
       </div>
 
       {showBalance && account.is_visible && (
         <div className="mb-3">
-          <p className="text-2xl font-heading" style={{ color: 'var(--text-primary)' }}>
+          <p className="text-xl font-heading" style={{ color: 'var(--text-primary)' }}>
             {formatBalance(account.balance, account.currency)}
           </p>
         </div>
       )}
 
-      {account.institution && (
-        <div className="mb-2">
-          <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
+      <div className="space-y-1">
+        {account.institution && (
+          <p className="text-xs font-body truncate" style={{ color: 'var(--text-secondary)' }}>
             {account.institution}
           </p>
-        </div>
-      )}
+        )}
 
-      {account.platform && (
-        <div>
-          <p className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
+        {account.platform && (
+          <p className="text-xs font-body truncate" style={{ color: 'var(--text-tertiary)' }}>
             {account.platform}
           </p>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Actions Menu */}
       {showActionsMenu && (

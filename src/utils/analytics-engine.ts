@@ -207,7 +207,7 @@ export class AnalyticsEngine {
     return targetGoals.map(goal => {
       const goalTransactions = this.transactions.filter(t => 
         t.linkedGoalId === goal.id || 
-        (t.type === 'expense' && t.description?.toLowerCase().includes(goal.name.toLowerCase()))
+        (t.type === 'expense' && t.description?.toLowerCase().includes(goal.title.toLowerCase()))
       );
 
       const contributionsByAccount = new Map<string, { accountName: string; amount: number; currency: string }>();
@@ -253,7 +253,7 @@ export class AnalyticsEngine {
 
       return {
         goalId: goal.id,
-        goalName: goal.name,
+        goalName: goal.title,
         currentAmount: goal.currentAmount,
         targetAmount: goal.targetAmount,
         progressPercentage,
@@ -587,7 +587,7 @@ export class AnalyticsEngine {
           events.push({
             id: `goal-${t.id}`,
             type: 'goal_contribution',
-            title: `Goal: ${goal.name}`,
+            title: `Goal: ${goal.title}`,
             amount: t.amount,
             currency: t.currencyCode,
             date: new Date(t.date),
