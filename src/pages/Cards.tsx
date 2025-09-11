@@ -192,17 +192,46 @@ const Cards: React.FC = () => {
         ]
       });
 
-      setTrendData({
-        income: { current: 5000, previous: 4800, change: 4.2 },
-        expenses: { current: 3500, previous: 3600, change: -2.8 },
-        savings: { current: 1500, previous: 1200, change: 25.0 }
-      });
+      setTrendData([
+        {
+          period: 'Income',
+          value: 5000,
+          change: 200,
+          changePercent: 4.2,
+          trend: 'up' as const
+        },
+        {
+          period: 'Expenses',
+          value: 3500,
+          change: -100,
+          changePercent: -2.8,
+          trend: 'down' as const
+        },
+        {
+          period: 'Savings',
+          value: 1500,
+          change: 300,
+          changePercent: 25.0,
+          trend: 'up' as const
+        }
+      ]);
 
-      setPredictions({
-        nextMonthIncome: 5100,
-        nextMonthExpenses: 3400,
-        confidence: 0.85
-      });
+      setPredictions([
+        {
+          period: 'Next Month Income',
+          predicted: 5100,
+          confidence: 85,
+          trend: 'increasing' as const,
+          factors: ['Historical growth', 'Seasonal patterns']
+        },
+        {
+          period: 'Next Month Expenses',
+          predicted: 3400,
+          confidence: 78,
+          trend: 'decreasing' as const,
+          factors: ['Budget optimization', 'Reduced spending']
+        }
+      ]);
 
       setLastUpdated(new Date());
     } catch (error) {
@@ -395,13 +424,14 @@ const Cards: React.FC = () => {
 
           {financialHealth && (
             <FinancialHealthCard 
-              data={financialHealth}
+              metrics={financialHealth}
               formatCurrency={formatCurrency}
             />
           )}
 
           {trendData && (
             <TrendAnalysis 
+              title="Financial Trends"
               data={trendData}
               formatCurrency={formatCurrency}
             />
@@ -409,7 +439,8 @@ const Cards: React.FC = () => {
 
           {predictions && (
             <PredictiveAnalytics 
-              data={predictions}
+              title="Financial Predictions"
+              predictions={predictions}
               formatCurrency={formatCurrency}
             />
           )}
