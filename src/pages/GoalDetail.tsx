@@ -26,7 +26,8 @@ const GoalDetail: React.FC = () => {
     accounts,
     updateGoal,
     addTransaction,
-    getGoalTransactions
+    getGoalTransactions,
+    fundGoalFromAccount
   } = useFinance();
   const { formatCurrency } = useInternationalization();
   
@@ -92,23 +93,11 @@ const GoalDetail: React.FC = () => {
       const amount = parseFloat(contributionAmount);
       if (isNaN(amount) || amount <= 0) return;
 
-      // Add transaction
-      await addTransaction({
-        type: 'income',
-        amount: amount,
-        description: `Contribution to ${goal.title}`,
-        category: 'Goal Contribution',
-        date: new Date(),
-        accountId: goal.accountId || accounts[0]?.id,
-        affectsBalance: true,
-        status: 'completed',
-        // linkedGoalId: goal.id
-      });
-
-      // Update goal
-      await updateGoal(goal.id, {
-        currentAmount: goal.currentAmount + amount
-      });
+      // Use the proper goal funding function
+      const sourceAccountId = goal.accountId || accounts[0]?.id;
+      if (sourceAccountId) {
+        await fundGoalFromAccount(sourceAccountId, goal.id, amount, `Contribution to ${goal.title}`);
+      }
 
       setContributionAmount('');
       setShowAddContribution(false);
