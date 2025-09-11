@@ -67,62 +67,202 @@ const Transactions: React.FC = () => {
   const loadAnalytics = async () => {
     setIsLoadingAnalytics(true);
     try {
-      // Simulate analytics loading (replace with actual analytics engine calls)
-      const mockFinancialHealth = {
-        netWorth: 25000,
-        totalAssets: 50000,
-        totalLiabilities: 25000,
-        totalIncome: 8000,
-        totalExpenses: 5000,
-        savingsRate: 37.5,
-        debtToIncomeRatio: 0.31,
-        creditUtilization: 25.0,
-        emergencyFundMonths: 6.0,
-        investmentRatio: 15.0,
-        overallHealthScore: 85,
-        healthGrade: 'A-',
-        riskLevel: 'low',
-        recommendations: [
-          'Continue your excellent savings rate',
-          'Consider increasing investment allocation',
-          'Maintain current debt management strategy'
-        ]
+      // Calculate real financial health metrics
+      const totalAssets = accounts
+        .filter(acc => acc.type !== 'credit_card' && acc.balance >= 0)
+        .reduce((sum, acc) => sum + (acc.balance || 0), 0);
+      
+      const totalLiabilities = accounts
+        .filter(acc => acc.type === 'credit_card' || acc.balance < 0)
+        .reduce((sum, acc) => sum + Math.abs(acc.balance || 0), 0);
+      
+      const netWorth = totalAssets - totalLiabilities;
+      
+      // Calculate monthly income and expenses
+      const currentMonth = new Date();
+      const startOfCurrentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      const endOfCurrentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      
+      const monthlyIncome = transactions
+        .filter(t => t.type === 'income' && new Date(t.date) >= startOfCurrentMonth && new Date(t.date) <= endOfCurrentMonth)
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      const monthlyExpenses = transactions
+        .filter(t => t.type === 'expense' && new Date(t.date) >= startOfCurrentMonth && new Date(t.date) <= endOfCurrentMonth)
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      const savingsRate = monthlyIncome > 0 ? ((monthlyIncome - monthlyExpenses) / monthlyIncome) * 100 : 0;
+      const debtToIncomeRatio = monthlyIncome > 0 ? monthlyExpenses / monthlyIncome : 0;
+      
+      // Calculate credit utilization
+      const creditCards = accounts.filter(acc => acc.type === 'credit_card');
+      const totalCreditLimit = creditCards.reduce((sum, acc) => sum + (acc.creditLimit || 0), 0);
+      const totalCreditUsed = creditCards.reduce((sum, acc) => sum + Math.abs(acc.balance || 0), 0);
+      const creditUtilization = totalCreditLimit > 0 ? (totalCreditUsed / totalCreditLimit) * 100 : 0;
+      
+      // Calculate emergency fund months
+      const emergencyFundMonths = monthlyExpenses > 0 ? totalAssets / monthlyExpenses : 0;
+      
+      // Calculate investment ratio
+      const investmentAccounts = accounts.filter(acc => acc.type === 'investment');
+      const totalInvestment = investmentAccounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+      const investmentRatio = totalAssets > 0 ? (totalInvestment / totalAssets) * 100 : 0;
+      
+      // Calculate overall health score
+      let healthScore = 0;
+      if (savingsRate >= 20) healthScore += 25;
+      else if (savingsRate >= 10) healthScore += 15;
+      else if (savingsRate >= 5) healthScore += 10;
+      
+      if (debtToIncomeRatio <= 0.3) healthScore += 25;
+      else if (debtToIncomeRatio <= 0.5) healthScore += 15;
+      else if (debtToIncomeRatio <= 0.7) healthScore += 10;
+      
+      if (creditUtilization <= 30) healthScore += 20;
+      else if (creditUtilization <= 50) healthScore += 15;
+      else if (creditUtilization <= 70) healthScore += 10;
+      
+      if (emergencyFundMonths >= 6) healthScore += 20;
+      else if (emergencyFundMonths >= 3) healthScore += 15;
+      else if (emergencyFundMonths >= 1) healthScore += 10;
+      
+      if (investmentRatio >= 15) healthScore += 10;
+      else if (investmentRatio >= 10) healthScore += 5;
+      
+      // Determine health grade and risk level
+      let healthGrade = 'F';
+      let riskLevel = 'very_high';
+      
+      if (healthScore >= 90) { healthGrade = 'A+'; riskLevel = 'low'; }
+      else if (healthScore >= 80) { healthGrade = 'A'; riskLevel = 'low'; }
+      else if (healthScore >= 70) { healthGrade = 'B+'; riskLevel = 'low'; }
+      else if (healthScore >= 60) { healthGrade = 'B'; riskLevel = 'medium'; }
+      else if (healthScore >= 50) { healthGrade = 'C+'; riskLevel = 'medium'; }
+      else if (healthScore >= 40) { healthGrade = 'C'; riskLevel = 'high'; }
+      else if (healthScore >= 30) { healthGrade = 'D'; riskLevel = 'high'; }
+      else { healthGrade = 'F'; riskLevel = 'very_high'; }
+      
+      // Generate recommendations
+      const recommendations = [];
+      if (savingsRate < 10) recommendations.push('Increase your savings rate to at least 10%');
+      if (debtToIncomeRatio > 0.5) recommendations.push('Reduce your debt-to-income ratio');
+      if (creditUtilization > 30) recommendations.push('Lower your credit card utilization');
+      if (emergencyFundMonths < 3) recommendations.push('Build an emergency fund of 3-6 months');
+      if (investmentRatio < 10) recommendations.push('Consider increasing your investment allocation');
+      if (recommendations.length === 0) recommendations.push('Great job! Keep maintaining your financial health');
+      
+      const financialHealth = {
+        netWorth,
+        totalAssets,
+        totalLiabilities,
+        totalIncome: monthlyIncome,
+        totalExpenses: monthlyExpenses,
+        savingsRate,
+        debtToIncomeRatio,
+        creditUtilization,
+        emergencyFundMonths,
+        investmentRatio,
+        overallHealthScore: healthScore,
+        healthGrade,
+        riskLevel,
+        recommendations
       };
 
-      const mockTrendData = {
-        income: [
-          { period: 'Jan', value: 7500, change: 0, changePercent: 0, trend: 'stable' },
-          { period: 'Feb', value: 8000, change: 500, changePercent: 6.7, trend: 'up' },
-          { period: 'Mar', value: 8200, change: 200, changePercent: 2.5, trend: 'up' }
-        ],
-        expenses: [
-          { period: 'Jan', value: 4800, change: 0, changePercent: 0, trend: 'stable' },
-          { period: 'Feb', value: 5200, change: 400, changePercent: 8.3, trend: 'up' },
-          { period: 'Mar', value: 5000, change: -200, changePercent: 3.8, trend: 'down' }
-        ],
-        savings: [
-          { period: 'Jan', value: 2700, change: 0, changePercent: 0, trend: 'stable' },
-          { period: 'Feb', value: 2800, change: 100, changePercent: 3.7, trend: 'up' },
-          { period: 'Mar', value: 3200, change: 400, changePercent: 14.3, trend: 'up' }
-        ]
+      // Calculate trend data for the last 6 months
+      const trendData = {
+        income: [],
+        expenses: [],
+        savings: []
       };
+      
+      for (let i = 5; i >= 0; i--) {
+        const month = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - i, 1);
+        const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - i + 1, 0);
+        const monthName = month.toLocaleDateString('en-US', { month: 'short' });
+        
+        const monthIncome = transactions
+          .filter(t => t.type === 'income' && new Date(t.date) >= month && new Date(t.date) <= monthEnd)
+          .reduce((sum, t) => sum + t.amount, 0);
+        
+        const monthExpenses = transactions
+          .filter(t => t.type === 'expense' && new Date(t.date) >= month && new Date(t.date) <= monthEnd)
+          .reduce((sum, t) => sum + t.amount, 0);
+        
+        const monthSavings = monthIncome - monthExpenses;
+        
+        // Calculate change from previous month
+        const prevMonthIncome = i > 0 ? trendData.income[trendData.income.length - 1]?.value || 0 : 0;
+        const prevMonthExpenses = i > 0 ? trendData.expenses[trendData.expenses.length - 1]?.value || 0 : 0;
+        
+        const incomeChange = i > 0 ? monthIncome - prevMonthIncome : 0;
+        const expenseChange = i > 0 ? monthExpenses - prevMonthExpenses : 0;
+        
+        const incomeChangePercent = prevMonthIncome > 0 ? (incomeChange / prevMonthIncome) * 100 : 0;
+        const expenseChangePercent = prevMonthExpenses > 0 ? (expenseChange / prevMonthExpenses) * 100 : 0;
+        
+        trendData.income.push({
+          period: monthName,
+          value: monthIncome,
+          change: incomeChange,
+          changePercent: incomeChangePercent,
+          trend: incomeChange > 0 ? 'up' : incomeChange < 0 ? 'down' : 'stable'
+        });
+        
+        trendData.expenses.push({
+          period: monthName,
+          value: monthExpenses,
+          change: expenseChange,
+          changePercent: expenseChangePercent,
+          trend: expenseChange > 0 ? 'up' : expenseChange < 0 ? 'down' : 'stable'
+        });
+        
+        trendData.savings.push({
+          period: monthName,
+          value: monthSavings,
+          change: monthSavings - (i > 0 ? trendData.savings[trendData.savings.length - 1]?.value || 0 : 0),
+          changePercent: i > 0 && trendData.savings[trendData.savings.length - 1]?.value > 0 ? 
+            ((monthSavings - trendData.savings[trendData.savings.length - 1].value) / trendData.savings[trendData.savings.length - 1].value) * 100 : 0,
+          trend: monthSavings > 0 ? 'up' : monthSavings < 0 ? 'down' : 'stable'
+        });
+      }
 
-      const mockPredictions = {
-        income: [
-          { period: 'Apr 2024', predicted: 8500, confidence: 85, trend: 'increasing', factors: ['Salary increase', 'Bonus season'] },
-          { period: 'May 2024', predicted: 8200, confidence: 80, trend: 'stable', factors: ['Regular salary', 'No bonuses'] },
-          { period: 'Jun 2024', predicted: 8300, confidence: 75, trend: 'increasing', factors: ['Performance review', 'Market trends'] }
-        ],
-        expenses: [
-          { period: 'Apr 2024', predicted: 5100, confidence: 80, trend: 'increasing', factors: ['Seasonal spending', 'Inflation impact'] },
-          { period: 'May 2024', predicted: 4900, confidence: 85, trend: 'decreasing', factors: ['Budget optimization', 'Reduced dining out'] },
-          { period: 'Jun 2024', predicted: 5000, confidence: 75, trend: 'stable', factors: ['Summer activities', 'Vacation planning'] }
-        ]
+      // Simple predictions based on trends
+      const predictions = {
+        income: [],
+        expenses: []
       };
+      
+      // Predict next 3 months based on recent trends
+      const recentIncomeTrend = trendData.income.slice(-3).reduce((sum, item) => sum + item.change, 0) / 3;
+      const recentExpenseTrend = trendData.expenses.slice(-3).reduce((sum, item) => sum + item.change, 0) / 3;
+      
+      for (let i = 1; i <= 3; i++) {
+        const futureMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + i, 1);
+        const monthName = futureMonth.toLocaleDateString('en-US', { month: 'short' }) + ' ' + futureMonth.getFullYear();
+        
+        const predictedIncome = monthlyIncome + (recentIncomeTrend * i);
+        const predictedExpenses = monthlyExpenses + (recentExpenseTrend * i);
+        
+        predictions.income.push({
+          period: monthName,
+          predicted: Math.max(0, predictedIncome),
+          confidence: Math.max(50, 90 - (i * 10)),
+          trend: recentIncomeTrend > 0 ? 'increasing' : recentIncomeTrend < 0 ? 'decreasing' : 'stable',
+          factors: ['Historical trends', 'Seasonal patterns']
+        });
+        
+        predictions.expenses.push({
+          period: monthName,
+          predicted: Math.max(0, predictedExpenses),
+          confidence: Math.max(50, 90 - (i * 10)),
+          trend: recentExpenseTrend > 0 ? 'increasing' : recentExpenseTrend < 0 ? 'decreasing' : 'stable',
+          factors: ['Historical trends', 'Inflation impact']
+        });
+      }
 
-      setFinancialHealth(mockFinancialHealth);
-      setTrendData(mockTrendData);
-      setPredictions(mockPredictions);
+      setFinancialHealth(financialHealth);
+      setTrendData(trendData);
+      setPredictions(predictions);
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Error loading analytics:', error);
@@ -551,6 +691,34 @@ const Transactions: React.FC = () => {
                 </div>
               )}
 
+              {/* Analytics Navigation Card */}
+              <div className="mb-6">
+                <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl p-6 border border-white/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600">
+                        <BarChart3 size={24} className="text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-heading text-white mb-1">Advanced Analytics</h3>
+                        <p className="text-sm text-gray-300">View detailed financial insights and trends</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => navigate('/analytics')}
+                      className="px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:scale-105"
+                      style={{ 
+                        backgroundColor: 'var(--primary)',
+                        color: 'white',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                      }}
+                    >
+                      View Analytics
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Enhanced Analytics Components */}
               {financialHealth && (
                 <div className="mb-8">
@@ -781,53 +949,6 @@ const Transactions: React.FC = () => {
               </Button>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Analytics Card */}
-      <div className="px-4 mb-6">
-        <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl p-6 border border-white/10">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600">
-                <BarChart3 size={24} className="text-white" />
-              </div>
-              <div>
-                <h3 className="text-xl font-heading text-white">Advanced Analytics</h3>
-                <p className="text-sm text-gray-300">Get deeper insights into your financial health</p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/analytics')}
-              className="px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
-              style={{ 
-                backgroundColor: 'var(--primary)',
-                color: 'white'
-              }}
-            >
-              <BarChart3 size={16} />
-              <span>View Analytics</span>
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 rounded-lg bg-white/5">
-              <div className="text-2xl font-bold text-white">85</div>
-              <div className="text-xs text-gray-400">Health Score</div>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-white/5">
-              <div className="text-2xl font-bold text-white">37.5%</div>
-              <div className="text-xs text-gray-400">Savings Rate</div>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-white/5">
-              <div className="text-2xl font-bold text-white">6.0</div>
-              <div className="text-xs text-gray-400">Emergency Fund</div>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-white/5">
-              <div className="text-2xl font-bold text-white">25%</div>
-              <div className="text-xs text-gray-400">Credit Usage</div>
-            </div>
-          </div>
         </div>
       </div>
 

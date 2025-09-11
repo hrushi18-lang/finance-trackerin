@@ -67,38 +67,38 @@ const Cards: React.FC = () => {
             : 'border-white/20 hover:border-white/30 bg-white/5'
         }`}
         onClick={onClick}
-      >
-        <div className="flex items-center justify-between mb-3">
+    >
+      <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-3">
             <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
               <CreditCard size={20} className="text-white" />
-            </div>
+      </div>
             <div>
               <h3 className="font-heading text-white">{account.name}</h3>
               <p className="text-sm text-gray-400">**** {account.accountNumber?.slice(-4) || '1234'}</p>
-            </div>
-          </div>
+      </div>
+    </div>
           <div className="text-right">
             <p className="text-sm text-gray-400">Balance</p>
             <p className={`font-numbers text-lg ${account.balance < 0 ? 'text-red-400' : 'text-white'}`}>
               {showBalances ? formatCurrency(account.balance) : '••••••'}
             </p>
           </div>
-        </div>
-
+      </div>
+      
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Credit Limit</span>
             <span className="text-white">{formatCurrency(account.creditLimit || 0)}</span>
-          </div>
-          
+      </div>
+      
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Available</span>
             <span className="text-green-400">
               {formatCurrency((account.creditLimit || 0) - Math.abs(account.balance || 0))}
-            </span>
-          </div>
-
+        </span>
+      </div>
+      
           <div className="space-y-1">
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Utilization</span>
@@ -114,13 +114,13 @@ const Cards: React.FC = () => {
                 style={{ width: `${Math.min(utilization, 100)}%` }}
               />
             </div>
-          </div>
-
+      </div>
+      
           {isOverLimit && (
             <div className="flex items-center space-x-2 text-red-400 text-sm">
               <Shield size={14} />
               <span>Over Credit Limit</span>
-            </div>
+      </div>
           )}
 
           {/* Payment Actions */}
@@ -147,12 +147,12 @@ const Cards: React.FC = () => {
               className="flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
               style={{ 
                 backgroundColor: 'var(--primary)',
-                color: 'white'
+                color: 'white' 
               }}
             >
               Pay
             </button>
-            <button
+          <button
               onClick={(e) => {
                 e.stopPropagation();
                 openPaymentModal({
@@ -179,8 +179,8 @@ const Cards: React.FC = () => {
               }}
             >
               Add Money
-            </button>
-          </div>
+          </button>
+        </div>
         </div>
       </div>
     );
@@ -192,7 +192,7 @@ const Cards: React.FC = () => {
       <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <button
+          <button
               onClick={() => navigate('/overview')}
               className="p-2 rounded-full transition-all duration-200 hover:scale-105"
               style={{ 
@@ -201,14 +201,14 @@ const Cards: React.FC = () => {
               }}
             >
               <ArrowLeft size={18} style={{ color: 'var(--text-primary)' }} />
-            </button>
+          </button>
             <div>
               <h1 className="text-2xl font-heading text-white">Cards</h1>
               <p className="text-sm text-gray-400">Manage your credit cards and spending</p>
-            </div>
-          </div>
+        </div>
+      </div>
           <div className="flex items-center space-x-2">
-            <button
+          <button
               onClick={() => setShowBalances(!showBalances)}
               className="p-2 rounded-full transition-all duration-200 hover:scale-105"
               style={{ 
@@ -218,17 +218,17 @@ const Cards: React.FC = () => {
               title={showBalances ? 'Hide Balances' : 'Show Balances'}
             >
               {showBalances ? <EyeOff size={16} style={{ color: 'var(--text-primary)' }} /> : <Eye size={16} style={{ color: 'var(--text-primary)' }} />}
-            </button>
+          </button>
             <button
               className="p-2 rounded-full transition-all duration-200 hover:scale-105"
-              style={{ 
+                style={{ 
                 backgroundColor: 'var(--background-secondary)',
                 boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
               }}
               title="Settings"
             >
               <Settings size={16} style={{ color: 'var(--text-primary)' }} />
-            </button>
+          </button>
           </div>
         </div>
       </div>
@@ -240,14 +240,14 @@ const Cards: React.FC = () => {
             <div className="flex items-center space-x-3 mb-3">
               <div className="p-2 rounded-lg bg-blue-500/20">
                 <CreditCard size={20} className="text-blue-400" />
-              </div>
-              <div>
+            </div>
+            <div>
                 <h3 className="text-sm font-medium text-gray-400">Total Cards</h3>
                 <p className="text-2xl font-bold text-white">{cardStats.totalCards}</p>
               </div>
             </div>
           </div>
-
+          
           <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl p-4 border border-white/10">
             <div className="flex items-center space-x-3 mb-3">
               <div className="p-2 rounded-lg bg-green-500/20">
@@ -257,8 +257,8 @@ const Cards: React.FC = () => {
                 <h3 className="text-sm font-medium text-gray-400">Available Credit</h3>
                 <p className="text-2xl font-bold text-white">{formatCurrency(cardStats.availableCredit)}</p>
               </div>
-            </div>
-          </div>
+        </div>
+      </div>
 
           <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-2xl p-4 border border-white/10">
             <div className="flex items-center space-x-3 mb-3">
@@ -289,17 +289,17 @@ const Cards: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-heading text-white">Your Cards</h2>
-            <button
+          <button
               onClick={() => navigate('/accounts')}
               className="px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-              style={{
+            style={{
                 backgroundColor: 'var(--primary)',
                 color: 'white'
-              }}
-            >
+            }}
+          >
               <Plus size={16} />
               <span className="text-sm font-medium">Add Card</span>
-            </button>
+          </button>
           </div>
 
           {accounts.filter(acc => acc.type === 'credit_card').length === 0 ? (
@@ -309,18 +309,18 @@ const Cards: React.FC = () => {
               </div>
               <h3 className="text-lg font-heading text-white mb-2">No Credit Cards</h3>
               <p className="text-gray-400 mb-6">Add your first credit card to start tracking spending</p>
-              <button
+          <button
                 onClick={() => navigate('/accounts')}
                 className="px-6 py-3 rounded-lg transition-colors flex items-center space-x-2 mx-auto"
-                style={{
+            style={{
                   backgroundColor: 'var(--primary)',
                   color: 'white'
-                }}
-              >
+            }}
+          >
                 <Plus size={20} />
                 <span className="font-medium">Add Credit Card</span>
-              </button>
-            </div>
+          </button>
+        </div>
           ) : (
             <div className="space-y-3">
               {accounts

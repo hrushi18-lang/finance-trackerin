@@ -230,7 +230,7 @@ const Overview: React.FC = () => {
           <h1 className="text-2xl font-heading" style={{ color: 'var(--text-primary)' }}>Financial Overview</h1>
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => navigate('/analytics')}
+              onClick={() => navigate('/transactions')}
               className="px-4 py-2 rounded-xl transition-colors flex items-center space-x-2"
               style={{ 
                 backgroundColor: 'var(--primary)',
