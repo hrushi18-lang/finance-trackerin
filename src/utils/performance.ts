@@ -343,21 +343,9 @@ export const optimizeImage = (src: string, width?: number, height?: number): str
 
 // Critical resource preloading
 export const preloadCriticalResources = () => {
-  const criticalResources = [
-    '/fonts/archivo-black.woff2',
-    '/fonts/archivo.woff2',
-    '/fonts/playfair-display.woff2'
-  ];
-  
-  criticalResources.forEach(resource => {
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.href = resource;
-    link.as = 'font';
-    link.type = 'font/woff2';
-    link.crossOrigin = 'anonymous';
-    document.head.appendChild(link);
-  });
+  // Self-hosted fonts are already loaded via @font-face in CSS
+  // No need to preload external fonts
+  console.log('Self-hosted fonts are loaded via CSS @font-face declarations');
 };
 
 // Performance metrics collection
