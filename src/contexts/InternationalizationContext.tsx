@@ -236,6 +236,11 @@ export const InternationalizationProvider: React.FC<InternationalizationProvider
 
   // Format currency according to local conventions
   const formatCurrency = (amount: number): string => {
+    // Handle invalid amounts
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return `${currency.symbol}0.00`;
+    }
+    
     const absAmount = Math.abs(amount);
     const isNegative = amount < 0;
     

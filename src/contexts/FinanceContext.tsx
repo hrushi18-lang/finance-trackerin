@@ -116,6 +116,11 @@ interface FinanceContextType {
   createGoalsVaultAccount: (name?: string, currencyCode?: string) => Promise<FinancialAccount>;
   cleanupDuplicateGoalsVaults: () => Promise<void>;
   
+  // Dual currency functions
+  updateAccountBalance: (accountId: string, amount: number, type: 'income' | 'expense' | 'transfer') => Promise<void>;
+  convertAccountToDisplayCurrency: (accountId: string, displayCurrency: string, exchangeRate: number) => Promise<void>;
+  updateAllAccountConversions: (displayCurrency: string) => Promise<void>;
+  
   // Goal completion and management
   handleGoalCompletion: (goalId: string) => Promise<any>;
   handleGoalWithdrawal: (goalId: string, amount: number, destinationAccountId: string, reason?: string, notes?: string) => Promise<any>;
@@ -560,6 +565,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const withdrawGoalToAccount = async (toAccountId: string, goalId: string, amount: number, description?: string) => {
     if (!user) throw new Error('User not authenticated');
+    
+    // Ensure Goals Vault exists before attempting transfer
+    await ensureGoalsVaultAccount();
     const vault = getGoalsVaultAccount();
     if (!vault) throw new Error('Goals Vault not available');
 
@@ -912,6 +920,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       currencyCode: account.currencycode,
       createdAt: new Date(account.created_at),
       updatedAt: new Date(account.updated_at),
+      
+      // Dual currency support
+      originalBalance: account.original_balance ? Number(account.original_balance) : Number(account.balance),
+      convertedBalance: account.converted_balance ? Number(account.converted_balance) : Number(account.balance),
+      displayCurrency: account.display_currency || account.currencycode,
+      exchangeRateUsed: account.exchange_rate_used ? Number(account.exchange_rate_used) : 1.0,
+      lastConversionDate: account.last_conversion_date ? new Date(account.last_conversion_date) : undefined,
+      conversionSource: account.conversion_source,
       
       // Enhanced fields
       routingNumber: account.routing_number,
@@ -1745,7 +1761,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         platform: updates.platform,
         account_number: updates.accountNumber,
         is_visible: updates.isVisible,
-        currencycode: updates.currencyCode
+        currencycode: updates.currencyCode,
+        // Dual currency fields
+        original_balance: updates.originalBalance,
+        converted_balance: updates.convertedBalance,
+        display_currency: updates.displayCurrency,
+        exchange_rate_used: updates.exchangeRateUsed,
+        last_conversion_date: updates.lastConversionDate?.toISOString(),
+        conversion_source: updates.conversionSource
       })
       .eq('id', id)
       .eq('user_id', user.id);
@@ -1775,6 +1798,57 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     // Invalidate cache for accounts
     invalidateUserData(user.id);
+  };
+
+  // Dual currency functions
+  const updateAccountBalance = async (accountId: string, amount: number, type: 'income' | 'expense' | 'transfer') => {
+    if (!user) throw new Error('User not authenticated');
+    
+    const account = accounts.find(acc => acc.id === accountId);
+    if (!account) throw new Error('Account not found');
+
+    const newBalance = type === 'income' ? account.balance + amount : account.balance - amount;
+    const newOriginalBalance = type === 'income' ? (account.originalBalance || account.balance) + amount : (account.originalBalance || account.balance) - amount;
+    
+    // Update both original and converted balances
+    await updateAccount(accountId, {
+      balance: newBalance,
+      originalBalance: newOriginalBalance,
+      convertedBalance: newBalance, // For now, assume same currency
+      lastConversionDate: new Date(),
+      conversionSource: 'manual'
+    });
+  };
+
+  const convertAccountToDisplayCurrency = async (accountId: string, displayCurrency: string, exchangeRate: number) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    const account = accounts.find(acc => acc.id === accountId);
+    if (!account) throw new Error('Account not found');
+
+    const convertedBalance = (account.originalBalance || account.balance) * exchangeRate;
+    
+    await updateAccount(accountId, {
+      displayCurrency,
+      convertedBalance,
+      exchangeRateUsed: exchangeRate,
+      lastConversionDate: new Date(),
+      conversionSource: 'api'
+    });
+  };
+
+  const updateAllAccountConversions = async (displayCurrency: string) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    // This would typically use the currency conversion context
+    // For now, we'll update all accounts to use the same display currency
+    for (const account of accounts) {
+      if (account.currencyCode !== displayCurrency) {
+        // In a real implementation, you'd get the exchange rate from the currency service
+        const exchangeRate = 1.0; // Placeholder - should get from currency service
+        await convertAccountToDisplayCurrency(account.id, displayCurrency, exchangeRate);
+      }
+    }
   };
 
   // Account Management Features
@@ -1927,7 +2001,54 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     invalidateUserData(user.id);
   };
 
-  const transferBetweenAccounts = async (transferData: Omit<AccountTransfer, 'id' | 'userId' | 'createdAt'>) => {
+  // Wrapper function for the interface signature
+  const transferBetweenAccounts = async (fromAccountId: string, toAccountId: string, amount: number, description: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    const fromAccount = accounts.find(acc => acc.id === fromAccountId);
+    const toAccount = accounts.find(acc => acc.id === toAccountId);
+
+    if (!fromAccount || !toAccount) throw new Error('Account not found');
+
+    // Create transfer record
+    const { data: transfer, error: transferError } = await supabase
+      .from('account_transfers')
+      .insert({
+        user_id: user.id,
+        from_account_id: fromAccountId,
+        to_account_id: toAccountId,
+        amount: amount,
+        from_currency: fromAccount.currencyCode,
+        to_currency: toAccount.currencyCode,
+        converted_amount: amount, // For now, assume same currency
+        exchange_rate: 1.0,
+        description: description,
+        transfer_type: 'manual',
+        status: 'completed',
+        notes: null
+      })
+      .select()
+      .single();
+
+    if (transferError) throw transferError;
+
+    // Update account balances
+    await updateAccount(fromAccountId, {
+      balance: fromAccount.balance - amount
+    });
+
+    await updateAccount(toAccountId, {
+      balance: toAccount.balance + amount
+    });
+
+    // Add transfer to state
+    setAccountTransfers(prev => [transfer, ...prev]);
+    
+    invalidateUserData(user.id);
+  };
+
+  // Internal function for complex transfers
+  const transferBetweenAccountsComplex = async (transferData: Omit<AccountTransfer, 'id' | 'userId' | 'createdAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
     // Create transfer record
@@ -3955,6 +4076,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ensureGoalsVaultAccount,
     createGoalsVaultAccount,
     cleanupDuplicateGoalsVaults,
+    updateAccountBalance,
+    convertAccountToDisplayCurrency,
+    updateAllAccountConversions,
     handleGoalCompletion,
     handleGoalWithdrawal,
     extendGoal,

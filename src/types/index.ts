@@ -20,6 +20,14 @@ export interface FinancialAccount {
   createdAt: Date;
   updatedAt: Date;
   
+  // Dual currency support
+  originalBalance?: number;
+  convertedBalance?: number;
+  displayCurrency?: string;
+  exchangeRateUsed?: number;
+  lastConversionDate?: Date;
+  conversionSource?: 'api' | 'manual' | 'fallback';
+  
   // Account Management Features
   isPrimary?: boolean;
   isArchived?: boolean;
