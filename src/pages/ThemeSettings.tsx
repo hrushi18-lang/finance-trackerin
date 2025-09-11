@@ -37,7 +37,7 @@ const ThemeSettings: React.FC = () => {
       name: 'Angular Gradient',
       description: 'Conic gradient with glassmorphism',
       preview: {
-        background: 'conic-gradient(from 180deg, #1500FE 68%, #060609 100%)',
+        background: 'conic-gradient(from 270deg, #1500FE 68%, #060609 100%)',
         primary: '#1500FE',
         surface: 'rgba(255, 255, 255, 0.08)',
         text: '#ffffff'

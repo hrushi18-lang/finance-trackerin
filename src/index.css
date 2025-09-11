@@ -124,7 +124,7 @@
   --primary-light: #3b82f6;
   --primary-dark: #0d00b8;
   
-  --background: conic-gradient(from 180deg, #1500FE 68%, #060609 100%);
+  --background: conic-gradient(from 270deg, #1500FE 68%, #060609 100%);
   --background-secondary: rgba(255, 255, 255, 0.1);
   --background-tertiary: rgba(255, 255, 255, 0.05);
   
@@ -269,6 +269,21 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Angular Theme Background Override */
+[data-theme="angular"] body {
+  background: conic-gradient(from 270deg, #1500FE 68%, #060609 100%) !important;
+  background-attachment: fixed !important;
+  min-height: 100vh !important;
+}
+
+[data-theme="angular"] #root {
+  background: transparent !important;
+}
+
+[data-theme="angular"] .min-h-screen {
+  background: transparent !important;
 }
 
 /* Font fallback styles - Exact Font Specifications */
