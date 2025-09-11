@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type Theme = 'cool-blue' | 'olive';
+export type Theme = 'cool-blue' | 'olive' | 'angular';
 
 interface ThemeContextType {
   theme: Theme;
