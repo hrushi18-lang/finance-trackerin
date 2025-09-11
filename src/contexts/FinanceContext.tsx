@@ -2056,7 +2056,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         currency_code: transactionData.currencyCode || 'USD',
         original_amount: transactionData.originalAmount || transactionData.amount,
         original_currency: transactionData.originalCurrency || 'USD',
-        exchange_rate_used: transactionData.exchangeRateUsed || 1.0
+        exchange_rate_used: transactionData.exchangeRateUsed || 1.0,
+        // Payment source tracking
+        payment_source: (transactionData as any).paymentSource || null,
+        source_entity_id: (transactionData as any).sourceEntityId || null,
+        source_entity_type: (transactionData as any).sourceEntityType || null,
+        deduct_from_balance: (transactionData as any).deductFromBalance ?? true,
+        payment_context: (transactionData as any).paymentContext || null
       })
       .select()
       .single();

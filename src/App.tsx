@@ -9,6 +9,7 @@ import { InternationalizationProvider } from './contexts/InternationalizationCon
 import { EnhancedCurrencyProvider } from './contexts/EnhancedCurrencyContext';
 import { PersonalizationProvider } from './contexts/PersonalizationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { PaymentProvider } from './contexts/PaymentContext';
 import { ToastProvider } from './components/common/Toast';
 import { ErrorFallback } from './components/common/ErrorFallback';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -127,7 +128,8 @@ function App() {
                       <EnhancedCurrencyProvider>
                         <PersonalizationProvider>
                           <FinanceProvider>
-                          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                            <PaymentProvider>
+                              <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                             <AppInitializer>
                             <RouteHandler>
                               <div className="min-h-screen" data-app-content style={{ backgroundColor: 'var(--background)' }}>
@@ -422,6 +424,7 @@ function App() {
                           </AppInitializer>
                         </Router>
                         <ReactQueryDevtools initialIsOpen={false} />
+                            </PaymentProvider>
                           </FinanceProvider>
                         </PersonalizationProvider>
                       </EnhancedCurrencyProvider>
