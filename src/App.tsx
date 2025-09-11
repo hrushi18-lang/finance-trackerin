@@ -39,7 +39,6 @@ import Liabilities from './pages/Liabilities';
 import { EnhancedLiabilities } from './pages/EnhancedLiabilities';
 import Budgets from './pages/Budgets';
 import Overview from './pages/Overview';
-import Cards from './pages/Cards';
 import Accounts from './pages/Accounts';
 import AccountDetail from './pages/AccountDetail';
 import CreateGoal from './pages/CreateGoal';
