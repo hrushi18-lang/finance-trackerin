@@ -442,7 +442,7 @@ const Transactions: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/')}
               className="p-2 rounded-full transition-all duration-200 hover:scale-105"
               style={{
                 backgroundColor: 'var(--background-secondary)',

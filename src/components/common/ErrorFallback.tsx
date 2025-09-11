@@ -44,7 +44,7 @@ export const ErrorFallback: React.FC<ErrorFallbackProps> = ({
               className="w-full"
             >
               <Home size={16} className="mr-2" />
-              Back to Dashboard
+              Back to Home
             </Button>
             
             {resetErrorBoundary && (

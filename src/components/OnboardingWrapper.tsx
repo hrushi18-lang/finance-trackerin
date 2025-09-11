@@ -54,10 +54,10 @@ const OnboardingWrapper: React.FC = () => {
         has_custom_categories: userCategories.length > 0
       });
 
-      // If user has profile and data, redirect to dashboard
+      // If user has profile and data, redirect to home
       if (hasProfile && hasExistingData) {
         analytics.trackOnboardingStep('existing_user_redirect', true);
-        navigate('/dashboard');
+        navigate('/');
         return;
       }
 
@@ -96,8 +96,8 @@ const OnboardingWrapper: React.FC = () => {
         // Mark onboarding as completed
         setData('onboarding_completed', true);
         
-        // Navigate to dashboard
-        navigate('/dashboard');
+        // Navigate to home
+        navigate('/');
       }} 
     />
   );

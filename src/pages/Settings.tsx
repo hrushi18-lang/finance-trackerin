@@ -280,7 +280,7 @@ const Settings: React.FC = () => {
       <div className="pt-12 pb-6 px-4">
         <div className="flex items-center space-x-3 mb-4">
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/')}
             className="p-2 rounded-full transition-all duration-200 hover:scale-105"
             style={{
               backgroundColor: 'var(--background-secondary)',

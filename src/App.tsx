@@ -31,7 +31,6 @@ import './styles/mobile.css';
 // Import core pages directly for better performance
 import Auth from './pages/Auth';
 import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
 import AddTransaction from './pages/AddTransaction';
 import TransactionsCalendar from './pages/TransactionsCalendar';
 import Cards from './pages/Cards';
@@ -169,17 +168,7 @@ function App() {
                                 path="/" 
                                 element={
                                   <ProtectedRoute>
-                                    <Dashboard />
-                                    <BottomNavigation />
-                                  </ProtectedRoute>
-                                } 
-                              />
-                              
-                              <Route 
-                                path="/dashboard" 
-                                element={
-                                  <ProtectedRoute>
-                                    <Dashboard />
+                                    <Home />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 

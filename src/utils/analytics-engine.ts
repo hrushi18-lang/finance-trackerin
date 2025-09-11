@@ -601,8 +601,8 @@ export class AnalyticsEngine {
     return events.sort((a, b) => a.date.getTime() - b.date.getTime());
   }
 
-  // Dashboard Summary
-  getDashboardSummary(startDate: Date, endDate: Date, primaryCurrency: string = 'USD') {
+  // Home Summary
+  getHomeSummary(startDate: Date, endDate: Date, primaryCurrency: string = 'USD') {
     const periodTransactions = this.transactions.filter(t => {
       const transactionDate = new Date(t.date);
       return transactionDate >= startDate && transactionDate <= endDate;

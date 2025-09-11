@@ -122,7 +122,7 @@ export const AccountActionsMenu: React.FC<AccountActionsMenuProps> = ({
               className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
             >
               <Star className="h-4 w-4" />
-              <span>{account.isPrimary ? 'Unpin from Dashboard' : 'Pin to Dashboard'}</span>
+              <span>{account.isPrimary ? 'Unpin from Home' : 'Pin to Home'}</span>
             </button>
             
             <button
@@ -175,7 +175,7 @@ export const AccountActionsMenu: React.FC<AccountActionsMenuProps> = ({
                 Archive "{account.name}"?
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                This will hide the account from your dashboard but keep all transaction history.
+                This will hide the account from your home screen but keep all transaction history.
               </p>
             </div>
           </div>
@@ -186,7 +186,7 @@ export const AccountActionsMenu: React.FC<AccountActionsMenuProps> = ({
               <div className="text-sm text-orange-800 dark:text-orange-200">
                 <p className="font-medium">What happens when you archive:</p>
                 <ul className="mt-1 space-y-1 text-xs">
-                  <li>• Account will be hidden from dashboard</li>
+                  <li>• Account will be hidden from home screen</li>
                   <li>• All transaction history is preserved</li>
                   <li>• You can restore it anytime</li>
                   <li>• Analytics data remains intact</li>

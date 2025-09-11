@@ -529,7 +529,7 @@ export interface Notification {
   userId: string;
 }
 
-export interface DashboardStats {
+export interface HomeStats {
   totalIncome: number;
   totalExpenses: number;
   totalSavings: number;

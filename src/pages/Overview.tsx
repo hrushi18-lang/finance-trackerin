@@ -93,7 +93,7 @@ const Overview: React.FC = () => {
 
   // Get comprehensive analytics data
   const analyticsData = useMemo(() => {
-    return analyticsEngine.getDashboardSummary(startDate, endDate, 'USD');
+    return analyticsEngine.getHomeSummary(startDate, endDate, 'USD');
   }, [analyticsEngine, startDate, endDate]);
 
   // Calculate comprehensive financial metrics

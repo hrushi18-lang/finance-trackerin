@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useAuth } from './AuthContext';
 
 interface PersonalizationSettings {
-  dashboardLayout: string[];
+  homeLayout: string[];
   priorityFeatures: string[];
   hiddenFeatures: string[];
   budgetingFrequency: 'weekly' | 'monthly' | 'yearly';
@@ -19,7 +19,7 @@ interface PersonalizationContextType {
   updateSettings: (updates: Partial<PersonalizationSettings>) => void;
   isFeatureEnabled: (feature: string) => boolean;
   isFeaturePriority: (feature: string) => boolean;
-  getDashboardComponents: () => string[];
+  getHomeComponents: () => string[];
   getRecommendedBudgetPeriod: () => 'weekly' | 'monthly' | 'yearly';
   getAssistantTone: () => 'conservative' | 'balanced' | 'aggressive';
   shouldShowTutorial: (feature: string) => boolean;
@@ -42,7 +42,7 @@ interface PersonalizationProviderProps {
 export const PersonalizationProvider: React.FC<PersonalizationProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const [settings, setSettings] = useState<PersonalizationSettings>({
-    dashboardLayout: ['overview', 'recent_transactions', 'quick_actions'],
+    homeLayout: ['overview', 'recent_transactions', 'quick_actions'],
     priorityFeatures: [],
     hiddenFeatures: [],
     budgetingFrequency: 'monthly',
@@ -98,9 +98,9 @@ export const PersonalizationProvider: React.FC<PersonalizationProviderProps> = (
     return settings.priorityFeatures.includes(feature);
   };
 
-  const getDashboardComponents = (): string[] => {
+  const getHomeComponents = (): string[] => {
     const baseComponents = ['overview', 'recent_transactions'];
-    const personalizedComponents = [...baseComponents, ...settings.dashboardLayout];
+    const personalizedComponents = [...baseComponents, ...settings.homeLayout];
     
     // Filter out hidden features
     return personalizedComponents.filter(component => isFeatureEnabled(component));
@@ -145,7 +145,7 @@ export const PersonalizationProvider: React.FC<PersonalizationProviderProps> = (
     updateSettings,
     isFeatureEnabled,
     isFeaturePriority,
-    getDashboardComponents,
+    getHomeComponents,
     getRecommendedBudgetPeriod,
     getAssistantTone,
     shouldShowTutorial,

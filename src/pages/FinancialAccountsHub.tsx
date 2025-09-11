@@ -187,7 +187,7 @@ const FinancialAccountsHub: React.FC = () => {
             <div className="flex items-center space-x-3">
               <span className="text-2xl">💰</span>
               <div>
-                <h3 className="text-lg font-heading font-bold">Your Money Dashboard</h3>
+                <h3 className="text-lg font-heading font-bold">Your Money Overview</h3>
                 <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Track every rupee across all accounts</p>
               </div>
             </div>

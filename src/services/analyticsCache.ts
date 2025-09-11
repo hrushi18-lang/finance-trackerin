@@ -170,7 +170,7 @@ export class AnalyticsCacheService {
 
   // Predefined cache types
   static readonly CACHE_TYPES = {
-    DASHBOARD_SUMMARY: 'dashboard_summary',
+    HOME_SUMMARY: 'home_summary',
     FINANCIAL_HEALTH: 'financial_health',
     SPENDING_ANALYSIS: 'spending_analysis',
     INCOME_ANALYSIS: 'income_analysis',

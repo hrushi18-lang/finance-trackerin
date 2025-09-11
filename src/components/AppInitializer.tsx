@@ -121,9 +121,9 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
         return;
       }
 
-      // Redirect to dashboard if on root path
+      // Redirect to home if on root path
       if (location.pathname === '/') {
-        navigate('/dashboard');
+        navigate('/');
         return;
       }
       

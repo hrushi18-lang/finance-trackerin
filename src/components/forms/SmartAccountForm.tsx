@@ -340,7 +340,7 @@ export const SmartAccountForm: React.FC<SmartAccountFormProps> = ({
                 className="w-4 h-4 text-primary-600 bg-gray-700 border-gray-600 rounded focus:ring-primary-500 focus:ring-2"
               />
               <label htmlFor="isVisible" className="text-sm text-gray-300">
-                Show this account on dashboard
+                Show this account on home screen
               </label>
             </div>
           </div>
