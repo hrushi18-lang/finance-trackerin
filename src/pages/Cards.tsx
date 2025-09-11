@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ArrowLeft,
   CreditCard,
@@ -12,121 +12,208 @@ import {
   Settings,
   Star,
   Shield,
-  Zap
+  Zap,
+  PieChart,
+  BarChart3,
+  DollarSign,
+  Calendar,
+  Filter,
+  Download,
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
-import { format } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
+import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { RingChart } from '../components/analytics/RingChart';
+import { BarChart } from '../components/analytics/BarChart';
+import { ChartPopup } from '../components/analytics/ChartPopup';
+import { FinancialHealthCard } from '../components/analytics/FinancialHealthCard';
+import { TrendAnalysis } from '../components/analytics/TrendAnalysis';
+import { PredictiveAnalytics } from '../components/analytics/PredictiveAnalytics';
 
 const Cards: React.FC = () => {
   const navigate = useNavigate();
   const { formatCurrency } = useInternationalization();
-  const { accounts, transactions, goals, budgets, liabilities } = useFinance();
+  const { user } = useAuth();
+  const { transactions, accounts, goals, budgets, liabilities } = useFinance();
   
-  const [showBalances, setShowBalances] = useState(true);
-  const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
+  const [selectedView] = useState('overview');
+  const [showChartPopup, setShowChartPopup] = useState(false);
+  const [popupData, setPopupData] = useState<any>(null);
+  const [popupType, setPopupType] = useState<'ring' | 'bar'>('ring');
+  const [selectedAccount, setSelectedAccount] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [customDateRange, setCustomDateRange] = useState<{start: Date | null, end: Date | null}>({start: null, end: null});
+  const [showDetailedView, setShowDetailedView] = useState(false);
+  
+  // Enhanced analytics state (temporarily disabled)
+  const [financialHealth, setFinancialHealth] = useState<any>(null);
+  const [trendData, setTrendData] = useState<any>(null);
+  const [predictions, setPredictions] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Calculate card statistics
-  const cardStats = useMemo(() => {
-    const creditCards = accounts.filter(acc => acc.type === 'credit_card');
-    const totalCreditLimit = creditCards.reduce((sum, acc) => sum + (acc.credit_limit || 0), 0);
-    const totalCreditUsed = creditCards.reduce((sum, acc) => sum + Math.abs(acc.balance || 0), 0);
-    const creditUtilization = totalCreditLimit > 0 ? (totalCreditUsed / totalCreditLimit) * 100 : 0;
-    
-    const monthlySpending = transactions
-      .filter(t => t.type === 'expense' && new Date(t.date) >= new Date(new Date().getFullYear(), new Date().getMonth(), 1))
-      .reduce((sum, t) => sum + t.amount, 0);
+  // Load enhanced analytics data (temporarily disabled)
+  const loadEnhancedAnalytics = async () => {
+    // Temporarily disabled to fix deadlock
+    console.log('Enhanced analytics temporarily disabled');
+    setLastUpdated(new Date());
+  };
+
+  // Calculate analytics data
+  const analyticsData = useMemo(() => {
+    const currentDate = new Date();
+    let startDate: Date;
+    let endDate: Date;
+
+    // Use custom date range if set, otherwise use period selection
+    if (customDateRange.start && customDateRange.end) {
+      startDate = customDateRange.start;
+      endDate = customDateRange.end;
+    } else {
+      switch (selectedPeriod) {
+        case 'lastMonth':
+          startDate = startOfMonth(subMonths(currentDate, 1));
+          endDate = endOfMonth(subMonths(currentDate, 1));
+          break;
+        case 'last3Months':
+          startDate = startOfMonth(subMonths(currentDate, 3));
+          endDate = endOfMonth(currentDate);
+          break;
+        case 'last6Months':
+          startDate = startOfMonth(subMonths(currentDate, 6));
+          endDate = endOfMonth(currentDate);
+          break;
+        default: // thisMonth
+          startDate = startOfMonth(currentDate);
+          endDate = endOfMonth(currentDate);
+          break;
+      }
+    }
+
+    // Filter transactions by date range
+    const filteredTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.date);
+      return transactionDate >= startDate && transactionDate <= endDate;
+    });
+
+    // Filter by account if selected
+    const accountFilteredTransactions = selectedAccount === 'all' 
+      ? filteredTransactions 
+      : filteredTransactions.filter(t => t.accountId === selectedAccount);
+
+    // Filter by category if selected
+    const categoryFilteredTransactions = selectedCategory === 'all'
+      ? accountFilteredTransactions
+      : accountFilteredTransactions.filter(t => t.category === selectedCategory);
+
+    const expenses = categoryFilteredTransactions.filter(t => t.type === 'expense');
+    const income = categoryFilteredTransactions.filter(t => t.type === 'income');
+
+    // Calculate totals
+    const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
+    const totalIncome = income.reduce((sum, t) => sum + t.amount, 0);
+    const netIncome = totalIncome - totalExpenses;
+
+    // Calculate category breakdown
+    const categoryBreakdown = expenses.reduce((acc, t) => {
+      acc[t.category] = (acc[t.category] || 0) + t.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Calculate account breakdown
+    const accountBreakdown = categoryFilteredTransactions.reduce((acc, t) => {
+      const account = accounts.find(a => a.id === t.accountId);
+      const accountName = account?.name || 'Unknown Account';
+      acc[accountName] = (acc[accountName] || 0) + (t.type === 'income' ? t.amount : -t.amount);
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Calculate monthly trends
+    const monthlyTrends = Array.from({ length: 6 }, (_, i) => {
+      const month = subMonths(currentDate, 5 - i);
+      const monthStart = startOfMonth(month);
+      const monthEnd = endOfMonth(month);
+      
+      const monthTransactions = categoryFilteredTransactions.filter(t => {
+        const transactionDate = new Date(t.date);
+        return transactionDate >= monthStart && transactionDate <= monthEnd;
+      });
+      
+      const monthExpenses = monthTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+      const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+      
+      return {
+        month: format(month, 'MMM'),
+        expenses: monthExpenses,
+        income: monthIncome,
+        net: monthIncome - monthExpenses
+      };
+    });
 
     return {
-      totalCards: creditCards.length,
-      totalCreditLimit,
-      totalCreditUsed,
-      creditUtilization,
-      monthlySpending,
-      availableCredit: totalCreditLimit - totalCreditUsed
+      totalExpenses,
+      totalIncome,
+      netIncome,
+      categoryBreakdown,
+      accountBreakdown,
+      monthlyTrends,
+      transactionCount: categoryFilteredTransactions.length,
+      averageExpense: expenses.length > 0 ? totalExpenses / expenses.length : 0,
+      averageIncome: income.length > 0 ? totalIncome / income.length : 0
     };
-  }, [accounts, transactions]);
+  }, [transactions, accounts, selectedPeriod, customDateRange, selectedAccount, selectedCategory]);
 
-  // Get recent transactions for cards
-  const recentCardTransactions = useMemo(() => {
-    return transactions
-      .filter(t => accounts.find(acc => acc.id === t.accountId && acc.type === 'credit_card'))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 5);
-  }, [transactions, accounts]);
+  // Load analytics data
+  const loadAnalytics = async () => {
+    setIsLoading(true);
+    try {
+      // Mock data for now (replace with real analytics engine when ready)
+      setFinancialHealth({
+        score: 85,
+        grade: 'B+',
+        riskLevel: 'low',
+        metrics: {
+          netWorth: 25000,
+          savingsRate: 15.2,
+          debtToIncome: 0.3,
+          creditUtilization: 25.5
+        },
+        recommendations: [
+          'Consider increasing your emergency fund',
+          'Your debt-to-income ratio is healthy',
+          'Great job maintaining low credit utilization'
+        ]
+      });
 
-  const CardItem = ({ account, isSelected, onClick }: { account: any, isSelected: boolean, onClick: () => void }) => {
-    const utilization = account.credit_limit > 0 ? (Math.abs(account.balance) / account.credit_limit) * 100 : 0;
-    const isOverLimit = account.balance < 0 && Math.abs(account.balance) > account.credit_limit;
-    
-    return (
-      <div 
-        className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
-          isSelected 
-            ? 'border-blue-400 bg-blue-500/10' 
-            : 'border-white/20 hover:border-white/30 bg-white/5'
-        }`}
-        onClick={onClick}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
-              <CreditCard size={20} className="text-white" />
-            </div>
-            <div>
-              <h3 className="font-heading text-white">{account.name}</h3>
-              <p className="text-sm text-gray-400">**** {account.accountNumber?.slice(-4) || '1234'}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-400">Balance</p>
-            <p className={`font-numbers text-lg ${account.balance < 0 ? 'text-red-400' : 'text-white'}`}>
-              {showBalances ? formatCurrency(account.balance) : '••••••'}
-            </p>
-          </div>
-        </div>
+      setTrendData({
+        income: { current: 5000, previous: 4800, change: 4.2 },
+        expenses: { current: 3500, previous: 3600, change: -2.8 },
+        savings: { current: 1500, previous: 1200, change: 25.0 }
+      });
 
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Credit Limit</span>
-            <span className="text-white">{formatCurrency(account.credit_limit || 0)}</span>
-          </div>
-          
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Available</span>
-            <span className="text-green-400">
-              {formatCurrency((account.credit_limit || 0) - Math.abs(account.balance || 0))}
-            </span>
-          </div>
+      setPredictions({
+        nextMonthIncome: 5100,
+        nextMonthExpenses: 3400,
+        confidence: 0.85
+      });
 
-          <div className="space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Utilization</span>
-              <span className={`${utilization > 80 ? 'text-red-400' : utilization > 50 ? 'text-yellow-400' : 'text-green-400'}`}>
-                {utilization.toFixed(1)}%
-              </span>
-            </div>
-            <div className="w-full bg-gray-700 rounded-full h-2">
-              <div 
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  utilization > 80 ? 'bg-red-400' : utilization > 50 ? 'bg-yellow-400' : 'bg-green-400'
-                }`}
-                style={{ width: `${Math.min(utilization, 100)}%` }}
-              />
-            </div>
-          </div>
-
-          {isOverLimit && (
-            <div className="flex items-center space-x-2 text-red-400 text-sm">
-              <Shield size={14} />
-              <span>Over Credit Limit</span>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Failed to load analytics:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadAnalytics();
+  }, []);
 
   return (
     <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
@@ -145,59 +232,96 @@ const Cards: React.FC = () => {
               <ArrowLeft size={18} style={{ color: 'var(--text-primary)' }} />
             </button>
             <div>
-              <h1 className="text-2xl font-heading text-white">Cards</h1>
-              <p className="text-sm text-gray-400">Manage your credit cards and spending</p>
+              <h1 className="text-2xl font-heading text-white">Activities</h1>
+              <p className="text-sm text-gray-400">Comprehensive overview of all your financial activities</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => setShowBalances(!showBalances)}
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
               className="p-2 rounded-full transition-all duration-200 hover:scale-105"
               style={{ 
                 backgroundColor: 'var(--background-secondary)',
                 boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
               }}
-              title={showBalances ? 'Hide Balances' : 'Show Balances'}
+              title="Advanced Filters"
             >
-              {showBalances ? <EyeOff size={16} style={{ color: 'var(--text-primary)' }} /> : <Eye size={16} style={{ color: 'var(--text-primary)' }} />}
+              <Filter size={16} style={{ color: 'var(--text-primary)' }} />
             </button>
             <button
+              onClick={loadAnalytics}
               className="p-2 rounded-full transition-all duration-200 hover:scale-105"
               style={{ 
                 backgroundColor: 'var(--background-secondary)',
                 boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
               }}
-              title="Settings"
+              title="Refresh Analytics"
             >
-              <Settings size={16} style={{ color: 'var(--text-primary)' }} />
+              <RefreshCw size={16} style={{ color: 'var(--text-primary)' }} />
             </button>
           </div>
         </div>
       </div>
 
       <div className="px-4 space-y-6">
+        {/* Period Selection */}
+        <div className="flex space-x-2 overflow-x-auto pb-2">
+          {[
+            { key: 'thisMonth', label: 'This Month' },
+            { key: 'lastMonth', label: 'Last Month' },
+            { key: 'last3Months', label: 'Last 3 Months' },
+            { key: 'last6Months', label: 'Last 6 Months' }
+          ].map((period) => (
+            <button
+              key={period.key}
+              onClick={() => setSelectedPeriod(period.key)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                selectedPeriod === period.key
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-white/10 text-gray-300 hover:bg-white/20'
+              }`}
+            >
+              {period.label}
+            </button>
+          ))}
+        </div>
+
         {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl p-4 border border-white/10">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="p-2 rounded-lg bg-blue-500/20">
-                <CreditCard size={20} className="text-blue-400" />
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-400">Total Cards</h3>
-                <p className="text-2xl font-bold text-white">{cardStats.totalCards}</p>
-              </div>
-            </div>
-          </div>
-
           <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl p-4 border border-white/10">
             <div className="flex items-center space-x-3 mb-3">
               <div className="p-2 rounded-lg bg-green-500/20">
                 <TrendingUp size={20} className="text-green-400" />
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-400">Available Credit</h3>
-                <p className="text-2xl font-bold text-white">{formatCurrency(cardStats.availableCredit)}</p>
+                <h3 className="text-sm font-medium text-gray-400">Total Income</h3>
+                <p className="text-2xl font-bold text-white">{formatCurrency(analyticsData.totalIncome)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-red-500/10 to-pink-500/10 rounded-2xl p-4 border border-white/10">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="p-2 rounded-lg bg-red-500/20">
+                <TrendingDown size={20} className="text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-400">Total Expenses</h3>
+                <p className="text-2xl font-bold text-white">{formatCurrency(analyticsData.totalExpenses)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl p-4 border border-white/10">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="p-2 rounded-lg bg-blue-500/20">
+                <DollarSign size={20} className="text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-400">Net Income</h3>
+                <p className={`text-2xl font-bold ${analyticsData.netIncome >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {formatCurrency(analyticsData.netIncome)}
+                </p>
               </div>
             </div>
           </div>
@@ -208,107 +332,105 @@ const Cards: React.FC = () => {
                 <Target size={20} className="text-yellow-400" />
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-400">Utilization</h3>
-                <p className="text-2xl font-bold text-white">{cardStats.creditUtilization.toFixed(1)}%</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl p-4 border border-white/10">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="p-2 rounded-lg bg-purple-500/20">
-                <Wallet size={20} className="text-purple-400" />
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-400">Monthly Spending</h3>
-                <p className="text-2xl font-bold text-white">{formatCurrency(cardStats.monthlySpending)}</p>
+                <h3 className="text-sm font-medium text-gray-400">Transactions</h3>
+                <p className="text-2xl font-bold text-white">{analyticsData.transactionCount}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Credit Cards List */}
-        <div className="space-y-4">
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Category Breakdown */}
+          <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-heading text-white">Expenses by Category</h3>
+              <button
+                onClick={() => {
+                  setPopupData(analyticsData.categoryBreakdown);
+                  setPopupType('ring');
+                  setShowChartPopup(true);
+                }}
+                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                <PieChart size={16} className="text-gray-400" />
+              </button>
+            </div>
+            <RingChart data={analyticsData.categoryBreakdown} />
+          </div>
+
+          {/* Monthly Trends */}
+          <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-heading text-white">Monthly Trends</h3>
+              <button
+                onClick={() => {
+                  setPopupData(analyticsData.monthlyTrends);
+                  setPopupType('bar');
+                  setShowChartPopup(true);
+                }}
+                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                <BarChart3 size={16} className="text-gray-400" />
+              </button>
+            </div>
+            <BarChart data={analyticsData.monthlyTrends} />
+          </div>
+        </div>
+
+        {/* Enhanced Analytics Section */}
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-heading text-white">Your Cards</h2>
+            <h2 className="text-xl font-heading text-white">Advanced Analytics</h2>
             <button
-              onClick={() => navigate('/accounts')}
-              className="px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-              style={{
-                backgroundColor: 'var(--primary)',
-                color: 'white'
-              }}
+              onClick={loadAnalytics}
+              disabled={isLoading}
+              className="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium flex items-center space-x-2 disabled:opacity-50"
             >
-              <Plus size={16} />
-              <span className="text-sm font-medium">Add Card</span>
+              <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+              <span>Load Advanced Analytics</span>
             </button>
           </div>
 
-          {accounts.filter(acc => acc.type === 'credit_card').length === 0 ? (
-            <div className="text-center py-12">
-              <div className="p-4 rounded-full bg-gray-500/20 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <CreditCard size={32} className="text-gray-400" />
-              </div>
-              <h3 className="text-lg font-heading text-white mb-2">No Credit Cards</h3>
-              <p className="text-gray-400 mb-6">Add your first credit card to start tracking spending</p>
-              <button
-                onClick={() => navigate('/accounts')}
-                className="px-6 py-3 rounded-lg transition-colors flex items-center space-x-2 mx-auto"
-                style={{
-                  backgroundColor: 'var(--primary)',
-                  color: 'white'
-                }}
-              >
-                <Plus size={20} />
-                <span className="font-medium">Add Credit Card</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {accounts
-                .filter(acc => acc.type === 'credit_card')
-                .map((account) => (
-                  <CardItem
-                    key={account.id}
-                    account={account}
-                    isSelected={selectedCard === account.id}
-                    onClick={() => setSelectedCard(selectedCard === account.id ? null : account.id)}
-                  />
-                ))}
+          {financialHealth && (
+            <FinancialHealthCard 
+              data={financialHealth}
+              formatCurrency={formatCurrency}
+            />
+          )}
+
+          {trendData && (
+            <TrendAnalysis 
+              data={trendData}
+              formatCurrency={formatCurrency}
+            />
+          )}
+
+          {predictions && (
+            <PredictiveAnalytics 
+              data={predictions}
+              formatCurrency={formatCurrency}
+            />
+          )}
+
+          {lastUpdated && (
+            <div className="text-center text-sm text-gray-400">
+              Last updated: {format(lastUpdated, 'MMM d, yyyy h:mm a')}
             </div>
           )}
         </div>
-
-        {/* Recent Transactions */}
-        {recentCardTransactions.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-heading text-white">Recent Card Transactions</h2>
-            <div className="space-y-2">
-              {recentCardTransactions.map((transaction) => {
-                const account = accounts.find(acc => acc.id === transaction.accountId);
-                return (
-                  <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-lg bg-blue-500/20">
-                        <CreditCard size={16} className="text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="text-white font-medium">{transaction.description}</p>
-                        <p className="text-sm text-gray-400">{account?.name} • {format(new Date(transaction.date), 'MMM d')}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-numbers ${transaction.type === 'expense' ? 'text-red-400' : 'text-green-400'}`}>
-                        {transaction.type === 'expense' ? '-' : '+'}{formatCurrency(transaction.amount)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Chart Popup */}
+      {showChartPopup && (
+        <ChartPopup
+          isOpen={showChartPopup}
+          onClose={() => setShowChartPopup(false)}
+          data={popupData}
+          type={popupType}
+          title={popupType === 'ring' ? 'Category Breakdown' : 'Monthly Trends'}
+        />
+      )}
     </div>
   );
 };
