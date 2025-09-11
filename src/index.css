@@ -151,6 +151,12 @@
   
   --neumorphic-light: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
   --neumorphic-inset: inset 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  
+  /* Angular Theme Typography */
+  --font-heading: 'Archivo Black', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-numbers: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-titles: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-description: 'Playfair Display', 'Times New Roman', 'Times', serif;
 }
 
 /* Angular Theme Glassmorphism Styles - Dark Theme Style */
@@ -297,6 +303,38 @@ body {
   background: transparent !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+}
+
+/* Angular Theme Typography Styles */
+[data-theme="angular"] {
+  font-family: var(--font-titles) !important;
+}
+
+[data-theme="angular"] h1,
+[data-theme="angular"] h2,
+[data-theme="angular"] h3,
+[data-theme="angular"] h4,
+[data-theme="angular"] h5,
+[data-theme="angular"] h6,
+[data-theme="angular"] .mobile-text-hero,
+[data-theme="angular"] .mobile-text-display {
+  font-family: var(--font-heading) !important;
+  font-weight: 900 !important;
+}
+
+[data-theme="angular"] .mobile-text-numbers,
+[data-theme="angular"] .text-numbers,
+[data-theme="angular"] [class*="number"] {
+  font-family: var(--font-numbers) !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="angular"] .mobile-text-description,
+[data-theme="angular"] .text-description,
+[data-theme="angular"] p,
+[data-theme="angular"] .mobile-text-lg {
+  font-family: var(--font-description) !important;
+  font-weight: 400 !important;
 }
 
 /* Font fallback styles - Exact Font Specifications */
