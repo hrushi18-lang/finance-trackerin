@@ -32,7 +32,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const savedTheme = localStorage.getItem('fintrack-theme') as Theme;
     const savedDarkMode = localStorage.getItem('fintrack-dark-mode') === 'true';
     
-    if (savedTheme && ['cool-blue', 'olive'].includes(savedTheme)) {
+    if (savedTheme && ['cool-blue', 'olive', 'angular'].includes(savedTheme)) {
       setThemeState(savedTheme);
     }
     
@@ -46,6 +46,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     // Set theme data attribute
     if (theme === 'olive') {
       root.setAttribute('data-theme', 'olive');
+    } else if (theme === 'angular') {
+      root.setAttribute('data-theme', 'angular');
     } else {
       root.removeAttribute('data-theme');
     }
