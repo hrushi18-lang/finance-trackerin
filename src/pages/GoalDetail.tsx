@@ -191,7 +191,7 @@ const GoalDetail: React.FC = () => {
                 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
                 : goalAnalytics.isOverdue
                 ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                : 'linear-gradient(135deg, var(--primary) 0%, #2d5016 100%)',
+                : 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)',
               boxShadow: '0 20px 40px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.06)'
             }}
           >

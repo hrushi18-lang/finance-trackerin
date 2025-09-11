@@ -184,8 +184,8 @@ const AccountDetail: React.FC = () => {
           <div 
             className="relative overflow-hidden rounded-3xl p-8 mb-6"
             style={{
-              background: 'linear-gradient(135deg, var(--primary) 0%, #2d5016 100%)',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.06)'
+              background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)',
+              boxShadow: '0 20px 40px rgba(59, 130, 246, 0.2), 0 8px 16px rgba(16, 185, 129, 0.1)'
             }}
           >
             <div className="text-center text-white">

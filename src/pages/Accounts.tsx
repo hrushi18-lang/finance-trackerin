@@ -312,8 +312,8 @@ const Accounts: React.FC = () => {
         <div 
           className="mobile-card relative overflow-hidden rounded-2xl p-4 mb-4"
           style={{
-            background: 'linear-gradient(135deg, var(--primary) 0%, #2d5016 100%)',
-            boxShadow: '0 8px 20px rgba(0,0,0,0.1)'
+            background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)',
+            boxShadow: '0 8px 20px rgba(59, 130, 246, 0.2)'
           }}
         >
           <div className="text-center text-white">
