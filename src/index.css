@@ -125,12 +125,12 @@
   --primary-dark: #0d00b8;
   
   --background: conic-gradient(from 270deg, #1500FE 68%, #060609 100%);
-  --background-secondary: rgba(255, 255, 255, 0.1);
-  --background-tertiary: rgba(255, 255, 255, 0.05);
+  --background-secondary: conic-gradient(from 270deg, #1500FE 68%, #060609 100%);
+  --background-tertiary: conic-gradient(from 270deg, #1500FE 68%, #060609 100%);
   
-  --surface: rgba(255, 255, 255, 0.15);
-  --surface-elevated: rgba(255, 255, 255, 0.2);
-  --surface-pressed: rgba(255, 255, 255, 0.1);
+  --surface: rgba(255, 255, 255, 0.08);
+  --surface-elevated: rgba(255, 255, 255, 0.12);
+  --surface-pressed: rgba(255, 255, 255, 0.06);
   
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.8);
@@ -140,66 +140,66 @@
   --accent-light: #3b82f6;
   --success: #10b981;
   
-  --border: rgba(255, 255, 255, 0.2);
-  --border-light: rgba(255, 255, 255, 0.1);
-  --border-dark: rgba(255, 255, 255, 0.3);
+  --border: rgba(255, 255, 255, 0.15);
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-dark: rgba(255, 255, 255, 0.25);
   
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
   
-  --neumorphic-light: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
-  --neumorphic-inset: inset 0 8px 32px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --neumorphic-light: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --neumorphic-inset: inset 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
-/* Angular Theme Glassmorphism Styles - iOS 26 Style */
+/* Angular Theme Glassmorphism Styles - Dark Theme Style */
 [data-theme="angular"] .mobile-card,
 [data-theme="angular"] .card,
 [data-theme="angular"] [class*="card"] {
-  background: rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(40px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(20px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-  border-radius: 20px !important;
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  border-radius: 16px !important;
 }
 
 [data-theme="angular"] .mobile-header {
-  background: rgba(255, 255, 255, 0.03) !important;
-  backdrop-filter: blur(40px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 0 0 24px 24px !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  backdrop-filter: blur(20px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(120%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-radius: 0 0 20px 20px !important;
 }
 
 [data-theme="angular"] .mobile-button {
-  background: rgba(255, 255, 255, 0.12) !important;
-  backdrop-filter: blur(20px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(15px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(15px) saturate(120%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   color: white !important;
-  border-radius: 16px !important;
+  border-radius: 12px !important;
   box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  transition: all 0.2s ease !important;
 }
 
 [data-theme="angular"] .mobile-button:hover {
-  background: rgba(255, 255, 255, 0.18) !important;
-  transform: translateY(-2px) scale(1.02) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  transform: translateY(-1px) !important;
   box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
 }
 
 [data-theme="angular"] .mobile-button:active {
-  transform: translateY(0) scale(0.98) !important;
-  background: rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(0) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
 }
 
 /* Enhanced glassmorphism for specific components */
@@ -279,11 +279,24 @@ body {
 }
 
 [data-theme="angular"] #root {
-  background: transparent !important;
+  background: conic-gradient(from 270deg, #1500FE 68%, #060609 100%) !important;
+  background-attachment: fixed !important;
+  min-height: 100vh !important;
 }
 
 [data-theme="angular"] .min-h-screen {
+  background: conic-gradient(from 270deg, #1500FE 68%, #060609 100%) !important;
+  background-attachment: fixed !important;
+}
+
+[data-theme="angular"] .mobile-container {
   background: transparent !important;
+}
+
+[data-theme="angular"] .mobile-header {
+  background: transparent !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
 }
 
 /* Font fallback styles - Exact Font Specifications */
