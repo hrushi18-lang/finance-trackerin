@@ -28,7 +28,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
-import { PullToRefresh } from '../components/mobile/PullToRefresh';
 import { AnalyticsEngine } from '../utils/analytics-engine';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths } from 'date-fns';
 
@@ -47,22 +46,6 @@ const Overview: React.FC = () => {
   
   const [showBalances, setShowBalances] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('month');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Refresh function for pull-to-refresh
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      // Simulate refresh delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // In a real app, this would refresh data from the server
-      console.log('Data refreshed');
-    } catch (error) {
-      console.error('Refresh failed:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
 
   // Initialize analytics engine
   const analyticsEngine = useMemo(() => {
@@ -241,8 +224,7 @@ const Overview: React.FC = () => {
 
   return (
     <div className="min-h-screen pb-24" style={{ background: 'var(--background)' }}>
-      <PullToRefresh onRefresh={handleRefresh} className="h-full">
-        {/* Header */}
+      {/* Header */}
       <div className="pt-12 pb-6 px-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-heading" style={{ color: 'var(--text-primary)' }}>Financial Overview</h1>
@@ -683,7 +665,6 @@ const Overview: React.FC = () => {
           </div>
         </div>
       </div>
-      </PullToRefresh>
     </div>
   );
 };

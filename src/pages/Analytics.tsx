@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ArrowLeft,
   Calendar,
@@ -11,28 +11,31 @@ import {
   Filter,
   Download,
   Eye,
-  EyeOff
+  EyeOff,
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { RingChart } from '../components/analytics/RingChart';
 import { BarChart } from '../components/analytics/BarChart';
 import { ChartPopup } from '../components/analytics/ChartPopup';
-import { AdvancedCharts } from '../components/analytics/AdvancedCharts';
-import { FinancialInsights } from '../components/analytics/FinancialInsights';
-import { MobileGestures } from '../components/mobile/MobileGestures';
+import { FinancialHealthCard } from '../components/analytics/FinancialHealthCard';
+import { TrendAnalysis } from '../components/analytics/TrendAnalysis';
+import { PredictiveAnalytics } from '../components/analytics/PredictiveAnalytics';
+import { EnhancedAnalyticsEngine } from '../services/enhancedAnalyticsEngine';
 
 const Analytics: React.FC = () => {
   const navigate = useNavigate();
   const { formatCurrency } = useInternationalization();
+  const { user } = useAuth();
   const { transactions, accounts, goals, budgets } = useFinance();
   
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
-  const [selectedView, setSelectedView] = useState('overview');
-  const [showAdvancedCharts, setShowAdvancedCharts] = useState(false);
-  const [showInsights, setShowInsights] = useState(false);
+  const [selectedView] = useState('overview');
   const [showChartPopup, setShowChartPopup] = useState(false);
   const [popupData, setPopupData] = useState<any>(null);
   const [popupType, setPopupType] = useState<'ring' | 'bar'>('ring');
@@ -41,6 +44,87 @@ const Analytics: React.FC = () => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [customDateRange, setCustomDateRange] = useState<{start: Date | null, end: Date | null}>({start: null, end: null});
   const [showDetailedView, setShowDetailedView] = useState(false);
+  
+  // Enhanced analytics state
+  const [analyticsEngine, setAnalyticsEngine] = useState<EnhancedAnalyticsEngine | null>(null);
+  const [financialHealth, setFinancialHealth] = useState<any>(null);
+  const [trendData, setTrendData] = useState<any>(null);
+  const [predictions, setPredictions] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Initialize analytics engine
+  useEffect(() => {
+    if (user?.id) {
+      setAnalyticsEngine(new EnhancedAnalyticsEngine(user.id));
+    }
+  }, [user?.id]);
+
+  // Load enhanced analytics data
+  const loadEnhancedAnalytics = async () => {
+    if (!analyticsEngine) return;
+    
+    setIsLoading(true);
+    try {
+      const currentDate = new Date();
+      let startDate: Date;
+      let endDate: Date;
+
+      if (customDateRange.start && customDateRange.end) {
+        startDate = customDateRange.start;
+        endDate = customDateRange.end;
+      } else {
+        switch (selectedPeriod) {
+          case 'lastMonth':
+            startDate = startOfMonth(subMonths(currentDate, 1));
+            endDate = endOfMonth(subMonths(currentDate, 1));
+            break;
+          case 'last3Months':
+            startDate = startOfMonth(subMonths(currentDate, 3));
+            endDate = endOfMonth(currentDate);
+            break;
+          case 'last6Months':
+            startDate = startOfMonth(subMonths(currentDate, 6));
+            endDate = endOfMonth(currentDate);
+            break;
+          default:
+            startDate = startOfMonth(currentDate);
+            endDate = endOfMonth(currentDate);
+        }
+      }
+
+      // Load all enhanced analytics in parallel
+      const [healthData, incomeTrends, expenseTrends, savingsTrends, incomePredictions, expensePredictions] = await Promise.all([
+        analyticsEngine.calculateFinancialHealth(startDate, endDate),
+        analyticsEngine.getTrendAnalysis(startDate, endDate, 'income'),
+        analyticsEngine.getTrendAnalysis(startDate, endDate, 'expenses'),
+        analyticsEngine.getTrendAnalysis(startDate, endDate, 'savings'),
+        analyticsEngine.getPredictiveAnalytics(startDate, endDate, 'income'),
+        analyticsEngine.getPredictiveAnalytics(startDate, endDate, 'expenses')
+      ]);
+
+      setFinancialHealth(healthData);
+      setTrendData({
+        income: incomeTrends,
+        expenses: expenseTrends,
+        savings: savingsTrends
+      });
+      setPredictions({
+        income: incomePredictions,
+        expenses: expensePredictions
+      });
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Error loading enhanced analytics:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load analytics when dependencies change
+  useEffect(() => {
+    loadEnhancedAnalytics();
+  }, [analyticsEngine, selectedPeriod, customDateRange]);
 
   // Calculate analytics data
   const analyticsData = useMemo(() => {
@@ -155,7 +239,7 @@ const Analytics: React.FC = () => {
         currency: acc.currency
       })),
       goals: goals.map(goal => ({
-        name: goal.name,
+        name: goal.title,
         currentAmount: goal.currentAmount,
         targetAmount: goal.targetAmount,
         progress: goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0,
@@ -191,9 +275,28 @@ const Analytics: React.FC = () => {
             >
               <ArrowLeft size={18} style={{ color: 'var(--text-primary)' }} />
             </button>
-            <h1 className="text-2xl font-heading">Analytics</h1>
+            <div>
+              <h1 className="text-2xl font-heading">Analytics</h1>
+              {lastUpdated && (
+                <div className="text-sm text-gray-400">
+                  Last updated: {format(lastUpdated, 'MMM d, h:mm a')}
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex items-center space-x-2">
+            <button
+              onClick={loadEnhancedAnalytics}
+              disabled={isLoading}
+              className="p-2 rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-50"
+              style={{ 
+                backgroundColor: 'var(--background-secondary)',
+                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
+              }}
+              title="Refresh Analytics"
+            >
+              <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} style={{ color: 'var(--text-primary)' }} />
+            </button>
             <button 
               onClick={() => setShowDetailedView(!showDetailedView)}
               className={`p-2 rounded-full transition-all duration-200 hover:scale-105 ${
@@ -240,32 +343,6 @@ const Analytics: React.FC = () => {
               title="Calendar View"
             >
               <Calendar size={16} style={{ color: 'var(--text-primary)' }} />
-            </button>
-            <button 
-              onClick={() => setShowAdvancedCharts(!showAdvancedCharts)}
-              className={`p-2 rounded-full transition-all duration-200 hover:scale-105 ${
-                showAdvancedCharts ? 'bg-purple-500 text-white' : ''
-              }`}
-              style={{ 
-                backgroundColor: showAdvancedCharts ? 'var(--primary)' : 'var(--background-secondary)',
-                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
-              }}
-              title="Advanced Charts"
-            >
-              <BarChart3 size={16} style={{ color: showAdvancedCharts ? 'white' : 'var(--text-primary)' }} />
-            </button>
-            <button 
-              onClick={() => setShowInsights(!showInsights)}
-              className={`p-2 rounded-full transition-all duration-200 hover:scale-105 ${
-                showInsights ? 'bg-yellow-500 text-white' : ''
-              }`}
-              style={{ 
-                backgroundColor: showInsights ? 'var(--warning)' : 'var(--background-secondary)',
-                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
-              }}
-              title="Financial Insights"
-            >
-              <Target size={16} style={{ color: showInsights ? 'white' : 'var(--text-primary)' }} />
             </button>
           </div>
         </div>
@@ -497,14 +574,7 @@ const Analytics: React.FC = () => {
         </div>
 
         {/* Spending Ring Chart */}
-        <MobileGestures
-          onPinch={(scale) => console.log('Pinch scale:', scale)}
-          onRotate={(angle) => console.log('Rotation:', angle)}
-          onDoubleTap={() => {
-            setPopupData(analyticsData.categoryBreakdown);
-            setPopupType('ring');
-            setShowChartPopup(true);
-          }}
+        <div 
           className="p-4 rounded-2xl slide-in-up"
           style={{
             backgroundColor: 'var(--background)',
@@ -527,17 +597,10 @@ const Analytics: React.FC = () => {
               setShowChartPopup(true);
             }}
           />
-        </MobileGestures>
+        </div>
 
         {/* Income vs Spending Bar Chart */}
-        <MobileGestures
-          onPinch={(scale) => console.log('Bar chart pinch scale:', scale)}
-          onRotate={(angle) => console.log('Bar chart rotation:', angle)}
-          onDoubleTap={() => {
-            setPopupData(analyticsData);
-            setPopupType('bar');
-            setShowChartPopup(true);
-          }}
+        <div 
           className="p-4 rounded-2xl slide-in-up"
           style={{
             backgroundColor: 'var(--background)',
@@ -584,7 +647,7 @@ const Analytics: React.FC = () => {
               setShowChartPopup(true);
             }}
           />
-        </MobileGestures>
+        </div>
 
         {/* Category Breakdown */}
         <div 
@@ -652,7 +715,7 @@ const Analytics: React.FC = () => {
                   <div key={goal.id} className="p-3 rounded-lg border border-gray-200">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                        {goal.name}
+                        {goal.title}
                       </h4>
                       <span className="text-sm font-numbers" style={{ color: 'var(--text-secondary)' }}>
                         {formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}
@@ -769,6 +832,63 @@ const Analytics: React.FC = () => {
           </div>
         </div>
 
+        {/* Enhanced Analytics Sections */}
+        {selectedView === 'overview' && (
+          <>
+            {/* Financial Health Card */}
+            {financialHealth && (
+              <div className="mb-8">
+                <FinancialHealthCard 
+                  metrics={financialHealth} 
+                  formatCurrency={formatCurrency} 
+                />
+              </div>
+            )}
+
+            {/* Trend Analysis */}
+            {trendData && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <TrendAnalysis
+                  title="Income Trends"
+                  data={trendData.income}
+                  formatCurrency={formatCurrency}
+                  icon={<TrendingUp className="w-5 h-5 text-green-400" />}
+                />
+                <TrendAnalysis
+                  title="Expense Trends"
+                  data={trendData.expenses}
+                  formatCurrency={formatCurrency}
+                  icon={<TrendingDown className="w-5 h-5 text-red-400" />}
+                />
+                <TrendAnalysis
+                  title="Savings Trends"
+                  data={trendData.savings}
+                  formatCurrency={formatCurrency}
+                  icon={<Target className="w-5 h-5 text-blue-400" />}
+                />
+              </div>
+            )}
+
+            {/* Predictive Analytics */}
+            {predictions && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <PredictiveAnalytics
+                  title="Income Forecast"
+                  predictions={predictions.income}
+                  formatCurrency={formatCurrency}
+                  icon={<Sparkles className="w-6 h-6 text-purple-400" />}
+                />
+                <PredictiveAnalytics
+                  title="Expense Forecast"
+                  predictions={predictions.expenses}
+                  formatCurrency={formatCurrency}
+                  icon={<Sparkles className="w-6 h-6 text-orange-400" />}
+                />
+              </div>
+            )}
+          </>
+        )}
+
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-4 slide-in-up">
           <div className="card p-4">
@@ -794,30 +914,6 @@ const Analytics: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Enhanced Analytics Sections */}
-      {showAdvancedCharts && (
-        <div className="px-4 space-y-6">
-          <AdvancedCharts
-            data={analyticsData}
-            timeRange={selectedPeriod}
-            onTimeRangeChange={setSelectedPeriod}
-            onExport={exportAnalyticsData}
-          />
-        </div>
-      )}
-
-      {showInsights && (
-        <div className="px-4 space-y-6">
-          <FinancialInsights
-            data={analyticsData}
-            onInsightClick={(insight) => {
-              console.log('Insight clicked:', insight);
-              // Handle insight click - could navigate to relevant section
-            }}
-          />
-        </div>
-      )}
 
       {/* Interactive Chart Popup */}
       <ChartPopup

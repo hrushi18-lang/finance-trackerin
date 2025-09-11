@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -23,9 +23,6 @@ import { MobileLoadingGuard } from './components/common/MobileLoadingGuard';
 import { MobileErrorRecovery } from './components/common/MobileErrorRecovery';
 import { fontLoader } from './utils/fontLoader';
 import { registerSW } from './utils/registerSW';
-import { bundleOptimizer, performanceUtils } from './utils/bundleOptimizer';
-import { PerformanceMonitor } from './components/performance/PerformanceMonitor';
-import { LazyWrapper, LazyErrorBoundary } from './components/lazy/LazyWrapper';
 import './styles/accessibility.css';
 import './styles/mobile.css';
 
@@ -81,12 +78,6 @@ const queryClient = new QueryClient({
 function App() {
   // Enable keyboard navigation
   useKeyboardNavigation();
-
-  // Initialize performance optimizations
-  useEffect(() => {
-    bundleOptimizer.initialize();
-    performanceUtils.mark('app-start');
-  }, []);
 
   // Initialize font loading and service worker
   useEffect(() => {
@@ -444,7 +435,6 @@ function App() {
           </ThemeProvider>
         </ToastProvider>
       </QueryClientProvider>
-      <PerformanceMonitor show={process.env.NODE_ENV === 'development'} />
     </ErrorBoundary>
   );
 }
