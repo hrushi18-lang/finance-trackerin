@@ -6,6 +6,7 @@ import {
   Wallet,
   Target,
   TrendingUp,
+  TrendingDown,
   Plus,
   Eye,
   EyeOff,
