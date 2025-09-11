@@ -204,8 +204,8 @@
 
 /* Mobile-optimized headers */
 .mobile-header {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: transparent;
+  border-bottom: none;
   padding: 16px;
   padding-top: calc(16px + env(safe-area-inset-top));
   position: sticky;
@@ -358,8 +358,8 @@
   }
   
   .mobile-header {
-    background: #1f2937;
-    border-bottom-color: #374151;
+    background: transparent;
+    border-bottom: none;
   }
   
   .mobile-input {
