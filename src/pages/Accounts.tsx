@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Filter, Eye, EyeOff, ArrowLeft, BarChart3, PieChart, TrendingUp, TrendingDown, DollarSign, Calendar, Clock } from 'lucide-react';
+import { Plus, Search, Filter, Eye, EyeOff, ArrowLeft, BarChart3, PieChart, TrendingUp, TrendingDown, DollarSign, Calendar, Clock, CreditCard, Shield } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { AccountCard } from '../components/accounts/AccountCard';
@@ -62,6 +62,7 @@ const Accounts: React.FC = () => {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'cards'>('accounts');
 
   // Initialize analytics engine
   const analyticsEngine = useMemo(() => {
@@ -328,6 +329,38 @@ const Accounts: React.FC = () => {
         </div>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="px-4 mb-4">
+        <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
+          <button
+            onClick={() => setActiveTab('accounts')}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'accounts'
+                ? 'text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+            style={{
+              backgroundColor: activeTab === 'accounts' ? 'var(--primary)' : 'transparent'
+            }}
+          >
+            Accounts
+          </button>
+          <button
+            onClick={() => setActiveTab('cards')}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'cards'
+                ? 'text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+            style={{
+              backgroundColor: activeTab === 'cards' ? 'var(--primary)' : 'transparent'
+            }}
+          >
+            Cards
+          </button>
+        </div>
+      </div>
+
       {/* Mobile-Optimized Analytics Section */}
       <div className="px-4 mb-4">
         <div className="card-neumorphic p-3 slide-in-up">
@@ -488,8 +521,11 @@ const Accounts: React.FC = () => {
         {/* Goals Vault Manager */}
         <GoalsVaultManager />
 
-        {/* Mobile-Optimized Accounts List */}
-        <div className="space-y-3">
+        {/* Tab Content */}
+        {activeTab === 'accounts' && (
+          <>
+            {/* Mobile-Optimized Accounts List */}
+            <div className="space-y-3">
           {filteredAccounts.length === 0 ? (
             <div
               className="p-6 rounded-2xl text-center"
@@ -541,7 +577,107 @@ const Accounts: React.FC = () => {
               ))}
             </div>
           )}
-        </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'cards' && (
+          <div className="space-y-4">
+            {/* Cards Section */}
+            <div className="px-4">
+              <h2 className="text-lg font-heading text-white mb-4">Credit Cards</h2>
+              {accounts.filter(acc => acc.type === 'credit_card').length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <CreditCard size={24} className="text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-white mb-2">No Credit Cards</h3>
+                  <p className="text-gray-400 mb-4">Add a credit card to start tracking your spending</p>
+                  <Button
+                    variant="primary"
+                    onClick={() => setShowForm(true)}
+                    className="flex items-center space-x-2 mx-auto"
+                  >
+                    <Plus size={16} />
+                    <span>Add Credit Card</span>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {accounts
+                    .filter(acc => acc.type === 'credit_card')
+                    .map((account) => {
+                      const utilization = account.creditLimit > 0 ? (Math.abs(account.balance) / account.creditLimit) * 100 : 0;
+                      const isOverLimit = account.balance < 0 && Math.abs(account.balance) > account.creditLimit;
+                      
+                      return (
+                        <div 
+                          key={account.id}
+                          className="p-4 rounded-2xl border-2 border-white/20 bg-white/5"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-3">
+                              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
+                                <CreditCard size={20} className="text-white" />
+                              </div>
+                              <div>
+                                <h3 className="font-heading text-white">{account.name}</h3>
+                                <p className="text-sm text-gray-400">**** {account.accountNumber?.slice(-4) || '1234'}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-400">Balance</p>
+                              <p className={`font-numbers text-lg ${account.balance < 0 ? 'text-red-400' : 'text-white'}`}>
+                                {formatCurrencyEnhanced(account.balance, account.currency_code || 'USD')}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-400">Credit Limit</span>
+                              <span className="text-white">{formatCurrencyEnhanced(account.creditLimit || 0, account.currency_code || 'USD')}</span>
+                            </div>
+                            
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-400">Available</span>
+                              <span className="text-green-400">
+                                {formatCurrencyEnhanced((account.creditLimit || 0) - Math.abs(account.balance || 0), account.currency_code || 'USD')}
+                              </span>
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-400">Utilization</span>
+                                <span className={`${utilization > 80 ? 'text-red-400' : utilization > 50 ? 'text-yellow-400' : 'text-green-400'}`}>
+                                  {utilization.toFixed(1)}%
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-700 rounded-full h-2">
+                                <div 
+                                  className={`h-2 rounded-full transition-all duration-300 ${
+                                    utilization > 80 ? 'bg-red-400' : utilization > 50 ? 'bg-yellow-400' : 'bg-green-400'
+                                  }`}
+                                  style={{ width: `${Math.min(utilization, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            {isOverLimit && (
+                              <div className="flex items-center space-x-2 text-red-400 text-sm">
+                                <Shield size={14} />
+                                <span>Over Credit Limit</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Account Form Modal */}

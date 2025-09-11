@@ -34,6 +34,8 @@ import Dashboard from './pages/Dashboard';
 import AddTransaction from './pages/AddTransaction';
 import TransactionsCalendar from './pages/TransactionsCalendar';
 import Cards from './pages/Cards';
+import Activities from './pages/Activities';
+import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
 import Goals from './pages/Goals';
 import Liabilities from './pages/Liabilities';
@@ -210,23 +212,13 @@ function App() {
                               />
                               
                               <Route 
-                                path="/cards" 
+                                path="/activities" 
                                 element={
                                   <ProtectedRoute>
-                                    <Cards />
+                                    <Activities />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
-                              />
-                              
-                              <Route 
-                                path="/cards" 
-                                element={
-                                  <ProtectedRoute>
-                                    <Cards />
-                                    <BottomNavigation />
-                                  </ProtectedRoute>
-                                }
                               />
                               
                               <Route 
@@ -234,6 +226,16 @@ function App() {
                                 element={
                                   <ProtectedRoute>
                                     <Overview />
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/analytics" 
+                                element={
+                                  <ProtectedRoute>
+                                    <Analytics />
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 

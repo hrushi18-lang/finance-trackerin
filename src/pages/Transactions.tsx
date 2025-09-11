@@ -784,6 +784,53 @@ const Transactions: React.FC = () => {
         </div>
       </div>
 
+      {/* Analytics Card */}
+      <div className="px-4 mb-6">
+        <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl p-6 border border-white/10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600">
+                <BarChart3 size={24} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-heading text-white">Advanced Analytics</h3>
+                <p className="text-sm text-gray-300">Get deeper insights into your financial health</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/analytics')}
+              className="px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+              style={{ 
+                backgroundColor: 'var(--primary)',
+                color: 'white'
+              }}
+            >
+              <BarChart3 size={16} />
+              <span>View Analytics</span>
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 rounded-lg bg-white/5">
+              <div className="text-2xl font-bold text-white">85</div>
+              <div className="text-xs text-gray-400">Health Score</div>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-white/5">
+              <div className="text-2xl font-bold text-white">37.5%</div>
+              <div className="text-xs text-gray-400">Savings Rate</div>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-white/5">
+              <div className="text-2xl font-bold text-white">6.0</div>
+              <div className="text-xs text-gray-400">Emergency Fund</div>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-white/5">
+              <div className="text-2xl font-bold text-white">25%</div>
+              <div className="text-xs text-gray-400">Credit Usage</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Transaction List */}
       <div className="px-4">
         <TransactionList
