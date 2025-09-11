@@ -545,31 +545,40 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       sourceAccountId = vault.id;
     }
 
-    // Create transaction for the contribution
-    const transaction = {
-      type: 'expense' as const,
-      amount: amount,
-      category: 'Savings',
-      description: description || `Contribution to ${goal.title}`,
-      date: new Date(),
-      userId: user.id,
-      accountId: sourceAccountId,
-      affectsBalance: true,
-      status: 'completed' as const
-    };
-
-    await addTransaction(transaction);
-
     // Update goal current amount
     const newAmount = Math.min(Number(goal.currentAmount || 0) + Number(amount || 0), Number(goal.targetAmount || 0));
     await updateGoal(goalId, { currentAmount: newAmount });
 
-    // If goal is linked to Goals Vault, transfer funds there
+    // If goal is linked to Goals Vault, transfer funds there (this will create transactions)
     if (goal.accountId) {
       const vault = getGoalsVaultAccount();
       if (vault && sourceAccountId !== vault.id) {
         await transferBetweenAccounts(sourceAccountId, vault.id, amount, `Goal: ${goal.title}`);
+      } else {
+        // If transferring to same vault or no vault, create direct transaction
+        await addTransaction({
+          type: 'expense',
+          amount: amount,
+          category: 'Savings',
+          description: description || `Contribution to ${goal.title}`,
+          date: new Date(),
+          accountId: sourceAccountId,
+          affectsBalance: true,
+          status: 'completed'
+        });
       }
+    } else {
+      // If goal is not linked to vault, create direct transaction
+      await addTransaction({
+        type: 'expense',
+        amount: amount,
+        category: 'Savings',
+        description: description || `Contribution to ${goal.title}`,
+        date: new Date(),
+        accountId: sourceAccountId,
+        affectsBalance: true,
+        status: 'completed'
+      });
     }
   };
 
@@ -2062,13 +2071,31 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (transferError) throw transferError;
 
-    // Update account balances
-    await updateAccount(fromAccountId, {
-      balance: fromAccount.balance - amount
+    // Create transactions for both accounts
+    // Outgoing transaction (expense from source account)
+    await addTransaction({
+      type: 'expense',
+      amount: amount,
+      category: 'Transfer',
+      description: `${description} (to ${toAccount.name})`,
+      date: new Date(),
+      accountId: fromAccountId,
+      affectsBalance: true,
+      status: 'completed',
+      transferToAccountId: toAccountId
     });
 
-    await updateAccount(toAccountId, {
-      balance: toAccount.balance + amount
+    // Incoming transaction (income to destination account)
+    await addTransaction({
+      type: 'income',
+      amount: amount,
+      category: 'Transfer',
+      description: `${description} (from ${fromAccount.name})`,
+      date: new Date(),
+      accountId: toAccountId,
+      affectsBalance: true,
+      status: 'completed',
+      transferToAccountId: fromAccountId
     });
 
     // Add transfer to state
