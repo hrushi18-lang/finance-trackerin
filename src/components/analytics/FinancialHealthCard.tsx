@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Shield, AlertTriangle, CheckCircle, Target } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, Target } from 'lucide-react';
 
 interface FinancialHealthMetrics {
   netWorth: number;
@@ -27,6 +27,18 @@ export const FinancialHealthCard: React.FC<FinancialHealthCardProps> = ({
   metrics,
   formatCurrency
 }) => {
+  // Guard clause to handle undefined or incomplete metrics
+  if (!metrics || typeof metrics !== 'object') {
+    return (
+      <div className="p-6 rounded-2xl border" style={{ borderColor: 'var(--border)' }}>
+        <div className="text-center text-gray-400">
+          <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
+          <p>Financial health data is loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   const getHealthColor = (score: number) => {
     if (score >= 80) return 'text-green-400';
     if (score >= 60) return 'text-yellow-400';
@@ -62,8 +74,8 @@ export const FinancialHealthCard: React.FC<FinancialHealthCardProps> = ({
           </div>
         </div>
         <div className="text-right">
-          <div className={`text-3xl font-bold ${getHealthColor(metrics.overallHealthScore)}`}>
-            {metrics.overallHealthScore}
+          <div className={`text-3xl font-bold ${getHealthColor(metrics.overallHealthScore || 0)}`}>
+            {metrics.overallHealthScore || 0}
           </div>
           <div className="text-sm text-gray-400">Health Score</div>
         </div>
@@ -73,14 +85,14 @@ export const FinancialHealthCard: React.FC<FinancialHealthCardProps> = ({
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="text-center p-4 rounded-lg bg-white/5">
           <div className="flex items-center justify-center mb-2">
-            {getHealthIcon(metrics.overallHealthScore)}
+            {getHealthIcon(metrics.overallHealthScore || 0)}
           </div>
-          <div className="text-2xl font-bold text-white">{metrics.healthGrade}</div>
+          <div className="text-2xl font-bold text-white">{metrics.healthGrade || 'N/A'}</div>
           <div className="text-sm text-gray-400">Health Grade</div>
         </div>
         <div className="text-center p-4 rounded-lg bg-white/5">
-          <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getRiskColor(metrics.riskLevel)}`}>
-            {metrics.riskLevel.replace('_', ' ').toUpperCase()}
+          <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getRiskColor(metrics.riskLevel || 'unknown')}`}>
+            {(metrics.riskLevel || 'unknown').replace('_', ' ').toUpperCase()}
           </div>
           <div className="text-sm text-gray-400 mt-2">Risk Level</div>
         </div>
@@ -92,19 +104,19 @@ export const FinancialHealthCard: React.FC<FinancialHealthCardProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-400">Net Worth</span>
             <span className="text-sm font-medium text-white">
-              {formatCurrency(metrics.netWorth)}
+              {formatCurrency(metrics.netWorth || 0)}
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-400">Savings Rate</span>
             <span className="text-sm font-medium text-white">
-              {metrics.savingsRate.toFixed(1)}%
+              {(metrics.savingsRate || 0).toFixed(1)}%
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-400">Emergency Fund</span>
             <span className="text-sm font-medium text-white">
-              {metrics.emergencyFundMonths.toFixed(1)} months
+              {(metrics.emergencyFundMonths || 0).toFixed(1)} months
             </span>
           </div>
         </div>
@@ -112,26 +124,26 @@ export const FinancialHealthCard: React.FC<FinancialHealthCardProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-400">Debt-to-Income</span>
             <span className="text-sm font-medium text-white">
-              {(metrics.debtToIncomeRatio * 100).toFixed(1)}%
+              {((metrics.debtToIncomeRatio || 0) * 100).toFixed(1)}%
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-400">Credit Utilization</span>
             <span className="text-sm font-medium text-white">
-              {metrics.creditUtilization.toFixed(1)}%
+              {(metrics.creditUtilization || 0).toFixed(1)}%
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-400">Investment Ratio</span>
             <span className="text-sm font-medium text-white">
-              {metrics.investmentRatio.toFixed(1)}%
+              {(metrics.investmentRatio || 0).toFixed(1)}%
             </span>
           </div>
         </div>
       </div>
 
       {/* Recommendations */}
-      {metrics.recommendations.length > 0 && (
+      {metrics.recommendations && metrics.recommendations.length > 0 && (
         <div className="mt-6">
           <h4 className="text-sm font-medium text-white mb-3">Recommendations</h4>
           <div className="space-y-2">

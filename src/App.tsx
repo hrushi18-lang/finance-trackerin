@@ -130,8 +130,8 @@ function App() {
                           <FinanceProvider>
                             <PaymentProvider>
                               <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                            <AppInitializer>
-                            <RouteHandler>
+                                <AppInitializer>
+                                  <RouteHandler>
                               <div className="min-h-screen" data-app-content style={{ backgroundColor: 'var(--background)' }}>
                                 {/* Font Loading Indicator */}
                                 <FontLoadingIndicator />
@@ -420,10 +420,10 @@ function App() {
                               </Routes>
                             </div>
                           </div>
-                          </RouteHandler>
-                          </AppInitializer>
-                        </Router>
-                        <ReactQueryDevtools initialIsOpen={false} />
+                                  </RouteHandler>
+                                </AppInitializer>
+                              </Router>
+                              <ReactQueryDevtools initialIsOpen={false} />
                             </PaymentProvider>
                           </FinanceProvider>
                         </PersonalizationProvider>
