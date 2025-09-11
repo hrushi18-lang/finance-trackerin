@@ -17,8 +17,8 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     emptyOutDir: true,
-    sourcemap: true,
-    minify: true,
+    sourcemap: false,
+    minify: 'terser',
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
@@ -29,7 +29,20 @@ export default defineConfig({
           'form-vendor': ['react-hook-form'],
           'three-vendor': ['three', '@react-three/fiber', 'ogl'],
           'supabase-vendor': ['@supabase/supabase-js']
-        }
+        },
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name.split('.');
+          const ext = info[info.length - 1];
+          if (/\.(css)$/.test(assetInfo.name)) {
+            return `assets/css/[name]-[hash][extname]`;
+          }
+          if (/\.(js)$/.test(assetInfo.name)) {
+            return `assets/js/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
+        },
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js'
       }
     }
   },
