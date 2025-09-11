@@ -20,11 +20,26 @@ self.addEventListener('install', (event) => {
 
 // Fetch event
 self.addEventListener('fetch', (event) => {
+  // Skip Google Fonts requests to avoid CSP issues
+  if (event.request.url.includes('fonts.googleapis.com') || event.request.url.includes('fonts.gstatic.com')) {
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
         // Return cached version or fetch from network
-        return response || fetch(event.request);
+        if (response) {
+          return response;
+        }
+        
+        // Only fetch if it's not a Google Fonts request
+        if (!event.request.url.includes('fonts.googleapis.com') && !event.request.url.includes('fonts.gstatic.com')) {
+          return fetch(event.request).catch(() => {
+            // Return a fallback response for failed requests
+            return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+          });
+        }
       })
   );
 });
