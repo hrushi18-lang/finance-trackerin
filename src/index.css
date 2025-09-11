@@ -124,7 +124,7 @@
   --primary-light: #3b82f6;
   --primary-dark: #0d00b8;
   
-  --background: conic-gradient(from 0deg, #1500FE 68%, #060609 100%);
+  --background: conic-gradient(from 180deg, #1500FE 68%, #060609 100%);
   --background-secondary: rgba(255, 255, 255, 0.1);
   --background-tertiary: rgba(255, 255, 255, 0.05);
   
@@ -153,35 +153,111 @@
   --neumorphic-inset: inset 0 8px 32px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
-/* Angular Theme Glassmorphism Styles */
+/* Angular Theme Glassmorphism Styles - iOS 26 Style */
 [data-theme="angular"] .mobile-card,
 [data-theme="angular"] .card,
 [data-theme="angular"] [class*="card"] {
-  background: rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  border-radius: 20px !important;
 }
 
 [data-theme="angular"] .mobile-header {
-  background: rgba(255, 255, 255, 0.05) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 0 0 24px 24px !important;
 }
 
 [data-theme="angular"] .mobile-button {
-  background: rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(20px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   color: white !important;
+  border-radius: 16px !important;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 [data-theme="angular"] .mobile-button:hover {
-  background: rgba(255, 255, 255, 0.2) !important;
-  transform: translateY(-1px) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+[data-theme="angular"] .mobile-button:active {
+  transform: translateY(0) scale(0.98) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Enhanced glassmorphism for specific components */
+[data-theme="angular"] .mobile-input {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(20px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  color: white !important;
+}
+
+[data-theme="angular"] .mobile-input::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+[data-theme="angular"] .mobile-input:focus {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(21, 0, 254, 0.5) !important;
+  box-shadow: 
+    0 0 0 3px rgba(21, 0, 254, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* iOS 26 Style Enhancements */
+[data-theme="angular"] {
+  --glass-primary: rgba(255, 255, 255, 0.08);
+  --glass-secondary: rgba(255, 255, 255, 0.12);
+  --glass-tertiary: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-border-light: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --glass-shadow-light: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Enhanced glassmorphism for status cards */
+[data-theme="angular"] .status-card {
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(30px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 18px !important;
+  box-shadow: 
+    0 6px 24px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Glassmorphism for navigation elements */
+[data-theme="angular"] .bottom-nav {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 
+    0 -8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
 }
 
 /* Global Background */
