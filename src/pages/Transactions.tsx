@@ -6,6 +6,9 @@ import { Modal } from '../components/common/Modal';
 import { TransactionForm } from '../components/transactions/TransactionForm';
 import { RingChart } from '../components/analytics/RingChart';
 import { BarChart } from '../components/analytics/BarChart';
+import { FinancialHealthCard } from '../components/analytics/FinancialHealthCard';
+import { TrendAnalysis } from '../components/analytics/TrendAnalysis';
+import { PredictiveAnalytics } from '../components/analytics/PredictiveAnalytics';
 import { AnalyticsEngine } from '../utils/analytics-engine';
 import { 
   ArrowLeft, 
@@ -39,6 +42,13 @@ const Transactions: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showDetailedView, setShowDetailedView] = useState(false);
+  
+  // Analytics state
+  const [financialHealth, setFinancialHealth] = useState<any>(null);
+  const [trendData, setTrendData] = useState<any>(null);
+  const [predictions, setPredictions] = useState<any>(null);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Initialize analytics engine
   const analyticsEngine = useMemo(() => {
@@ -52,6 +62,74 @@ const Transactions: React.FC = () => {
       userCategories
     );
   }, [transactions, accounts, goals, bills, liabilities, budgets, userCategories]);
+
+  // Load analytics data
+  const loadAnalytics = async () => {
+    setIsLoadingAnalytics(true);
+    try {
+      // Simulate analytics loading (replace with actual analytics engine calls)
+      const mockFinancialHealth = {
+        netWorth: 25000,
+        totalAssets: 50000,
+        totalLiabilities: 25000,
+        totalIncome: 8000,
+        totalExpenses: 5000,
+        savingsRate: 37.5,
+        debtToIncomeRatio: 0.31,
+        creditUtilization: 25.0,
+        emergencyFundMonths: 6.0,
+        investmentRatio: 15.0,
+        overallHealthScore: 85,
+        healthGrade: 'A-',
+        riskLevel: 'low',
+        recommendations: [
+          'Continue your excellent savings rate',
+          'Consider increasing investment allocation',
+          'Maintain current debt management strategy'
+        ]
+      };
+
+      const mockTrendData = {
+        income: [
+          { period: 'Jan', value: 7500, change: 0, changePercent: 0, trend: 'stable' },
+          { period: 'Feb', value: 8000, change: 500, changePercent: 6.7, trend: 'up' },
+          { period: 'Mar', value: 8200, change: 200, changePercent: 2.5, trend: 'up' }
+        ],
+        expenses: [
+          { period: 'Jan', value: 4800, change: 0, changePercent: 0, trend: 'stable' },
+          { period: 'Feb', value: 5200, change: 400, changePercent: 8.3, trend: 'up' },
+          { period: 'Mar', value: 5000, change: -200, changePercent: 3.8, trend: 'down' }
+        ],
+        savings: [
+          { period: 'Jan', value: 2700, change: 0, changePercent: 0, trend: 'stable' },
+          { period: 'Feb', value: 2800, change: 100, changePercent: 3.7, trend: 'up' },
+          { period: 'Mar', value: 3200, change: 400, changePercent: 14.3, trend: 'up' }
+        ]
+      };
+
+      const mockPredictions = {
+        income: [
+          { period: 'Apr 2024', predicted: 8500, confidence: 85, trend: 'increasing', factors: ['Salary increase', 'Bonus season'] },
+          { period: 'May 2024', predicted: 8200, confidence: 80, trend: 'stable', factors: ['Regular salary', 'No bonuses'] },
+          { period: 'Jun 2024', predicted: 8300, confidence: 75, trend: 'increasing', factors: ['Performance review', 'Market trends'] }
+        ],
+        expenses: [
+          { period: 'Apr 2024', predicted: 5100, confidence: 80, trend: 'increasing', factors: ['Seasonal spending', 'Inflation impact'] },
+          { period: 'May 2024', predicted: 4900, confidence: 85, trend: 'decreasing', factors: ['Budget optimization', 'Reduced dining out'] },
+          { period: 'Jun 2024', predicted: 5000, confidence: 75, trend: 'stable', factors: ['Summer activities', 'Vacation planning'] }
+        ]
+      };
+
+      setFinancialHealth(mockFinancialHealth);
+      setTrendData(mockTrendData);
+      setPredictions(mockPredictions);
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Error loading analytics:', error);
+    } finally {
+      setIsLoadingAnalytics(false);
+    }
+  };
 
   // Calculate financial metrics
   const financialMetrics = useMemo(() => {
@@ -472,6 +550,88 @@ const Transactions: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* Enhanced Analytics Components */}
+              {financialHealth && (
+                <div className="mb-8">
+                  <FinancialHealthCard 
+                    metrics={financialHealth} 
+                    formatCurrency={(amount: number) => `$${amount.toFixed(2)}`} 
+                  />
+                </div>
+              )}
+
+              {/* Trend Analysis */}
+              {trendData && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <TrendAnalysis
+                    title="Income Trends"
+                    data={trendData.income}
+                    formatCurrency={(amount: number) => `$${amount.toFixed(2)}`}
+                    icon={<TrendingUp className="w-5 h-5 text-green-400" />}
+                  />
+                  <TrendAnalysis
+                    title="Expense Trends"
+                    data={trendData.expenses}
+                    formatCurrency={(amount: number) => `$${amount.toFixed(2)}`}
+                    icon={<TrendingDown className="w-5 h-5 text-red-400" />}
+                  />
+                  <TrendAnalysis
+                    title="Savings Trends"
+                    data={trendData.savings}
+                    formatCurrency={(amount: number) => `$${amount.toFixed(2)}`}
+                    icon={<Target className="w-5 h-5 text-blue-400" />}
+                  />
+                </div>
+              )}
+
+              {/* Predictive Analytics */}
+              {predictions && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <PredictiveAnalytics
+                    title="Income Forecast"
+                    predictions={predictions.income}
+                    formatCurrency={(amount: number) => `$${amount.toFixed(2)}`}
+                    icon={<TrendingUp className="w-6 h-6 text-purple-400" />}
+                  />
+                  <PredictiveAnalytics
+                    title="Expense Forecast"
+                    predictions={predictions.expenses}
+                    formatCurrency={(amount: number) => `$${amount.toFixed(2)}`}
+                    icon={<TrendingDown className="w-6 h-6 text-orange-400" />}
+                  />
+                </div>
+              )}
+
+              {/* Load Analytics Button */}
+              <div className="text-center">
+                <button
+                  onClick={loadAnalytics}
+                  disabled={isLoadingAnalytics}
+                  className="px-6 py-3 rounded-lg transition-colors flex items-center space-x-2 mx-auto disabled:opacity-50"
+                  style={{
+                    backgroundColor: 'var(--primary)',
+                    color: 'white'
+                  }}
+                >
+                  {isLoadingAnalytics ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      <span>Loading Analytics...</span>
+                    </>
+                  ) : (
+                    <>
+                      <BarChart3 size={20} />
+                      <span>Load Advanced Analytics</span>
+                    </>
+                  )}
+                </button>
+                {lastUpdated && (
+                  <p className="text-sm text-gray-400 mt-2">
+                    Last updated: {format(lastUpdated, 'MMM d, h:mm a')}
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>

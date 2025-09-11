@@ -1,473 +1,313 @@
 import React, { useState, useMemo } from 'react';
+import { 
+  ArrowLeft,
+  CreditCard,
+  Building2,
+  Wallet,
+  Target,
+  TrendingUp,
+  Plus,
+  Eye,
+  EyeOff,
+  Settings,
+  Star,
+  Shield,
+  Zap
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
-import { useSwipeGestures } from '../hooks/useMobileGestures';
-import { 
-  Target, 
-  PieChart, 
-  CreditCard, 
-  Receipt, 
-  Plus,
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  Calendar,
-  DollarSign,
-  AlertCircle
-} from 'lucide-react';
 import { format } from 'date-fns';
 
 const Cards: React.FC = () => {
   const navigate = useNavigate();
   const { formatCurrency } = useInternationalization();
-  const { 
-    goals, 
-    budgets, 
-    liabilities, 
-    bills 
-  } = useFinance();
-
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-
-  // Swipe gestures for card navigation
-  const { elementRef } = useSwipeGestures({
-    onSwipeLeft: () => {
-      if (currentCardIndex < 3) { // 4 cards total (0-3)
-        setCurrentCardIndex(currentCardIndex + 1);
-      }
-    },
-    onSwipeRight: () => {
-      if (currentCardIndex > 0) {
-        setCurrentCardIndex(currentCardIndex - 1);
-      }
-    },
-    threshold: 50,
-    velocityThreshold: 0.3
-  });
-
-  // Get active items
-  const activeGoals = useMemo(() => 
-    goals.filter(goal => !goal.is_archived), [goals]
-  );
+  const { accounts, transactions, goals, budgets, liabilities } = useFinance();
   
-  const activeBudgets = useMemo(() => 
-    budgets.filter(budget => budget.is_active), [budgets]
-  );
-  
-  const activeLiabilities = useMemo(() => 
-    liabilities.filter(liability => liability.is_active), [liabilities]
-  );
-  
-  const upcomingBills = useMemo(() => {
-    const nextWeek = new Date();
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    return bills.filter(bill => 
-      new Date(bill.due_date) <= nextWeek && !bill.is_paid
-    );
-  }, [bills]);
+  const [showBalances, setShowBalances] = useState(true);
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
-  // Create card data
-  const cardData = useMemo(() => [
-    {
-      type: 'goals',
-      title: 'Goals',
-      icon: Target,
-      color: 'var(--primary)',
-      items: activeGoals,
-      emptyMessage: 'No goals set',
-      emptyAction: () => navigate('/goals/create'),
-      emptyActionText: 'Create Goal'
-    },
-    {
-      type: 'budgets',
-      title: 'Budgets',
-      icon: PieChart,
-      color: 'var(--success)',
-      items: activeBudgets,
-      emptyMessage: 'No budgets set',
-      emptyAction: () => navigate('/budgets'),
-      emptyActionText: 'Create Budget'
-    },
-    {
-      type: 'liabilities',
-      title: 'Liabilities',
-      icon: CreditCard,
-      color: 'var(--warning)',
-      items: activeLiabilities,
-      emptyMessage: 'No liabilities',
-      emptyAction: () => navigate('/liabilities'),
-      emptyActionText: 'Add Liability'
-    },
-    {
-      type: 'bills',
-      title: 'Bills',
-      icon: Receipt,
-      color: 'var(--error)',
-      items: upcomingBills,
-      emptyMessage: 'No upcoming bills',
-      emptyAction: () => navigate('/bills'),
-      emptyActionText: 'Add Bill'
-    }
-  ], [activeGoals, activeBudgets, activeLiabilities, upcomingBills, navigate]);
+  // Calculate card statistics
+  const cardStats = useMemo(() => {
+    const creditCards = accounts.filter(acc => acc.type === 'credit_card');
+    const totalCreditLimit = creditCards.reduce((sum, acc) => sum + (acc.credit_limit || 0), 0);
+    const totalCreditUsed = creditCards.reduce((sum, acc) => sum + Math.abs(acc.balance || 0), 0);
+    const creditUtilization = totalCreditLimit > 0 ? (totalCreditUsed / totalCreditLimit) * 100 : 0;
+    
+    const monthlySpending = transactions
+      .filter(t => t.type === 'expense' && new Date(t.date) >= new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+      .reduce((sum, t) => sum + t.amount, 0);
 
-  const currentCard = cardData[currentCardIndex];
+    return {
+      totalCards: creditCards.length,
+      totalCreditLimit,
+      totalCreditUsed,
+      creditUtilization,
+      monthlySpending,
+      availableCredit: totalCreditLimit - totalCreditUsed
+    };
+  }, [accounts, transactions]);
 
-  const nextCard = () => {
-    setCurrentCardIndex((prev) => (prev + 1) % cardData.length);
-  };
+  // Get recent transactions for cards
+  const recentCardTransactions = useMemo(() => {
+    return transactions
+      .filter(t => accounts.find(acc => acc.id === t.accountId && acc.type === 'credit_card'))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+  }, [transactions, accounts]);
 
-  const prevCard = () => {
-    setCurrentCardIndex((prev) => (prev - 1 + cardData.length) % cardData.length);
-  };
-
-  const getGoalProgress = (goal: any) => {
-    return Math.min(((goal.current_amount || 0) / goal.target_amount) * 100, 100);
-  };
-
-  const getBudgetProgress = (budget: any) => {
-    return Math.min(((budget.spent_amount || 0) / budget.limit_amount) * 100, 100);
-  };
-
-  const getLiabilityProgress = (liability: any) => {
-    const total = liability.total_amount || 0;
-    const remaining = liability.remaining_amount || 0;
-    const paid = total - remaining;
-    return Math.min((paid / total) * 100, 100);
-  };
-
-  const getDaysUntilDue = (dueDate: string) => {
-    const today = new Date();
-    const due = new Date(dueDate);
-    const diffTime = due.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const renderGoalCard = (goal: any) => (
-    <div 
-      key={goal.id}
-      className="p-4 rounded-2xl mb-3 cursor-pointer transition-all duration-200 hover:scale-105"
-      style={{
-        backgroundColor: 'var(--background-secondary)',
-        boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-      }}
-      onClick={() => navigate(`/goals/${goal.id}`)}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-heading text-lg" style={{ color: 'var(--text-primary)' }}>
-          {goal.description || 'Untitled Goal'}
-        </h3>
-        <span className="text-sm font-body px-2 py-1 rounded-full" style={{ backgroundColor: 'var(--primary)', color: 'white' }}>
-          {Math.round(getGoalProgress(goal))}%
-        </span>
-      </div>
-      
-      <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
-        <div
-          className="h-3 rounded-full transition-all duration-300"
-          style={{
-            backgroundColor: 'var(--primary)',
-            width: `${getGoalProgress(goal)}%`
-          }}
-        />
-      </div>
-      
-      <div className="flex items-center justify-between text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
-        <span>{formatCurrency(goal.current_amount || 0)}</span>
-        <span>{formatCurrency(goal.target_amount || 0)}</span>
-      </div>
-    </div>
-  );
-
-  const renderBudgetCard = (budget: any) => (
-    <div 
-      key={budget.id}
-      className="p-4 rounded-2xl mb-3 cursor-pointer transition-all duration-200 hover:scale-105"
-      style={{
-        backgroundColor: 'var(--background-secondary)',
-        boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-      }}
-      onClick={() => navigate(`/budgets/${budget.id}`)}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-heading text-lg" style={{ color: 'var(--text-primary)' }}>
-          {budget.name || 'Untitled Budget'}
-        </h3>
-        <span className="text-sm font-body px-2 py-1 rounded-full" style={{ backgroundColor: 'var(--success)', color: 'white' }}>
-          {Math.round(getBudgetProgress(budget))}%
-        </span>
-      </div>
-      
-      <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
-        <div
-          className="h-3 rounded-full transition-all duration-300"
-          style={{
-            backgroundColor: getBudgetProgress(budget) > 100 ? 'var(--error)' : 'var(--success)',
-            width: `${Math.min(getBudgetProgress(budget), 100)}%`
-          }}
-        />
-      </div>
-      
-      <div className="flex items-center justify-between text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
-        <span>{formatCurrency(budget.spent_amount || 0)}</span>
-        <span>{formatCurrency(budget.limit_amount || 0)}</span>
-      </div>
-    </div>
-  );
-
-  const renderLiabilityCard = (liability: any) => (
-    <div 
-      key={liability.id}
-      className="p-4 rounded-2xl mb-3 cursor-pointer transition-all duration-200 hover:scale-105"
-      style={{
-        backgroundColor: 'var(--background-secondary)',
-        boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-      }}
-      onClick={() => navigate(`/liabilities/${liability.id}`)}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-heading text-lg" style={{ color: 'var(--text-primary)' }}>
-          {liability.name || 'Untitled Liability'}
-        </h3>
-        <span className="text-sm font-body px-2 py-1 rounded-full" style={{ backgroundColor: 'var(--warning)', color: 'white' }}>
-          {Math.round(getLiabilityProgress(liability))}%
-        </span>
-      </div>
-      
-      <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
-        <div
-          className="h-3 rounded-full transition-all duration-300"
-          style={{
-            backgroundColor: 'var(--warning)',
-            width: `${getLiabilityProgress(liability)}%`
-          }}
-        />
-      </div>
-      
-      <div className="flex items-center justify-between text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
-        <span>Paid: {formatCurrency((liability.total_amount || 0) - (liability.remaining_amount || 0))}</span>
-        <span>Total: {formatCurrency(liability.total_amount || 0)}</span>
-      </div>
-    </div>
-  );
-
-  const renderBillCard = (bill: any) => {
-    const daysUntilDue = getDaysUntilDue(bill.due_date);
-    const isOverdue = daysUntilDue < 0;
-    const isDueSoon = daysUntilDue <= 3 && daysUntilDue >= 0;
+  const CardItem = ({ account, isSelected, onClick }: { account: any, isSelected: boolean, onClick: () => void }) => {
+    const utilization = account.credit_limit > 0 ? (Math.abs(account.balance) / account.credit_limit) * 100 : 0;
+    const isOverLimit = account.balance < 0 && Math.abs(account.balance) > account.credit_limit;
     
     return (
       <div 
-        key={bill.id}
-        className="p-4 rounded-2xl mb-3 cursor-pointer transition-all duration-200 hover:scale-105"
-        style={{
-          backgroundColor: 'var(--background-secondary)',
-          boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-        }}
-        onClick={() => navigate(`/bills/${bill.id}`)}
+        className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
+          isSelected 
+            ? 'border-blue-400 bg-blue-500/10' 
+            : 'border-white/20 hover:border-white/30 bg-white/5'
+        }`}
+        onClick={onClick}
       >
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-heading text-lg" style={{ color: 'var(--text-primary)' }}>
-            {bill.name || 'Untitled Bill'}
-          </h3>
-          <div className="flex items-center space-x-2">
-            {isOverdue && <AlertCircle size={16} style={{ color: 'var(--error)' }} />}
-            {isDueSoon && !isOverdue && <AlertCircle size={16} style={{ color: 'var(--warning)' }} />}
-            <span 
-              className="text-sm font-body px-2 py-1 rounded-full"
-              style={{ 
-                backgroundColor: isOverdue ? 'var(--error)' : isDueSoon ? 'var(--warning)' : 'var(--success)', 
-                color: 'white' 
-              }}
-            >
-              {isOverdue ? 'Overdue' : isDueSoon ? 'Due Soon' : `${daysUntilDue}d`}
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
+              <CreditCard size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className="font-heading text-white">{account.name}</h3>
+              <p className="text-sm text-gray-400">**** {account.accountNumber?.slice(-4) || '1234'}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-400">Balance</p>
+            <p className={`font-numbers text-lg ${account.balance < 0 ? 'text-red-400' : 'text-white'}`}>
+              {showBalances ? formatCurrency(account.balance) : '••••••'}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">Credit Limit</span>
+            <span className="text-white">{formatCurrency(account.credit_limit || 0)}</span>
+          </div>
+          
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">Available</span>
+            <span className="text-green-400">
+              {formatCurrency((account.credit_limit || 0) - Math.abs(account.balance || 0))}
             </span>
           </div>
-        </div>
-        
-        <div className="flex items-center justify-between text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
-          <span>{formatCurrency(bill.amount || 0)}</span>
-          <span>{format(new Date(bill.due_date), 'MMM dd, yyyy')}</span>
-        </div>
-      </div>
-    );
-  };
 
-  const renderCardContent = () => {
-    if (currentCard.items.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'var(--background)' }}>
-            <currentCard.icon size={32} style={{ color: 'var(--text-tertiary)' }} />
+          <div className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Utilization</span>
+              <span className={`${utilization > 80 ? 'text-red-400' : utilization > 50 ? 'text-yellow-400' : 'text-green-400'}`}>
+                {utilization.toFixed(1)}%
+              </span>
+            </div>
+            <div className="w-full bg-gray-700 rounded-full h-2">
+              <div 
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  utilization > 80 ? 'bg-red-400' : utilization > 50 ? 'bg-yellow-400' : 'bg-green-400'
+                }`}
+                style={{ width: `${Math.min(utilization, 100)}%` }}
+              />
+            </div>
           </div>
-          <h3 className="text-lg font-heading mb-2" style={{ color: 'var(--text-primary)' }}>
-            {currentCard.emptyMessage}
-          </h3>
-          <button
-            onClick={currentCard.emptyAction}
-            className="px-6 py-3 rounded-full text-white font-medium transition-all duration-200 hover:scale-105"
-            style={{ backgroundColor: currentCard.color }}
-          >
-            {currentCard.emptyActionText}
-          </button>
-        </div>
-      );
-    }
 
-    return (
-      <div className="space-y-3">
-        {currentCard.items.map((item: any) => {
-          switch (currentCard.type) {
-            case 'goals':
-              return renderGoalCard(item);
-            case 'budgets':
-              return renderBudgetCard(item);
-            case 'liabilities':
-              return renderLiabilityCard(item);
-            case 'bills':
-              return renderBillCard(item);
-            default:
-              return null;
-          }
-        })}
+          {isOverLimit && (
+            <div className="flex items-center space-x-2 text-red-400 text-sm">
+              <Shield size={14} />
+              <span>Over Credit Limit</span>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: 'var(--background)' }} ref={elementRef}>
+    <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
       {/* Header */}
-      <div className="pt-12 pb-6 px-6">
+      <div className="pt-12 pb-6 px-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-heading" style={{ color: 'var(--text-primary)' }}>Financial Cards</h1>
-          <button
-            onClick={() => navigate('/add-transaction')}
-            className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
-            style={{ backgroundColor: 'var(--primary)' }}
-          >
-            <Plus size={20} className="text-white" />
-          </button>
-        </div>
-      </div>
-
-      {/* Card Navigation */}
-      <div className="px-6 mb-6">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={prevCard}
-            className="p-2 rounded-full transition-all duration-200 hover:scale-110"
-            style={{ backgroundColor: 'var(--background-secondary)' }}
-          >
-            <ChevronLeft size={20} style={{ color: 'var(--text-secondary)' }} />
-          </button>
-          
-          <div className="flex items-center space-x-2">
-            {cardData.map((_, index) => (
-              <div
-                key={index}
-                className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                  index === currentCardIndex ? 'scale-125' : ''
-                }`}
-                style={{ 
-                  backgroundColor: index === currentCardIndex ? currentCard.color : 'var(--text-tertiary)' 
-                }}
-              />
-            ))}
-          </div>
-          
-          <button
-            onClick={nextCard}
-            className="p-2 rounded-full transition-all duration-200 hover:scale-110"
-            style={{ backgroundColor: 'var(--background-secondary)' }}
-          >
-            <ChevronRight size={20} style={{ color: 'var(--text-secondary)' }} />
-          </button>
-        </div>
-      </div>
-
-      {/* Current Card */}
-      <div className="px-6">
-        <div 
-          className="p-6 rounded-3xl mb-6"
-          style={{
-            backgroundColor: 'var(--background-secondary)',
-            boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-          }}
-        >
-          <div className="flex items-center space-x-3 mb-6">
-            <div 
-              className="w-12 h-12 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: currentCard.color }}
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => navigate('/overview')}
+              className="p-2 rounded-full transition-all duration-200 hover:scale-105"
+              style={{ 
+                backgroundColor: 'var(--background-secondary)',
+                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
+              }}
             >
-              <currentCard.icon size={24} className="text-white" />
-            </div>
+              <ArrowLeft size={18} style={{ color: 'var(--text-primary)' }} />
+            </button>
             <div>
-              <h2 className="text-xl font-heading" style={{ color: 'var(--text-primary)' }}>
-                {currentCard.title}
-              </h2>
-              <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
-                {currentCard.items.length} {currentCard.items.length === 1 ? 'item' : 'items'}
-              </p>
+              <h1 className="text-2xl font-heading text-white">Cards</h1>
+              <p className="text-sm text-gray-400">Manage your credit cards and spending</p>
             </div>
           </div>
-          
-          {renderCardContent()}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowBalances(!showBalances)}
+              className="p-2 rounded-full transition-all duration-200 hover:scale-105"
+              style={{ 
+                backgroundColor: 'var(--background-secondary)',
+                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
+              }}
+              title={showBalances ? 'Hide Balances' : 'Show Balances'}
+            >
+              {showBalances ? <EyeOff size={16} style={{ color: 'var(--text-primary)' }} /> : <Eye size={16} style={{ color: 'var(--text-primary)' }} />}
+            </button>
+            <button
+              className="p-2 rounded-full transition-all duration-200 hover:scale-105"
+              style={{ 
+                backgroundColor: 'var(--background-secondary)',
+                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
+              }}
+              title="Settings"
+            >
+              <Settings size={16} style={{ color: 'var(--text-primary)' }} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="px-6">
-        <h3 className="text-lg font-heading mb-4" style={{ color: 'var(--text-primary)' }}>Quick Actions</h3>
+      <div className="px-4 space-y-6">
+        {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-4">
-          <button
-            onClick={() => navigate('/goals')}
-            className="p-4 rounded-2xl text-center transition-all duration-200 hover:scale-105"
-            style={{
-              backgroundColor: 'var(--background-secondary)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
-          >
-            <Target size={24} style={{ color: 'var(--primary)' }} className="mx-auto mb-2" />
-            <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>All Goals</p>
-          </button>
-          
-          <button
-            onClick={() => navigate('/budgets')}
-            className="p-4 rounded-2xl text-center transition-all duration-200 hover:scale-105"
-            style={{
-              backgroundColor: 'var(--background-secondary)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
-          >
-            <PieChart size={24} style={{ color: 'var(--success)' }} className="mx-auto mb-2" />
-            <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>All Budgets</p>
-          </button>
-          
-          <button
-            onClick={() => navigate('/liabilities')}
-            className="p-4 rounded-2xl text-center transition-all duration-200 hover:scale-105"
-            style={{
-              backgroundColor: 'var(--background-secondary)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
-          >
-            <CreditCard size={24} style={{ color: 'var(--warning)' }} className="mx-auto mb-2" />
-            <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>All Liabilities</p>
-          </button>
-          
-          <button
-            onClick={() => navigate('/bills')}
-            className="p-4 rounded-2xl text-center transition-all duration-200 hover:scale-105"
-            style={{
-              backgroundColor: 'var(--background-secondary)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
-          >
-            <Receipt size={24} style={{ color: 'var(--error)' }} className="mx-auto mb-2" />
-            <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>All Bills</p>
-          </button>
+          <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl p-4 border border-white/10">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="p-2 rounded-lg bg-blue-500/20">
+                <CreditCard size={20} className="text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-400">Total Cards</h3>
+                <p className="text-2xl font-bold text-white">{cardStats.totalCards}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl p-4 border border-white/10">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="p-2 rounded-lg bg-green-500/20">
+                <TrendingUp size={20} className="text-green-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-400">Available Credit</h3>
+                <p className="text-2xl font-bold text-white">{formatCurrency(cardStats.availableCredit)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 rounded-2xl p-4 border border-white/10">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="p-2 rounded-lg bg-yellow-500/20">
+                <Target size={20} className="text-yellow-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-400">Utilization</h3>
+                <p className="text-2xl font-bold text-white">{cardStats.creditUtilization.toFixed(1)}%</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl p-4 border border-white/10">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="p-2 rounded-lg bg-purple-500/20">
+                <Wallet size={20} className="text-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-400">Monthly Spending</h3>
+                <p className="text-2xl font-bold text-white">{formatCurrency(cardStats.monthlySpending)}</p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Credit Cards List */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-heading text-white">Your Cards</h2>
+            <button
+              onClick={() => navigate('/accounts')}
+              className="px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+              style={{
+                backgroundColor: 'var(--primary)',
+                color: 'white'
+              }}
+            >
+              <Plus size={16} />
+              <span className="text-sm font-medium">Add Card</span>
+            </button>
+          </div>
+
+          {accounts.filter(acc => acc.type === 'credit_card').length === 0 ? (
+            <div className="text-center py-12">
+              <div className="p-4 rounded-full bg-gray-500/20 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <CreditCard size={32} className="text-gray-400" />
+              </div>
+              <h3 className="text-lg font-heading text-white mb-2">No Credit Cards</h3>
+              <p className="text-gray-400 mb-6">Add your first credit card to start tracking spending</p>
+              <button
+                onClick={() => navigate('/accounts')}
+                className="px-6 py-3 rounded-lg transition-colors flex items-center space-x-2 mx-auto"
+                style={{
+                  backgroundColor: 'var(--primary)',
+                  color: 'white'
+                }}
+              >
+                <Plus size={20} />
+                <span className="font-medium">Add Credit Card</span>
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {accounts
+                .filter(acc => acc.type === 'credit_card')
+                .map((account) => (
+                  <CardItem
+                    key={account.id}
+                    account={account}
+                    isSelected={selectedCard === account.id}
+                    onClick={() => setSelectedCard(selectedCard === account.id ? null : account.id)}
+                  />
+                ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recent Transactions */}
+        {recentCardTransactions.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-heading text-white">Recent Card Transactions</h2>
+            <div className="space-y-2">
+              {recentCardTransactions.map((transaction) => {
+                const account = accounts.find(acc => acc.id === transaction.accountId);
+                return (
+                  <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 rounded-lg bg-blue-500/20">
+                        <CreditCard size={16} className="text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{transaction.description}</p>
+                        <p className="text-sm text-gray-400">{account?.name} • {format(new Date(transaction.date), 'MMM d')}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-numbers ${transaction.type === 'expense' ? 'text-red-400' : 'text-green-400'}`}>
+                        {transaction.type === 'expense' ? '-' : '+'}{formatCurrency(transaction.amount)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

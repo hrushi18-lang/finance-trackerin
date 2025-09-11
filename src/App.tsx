@@ -32,7 +32,7 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import AddTransaction from './pages/AddTransaction';
 import TransactionsCalendar from './pages/TransactionsCalendar';
-import Analytics from './pages/Analytics';
+import Cards from './pages/Cards';
 import Calendar from './pages/Calendar';
 import Goals from './pages/Goals';
 import Liabilities from './pages/Liabilities';
@@ -219,13 +219,13 @@ function App() {
                               />
                               
                               <Route 
-                                path="/analytics" 
+                                path="/cards" 
                                 element={
                                   <ProtectedRoute>
-                                    <Analytics />
+                                    <Cards />
                                     <BottomNavigation />
                                   </ProtectedRoute>
-                                } 
+                                }
                               />
                               
                               <Route 
