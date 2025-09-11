@@ -25,12 +25,8 @@ export const PerformanceOptimizer: React.FC<PerformanceOptimizerProps> = ({ chil
 
     // Preload critical resources
     const preloadResources = () => {
-      // Preload fonts
-      const fontLink = document.createElement('link');
-      fontLink.rel = 'preload';
-      fontLink.href = 'https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&family=Playfair+Display:wght@400;600&display=swap';
-      fontLink.as = 'style';
-      document.head.appendChild(fontLink);
+      // Self-hosted fonts are already loaded via @font-face in CSS
+      // No need to preload external fonts
 
       // Preload critical images
       const imagePreloads = [

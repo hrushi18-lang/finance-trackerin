@@ -157,11 +157,15 @@ export default {
         },
       },
       fontFamily: {
+        // Self-hosted Font Families
+        'heading': ['Archivo Black', 'sans-serif'],
+        'number': ['Archivo', 'sans-serif'],
+        'title': ['Archivo', 'sans-serif'],
+        'description': ['Playfair Display', 'serif'],
+        
         // Mobile-First Font Specifications using CSS variables
-        'heading': ['var(--font-heading)'],
         'numbers': ['var(--font-numbers)'],
         'titles': ['var(--font-primary)'],
-        'description': ['var(--font-description)'],
         
         // Legacy support with fallbacks
         'sans': ['var(--font-primary)'],

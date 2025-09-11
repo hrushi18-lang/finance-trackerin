@@ -16,9 +16,9 @@ class FontLoader {
   private fallbackTimeout = 3000; // 3 seconds fallback timeout
 
   /**
-   * Load Google Fonts with fallback handling
+   * Load self-hosted fonts with fallback handling
    */
-  async loadGoogleFonts(fonts: FontConfig[]): Promise<void> {
+  async loadSelfHostedFonts(fonts: FontConfig[]): Promise<void> {
     try {
       // Check if fonts are already loaded
       const fontFaces = Array.from(document.fonts);
@@ -27,32 +27,19 @@ class FontLoader {
       );
 
       if (alreadyLoaded) {
-        console.log('Fonts already loaded');
+        console.log('Self-hosted fonts already loaded');
         return;
       }
 
-      // Create font URL with proper encoding
-      const fontFamilies = fonts.map(font => {
-        const weights = font.weights.join(';');
-        return `${font.family.replace(/\s+/g, '+')}:wght@${weights}`;
-      }).join('&family=');
-
-      const fontUrl = `https://fonts.googleapis.com/css2?family=${fontFamilies}&display=swap&subset=latin`;
-
-      // Load fonts with timeout
-      await Promise.race([
-        this.loadFontStylesheet(fontUrl),
-        this.createTimeoutPromise(this.fallbackTimeout)
-      ]);
-
-      // Wait for fonts to be actually loaded
+      // Self-hosted fonts are loaded via @font-face in CSS
+      // Just wait for them to be available
       await this.waitForFontsToLoad(fonts);
 
       // Mark fonts as loaded
       fonts.forEach(font => this.loadedFonts.add(font.family));
 
     } catch (error) {
-      console.warn('Failed to load Google Fonts, using fallbacks:', error);
+      console.warn('Failed to load self-hosted fonts, using fallbacks:', error);
       this.enableFallbackFonts();
     }
   }
@@ -66,25 +53,11 @@ class FontLoader {
   }
 
   /**
-   * Load font stylesheet
+   * Load font stylesheet (deprecated - using self-hosted fonts)
    */
   private loadFontStylesheet(url: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = url;
-      link.onload = () => {
-        console.log('Font stylesheet loaded successfully');
-        resolve();
-      };
-      link.onerror = (error) => {
-        console.warn('Font stylesheet loading failed:', error);
-        // Don't reject, just resolve to continue with fallbacks
-        resolve();
-      };
-      
-      document.head.appendChild(link);
-    });
+    // This method is no longer used with self-hosted fonts
+    return Promise.resolve();
   }
 
   /**
@@ -152,14 +125,14 @@ class FontLoader {
       return;
     }
 
-    // Use standard font loading for desktop
+    // Use self-hosted font loading for desktop
     const criticalFonts = [
       { family: 'Archivo', weights: [400, 500, 600, 700] },
       { family: 'Archivo Black', weights: [400] },
       { family: 'Playfair Display', weights: [400, 500, 600, 700] }
     ];
 
-    await this.loadGoogleFonts(criticalFonts);
+    await this.loadSelfHostedFonts(criticalFonts);
   }
 
   /**
