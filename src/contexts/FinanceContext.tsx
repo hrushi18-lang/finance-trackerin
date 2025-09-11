@@ -343,8 +343,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Only create if it doesn't exist in database
       if (checkError && checkError.code === 'PGRST116') {
         // Use user's selected currency from onboarding/internationalization
-        const savedCurrency = typeof window !== 'undefined' ? localStorage.getItem('finspire_currency') : null;
-        const defaultCurrency = accounts[0]?.currencyCode || savedCurrency || 'USD';
+        const defaultCurrency = getUserCurrency();
 
         const { data, error } = await supabase
           .from('financial_accounts')
@@ -393,7 +392,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const getGoalsVaultAccount = () => accounts.find(a => a.type === 'goals_vault');
 
-  const createGoalsVaultAccount = async (name: string = 'Goals Vault', currencyCode: string = 'USD') => {
+  // Helper function to get user's selected currency
+  const getUserCurrency = () => {
+    if (typeof window !== 'undefined') {
+      const savedCurrency = localStorage.getItem('finspire_currency');
+      return savedCurrency || 'USD';
+    }
+    return 'USD';
+  };
+
+  const createGoalsVaultAccount = async (name: string = 'Goals Vault', currencyCode: string = getUserCurrency()) => {
     if (!user) throw new Error('User not authenticated');
     
     // Check if Goals Vault already exists
@@ -629,7 +637,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     generatePaymentReceipt({
       id: transaction.id,
       amount: payAmount,
-      currency: account.currency || 'USD',
+      currency: account.currency || getUserCurrency(),
       description: description || `Bill Payment: ${bill.title}`,
       accountName: account.name,
       paymentType: 'bill_payment',
@@ -1127,7 +1135,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       activityScope: goal.activity_scope || 'general',
       accountIds: goal.account_ids || [],
       targetCategory: goal.target_category,
-      currencyCode: goal.currency_code || 'USD',
+      currencyCode: goal.currency_code || getUserCurrency(),
       linkedAccountsCount: goal.linked_accounts_count || 0,
       // New completion and management fields
       completionDate: goal.completion_date ? new Date(goal.completion_date) : undefined,
@@ -1209,7 +1217,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         lastModifiedDate: liability.last_modified_date ? new Date(liability.last_modified_date) : undefined,
         modificationReason: liability.modification_reason,
         typeSpecificData: liability.type_specific_data || {},
-        currencyCode: liability.currency_code || 'USD',
+        currencyCode: liability.currency_code || getUserCurrency(),
         activityScope: liability.activity_scope || 'general',
         accountIds: accountIds,
         targetCategory: targetCategory,
@@ -1248,7 +1256,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       activityScope: budget.activity_scope || 'general',
       accountIds: budget.account_ids || [],
       targetCategory: budget.target_category,
-      currencyCode: budget.currency_code || 'USD',
+      currencyCode: budget.currency_code || getUserCurrency(),
       startDate: budget.start_date ? new Date(budget.start_date) : new Date(),
       endDate: budget.end_date ? new Date(budget.end_date) : undefined,
       createdAt: new Date(budget.created_at),
@@ -1306,7 +1314,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       accountIds: [],
       linkedAccountsCount: bill.linked_accounts_count || 0,
       // New fields
-      currencyCode: bill.currency_code || 'USD',
+      currencyCode: bill.currency_code || getUserCurrency(),
       isIncome: bill.is_income || false,
       billStage: bill.bill_stage || 'pending',
       movedToDate: bill.moved_to_date ? new Date(bill.moved_to_date) : undefined,
@@ -1512,8 +1520,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       toTransactionId: transfer.to_transaction_id,
       createdAt: new Date(transfer.created_at),
       // Add missing required fields with defaults
-      fromCurrency: 'USD',
-      toCurrency: 'USD',
+      fromCurrency: getUserCurrency(),
+      toCurrency: getUserCurrency(),
       transferType: 'manual',
       status: 'completed'
     }));
@@ -2256,9 +2264,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         transfer_to_account_id: transactionData.transferToAccountId || null,
         status: transactionData.status || 'completed',
         // Currency fields
-        currency_code: (transactionData as any).currencyCode || 'USD',
+        currency_code: (transactionData as any).currencyCode || getUserCurrency(),
         original_amount: (transactionData as any).originalAmount || transactionData.amount,
-        original_currency: (transactionData as any).originalCurrency || 'USD',
+        original_currency: (transactionData as any).originalCurrency || getUserCurrency(),
         exchange_rate_used: (transactionData as any).exchangeRateUsed || 1.0,
         // Payment source tracking
         payment_source: (transactionData as any).paymentSource || null,
@@ -2421,7 +2429,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         status: goalData.status || 'active',
         activity_scope: goalData.activityScope || 'general',
         linked_accounts_count: goalData.linkedAccountsCount || 0,
-        currency_code: (goalData as any).currencyCode || 'USD'
+        currency_code: (goalData as any).currencyCode || getUserCurrency()
       })
       .select()
       .single();
@@ -2457,7 +2465,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       originalTargetAmount: data.original_target_amount ? Number(data.original_target_amount) : undefined,
       extendedTargetAmount: data.extended_target_amount ? Number(data.extended_target_amount) : undefined,
       completionNotes: data.completion_notes,
-      currencyCode: data.currency_code || 'USD'
+      currencyCode: data.currency_code || getUserCurrency()
     };
 
     setGoals(prev => [newGoal, ...prev]);
@@ -2699,7 +2707,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         last_modified_date: liabilityData.lastModifiedDate?.toISOString(),
         modification_reason: liabilityData.modificationReason,
         type_specific_data: liabilityData.typeSpecificData || {},
-        currency_code: liabilityData.currencyCode || 'USD',
+        currency_code: liabilityData.currencyCode || getUserCurrency(),
         activity_scope: liabilityData.activityScope || 'general',
         priority: liabilityData.priority || 'medium'
       })
@@ -2748,7 +2756,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       lastModifiedDate: data.last_modified_date ? new Date(data.last_modified_date) : undefined,
       modificationReason: data.modification_reason,
       typeSpecificData: data.type_specific_data || {},
-      currencyCode: data.currency_code || 'USD',
+      currencyCode: data.currency_code || getUserCurrency(),
       activityScope: liabilityData.activityScope || 'general',
       accountIds: liabilityData.accountIds || [],
       targetCategory: liabilityData.targetCategory,
@@ -3225,7 +3233,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       activityScope: budgetData.activityScope || 'general',
       accountIds: budgetData.accountIds || [],
       targetCategory: budgetData.targetCategory,
-      currencyCode: budgetData.currencyCode || 'USD',
+      currencyCode: budgetData.currencyCode || getUserCurrency(),
       startDate: data.start_date ? new Date(data.start_date) : new Date(),
       endDate: data.end_date ? new Date(data.end_date) : undefined,
       createdAt: new Date(data.created_at)
@@ -3314,7 +3322,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         activity_scope: billData.activityScope || 'general',
         target_category: billData.targetCategory,
         linked_accounts_count: billData.accountIds?.length || 0,
-        currency_code: billData.currencyCode || 'USD',
+        currency_code: billData.currencyCode || getUserCurrency(),
         is_income: billData.isIncome || false,
         is_variable_amount: billData.isVariableAmount || false,
         min_amount: billData.minAmount,
@@ -3363,7 +3371,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       accountIds: [], // Will be loaded separately from activity_account_links
       linkedAccountsCount: data.linked_accounts_count || 0,
       // New fields
-      currencyCode: data.currency_code || 'USD',
+      currencyCode: data.currency_code || getUserCurrency(),
       isIncome: data.is_income || false,
       billStage: data.bill_stage || 'pending',
       movedToDate: data.moved_to_date ? new Date(data.moved_to_date) : undefined,
