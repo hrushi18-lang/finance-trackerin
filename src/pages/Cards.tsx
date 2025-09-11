@@ -348,7 +348,7 @@ const Cards: React.FC = () => {
               <h3 className="text-lg font-heading text-white">Expenses by Category</h3>
               <button
                 onClick={() => {
-                  setPopupData(analyticsData.categoryBreakdown);
+                  setPopupData(Object.entries(analyticsData.categoryBreakdown).map(([name, value]) => ({ name, value })));
                   setPopupType('ring');
                   setShowChartPopup(true);
                 }}
@@ -357,7 +357,7 @@ const Cards: React.FC = () => {
                 <PieChart size={16} className="text-gray-400" />
               </button>
             </div>
-            <RingChart data={analyticsData.categoryBreakdown} />
+            <RingChart data={Object.entries(analyticsData.categoryBreakdown).map(([name, value]) => ({ name, value }))} />
           </div>
 
           {/* Monthly Trends */}
