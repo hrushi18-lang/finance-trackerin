@@ -26,7 +26,7 @@ import { ChartPopup } from '../components/analytics/ChartPopup';
 import { FinancialHealthCard } from '../components/analytics/FinancialHealthCard';
 import { TrendAnalysis } from '../components/analytics/TrendAnalysis';
 import { PredictiveAnalytics } from '../components/analytics/PredictiveAnalytics';
-import { EnhancedAnalyticsEngine } from '../services/enhancedAnalyticsEngine';
+// import { EnhancedAnalyticsEngine } from '../services/enhancedAnalyticsEngine';
 
 const Analytics: React.FC = () => {
   const navigate = useNavigate();
@@ -45,86 +45,32 @@ const Analytics: React.FC = () => {
   const [customDateRange, setCustomDateRange] = useState<{start: Date | null, end: Date | null}>({start: null, end: null});
   const [showDetailedView, setShowDetailedView] = useState(false);
   
-  // Enhanced analytics state
-  const [analyticsEngine, setAnalyticsEngine] = useState<EnhancedAnalyticsEngine | null>(null);
+  // Enhanced analytics state (temporarily disabled)
+  // const [analyticsEngine, setAnalyticsEngine] = useState<EnhancedAnalyticsEngine | null>(null);
   const [financialHealth, setFinancialHealth] = useState<any>(null);
   const [trendData, setTrendData] = useState<any>(null);
   const [predictions, setPredictions] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Initialize analytics engine
-  useEffect(() => {
-    if (user?.id) {
-      setAnalyticsEngine(new EnhancedAnalyticsEngine(user.id));
-    }
-  }, [user?.id]);
+  // Initialize analytics engine (temporarily disabled)
+  // useEffect(() => {
+  //   if (user?.id) {
+  //     setAnalyticsEngine(new EnhancedAnalyticsEngine(user.id));
+  //   }
+  // }, [user?.id]);
 
-  // Load enhanced analytics data
+  // Load enhanced analytics data (temporarily disabled)
   const loadEnhancedAnalytics = async () => {
-    if (!analyticsEngine) return;
-    
-    setIsLoading(true);
-    try {
-      const currentDate = new Date();
-      let startDate: Date;
-      let endDate: Date;
-
-      if (customDateRange.start && customDateRange.end) {
-        startDate = customDateRange.start;
-        endDate = customDateRange.end;
-      } else {
-        switch (selectedPeriod) {
-          case 'lastMonth':
-            startDate = startOfMonth(subMonths(currentDate, 1));
-            endDate = endOfMonth(subMonths(currentDate, 1));
-            break;
-          case 'last3Months':
-            startDate = startOfMonth(subMonths(currentDate, 3));
-            endDate = endOfMonth(currentDate);
-            break;
-          case 'last6Months':
-            startDate = startOfMonth(subMonths(currentDate, 6));
-            endDate = endOfMonth(currentDate);
-            break;
-          default:
-            startDate = startOfMonth(currentDate);
-            endDate = endOfMonth(currentDate);
-        }
-      }
-
-      // Load all enhanced analytics in parallel
-      const [healthData, incomeTrends, expenseTrends, savingsTrends, incomePredictions, expensePredictions] = await Promise.all([
-        analyticsEngine.calculateFinancialHealth(startDate, endDate),
-        analyticsEngine.getTrendAnalysis(startDate, endDate, 'income'),
-        analyticsEngine.getTrendAnalysis(startDate, endDate, 'expenses'),
-        analyticsEngine.getTrendAnalysis(startDate, endDate, 'savings'),
-        analyticsEngine.getPredictiveAnalytics(startDate, endDate, 'income'),
-        analyticsEngine.getPredictiveAnalytics(startDate, endDate, 'expenses')
-      ]);
-
-      setFinancialHealth(healthData);
-      setTrendData({
-        income: incomeTrends,
-        expenses: expenseTrends,
-        savings: savingsTrends
-      });
-      setPredictions({
-        income: incomePredictions,
-        expenses: expensePredictions
-      });
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error('Error loading enhanced analytics:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    // Temporarily disabled to fix deadlock
+    console.log('Enhanced analytics temporarily disabled');
+    setLastUpdated(new Date());
   };
 
-  // Load analytics when dependencies change
-  useEffect(() => {
-    loadEnhancedAnalytics();
-  }, [analyticsEngine, selectedPeriod, customDateRange]);
+  // Load analytics when dependencies change (temporarily disabled)
+  // useEffect(() => {
+  //   loadEnhancedAnalytics();
+  // }, [analyticsEngine, selectedPeriod, customDateRange]);
 
   // Calculate analytics data
   const analyticsData = useMemo(() => {
