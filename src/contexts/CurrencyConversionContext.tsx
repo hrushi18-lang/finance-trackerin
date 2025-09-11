@@ -52,7 +52,7 @@ export const CurrencyConversionProvider: React.FC<CurrencyConversionProviderProp
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [offlineRates, setOfflineRates] = useState<ExchangeRates>({});
 
-  // Fallback exchange rates for offline use (approximate rates)
+  // Fallback exchange rates for offline use (approximate rates) - only supported currencies
   const fallbackRates: ExchangeRates = {
     'USD': 1.0,
     'EUR': 0.85,
@@ -63,38 +63,11 @@ export const CurrencyConversionProvider: React.FC<CurrencyConversionProviderProp
     'AUD': 1.35,
     'CAD': 1.25,
     'SGD': 1.35,
-    'HKD': 7.8,
-    'KRW': 1180.0,
-    'THB': 33.0,
     'MYR': 4.15,
-    'IDR': 14250.0,
-    'PHP': 50.5,
-    'VND': 23000.0,
-    'CHF': 0.92,
-    'SEK': 8.6,
-    'NOK': 8.5,
-    'DKK': 6.35,
-    'PLN': 3.9,
-    'CZK': 21.5,
-    'HUF': 295.0,
-    'RUB': 73.0,
-    'BRL': 5.2,
-    'MXN': 20.1,
-    'ARS': 98.0,
-    'CLP': 710.0,
-    'COP': 3650.0,
-    'PEN': 3.6,
     'AED': 3.67,
-    'SAR': 3.75,
-    'QAR': 3.64,
-    'ILS': 3.2,
-    'TRY': 8.5,
+    'NZD': 1.62,
     'ZAR': 14.8,
-    'EGP': 15.7,
-    'NGN': 411.0,
-    'KES': 108.0,
-    'BTC': 0.000023,
-    'ETH': 0.00035
+    'LKR': 325.0
   };
 
   // Monitor online status

@@ -112,7 +112,7 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
   const primaryCurrency = userPreferences?.primary_currency || 'USD';
   const displayCurrency = userPreferences?.display_currency || 'USD';
 
-  // Fallback exchange rates (updated with current approximate rates)
+  // Fallback exchange rates (updated with current approximate rates) - only supported currencies
   const fallbackRates: ExchangeRates = {
     'USD': 1.0,
     'INR': 83.45,
@@ -314,7 +314,18 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
   // Save rates to database
   const saveRatesToDatabase = async (rates: ExchangeRates, source: string, apiProvider?: string) => {
     try {
-      const rateEntries = Object.entries(rates).map(([currency, rate]) => ({
+      // Only save rates for currencies that exist in supported_currencies table
+      const supportedCurrencyCodes = supportedCurrencies.map(c => c.code);
+      const filteredRates = Object.entries(rates).filter(([currency]) => 
+        supportedCurrencyCodes.includes(currency)
+      );
+
+      if (filteredRates.length === 0) {
+        console.log('No supported currencies found in rates, skipping database save');
+        return;
+      }
+
+      const rateEntries = filteredRates.map(([currency, rate]) => ({
         from_currency: 'USD',
         to_currency: currency,
         rate: rate,
