@@ -32,6 +32,30 @@ interface GoalFormProps {
 
 const goalCategories = ['Emergency', 'Travel', 'Education', 'Home', 'Investment', 'Other'];
 
+const goalTypes = [
+  { 
+    id: 'general', 
+    name: 'Random Goal', 
+    description: 'Personal goals like "Travel to India", "Buy something"', 
+    icon: '🎯',
+    examples: ['Travel to India', 'Buy a new laptop', 'Save for vacation']
+  },
+  { 
+    id: 'account_specific', 
+    name: 'Account-Specific', 
+    description: 'Goals linked to a specific account', 
+    icon: '🏦',
+    examples: ['Save $5000 in SBI account', 'Build emergency fund in checking']
+  },
+  { 
+    id: 'category_based', 
+    name: 'Category-Based', 
+    description: 'Goals based on spending categories', 
+    icon: '📊',
+    examples: ['Reduce food spending', 'Save on entertainment']
+  }
+];
+
 export const GoalForm: React.FC<GoalFormProps> = ({
   onSubmit,
   onCancel,
@@ -42,6 +66,9 @@ export const GoalForm: React.FC<GoalFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [goalCurrency, setGoalCurrency] = useState(initialData?.currencyCode || 'USD');
+  const [selectedGoalType, setSelectedGoalType] = useState<'general' | 'account_specific' | 'category_based'>(
+    initialData?.activityScope || 'general'
+  );
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<GoalFormData>({
     defaultValues: {
@@ -95,11 +122,11 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         accountId: validatedData.account_id,
         currencyCode: goalCurrency,
         // Add scoping fields from validated data
-        activityScope: validatedData.activity_scope,
-        accountIds: validatedData.account_ids || [],
-        targetCategory: validatedData.target_category,
-        goalType: validatedData.activity_scope === 'account_specific' ? 'account_specific' : 
-                 validatedData.activity_scope === 'category_based' ? 'category_based' : 'general_savings',
+        activityScope: selectedGoalType,
+        accountIds: selectedGoalType === 'account_specific' ? (data.accountIds || []) : [],
+        targetCategory: selectedGoalType === 'category_based' ? data.targetCategory : undefined,
+        goalType: selectedGoalType === 'account_specific' ? 'account_specific' : 
+                 selectedGoalType === 'category_based' ? 'category_based' : 'general_savings',
         priority: validatedData.priority,
         status: 'active'
       });
@@ -149,6 +176,37 @@ export const GoalForm: React.FC<GoalFormProps> = ({
             ? 'Update your goal details to stay on track with your financial journey.'
             : 'Set clear targets for your financial journey. Track your progress and stay motivated!'}
         </p>
+      </div>
+
+      {/* Goal Type Selection */}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <h4 className="text-md font-semibold text-white mb-4">Goal Type</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {goalTypes.map((type) => (
+            <button
+              key={type.id}
+              type="button"
+              onClick={() => {
+                setSelectedGoalType(type.id as any);
+                setValue('activityScope', type.id as any);
+              }}
+              className={`p-4 rounded-lg border-2 transition-all ${
+                selectedGoalType === type.id
+                  ? 'border-primary-500 bg-primary-500/20'
+                  : 'border-white/20 hover:border-white/40'
+              }`}
+            >
+              <div className="text-center">
+                <div className="text-2xl mb-2">{type.icon}</div>
+                <h5 className="font-semibold text-white text-sm mb-1">{type.name}</h5>
+                <p className="text-xs text-gray-400 mb-2">{type.description}</p>
+                <div className="text-xs text-gray-500">
+                  Examples: {type.examples.slice(0, 2).join(', ')}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
@@ -377,7 +435,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       </div>
 
       {/* Account Selection - Only show if account_specific is selected */}
-      {watch('activityScope') === 'account_specific' && (
+      {selectedGoalType === 'account_specific' && (
         <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
           <label className="block text-sm font-medium text-gray-300 mb-3">
             Select Accounts (Multiple Selection)
@@ -408,7 +466,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       )}
 
       {/* Target Category - Only show if category_based is selected */}
-      {watch('activityScope') === 'category_based' && (
+      {selectedGoalType === 'category_based' && (
         <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Target Category

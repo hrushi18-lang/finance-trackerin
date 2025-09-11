@@ -62,6 +62,29 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
       setIsSubmitting(true);
       setError(null);
       
+      // Check for withdrawal warning (>80% of goal amount)
+      if (transactionType === 'withdraw') {
+        const withdrawalAmount = Number(data.amount);
+        const withdrawalPercentage = (withdrawalAmount / goal.currentAmount) * 100;
+        
+        if (withdrawalPercentage > 80) {
+          const confirmed = window.confirm(
+            `⚠️ WARNING: You're withdrawing ${withdrawalPercentage.toFixed(1)}% of your goal!\n\n` +
+            `This will leave only ${((goal.currentAmount - withdrawalAmount) / goal.currentAmount * 100).toFixed(1)}% remaining.\n\n` +
+            `Consider:\n` +
+            `• Deleting the goal if it's no longer needed\n` +
+            `• Archiving it for future reference\n` +
+            `• Continuing with a smaller amount\n\n` +
+            `Do you want to proceed with this withdrawal?`
+          );
+          
+          if (!confirmed) {
+            setIsSubmitting(false);
+            return;
+          }
+        }
+      }
+      
       await onSubmit({
         ...data,
         amount: Number(data.amount),
