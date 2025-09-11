@@ -21,13 +21,51 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'chart-vendor': ['recharts'],
-          'i18n-vendor': ['i18next', 'react-i18next'],
-          'form-vendor': ['react-hook-form'],
-          'three-vendor': ['three', '@react-three/fiber', 'ogl'],
-          'supabase-vendor': ['@supabase/supabase-js']
+        manualChunks: (id) => {
+          // React and core libraries
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            return 'react-vendor';
+          }
+          // Charts and visualization
+          if (id.includes('recharts') || id.includes('chart')) {
+            return 'chart-vendor';
+          }
+          // Internationalization
+          if (id.includes('i18next') || id.includes('react-i18next')) {
+            return 'i18n-vendor';
+          }
+          // Forms and validation
+          if (id.includes('react-hook-form') || id.includes('zod')) {
+            return 'form-vendor';
+          }
+          // 3D libraries
+          if (id.includes('three') || id.includes('@react-three/fiber') || id.includes('ogl')) {
+            return 'three-vendor';
+          }
+          // Supabase
+          if (id.includes('@supabase') || id.includes('supabase')) {
+            return 'supabase-vendor';
+          }
+          // UI libraries
+          if (id.includes('lucide-react') || id.includes('clsx') || id.includes('tailwind')) {
+            return 'ui-vendor';
+          }
+          // Query and state management
+          if (id.includes('@tanstack') || id.includes('react-query')) {
+            return 'query-vendor';
+          }
+          // Date utilities
+          if (id.includes('date-fns')) {
+            return 'date-vendor';
+          }
+          // Large utility libraries
+          if (id.includes('uuid') || id.includes('isomorphic-dompurify')) {
+            return 'utils-vendor';
+          }
+          // If it's a large node_modules package, put it in vendor
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         },
         assetFileNames: (assetInfo) => {
           const info = assetInfo.name.split('.');

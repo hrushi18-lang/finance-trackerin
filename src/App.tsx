@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -27,7 +27,7 @@ import { registerSW } from './utils/registerSW';
 import './styles/accessibility.css';
 import './styles/mobile.css';
 
-// Import pages directly to avoid lazy loading issues
+// Import core pages directly for better performance
 import Auth from './pages/Auth';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
@@ -35,11 +35,9 @@ import AddTransaction from './pages/AddTransaction';
 import TransactionsCalendar from './pages/TransactionsCalendar';
 import Cards from './pages/Cards';
 import Activities from './pages/Activities';
-import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
 import Goals from './pages/Goals';
 import Liabilities from './pages/Liabilities';
-import { EnhancedLiabilities } from './pages/EnhancedLiabilities';
 import Budgets from './pages/Budgets';
 import Overview from './pages/Overview';
 import Accounts from './pages/Accounts';
@@ -55,6 +53,10 @@ import ProfileNew from './pages/ProfileNew';
 import CurrencyDemo from './pages/CurrencyDemo';
 import FontTest from './pages/FontTest';
 import ContextTest from './pages/ContextTest';
+
+// Dynamic imports for heavy components
+const Analytics = React.lazy(() => import('./pages/Analytics'));
+const EnhancedLiabilities = React.lazy(() => import('./pages/EnhancedLiabilities'));
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -235,7 +237,9 @@ function App() {
                                 path="/analytics" 
                                 element={
                                   <ProtectedRoute>
-                                    <Analytics />
+                                    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>}>
+                                      <Analytics />
+                                    </Suspense>
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
@@ -295,7 +299,9 @@ function App() {
                                 path="/liabilities/enhanced" 
                                 element={
                                   <ProtectedRoute>
-                                    <EnhancedLiabilities />
+                                    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>}>
+                                      <EnhancedLiabilities />
+                                    </Suspense>
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
