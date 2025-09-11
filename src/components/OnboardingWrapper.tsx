@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useFinance } from '../contexts/FinanceContext';
 import { useProfile } from '../contexts/ProfileContext';
-import EnhancedOnboardingFlow from './onboarding/EnhancedOnboardingFlow';
+import SimpleOnboardingFlow from './onboarding/SimpleOnboardingFlow';
 import { analytics } from '../utils/analytics';
 import { LoadingScreen } from './common/LoadingScreen';
 
@@ -84,7 +84,7 @@ const OnboardingWrapper: React.FC = () => {
 
   // Show onboarding for new users
   return (
-    <EnhancedOnboardingFlow 
+    <SimpleOnboardingFlow 
       onComplete={() => {
         // Track onboarding completion
         analytics.trackOnboardingStep('onboarding_completed', true);
@@ -93,7 +93,10 @@ const OnboardingWrapper: React.FC = () => {
           completed_at: new Date().toISOString()
         });
 
-        // Redirect to dashboard
+        // Mark onboarding as completed
+        setData('onboarding_completed', true);
+        
+        // Navigate to dashboard
         navigate('/dashboard');
       }} 
     />

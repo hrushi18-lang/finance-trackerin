@@ -163,8 +163,8 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         disabled={isLoading}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className={`w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
-          error ? 'border-red-500' : ''
+        className={`w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 ${
+          error ? 'border-red-500 focus:ring-red-500/20' : ''
         } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <div className="flex items-center justify-between">
@@ -193,12 +193,12 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
 
       {isOpen && (
         <div 
-          className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-64 overflow-hidden"
+          className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl max-h-64 overflow-hidden backdrop-blur-sm"
           role="listbox"
           aria-label="Category selection"
         >
           {/* Search */}
-          <div className="p-3 border-b border-gray-200 dark:border-gray-600">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-600">
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <Input
@@ -206,7 +206,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                 placeholder="Search categories..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg"
               />
             </div>
           </div>
@@ -234,41 +234,41 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                   key={category}
                   type="button"
                   onClick={() => handleCategorySelect(category)}
-                  className={`w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3 transition-colors ${
+                  className={`w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3 transition-all duration-200 ${
                     index === focusedIndex ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                   }`}
                   aria-selected={index === focusedIndex}
                 >
                   <div 
-                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm"
                     style={{ backgroundColor: getCategoryColor(category) }}
                   />
                   {getIconComponent(getCategoryIcon(category))}
-                  <span className="text-gray-900 dark:text-white text-sm">{category}</span>
+                  <span className="text-gray-900 dark:text-white text-sm font-medium">{category}</span>
                 </button>
               ))
             )}
           </div>
 
           {/* Add Custom Category */}
-          <div className="border-t border-gray-200 dark:border-gray-600 p-3">
+          <div className="border-t border-gray-200 dark:border-gray-600 p-4">
             {!showAddForm ? (
               <button
                 type="button"
                 onClick={() => setShowAddForm(true)}
-                className="w-full flex items-center justify-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                className="w-full flex items-center justify-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
               >
                 <Plus size={16} />
-                <span className="text-sm">Add Custom Category</span>
+                <span className="text-sm font-medium">Add Custom Category</span>
               </button>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Input
                   type="text"
                   placeholder="Enter category name"
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value)}
-                  className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white text-sm"
+                  className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg"
                 />
                 <div className="flex space-x-2">
                   <Button
@@ -276,7 +276,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                     size="sm"
                     onClick={handleAddCategory}
                     disabled={!newCategory.trim() || categories.includes(newCategory.trim()) || isAdding}
-                    className="flex-1"
+                    className="flex-1 rounded-lg"
                   >
                     {isAdding ? 'Adding...' : 'Add'}
                   </Button>
@@ -288,7 +288,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                       setShowAddForm(false);
                       setNewCategory('');
                     }}
-                    className="flex-1"
+                    className="flex-1 rounded-lg"
                   >
                     Cancel
                   </Button>
