@@ -213,14 +213,17 @@ export const LiabilityMockTransactionForm: React.FC<LiabilityMockTransactionForm
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Frequency</label>
                 <Select
-                  {...register('recurringFrequency')}
+                  value={watch('recurringFrequency') || ''}
+                  onChange={(value) => setValue('recurringFrequency', value)}
+                  options={[
+                    { value: 'weekly', label: 'Weekly' },
+                    { value: 'monthly', label: 'Monthly' },
+                    { value: 'quarterly', label: 'Quarterly' },
+                    { value: 'yearly', label: 'Yearly' }
+                  ]}
+                  placeholder="Select frequency"
                   className="bg-black/20 border-white/20 text-white"
-                >
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="quarterly">Quarterly</option>
-                  <option value="yearly">Yearly</option>
-                </Select>
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">End Date (Optional)</label>
