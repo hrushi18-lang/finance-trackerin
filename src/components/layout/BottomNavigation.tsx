@@ -7,7 +7,8 @@ import {
   Calendar, 
   Building2,
   Plus,
-  Grid3X3
+  Grid3X3,
+  PieChart
 } from 'lucide-react';
 
 export const BottomNavigation: React.FC = () => {
@@ -18,7 +19,7 @@ export const BottomNavigation: React.FC = () => {
   const navItems = [
     { path: '/home', icon: Home, label: 'Home' },
     { path: '/overview', icon: BarChart3, label: 'Overview' },
-    { path: '/cards', icon: Grid3X3, label: 'Cards' },
+    { path: '/analytics', icon: PieChart, label: 'Analytics' },
     { path: '/transactions', icon: Calendar, label: 'Transactions' },
     { path: '/accounts', icon: Building2, label: 'Accounts' },
   ];

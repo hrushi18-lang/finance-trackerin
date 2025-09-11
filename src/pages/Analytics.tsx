@@ -20,6 +20,9 @@ import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { RingChart } from '../components/analytics/RingChart';
 import { BarChart } from '../components/analytics/BarChart';
 import { ChartPopup } from '../components/analytics/ChartPopup';
+import { AdvancedCharts } from '../components/analytics/AdvancedCharts';
+import { FinancialInsights } from '../components/analytics/FinancialInsights';
+import { MobileGestures } from '../components/mobile/MobileGestures';
 
 const Analytics: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +31,8 @@ const Analytics: React.FC = () => {
   
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
   const [selectedView, setSelectedView] = useState('overview');
+  const [showAdvancedCharts, setShowAdvancedCharts] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
   const [showChartPopup, setShowChartPopup] = useState(false);
   const [popupData, setPopupData] = useState<any>(null);
   const [popupType, setPopupType] = useState<'ring' | 'bar'>('ring');
@@ -235,6 +240,32 @@ const Analytics: React.FC = () => {
               title="Calendar View"
             >
               <Calendar size={16} style={{ color: 'var(--text-primary)' }} />
+            </button>
+            <button 
+              onClick={() => setShowAdvancedCharts(!showAdvancedCharts)}
+              className={`p-2 rounded-full transition-all duration-200 hover:scale-105 ${
+                showAdvancedCharts ? 'bg-purple-500 text-white' : ''
+              }`}
+              style={{ 
+                backgroundColor: showAdvancedCharts ? 'var(--primary)' : 'var(--background-secondary)',
+                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
+              }}
+              title="Advanced Charts"
+            >
+              <BarChart3 size={16} style={{ color: showAdvancedCharts ? 'white' : 'var(--text-primary)' }} />
+            </button>
+            <button 
+              onClick={() => setShowInsights(!showInsights)}
+              className={`p-2 rounded-full transition-all duration-200 hover:scale-105 ${
+                showInsights ? 'bg-yellow-500 text-white' : ''
+              }`}
+              style={{ 
+                backgroundColor: showInsights ? 'var(--warning)' : 'var(--background-secondary)',
+                boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.1), inset -2px -2px 4px rgba(255,255,255,0.7)'
+              }}
+              title="Financial Insights"
+            >
+              <Target size={16} style={{ color: showInsights ? 'white' : 'var(--text-primary)' }} />
             </button>
           </div>
         </div>
@@ -466,7 +497,14 @@ const Analytics: React.FC = () => {
         </div>
 
         {/* Spending Ring Chart */}
-        <div 
+        <MobileGestures
+          onPinch={(scale) => console.log('Pinch scale:', scale)}
+          onRotate={(angle) => console.log('Rotation:', angle)}
+          onDoubleTap={() => {
+            setPopupData(analyticsData.categoryBreakdown);
+            setPopupType('ring');
+            setShowChartPopup(true);
+          }}
           className="p-4 rounded-2xl slide-in-up"
           style={{
             backgroundColor: 'var(--background)',
@@ -489,10 +527,17 @@ const Analytics: React.FC = () => {
               setShowChartPopup(true);
             }}
           />
-        </div>
+        </MobileGestures>
 
         {/* Income vs Spending Bar Chart */}
-        <div 
+        <MobileGestures
+          onPinch={(scale) => console.log('Bar chart pinch scale:', scale)}
+          onRotate={(angle) => console.log('Bar chart rotation:', angle)}
+          onDoubleTap={() => {
+            setPopupData(analyticsData);
+            setPopupType('bar');
+            setShowChartPopup(true);
+          }}
           className="p-4 rounded-2xl slide-in-up"
           style={{
             backgroundColor: 'var(--background)',
@@ -539,7 +584,7 @@ const Analytics: React.FC = () => {
               setShowChartPopup(true);
             }}
           />
-        </div>
+        </MobileGestures>
 
         {/* Category Breakdown */}
         <div 
@@ -749,6 +794,30 @@ const Analytics: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Enhanced Analytics Sections */}
+      {showAdvancedCharts && (
+        <div className="px-4 space-y-6">
+          <AdvancedCharts
+            data={analyticsData}
+            timeRange={selectedPeriod}
+            onTimeRangeChange={setSelectedPeriod}
+            onExport={exportAnalyticsData}
+          />
+        </div>
+      )}
+
+      {showInsights && (
+        <div className="px-4 space-y-6">
+          <FinancialInsights
+            data={analyticsData}
+            onInsightClick={(insight) => {
+              console.log('Insight clicked:', insight);
+              // Handle insight click - could navigate to relevant section
+            }}
+          />
+        </div>
+      )}
 
       {/* Interactive Chart Popup */}
       <ChartPopup

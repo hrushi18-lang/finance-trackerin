@@ -160,7 +160,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
 
       {showBalance && account.is_visible && (
         <div className="mb-3">
-          <p className="text-xl font-heading" style={{ color: 'var(--text-primary)' }}>
+          <p className={`text-xl font-heading ${account.balance < 0 ? 'text-red-600' : ''}`} style={{ color: account.balance < 0 ? 'var(--error)' : 'var(--text-primary)' }}>
             {formatBalance(account.balance, account.currency)}
           </p>
         </div>

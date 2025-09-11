@@ -8,6 +8,7 @@ import { useInternationalization } from '../contexts/InternationalizationContext
 import { QuickLiabilityForm } from '../components/forms/QuickLiabilityForm';
 import { DetailedLiabilityForm } from '../components/forms/DetailedLiabilityForm';
 import { LiabilityModificationForm } from '../components/forms/LiabilityModificationForm';
+import { LiabilityMockTransactionForm } from '../components/forms/LiabilityMockTransactionForm';
 import { getLiabilityBehavior, LiabilityType } from '../lib/liability-behaviors';
 
 interface EnhancedLiability {
@@ -66,7 +67,9 @@ export const EnhancedLiabilities: React.FC = () => {
     shortenLiabilityTerm,
     changeLiabilityAmount,
     changeLiabilityDates,
-    payLiabilityFromMultipleAccounts
+    payLiabilityFromMultipleAccounts,
+    addTransaction,
+    accounts
   } = useFinance();
   const { formatCurrency } = useInternationalization();
 
@@ -77,6 +80,8 @@ export const EnhancedLiabilities: React.FC = () => {
   const [showDetailedForm, setShowDetailedForm] = useState(false);
   const [showModificationForm, setShowModificationForm] = useState(false);
   const [selectedLiability, setSelectedLiability] = useState<EnhancedLiability | null>(null);
+  const [showMockTransactionForm, setShowMockTransactionForm] = useState(false);
+  const [selectedLiabilityForMock, setSelectedLiabilityForMock] = useState<EnhancedLiability | null>(null);
   const [quickAddData, setQuickAddData] = useState<{ name: string; type: LiabilityType; status: 'new' | 'existing' } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -165,6 +170,37 @@ export const EnhancedLiabilities: React.FC = () => {
     } catch (error: any) {
       console.error('Error deleting liability:', error);
       setError(error.message || 'Failed to delete liability');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMockTransaction = async (data: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Create a mock transaction for the liability
+      await addTransaction({
+        type: data.type === 'payment' ? 'expense' : 'expense',
+        amount: data.amount,
+        category: 'Debt Payment',
+        description: data.description,
+        date: new Date(data.date).toISOString(),
+        accountId: selectedLiabilityForMock?.accountIds?.[0] || accounts?.[0]?.id,
+        affectsBalance: true,
+        status: 'completed',
+        notes: data.notes || `Mock transaction for ${selectedLiabilityForMock?.name}`,
+        isRecurring: data.isRecurring,
+        recurringFrequency: data.recurringFrequency,
+        recurringEndDate: data.recurringEndDate
+      });
+      
+      setShowMockTransactionForm(false);
+      setSelectedLiabilityForMock(null);
+    } catch (error: any) {
+      console.error('Error adding mock transaction:', error);
+      setError(error.message || 'Failed to add mock transaction');
     } finally {
       setLoading(false);
     }
@@ -386,6 +422,19 @@ export const EnhancedLiabilities: React.FC = () => {
                     size="sm"
                     variant="outline"
                     onClick={() => {
+                      setSelectedLiabilityForMock(liability);
+                      setShowMockTransactionForm(true);
+                    }}
+                    className="text-green-400 hover:text-green-300 hover:border-green-400"
+                    title="Add Mock Transaction"
+                  >
+                    <DollarSign size={16} className="mr-1" />
+                    Mock
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
                       setSelectedLiability(liability);
                       setShowModificationForm(true);
                     }}
@@ -473,6 +522,19 @@ export const EnhancedLiabilities: React.FC = () => {
               />
             </div>
           </div>
+        )}
+
+        {/* Mock Transaction Modal */}
+        {showMockTransactionForm && selectedLiabilityForMock && (
+          <LiabilityMockTransactionForm
+            liability={selectedLiabilityForMock}
+            isOpen={showMockTransactionForm}
+            onClose={() => {
+              setShowMockTransactionForm(false);
+              setSelectedLiabilityForMock(null);
+            }}
+            onSubmit={handleMockTransaction}
+          />
         )}
       </div>
     </div>

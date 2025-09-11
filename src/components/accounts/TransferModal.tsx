@@ -100,7 +100,13 @@ export const TransferModal: React.FC<TransferModalProps> = ({
       newErrors.amount = 'Amount must be greater than 0';
     }
 
-    if (formData.amount > fromAccount.balance) {
+    // For credit cards, check if transfer would exceed credit limit
+    if (fromAccount.type === 'credit_card') {
+      const newBalance = fromAccount.balance - formData.amount;
+      if (newBalance < (fromAccount.creditLimit || 0)) {
+        newErrors.amount = 'Transfer would exceed credit limit';
+      }
+    } else if (formData.amount > fromAccount.balance) {
       newErrors.amount = 'Insufficient funds in source account';
     }
 
@@ -253,13 +259,26 @@ export const TransferModal: React.FC<TransferModalProps> = ({
           )}
         </div>
 
-        {/* Warning for insufficient funds */}
-        {formData.amount > fromAccount.balance && (
+        {/* Warning for insufficient funds or credit limit */}
+        {(formData.amount > fromAccount.balance && fromAccount.type !== 'credit_card') && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
             <div className="flex items-center space-x-2">
               <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
               <span className="text-sm text-red-800 dark:text-red-200">
                 Insufficient funds. Available: {formatCurrency(fromAccount.balance, fromAccount.currency)}
+              </span>
+            </div>
+          </div>
+        )}
+        
+        {/* Warning for credit limit */}
+        {fromAccount.type === 'credit_card' && formData.amount > 0 && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+              <span className="text-sm text-yellow-800 dark:text-yellow-200">
+                Credit Card Balance: {formatCurrency(fromAccount.balance, fromAccount.currency)} 
+                {fromAccount.creditLimit && ` (Limit: ${formatCurrency(fromAccount.creditLimit, fromAccount.currency)})`}
               </span>
             </div>
           </div>
@@ -280,7 +299,11 @@ export const TransferModal: React.FC<TransferModalProps> = ({
             type="submit"
             variant="primary"
             className="flex-1"
-            disabled={isSubmitting || formData.amount > fromAccount.balance}
+            disabled={
+              isSubmitting || 
+              (fromAccount.type !== 'credit_card' && formData.amount > fromAccount.balance) ||
+              (fromAccount.type === 'credit_card' && formData.amount > 0 && fromAccount.creditLimit && (fromAccount.balance - formData.amount) < fromAccount.creditLimit)
+            }
           >
             {isSubmitting ? 'Processing...' : 'Transfer Funds'}
           </Button>

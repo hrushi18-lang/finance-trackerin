@@ -222,10 +222,10 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
         <label className="block text-sm font-medium text-gray-300 mb-3">Bill Type</label>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { value: 'fixed', label: 'Fixed Amount', description: 'Same amount every time' },
-            { value: 'variable', label: 'Variable Amount', description: 'Amount changes' },
-            { value: 'one_time', label: 'One-time', description: 'Single payment' },
-            { value: 'liability_linked', label: 'Linked to Debt', description: 'EMI or debt payment' }
+            { value: 'fixed', label: 'Fixed Amount', description: 'Same amount every time (e.g., Netflix $15/month)' },
+            { value: 'variable', label: 'Variable Amount', description: 'Amount changes (e.g., electricity bill)' },
+            { value: 'one_time', label: 'One-time', description: 'Single payment (e.g., annual fee)' },
+            { value: 'liability_linked', label: 'Debt Payment', description: 'Loan/credit card payment' }
           ].map((type) => (
             <label key={type.value} className="cursor-pointer">
               <input

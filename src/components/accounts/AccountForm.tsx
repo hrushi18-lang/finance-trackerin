@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';
-import { formatCurrency, getCurrencyInfo } from '../../utils/currency-converter';
+import { formatCurrency } from '../../utils/currency-converter';
 import { FinancialAccount, CreateAccountData } from '../../lib/finance-manager';
 
 interface AccountFormProps {
@@ -72,8 +72,10 @@ export const AccountForm: React.FC<AccountFormProps> = ({
       newErrors.name = 'Account name is required';
     }
 
-    if (formData.balance < 0) {
-      newErrors.balance = 'Balance cannot be negative';
+    // Allow negative balances for credit cards and investment accounts
+    const allowsNegativeBalance = ['credit_card', 'investment'].includes(formData.type);
+    if (!allowsNegativeBalance && (formData.balance || 0) < 0) {
+      newErrors.balance = 'Balance cannot be negative for this account type';
     }
 
     setErrors(newErrors);
@@ -122,7 +124,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
             placeholder="e.g., My Savings Account"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            error={!!errors.name}
+              error={errors.name || ''}
           />
           {errors.name && (
             <p className="mt-1 text-xs text-red-600">{errors.name}</p>
@@ -166,21 +168,24 @@ export const AccountForm: React.FC<AccountFormProps> = ({
           
           <div className="flex items-center space-x-2">
             <span className="text-lg font-semibold text-gray-600">
-              {formatCurrency(1, formData.currency).charAt(0)}
+              {formatCurrency(1, formData.currency || 'USD').charAt(0)}
             </span>
             <Input
               type="number"
-              placeholder="0.00"
+              placeholder={['credit_card', 'investment'].includes(formData.type) ? "-0.00" : "0.00"}
               value={formData.balance || ''}
               onChange={(e) => handleInputChange('balance', parseFloat(e.target.value) || 0)}
-              error={!!errors.balance}
+              error={errors.balance || ''}
               className="flex-1"
             />
           </div>
           
           <div className="mt-2 space-y-1">
             <p className="text-xs text-gray-600">
-              This will be your starting balance for this account
+              {['credit_card', 'investment'].includes(formData.type) 
+                ? "Enter current balance (negative for debt/overdrawn accounts)"
+                : "This will be your starting balance for this account"
+              }
             </p>
             {errors.balance && (
               <p className="text-xs text-red-600">{errors.balance}</p>

@@ -1,265 +1,175 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Activity, Zap, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
-import { performanceMonitor, collectPerformanceMetrics } from '../../utils/performance';
-
-interface PerformanceMetrics {
-  loadTime: number;
-  domContentLoaded: number;
-  firstPaint: number;
-  firstContentfulPaint: number;
-  largestContentfulPaint: number;
-  memoryUsage?: number;
-  connectionType?: string;
-}
+import React, { useState, useEffect } from 'react';
+import { Activity, Zap, HardDrive, Clock, Download, AlertTriangle } from 'lucide-react';
+import { usePerformanceOptimization } from '../../hooks/usePerformanceOptimization';
 
 interface PerformanceMonitorProps {
-  enabled?: boolean;
-  showUI?: boolean;
-  onMetricsUpdate?: (metrics: PerformanceMetrics) => void;
+  show?: boolean;
+  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  className?: string;
 }
 
 export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
-  enabled = true,
-  showUI = false,
-  onMetricsUpdate
+  show = false,
+  position = 'top-right',
+  className = ''
 }) => {
-  const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [connectionType, setConnectionType] = useState<string>('unknown');
-  const [memoryUsage, setMemoryUsage] = useState<number | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [alerts, setAlerts] = useState<string[]>([]);
+  
+  const { metrics, monitorMemoryUsage } = usePerformanceOptimization({
+    enableVirtualization: true,
+    enableDebouncing: true,
+    enableMemoization: true,
+    enableLazyLoading: true,
+    enableCodeSplitting: true
+  });
 
-  // Collect performance metrics
-  const collectMetrics = useCallback(() => {
-    if (!enabled) return;
-
-    const perfMetrics = collectPerformanceMetrics();
-    const newMetrics: PerformanceMetrics = {
-      ...perfMetrics,
-      memoryUsage: (performance as any).memory?.usedJSHeapSize || null,
-      connectionType
-    };
-
-    setMetrics(newMetrics);
-    onMetricsUpdate?.(newMetrics);
-
-    // Log performance issues
-    if (perfMetrics.loadTime > 3000) {
-      console.warn('Slow page load detected:', perfMetrics.loadTime + 'ms');
-    }
-
-    if (perfMetrics.firstContentfulPaint > 1500) {
-      console.warn('Slow first contentful paint:', perfMetrics.firstContentfulPaint + 'ms');
-    }
-  }, [enabled, connectionType, onMetricsUpdate]);
-
-  // Monitor network status
+  // Monitor performance and generate alerts
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // Check connection type if available
-    if ('connection' in navigator) {
-      const connection = (navigator as any).connection;
-      setConnectionType(connection.effectiveType || 'unknown');
+    const checkPerformance = () => {
+      const newAlerts: string[] = [];
       
-      const handleConnectionChange = () => {
-        setConnectionType(connection.effectiveType || 'unknown');
-      };
+      // Check render time
+      if (metrics.renderTime > 100) {
+        newAlerts.push(`Slow render: ${metrics.renderTime.toFixed(2)}ms`);
+      }
       
-      connection.addEventListener('change', handleConnectionChange);
+      // Check memory usage
+      if (metrics.memoryUsage > 100) {
+        newAlerts.push(`High memory usage: ${metrics.memoryUsage.toFixed(2)}MB`);
+      }
       
-      return () => {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-        connection.removeEventListener('change', handleConnectionChange);
-      };
-    }
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      // Check load time
+      if (metrics.loadTime > 3000) {
+        newAlerts.push(`Slow load time: ${metrics.loadTime.toFixed(2)}ms`);
+      }
+      
+      setAlerts(newAlerts);
     };
-  }, []);
+
+    checkPerformance();
+    const interval = setInterval(checkPerformance, 5000);
+    
+    return () => clearInterval(interval);
+  }, [metrics]);
 
   // Monitor memory usage
   useEffect(() => {
-    if (!enabled || !('memory' in performance)) return;
-
-    const updateMemoryUsage = () => {
-      const memory = (performance as any).memory;
-      if (memory) {
-        setMemoryUsage(memory.usedJSHeapSize);
-      }
-    };
-
-    updateMemoryUsage();
-    const interval = setInterval(updateMemoryUsage, 5000);
-
+    monitorMemoryUsage();
+    const interval = setInterval(monitorMemoryUsage, 10000);
+    
     return () => clearInterval(interval);
-  }, [enabled]);
+  }, [monitorMemoryUsage]);
 
-  // Collect metrics on mount and when online status changes
-  useEffect(() => {
-    if (enabled) {
-      // Initial collection after a short delay
-      const timer = setTimeout(collectMetrics, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [enabled, collectMetrics]);
+  if (!show) return null;
 
-  // Monitor for performance issues
-  useEffect(() => {
-    if (!enabled || !metrics) return;
-
-    // Check for performance issues
-    const issues: string[] = [];
-
-    if (metrics.loadTime > 5000) {
-      issues.push('Very slow page load');
-    }
-
-    if (metrics.firstContentfulPaint > 2000) {
-      issues.push('Slow first contentful paint');
-    }
-
-    if (metrics.largestContentfulPaint > 4000) {
-      issues.push('Slow largest contentful paint');
-    }
-
-    if (memoryUsage && memoryUsage > 50 * 1024 * 1024) { // 50MB
-      issues.push('High memory usage');
-    }
-
-    if (connectionType === 'slow-2g' || connectionType === '2g') {
-      issues.push('Slow network connection');
-    }
-
-    if (issues.length > 0) {
-      console.warn('Performance issues detected:', issues);
-    }
-  }, [metrics, memoryUsage, connectionType, enabled]);
-
-  // Don't render UI if not enabled or not showing UI
-  if (!enabled || !showUI) {
-    return null;
-  }
-
-  const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  const positionClasses = {
+    'top-left': 'top-4 left-4',
+    'top-right': 'top-4 right-4',
+    'bottom-left': 'bottom-4 left-4',
+    'bottom-right': 'bottom-4 right-4'
   };
 
-  const formatTime = (ms: number) => {
-    return ms.toFixed(0) + 'ms';
+  const getPerformanceColor = (value: number, thresholds: { good: number; warning: number }) => {
+    if (value <= thresholds.good) return 'text-green-500';
+    if (value <= thresholds.warning) return 'text-yellow-500';
+    return 'text-red-500';
   };
 
-  const getConnectionIcon = () => {
-    if (!isOnline) return <WifiOff size={16} className="text-red-500" />;
-    if (connectionType === 'slow-2g' || connectionType === '2g') {
-      return <Wifi size={16} className="text-yellow-500" />;
-    }
-    return <Wifi size={16} className="text-green-500" />;
+  const getPerformanceIcon = (value: number, thresholds: { good: number; warning: number }) => {
+    if (value <= thresholds.good) return <Zap size={16} className="text-green-500" />;
+    if (value <= thresholds.warning) return <Clock size={16} className="text-yellow-500" />;
+    return <AlertTriangle size={16} className="text-red-500" />;
   };
-
-  const getPerformanceStatus = () => {
-    if (!metrics) return 'unknown';
-    
-    const score = 
-      (metrics.loadTime < 2000 ? 1 : 0) +
-      (metrics.firstContentfulPaint < 1500 ? 1 : 0) +
-      (metrics.largestContentfulPaint < 2500 ? 1 : 0) +
-      (isOnline ? 1 : 0);
-    
-    if (score >= 3) return 'good';
-    if (score >= 2) return 'fair';
-    return 'poor';
-  };
-
-  const status = getPerformanceStatus();
-  const statusColor = status === 'good' ? 'text-green-500' : status === 'fair' ? 'text-yellow-500' : 'text-red-500';
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-sm">
-        <div className="flex items-center justify-between mb-3">
+    <div className={`fixed ${positionClasses[position]} z-50 ${className}`}>
+      <div className="bg-gray-900 rounded-lg shadow-lg border border-gray-700">
+        {/* Header */}
+        <div
+          className="flex items-center justify-between p-3 cursor-pointer"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
           <div className="flex items-center space-x-2">
-            <Activity size={16} className={statusColor} />
-            <span className="text-sm font-body font-semibold">Performance</span>
+            <Activity size={20} className="text-blue-500" />
+            <span className="text-sm font-medium text-white">Performance</span>
+            {alerts.length > 0 && (
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            )}
           </div>
-          {getConnectionIcon()}
+          <div className="text-xs text-gray-400">
+            {isExpanded ? '▼' : '▶'}
+          </div>
         </div>
 
-        {metrics && (
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between">
-              <span className="font-body" style={{ color: 'var(--text-secondary)' }}>Load Time:</span>
-              <span className="font-numbers">{formatTime(metrics.loadTime)}</span>
+        {/* Expanded Content */}
+        {isExpanded && (
+          <div className="px-3 pb-3 space-y-3 border-t border-gray-700">
+            {/* Metrics */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  {getPerformanceIcon(metrics.renderTime, { good: 50, warning: 100 })}
+                  <span className="text-xs text-gray-300">Render Time</span>
+                </div>
+                <span className={`text-xs font-mono ${
+                  getPerformanceColor(metrics.renderTime, { good: 50, warning: 100 })
+                }`}>
+                  {metrics.renderTime.toFixed(2)}ms
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <HardDrive size={16} className="text-blue-500" />
+                  <span className="text-xs text-gray-300">Memory</span>
+                </div>
+                <span className={`text-xs font-mono ${
+                  getPerformanceColor(metrics.memoryUsage, { good: 50, warning: 100 })
+                }`}>
+                  {metrics.memoryUsage.toFixed(2)}MB
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Download size={16} className="text-green-500" />
+                  <span className="text-xs text-gray-300">Load Time</span>
+                </div>
+                <span className={`text-xs font-mono ${
+                  getPerformanceColor(metrics.loadTime, { good: 1000, warning: 3000 })
+                }`}>
+                  {metrics.loadTime.toFixed(2)}ms
+                </span>
+              </div>
             </div>
-            
-            <div className="flex justify-between">
-              <span className="font-body" style={{ color: 'var(--text-secondary)' }}>First Paint:</span>
-              <span className="font-numbers">{formatTime(metrics.firstPaint)}</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="font-body" style={{ color: 'var(--text-secondary)' }}>FCP:</span>
-              <span className="font-numbers">{formatTime(metrics.firstContentfulPaint)}</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="font-body" style={{ color: 'var(--text-secondary)' }}>LCP:</span>
-              <span className="font-numbers">{formatTime(metrics.largestContentfulPaint)}</span>
-            </div>
-            
-            {memoryUsage && (
-              <div className="flex justify-between">
-                <span className="font-body" style={{ color: 'var(--text-secondary)' }}>Memory:</span>
-                <span className="font-numbers">{formatBytes(memoryUsage)}</span>
+
+            {/* Alerts */}
+            {alerts.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-red-400 flex items-center space-x-1">
+                  <AlertTriangle size={12} />
+                  <span>Alerts</span>
+                </div>
+                {alerts.map((alert, index) => (
+                  <div key={index} className="text-xs text-red-300 bg-red-900/20 px-2 py-1 rounded">
+                    {alert}
+                  </div>
+                ))}
               </div>
             )}
-            
-            <div className="flex justify-between">
-              <span className="font-body" style={{ color: 'var(--text-secondary)' }}>Connection:</span>
-              <span className="font-numbers capitalize">{connectionType}</span>
+
+            {/* Performance Tips */}
+            <div className="text-xs text-gray-400 space-y-1">
+              <div className="font-medium text-gray-300">Tips:</div>
+              <div>• Use lazy loading for heavy components</div>
+              <div>• Enable virtualization for long lists</div>
+              <div>• Optimize images and assets</div>
+              <div>• Use code splitting</div>
             </div>
           </div>
         )}
-
-        <div className="mt-3 pt-2 border-t border-gray-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
-              Status: <span className={`font-semibold ${statusColor}`}>{status}</span>
-            </span>
-            {status === 'poor' && (
-              <AlertTriangle size={14} className="text-red-500" />
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );
 };
-
-// Hook for performance monitoring
-export const usePerformanceMonitor = (enabled: boolean = true) => {
-  const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
-
-  const handleMetricsUpdate = useCallback((newMetrics: PerformanceMetrics) => {
-    setMetrics(newMetrics);
-  }, []);
-
-  return {
-    metrics,
-    PerformanceMonitor: (props: Omit<PerformanceMonitorProps, 'onMetricsUpdate'>) => (
-      <PerformanceMonitor {...props} enabled={enabled} onMetricsUpdate={handleMetricsUpdate} />
-    )
-  };
-};
-
-export default PerformanceMonitor;

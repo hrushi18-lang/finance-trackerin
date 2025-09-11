@@ -28,6 +28,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
+import { PullToRefresh } from '../components/mobile/PullToRefresh';
 import { AnalyticsEngine } from '../utils/analytics-engine';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths } from 'date-fns';
 
@@ -46,6 +47,22 @@ const Overview: React.FC = () => {
   
   const [showBalances, setShowBalances] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Refresh function for pull-to-refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // Simulate refresh delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // In a real app, this would refresh data from the server
+      console.log('Data refreshed');
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Initialize analytics engine
   const analyticsEngine = useMemo(() => {
@@ -224,18 +241,32 @@ const Overview: React.FC = () => {
 
   return (
     <div className="min-h-screen pb-24" style={{ background: 'var(--background)' }}>
-      {/* Header */}
+      <PullToRefresh onRefresh={handleRefresh} className="h-full">
+        {/* Header */}
       <div className="pt-12 pb-6 px-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-heading" style={{ color: 'var(--text-primary)' }}>Financial Overview</h1>
-          <button
-            onClick={() => setShowBalances(!showBalances)}
-            className="flex items-center space-x-2 text-sm font-body hover:scale-105 transition-all duration-200"
-            style={{ color: 'var(--text-tertiary)' }}
-          >
-            {showBalances ? <Eye size={16} /> : <EyeOff size={16} />}
-            <span>{showBalances ? 'Hide' : 'Show'}</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => navigate('/analytics')}
+              className="px-4 py-2 rounded-xl transition-colors flex items-center space-x-2"
+              style={{ 
+                backgroundColor: 'var(--primary)',
+                color: 'white'
+              }}
+            >
+              <BarChart3 size={16} />
+              <span className="text-sm font-medium">Analytics</span>
+            </button>
+            <button
+              onClick={() => setShowBalances(!showBalances)}
+              className="flex items-center space-x-2 text-sm font-body hover:scale-105 transition-all duration-200"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
+              {showBalances ? <Eye size={16} /> : <EyeOff size={16} />}
+              <span>{showBalances ? 'Hide' : 'Show'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -652,6 +683,7 @@ const Overview: React.FC = () => {
           </div>
         </div>
       </div>
+      </PullToRefresh>
     </div>
   );
 };

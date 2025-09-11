@@ -151,7 +151,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
             />
             <label htmlFor="general" className="text-sm text-gray-300">
               <span className="font-medium">General Budget</span>
-              <span className="block text-xs text-gray-400">Not tied to any specific account</span>
+              <span className="block text-xs text-gray-400">Track spending across all accounts (recommended for most users)</span>
             </label>
           </div>
           
@@ -165,7 +165,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
             />
             <label htmlFor="account_specific" className="text-sm text-gray-300">
               <span className="font-medium">Account-Specific Budget</span>
-              <span className="block text-xs text-gray-400">Linked to one or more specific accounts</span>
+              <span className="block text-xs text-gray-400">Limit spending from specific accounts (e.g., credit card only)</span>
             </label>
           </div>
           
@@ -179,9 +179,15 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
             />
             <label htmlFor="category_based" className="text-sm text-gray-300">
               <span className="font-medium">Category-Based Budget</span>
-              <span className="block text-xs text-gray-400">For a specific spending category</span>
+              <span className="block text-xs text-gray-400">Set limits for specific spending categories (e.g., dining out)</span>
             </label>
           </div>
+        </div>
+        <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+          <p className="text-xs text-blue-300">
+            <strong>💡 Tip:</strong> Choose "Monthly" for most budgets. Weekly is good for short-term goals, 
+            Yearly for annual planning. The budget will reset automatically at the end of each period.
+          </p>
         </div>
       </div>
 

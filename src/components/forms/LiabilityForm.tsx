@@ -215,7 +215,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
                   <div>
                     <p className="font-medium">Cash Loan/Credit</p>
                     <p className="text-sm opacity-80">
-                      I received cash/money directly - record as income
+                      I received cash/money directly (e.g., personal loan, cash advance) - record as income
                     </p>
                   </div>
                 </div>
@@ -239,7 +239,7 @@ export const EnhancedLiabilityForm: React.FC<EnhancedLiabilityFormProps> = ({ on
                   <div>
                     <p className="font-medium">Existing Debt</p>
                     <p className="text-sm opacity-80">
-                      Track existing debt without adding income
+                      Track existing debt without adding income (e.g., credit card balance, student loan)
                     </p>
                   </div>
                 </div>

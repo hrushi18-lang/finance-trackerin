@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useFinance } from '../contexts/FinanceContext';
 import { TransactionList } from '../components/transactions/TransactionList';
+import { SwipeableCard } from '../components/mobile/SwipeGestures';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { TransactionForm } from '../components/transactions/TransactionForm';
