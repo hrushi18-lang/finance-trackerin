@@ -213,19 +213,12 @@ const Accounts: React.FC = () => {
 
   const handleTransferSubmit = async (transferData: any) => {
     try {
-      await transferBetweenAccounts({
-        fromAccountId: transferData.fromAccountId,
-        toAccountId: transferData.toAccountId,
-        amount: transferData.amount,
-        fromCurrency: transferData.fromCurrency,
-        toCurrency: transferData.toCurrency,
-        convertedAmount: transferData.convertedAmount,
-        exchangeRate: transferData.exchangeRate,
-        description: transferData.description,
-        transferType: 'manual',
-        status: 'completed',
-        notes: transferData.notes
-      });
+      await transferBetweenAccounts(
+        transferData.fromAccountId,
+        transferData.toAccountId,
+        transferData.amount,
+        transferData.description
+      );
       setShowTransferModal(false);
     } catch (error) {
       console.error('Error processing transfer:', error);

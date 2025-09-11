@@ -229,20 +229,13 @@ const AddTransaction: React.FC = () => {
             exchangeRate = convertCurrency(1, fromAccount.currency, toAccount.currency) || 1.0;
           }
 
-          // Use the new transferBetweenAccounts function
-          await transferBetweenAccounts({
-            fromAccountId: data.accountId,
-            toAccountId: data.transferToAccountId,
-            amount: finalAmount,
-            fromCurrency: fromAccount.currency,
-            toCurrency: toAccount.currency,
-            convertedAmount: convertedAmount,
-            exchangeRate: exchangeRate,
-            description: data.description,
-            transferType: 'manual',
-            status: 'completed',
-            notes: `Transfer via Add Transaction modal`
-          });
+          // Use the transferBetweenAccounts function
+          await transferBetweenAccounts(
+            data.accountId,
+            data.transferToAccountId,
+            finalAmount,
+            data.description
+          );
 
           // Show success message
           console.log(`✅ Transfer completed: ${formatCurrency(finalAmount, fromAccount.currency)} → ${formatCurrency(convertedAmount, toAccount.currency)}`);

@@ -57,7 +57,7 @@ interface FinanceContextType {
   softDeleteAccount: (accountId: string) => Promise<void>;
   toggleAccountVisibility: (accountId: string) => Promise<void>;
   toggleAccountPin: (accountId: string) => Promise<void>;
-  transferBetweenAccounts: (transferData: Omit<AccountTransfer, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
+  transferBetweenAccountsComplex: (transferData: Omit<AccountTransfer, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
   getAccountSummary: (accountId: string) => Promise<any>;
   getAccountTransfers: (accountId: string) => Promise<AccountTransfer[]>;
   getAccountAnalytics: (accountId: string, periodStart: Date, periodEnd: Date) => Promise<any>;
@@ -4155,6 +4155,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     updateRecurringTransaction,
     deleteRecurringTransaction,
     transferBetweenAccounts,
+    transferBetweenAccountsComplex,
     getGoalsVaultAccount,
     ensureGoalsVaultAccount,
     createGoalsVaultAccount,
