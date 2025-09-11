@@ -20,11 +20,13 @@ export interface FinancialAccount {
   createdAt: Date;
   updatedAt: Date;
   
-  // Dual currency support
-  originalBalance?: number;
-  convertedBalance?: number;
-  displayCurrency?: string;
-  exchangeRateUsed?: number;
+  // Dual currency support (matching database schema)
+  currency?: string; // Database field name
+  home_currency?: string; // Database field name
+  original_balance?: number; // Database field name
+  converted_balance?: number; // Database field name
+  display_currency?: string; // Database field name
+  exchange_rate_used?: number; // Database field name
   lastConversionDate?: Date;
   conversionSource?: 'api' | 'manual' | 'fallback';
   
@@ -101,7 +103,6 @@ export interface Transaction {
   type: 'income' | 'expense';
   amount: number;
   category: string;
-  // description: string; // Removed as per schema
   description: string;
   date: Date;
   userId: string;
@@ -109,11 +110,8 @@ export interface Transaction {
   affectsBalance: boolean; // Whether this affects account balance
   reason?: string; // Required when affectsBalance is false
   status: 'completed' | 'pending' | 'scheduled' | 'cancelled'; // Transaction status
-  // transferToAccountId?: string; // Removed as per schema
   transferToAccountId?: string; // For cross-account transfers
-  // recurringTransactionId?: string; // Removed as per schema
   recurringTransactionId?: string; // Link to parent recurring transaction
-  // parentTransactionId?: string; // Removed as per schema
   parentTransactionId?: string; // Link to parent transaction (for split transactions)
   originalAmount?: number;
   originalCurrency?: string;
@@ -122,6 +120,17 @@ export interface Transaction {
   splitGroupId?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  
+  // Currency and payment tracking fields (matching database schema)
+  currencyCode?: string;
+  original_amount?: number;
+  original_currency?: string;
+  exchange_rate_used?: number;
+  payment_source?: string;
+  source_entity_id?: string;
+  source_entity_type?: string;
+  deduct_from_balance?: boolean;
+  payment_context?: string;
 }
 
 export interface RecurringTransaction {
@@ -196,6 +205,11 @@ export interface Goal {
   originalTargetAmount?: number;
   extendedTargetAmount?: number;
   completionNotes?: string;
+  
+  // Currency and amount tracking fields (matching database schema)
+  original_current_amount?: number;
+  original_currency?: string;
+  exchange_rate_used?: number;
 }
 
 export interface Liability {
@@ -265,8 +279,6 @@ export interface Bill { // Enhanced Bill interface with all new features
   status: 'active' | 'paused' | 'completed' | 'cancelled';
   activityScope: 'general' | 'account_specific' | 'category_based';
   accountIds: string[];
-  // New multi-currency support
-  currencyCode: string;
   // Income bills support
   isIncome: boolean;
   // Bill staging support
@@ -288,6 +300,10 @@ export interface Bill { // Enhanced Bill interface with all new features
   archivedReason?: string;
   // Multi-account support
   linkedAccountsCount: number;
+  // Currency tracking fields (matching database schema)
+  original_amount?: number;
+  original_currency?: string;
+  exchange_rate_used?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -353,60 +369,6 @@ export interface NotificationItem {
 // Export enhanced liability types
 export * from './enhanced_liabilities';
 
-export interface Asset {
-  id: string;
-  userId: string;
-  name: string;
-  assetType: string;
-  description?: string;
-  purchaseValue: number;
-  currentValue: number;
-  depreciationRate: number;
-  purchaseDate: Date;
-  lastValuationDate: Date;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Bill {
-  id: string;
-  userId: string;
-  title: string;
-  description?: string;
-  category: string;
-  billType: 'fixed' | 'variable' | 'one_time' | 'liability_linked';
-  amount: number;
-  estimatedAmount?: number;
-  currencyCode: string;
-  frequency: 'weekly' | 'bi_weekly' | 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'custom' | 'one_time';
-  customFrequencyDays?: number;
-  dueDate: Date;
-  nextDueDate: Date;
-  lastPaidDate?: Date;
-  defaultAccountId?: string;
-  autoPay: boolean;
-  linkedLiabilityId?: string;
-  isEmi: boolean;
-  isActive: boolean;
-  isEssential: boolean;
-  reminderDaysBefore: number;
-  sendDueDateReminder: boolean;
-  sendOverdueReminder: boolean;
-  // Missing fields from database
-  billCategory: 'account_specific' | 'category_based' | 'general_expense';
-  isRecurring: boolean;
-  notes?: string;
-  paymentMethod?: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'active' | 'paused' | 'completed' | 'cancelled';
-  activityScope: 'general' | 'account_specific' | 'category_based';
-  accountIds: string[];
-  targetCategory?: string;
-  linkedAccountsCount: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export interface BillInstance {
   id: string;
@@ -515,6 +477,10 @@ export interface Budget {
   currencyCode?: string;
   startDate?: Date;
   endDate?: Date;
+  // Currency tracking fields (matching database schema)
+  original_amount?: number;
+  original_currency?: string;
+  exchange_rate_used?: number;
   createdAt: Date;
   updatedAt?: Date;
 }

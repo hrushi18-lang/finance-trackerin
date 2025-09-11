@@ -11,6 +11,7 @@ import { PersonalizationProvider } from './contexts/PersonalizationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { PaymentProvider } from './contexts/PaymentContext';
 import { ToastProvider } from './components/common/Toast';
+import NotificationProvider from './contexts/NotificationContext';
 import { ErrorFallback } from './components/common/ErrorFallback';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ReceiptModal } from './components/receipts/ReceiptModal';
@@ -133,7 +134,8 @@ function App() {
                         <PersonalizationProvider>
                           <FinanceProvider>
                             <PaymentProvider>
-                              <ReceiptModal />
+                              <NotificationProvider>
+                                <ReceiptModal />
                               <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                                 <AppInitializer>
                                   <RouteHandler>
@@ -423,6 +425,7 @@ function App() {
                                 </AppInitializer>
                               </Router>
                               <ReactQueryDevtools initialIsOpen={false} />
+                              </NotificationProvider>
                             </PaymentProvider>
                           </FinanceProvider>
                         </PersonalizationProvider>

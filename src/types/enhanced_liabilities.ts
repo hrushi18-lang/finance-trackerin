@@ -50,6 +50,10 @@ export interface EnhancedLiability {
   accountIds: string[];
   targetCategory?: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  // Currency tracking fields (matching database schema)
+  original_amount?: number;
+  original_currency?: string;
+  exchange_rate_used?: number;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -182,7 +182,7 @@ const BillDetail: React.FC = () => {
               border: billAnalytics.isOverdue
                 ? '1px solid #fecaca'
                 : billAnalytics.isDueSoon
-                ? '1px solid #fed7aa'
+                ? '1px solidrgb(192, 111, 18)'
                 : billAnalytics.isPaid
                 ? '1px solid #bbf7d0'
                 : '1px solid #fed7aa'

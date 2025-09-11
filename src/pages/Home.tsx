@@ -27,6 +27,9 @@ import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
+import { useNotifications } from '../contexts/NotificationContext';
+import NotificationCenter from '../components/notifications/NotificationCenter';
+import FinancialSnapshot from '../components/notifications/FinancialSnapshot';
 import { format } from 'date-fns';
 
 const Home: React.FC = () => {
@@ -43,6 +46,8 @@ const Home: React.FC = () => {
     stats,
     getGoalsVaultAccount 
   } = useFinance();
+  
+  const { generateFinancialInsights } = useNotifications();
 
   const [hideBalance, setHideBalance] = useState(false);
 
@@ -148,13 +153,9 @@ const Home: React.FC = () => {
           </div>
           
           <div className="flex items-center space-x-3">
-            <button 
-              onClick={() => navigate('/notifications')}
-              className="p-2 rounded-full transition-all duration-200 hover:scale-110"
-              style={{ backgroundColor: 'var(--background-secondary)' }}
-            >
-              <Bell size={18} style={{ color: 'var(--text-secondary)' }} />
-            </button>
+            <div style={{ position: 'relative' }}>
+              <NotificationCenter />
+            </div>
             <button 
               onClick={() => navigate('/settings')}
               className="p-2 rounded-full transition-all duration-200 hover:scale-110"
@@ -182,6 +183,9 @@ const Home: React.FC = () => {
             Hello, {user?.name || 'Hrushi'} 👋
           </h2>
         </div>
+
+        {/* Financial Snapshot */}
+        <FinancialSnapshot />
 
         {/* Current Balance Card */}
         <div 

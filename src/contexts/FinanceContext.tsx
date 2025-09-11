@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { queryCache, invalidateUserData } from '../lib/query-cache';
+import { sendGoalProgressUpdate, sendSpendingAlert, sendBudgetWarning } from '../services/notificationService';
 import { 
   FinancialAccount, 
   Transaction, 
@@ -556,6 +557,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Update goal current amount
     const newAmount = Math.min(Number(goal.currentAmount || 0) + Number(amount || 0), Number(goal.targetAmount || 0));
     await updateGoal(goalId, { currentAmount: newAmount });
+    
+    // Send notification for goal progress
+    sendGoalProgressUpdate(goal.title, newAmount, goal.targetAmount);
 
     // If goal is linked to Goals Vault, transfer funds there (this will create transactions)
     if (goal.accountId) {
@@ -572,8 +576,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           date: new Date(),
           accountId: sourceAccountId,
           affectsBalance: true,
-          status: 'completed'
-        });
+          status: 'completed',
+          // Currency fields
+          currencyCode: getUserCurrency(),
+          originalAmount: amount,
+          originalCurrency: getUserCurrency(),
+          exchangeRateUsed: 1.0,
+          // Payment source tracking
+          paymentSource: 'goal_contribution',
+          sourceEntityId: goalId,
+          sourceEntityType: 'goal',
+          deductFromBalance: true,
+          paymentContext: 'goal_funding'
+        } as any);
       }
     } else {
       // If goal is not linked to vault, create direct transaction
@@ -585,8 +600,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         date: new Date(),
         accountId: sourceAccountId,
         affectsBalance: true,
-        status: 'completed'
-      });
+        status: 'completed',
+        // Currency fields
+        currencyCode: getUserCurrency(),
+        originalAmount: amount,
+        originalCurrency: getUserCurrency(),
+        exchangeRateUsed: 1.0,
+        // Payment source tracking
+        paymentSource: 'goal_contribution',
+        sourceEntityId: goalId,
+        sourceEntityType: 'goal',
+        deductFromBalance: true,
+        paymentContext: 'goal_funding'
+      } as any);
     }
   };
 
@@ -625,8 +651,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       date: new Date(),
       accountId,
       affectsBalance: true,
-      status: 'completed'
-    });
+      status: 'completed',
+      // Currency fields
+      currencyCode: getUserCurrency(),
+      originalAmount: payAmount,
+      originalCurrency: getUserCurrency(),
+      exchangeRateUsed: 1.0,
+      // Payment source tracking
+      paymentSource: 'bill_payment',
+      sourceEntityId: billId,
+      sourceEntityType: 'bill',
+      deductFromBalance: true,
+      paymentContext: 'bill_payment'
+    } as any);
 
     // Update bill schedule and mark as paid
     const nextDueDate = new Date(bill.nextDueDate);
@@ -650,6 +687,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       reference: `BILL-${billId.slice(-8)}`,
       notes: `Payment for ${bill.title}`
     });
+    
+    // Send spending alert for bill payment
+    sendSpendingAlert(`Bill paid: ${bill.title}`, payAmount, bill.category || 'Bills');
 
     // Also update recurring transaction if it exists
     const recurringBill = recurringTransactions.find(rt => rt.description === bill.title && rt.type === 'expense');
@@ -675,8 +715,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       date: new Date(),
       accountId,
       affectsBalance: true,
-      status: 'completed'
-    });
+      status: 'completed',
+      // Currency fields
+      currencyCode: getUserCurrency(),
+      originalAmount: Number(amount),
+      originalCurrency: getUserCurrency(),
+      exchangeRateUsed: 1.0,
+      // Payment source tracking
+      paymentSource: 'liability_payment',
+      sourceEntityId: liabilityId,
+      sourceEntityType: 'liability',
+      deductFromBalance: true,
+      paymentContext: 'liability_payment'
+    } as any);
 
     const newRemaining = Math.max(0, Number(liability.remainingAmount || 0) - Number(amount || 0));
     await updateLiability(liabilityId, { remainingAmount: newRemaining, status: newRemaining === 0 ? 'paid_off' : liability.status });
@@ -1001,9 +1052,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       updatedAt: new Date(account.updated_at),
       
       // Dual currency support
-      originalBalance: account.original_balance ? Number(account.original_balance) : Number(account.balance),
-      convertedBalance: account.converted_balance ? Number(account.converted_balance) : Number(account.balance),
-      displayCurrency: account.display_currency || account.currencycode,
+      original_balance: account.original_balance ? Number(account.original_balance) : Number(account.balance),
+      converted_balance: account.converted_balance ? Number(account.converted_balance) : Number(account.balance),
+      display_currency: account.display_currency || account.currencycode,
       exchangeRateUsed: account.exchange_rate_used ? Number(account.exchange_rate_used) : 1.0,
       lastConversionDate: account.last_conversion_date ? new Date(account.last_conversion_date) : undefined,
       conversionSource: account.conversion_source,
@@ -1847,10 +1898,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         is_visible: updates.isVisible,
         currencycode: updates.currencyCode,
         // Dual currency fields
-        original_balance: updates.originalBalance,
-        converted_balance: updates.convertedBalance,
-        display_currency: updates.displayCurrency,
-        exchange_rate_used: updates.exchangeRateUsed,
+        original_balance: updates.original_balance,
+        converted_balance: updates.converted_balance,
+        display_currency: updates.display_currency,
+        exchange_rate_used: updates.exchange_rate_used,
         last_conversion_date: updates.lastConversionDate?.toISOString(),
         conversion_source: updates.conversionSource
       })
@@ -1892,13 +1943,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!account) throw new Error('Account not found');
 
     const newBalance = type === 'income' ? account.balance + amount : account.balance - amount;
-    const newOriginalBalance = type === 'income' ? (account.originalBalance || account.balance) + amount : (account.originalBalance || account.balance) - amount;
+    const newOriginalBalance = type === 'income' ? (account.original_balance || account.balance) + amount : (account.original_balance || account.balance) - amount;
     
     // Update both original and converted balances
     await updateAccount(accountId, {
       balance: newBalance,
-      originalBalance: newOriginalBalance,
-      convertedBalance: newBalance, // For now, assume same currency
+      original_balance: newOriginalBalance,
+      converted_balance: newBalance, // For now, assume same currency
       lastConversionDate: new Date(),
       conversionSource: 'manual'
     });
@@ -1910,12 +1961,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const account = accounts.find(acc => acc.id === accountId);
     if (!account) throw new Error('Account not found');
 
-    const convertedBalance = (account.originalBalance || account.balance) * exchangeRate;
+    const convertedBalance = (account.original_balance || account.balance) * exchangeRate;
     
     await updateAccount(accountId, {
-      displayCurrency,
-      convertedBalance,
-      exchangeRateUsed: exchangeRate,
+      display_currency: displayCurrency,
+      converted_balance: convertedBalance,
+      exchange_rate_used: exchangeRate,
       lastConversionDate: new Date(),
       conversionSource: 'api'
     });
@@ -2121,8 +2172,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       accountId: fromAccountId,
       affectsBalance: true,
       status: 'completed',
-      transferToAccountId: toAccountId
-    });
+      transferToAccountId: toAccountId,
+      // Currency fields
+      currencyCode: getUserCurrency(),
+      originalAmount: amount,
+      originalCurrency: getUserCurrency(),
+      exchangeRateUsed: 1.0,
+      // Payment source tracking
+      paymentSource: 'account_transfer',
+      sourceEntityId: transfer.id,
+      sourceEntityType: 'transfer',
+      deductFromBalance: true,
+      paymentContext: 'account_transfer'
+    } as any);
 
     // Incoming transaction (income to destination account)
     await addTransaction({
@@ -2134,8 +2196,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       accountId: toAccountId,
       affectsBalance: true,
       status: 'completed',
-      transferToAccountId: fromAccountId
-    });
+      transferToAccountId: fromAccountId,
+      // Currency fields
+      currencyCode: getUserCurrency(),
+      originalAmount: amount,
+      originalCurrency: getUserCurrency(),
+      exchangeRateUsed: 1.0,
+      // Payment source tracking
+      paymentSource: 'account_transfer',
+      sourceEntityId: transfer.id,
+      sourceEntityType: 'transfer',
+      deductFromBalance: false,
+      paymentContext: 'account_transfer'
+    } as any);
 
     // Add transfer to state
     setAccountTransfers(prev => [transfer, ...prev]);
@@ -2429,7 +2502,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         status: goalData.status || 'active',
         activity_scope: goalData.activityScope || 'general',
         linked_accounts_count: goalData.linkedAccountsCount || 0,
-        currency_code: (goalData as any).currencyCode || getUserCurrency()
+        currency_code: (goalData as any).currencyCode || getUserCurrency(),
+        // Currency tracking fields
+        original_current_amount: goalData.original_current_amount || goalData.currentAmount || 0,
+        original_currency: goalData.original_currency || getUserCurrency(),
+        exchange_rate_used: goalData.exchange_rate_used || 1.0
       })
       .select()
       .single();
@@ -2700,7 +2777,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         payment_strategy: liabilityData.paymentStrategy || 'equal',
         payment_accounts: liabilityData.paymentAccounts || [],
         payment_percentages: liabilityData.paymentPercentages || [],
-        original_amount: liabilityData.originalAmount,
+        original_amount: liabilityData.originalAmount || liabilityData.original_amount || liabilityData.totalAmount,
         original_term_months: liabilityData.originalTermMonths,
         original_start_date: liabilityData.originalStartDate?.toISOString().split('T')[0],
         modification_count: liabilityData.modificationCount || 0,
@@ -2709,7 +2786,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type_specific_data: liabilityData.typeSpecificData || {},
         currency_code: liabilityData.currencyCode || getUserCurrency(),
         activity_scope: liabilityData.activityScope || 'general',
-        priority: liabilityData.priority || 'medium'
+        priority: liabilityData.priority || 'medium',
+        // Currency tracking fields
+        original_currency: liabilityData.original_currency || getUserCurrency(),
+        exchange_rate_used: liabilityData.exchange_rate_used || 1.0
       })
       .select()
       .single();
@@ -3161,7 +3241,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             period: budgetData.period,
             start_date: budgetData.startDate?.toISOString().split('T')[0],
             end_date: budgetData.endDate?.toISOString().split('T')[0],
-            is_active: true
+            is_active: true,
+            // Currency fields
+            currency_code: budgetData.currencyCode || getUserCurrency(),
+            original_amount: budgetData.original_amount || budgetData.amount,
+            original_currency: budgetData.original_currency || getUserCurrency(),
+            exchange_rate_used: budgetData.exchange_rate_used || 1.0
           })
           .select()
           .single()
@@ -3213,7 +3298,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           spent: budgetData.spent || 0,
           period: budgetData.period,
           activity_scope: budgetData.activityScope || 'general',
-          linked_accounts_count: budgetData.accountIds?.length || 0
+          linked_accounts_count: budgetData.accountIds?.length || 0,
+          // Currency fields
+          currency_code: budgetData.currencyCode || getUserCurrency(),
+          original_amount: budgetData.original_amount || budgetData.amount,
+          original_currency: budgetData.original_currency || getUserCurrency(),
+          exchange_rate_used: budgetData.exchange_rate_used || 1.0
         })
         .select()
         .single();
@@ -3276,6 +3366,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setBudgets(prev => prev.map(budget => 
       budget.id === id ? { ...budget, ...updates } : budget
     ));
+    
+    // Check for budget warnings
+    const updatedBudget = { ...budgets.find(b => b.id === id), ...updates };
+    if (updatedBudget && updatedBudget.amount && updatedBudget.spent) {
+      const spentPercentage = (updatedBudget.spent / updatedBudget.amount) * 100;
+      if (spentPercentage >= 80) {
+        sendBudgetWarning(updatedBudget.category || 'Unknown', updatedBudget.spent, updatedBudget.amount);
+      }
+    }
   };
 
   const deleteBudget = async (id: string) => {
@@ -3330,7 +3429,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         priority: billData.priority || 'medium',
         status: billData.status || 'active',
         payment_method: billData.paymentMethod,
-        notes: billData.notes
+        notes: billData.notes,
+        // Currency tracking fields
+        original_amount: billData.original_amount || billData.amount,
+        original_currency: billData.original_currency || getUserCurrency(),
+        exchange_rate_used: billData.exchange_rate_used || 1.0
       })
       .select()
       .single();

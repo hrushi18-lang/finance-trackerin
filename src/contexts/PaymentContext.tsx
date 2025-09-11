@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { useFinance } from './FinanceContext';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { UniversalPaymentModal, UniversalPaymentData } from '../components/forms/UniversalPaymentModal';
+import { setPaymentContext } from '../services/paymentService';
 
 interface PaymentContextType {
   openPaymentModal: (config: PaymentModalConfig) => void;
@@ -22,7 +22,7 @@ interface PaymentModalConfig {
   title?: string;
   showDeductToggle?: boolean;
   paymentType?: 'contribution' | 'payment' | 'transfer' | 'withdrawal';
-  onSuccess?: () => void;
+  onSuccess?: (transactionData?: any) => void;
 }
 
 const PaymentContext = createContext<PaymentContextType | undefined>(undefined);
@@ -40,7 +40,6 @@ interface PaymentProviderProps {
 }
 
 export const PaymentProvider: React.FC<PaymentProviderProps> = ({ children }) => {
-  const { addTransaction } = useFinance();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<PaymentModalConfig | null>(null);
 
@@ -79,11 +78,10 @@ export const PaymentProvider: React.FC<PaymentProviderProps> = ({ children }) =>
         }
       };
 
-      await addTransaction(transactionData);
-
-      // Call success callback if provided
+      // Store the transaction data for the parent component to handle
+      // This will be picked up by the FinanceContext or other components
       if (modalConfig?.onSuccess) {
-        modalConfig.onSuccess();
+        modalConfig.onSuccess(transactionData);
       }
 
       closePaymentModal();
@@ -108,6 +106,11 @@ export const PaymentProvider: React.FC<PaymentProviderProps> = ({ children }) =>
     closePaymentModal,
     isPaymentModalOpen
   };
+
+  // Register the context with the payment service
+  useEffect(() => {
+    setPaymentContext(value);
+  }, [value]);
 
   return (
     <PaymentContext.Provider value={value}>
