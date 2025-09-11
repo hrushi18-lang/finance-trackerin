@@ -312,18 +312,18 @@ const Accounts: React.FC = () => {
         <div 
           className="mobile-card relative overflow-hidden rounded-2xl p-4 mb-4"
           style={{
-            background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)',
-            boxShadow: '0 8px 20px rgba(59, 130, 246, 0.2)'
+            background: '#fef7ed',
+            border: '1px solid #fed7aa'
           }}
         >
-          <div className="text-center text-white">
+          <div className="text-center text-black">
             <p className="mobile-text-small font-body mb-1 opacity-90">Total Net Worth</p>
             <p className="mobile-text-hero font-serif font-bold">
               {formatCurrencyEnhanced(totalBalance, displayCurrency)}
             </p>
           </div>
           {/* Simplified decorative elements */}
-          <div className="absolute top-2 right-2 w-8 h-8 rounded-full opacity-10" style={{ backgroundColor: 'white' }}></div>
+          <div className="absolute top-2 right-2 w-8 h-8 rounded-full opacity-20" style={{ backgroundColor: '#fed7aa' }}></div>
         </div>
       </div>
 

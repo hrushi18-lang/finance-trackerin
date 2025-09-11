@@ -188,14 +188,18 @@ const GoalDetail: React.FC = () => {
             className="relative overflow-hidden rounded-3xl p-8 mb-6"
             style={{
               background: goalAnalytics.isCompleted 
-                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                ? '#f0fdf4'
                 : goalAnalytics.isOverdue
-                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                : 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.06)'
+                ? '#fef2f2'
+                : '#fef7ed',
+              border: goalAnalytics.isCompleted 
+                ? '1px solid #bbf7d0'
+                : goalAnalytics.isOverdue
+                ? '1px solid #fecaca'
+                : '1px solid #fed7aa'
             }}
           >
-            <div className="text-center text-white">
+            <div className="text-center text-black">
               <div className="flex items-center justify-center mb-4">
                 <LuxuryCategoryIcon category={goal.category} size={32} variant="luxury" />
               </div>

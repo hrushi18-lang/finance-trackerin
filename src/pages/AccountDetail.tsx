@@ -184,11 +184,11 @@ const AccountDetail: React.FC = () => {
           <div 
             className="relative overflow-hidden rounded-3xl p-8 mb-6"
             style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)',
-              boxShadow: '0 20px 40px rgba(59, 130, 246, 0.2), 0 8px 16px rgba(16, 185, 129, 0.1)'
+              background: '#fef7ed',
+              border: '1px solid #fed7aa'
             }}
           >
-            <div className="text-center text-white">
+            <div className="text-center text-black">
               <p className="text-lg font-body mb-2 opacity-90">Current Balance</p>
               <p className="text-4xl font-serif font-bold mb-2">
                 {formatCurrency(account.balance || 0)}

@@ -173,16 +173,22 @@ const BillDetail: React.FC = () => {
             className="relative overflow-hidden rounded-3xl p-8 mb-6"
             style={{
               background: billAnalytics.isOverdue
-                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                ? '#fef2f2'
                 : billAnalytics.isDueSoon
-                ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                ? '#fffbeb'
                 : billAnalytics.isPaid
-                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                : 'linear-gradient(135deg, #3b82f6 0%, #10b981 100%)',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.06)'
+                ? '#f0fdf4'
+                : '#fef7ed',
+              border: billAnalytics.isOverdue
+                ? '1px solid #fecaca'
+                : billAnalytics.isDueSoon
+                ? '1px solid #fed7aa'
+                : billAnalytics.isPaid
+                ? '1px solid #bbf7d0'
+                : '1px solid #fed7aa'
             }}
           >
-            <div className="text-center text-white">
+            <div className="text-center text-black">
               <div className="flex items-center justify-center mb-4">
                 <LuxuryCategoryIcon category={bill.category} size={32} variant="luxury" />
               </div>
