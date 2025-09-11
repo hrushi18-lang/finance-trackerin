@@ -13,6 +13,7 @@ import { PaymentProvider } from './contexts/PaymentContext';
 import { ToastProvider } from './components/common/Toast';
 import { ErrorFallback } from './components/common/ErrorFallback';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { ReceiptModal } from './components/receipts/ReceiptModal';
 import { BottomNavigation } from './components/layout/BottomNavigation';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import OnboardingWrapper from './components/OnboardingWrapper';
@@ -133,6 +134,7 @@ function App() {
                         <PersonalizationProvider>
                           <FinanceProvider>
                             <PaymentProvider>
+                              <ReceiptModal />
                               <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                                 <AppInitializer>
                                   <RouteHandler>

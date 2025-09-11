@@ -276,65 +276,63 @@ const Accounts: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--background)' }}>
-      {/* Mobile-Optimized Header */}
-      <div className="sticky top-0 z-10" style={{ backgroundColor: 'var(--background)' }}>
-        <div className="px-4 pt-4 pb-3">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 rounded-xl transition-all duration-200 active:scale-95"
-                style={{ backgroundColor: 'var(--background-secondary)' }}
-              >
-                <ArrowLeft size={18} style={{ color: 'var(--text-secondary)' }} />
-              </button>
-              <div>
-                <h1 className="text-xl font-heading font-bold" style={{ color: 'var(--text-primary)' }}>
-                  Accounts
-                </h1>
-                <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
-                  {accounts.length} account{accounts.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setShowForm(true)}
-              className="flex items-center space-x-1 px-3 py-2"
+    <div className="min-h-screen pb-20 mobile-container" style={{ backgroundColor: 'var(--background)' }}>
+      {/* Mobile-optimized Header */}
+      <div className="mobile-header">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="mobile-touch-target p-2 rounded-xl transition-all duration-200 active:scale-95"
+              style={{ backgroundColor: 'var(--background-secondary)' }}
             >
-              <Plus size={14} />
-              <span className="text-sm">Add</span>
-            </Button>
-          </div>
-
-          {/* Compact Total Balance Card */}
-          <div 
-            className="relative overflow-hidden rounded-2xl p-4 mb-4"
-            style={{
-              background: 'linear-gradient(135deg, var(--primary) 0%, #2d5016 100%)',
-              boxShadow: '0 8px 20px rgba(0,0,0,0.1)'
-            }}
-          >
-            <div className="text-center text-white">
-              <p className="text-sm font-body mb-1 opacity-90">Total Net Worth</p>
-              <p className="text-2xl font-serif font-bold">
-                {formatCurrencyEnhanced(totalBalance, displayCurrency)}
+              <ArrowLeft size={18} style={{ color: 'var(--text-secondary)' }} />
+            </button>
+            <div className="flex-1 min-w-0">
+              <h1 className="mobile-text-display font-heading font-bold truncate" style={{ color: 'var(--text-primary)' }}>
+                Accounts
+              </h1>
+              <p className="mobile-text-small font-body truncate" style={{ color: 'var(--text-secondary)' }}>
+                {accounts.length} account{accounts.length !== 1 ? 's' : ''}
               </p>
             </div>
-            {/* Simplified decorative elements */}
-            <div className="absolute top-2 right-2 w-8 h-8 rounded-full opacity-10" style={{ backgroundColor: 'white' }}></div>
           </div>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setShowForm(true)}
+            className="mobile-button flex items-center space-x-1 px-3 py-2"
+          >
+            <Plus size={14} />
+            <span className="text-sm">Add</span>
+          </Button>
+        </div>
+
+        {/* Mobile-optimized Total Balance Card */}
+        <div 
+          className="mobile-card relative overflow-hidden rounded-2xl p-4 mb-4"
+          style={{
+            background: 'linear-gradient(135deg, var(--primary) 0%, #2d5016 100%)',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.1)'
+          }}
+        >
+          <div className="text-center text-white">
+            <p className="mobile-text-small font-body mb-1 opacity-90">Total Net Worth</p>
+            <p className="mobile-text-hero font-serif font-bold">
+              {formatCurrencyEnhanced(totalBalance, displayCurrency)}
+            </p>
+          </div>
+          {/* Simplified decorative elements */}
+          <div className="absolute top-2 right-2 w-8 h-8 rounded-full opacity-10" style={{ backgroundColor: 'white' }}></div>
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Mobile-optimized Tab Navigation */}
       <div className="px-4 mb-4">
         <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
           <button
             onClick={() => setActiveTab('accounts')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`mobile-touch-target flex-1 py-3 px-4 rounded-lg mobile-text-medium font-medium transition-all duration-200 ${
               activeTab === 'accounts'
                 ? 'text-white shadow-lg'
                 : 'text-gray-600 hover:text-gray-800'
@@ -347,7 +345,7 @@ const Accounts: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('cards')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`mobile-touch-target flex-1 py-3 px-4 rounded-lg mobile-text-medium font-medium transition-all duration-200 ${
               activeTab === 'cards'
                 ? 'text-white shadow-lg'
                 : 'text-gray-600 hover:text-gray-800'

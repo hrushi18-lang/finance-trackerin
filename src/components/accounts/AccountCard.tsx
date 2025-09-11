@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FinancialAccount } from '../../types';
 import { getCurrencyInfo } from '../../utils/currency-converter';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
-import { useCurrencyConversion } from '../../contexts/CurrencyConversionContext';
+import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { AccountActionsMenu } from './AccountActionsMenu';
 import { 
   CreditCard, 
@@ -48,7 +48,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const navigate = useNavigate();
   const { formatCurrency: formatCurrencyI18n } = useInternationalization();
-  const { convertAmount } = useCurrencyConversion();
+  const { convertAmount } = useEnhancedCurrency();
   const getAccountIcon = (type: FinancialAccount['type']) => {
     switch (type) {
       case 'bank_savings':
@@ -91,9 +91,9 @@ export const AccountCard: React.FC<AccountCardProps> = ({
 
 
   // Get display currency and converted balance
-  const displayCurrency = account.displayCurrency || account.currencyCode;
-  const originalCurrency = account.currencyCode;
-  const originalBalance = account.originalBalance || account.balance;
+  const displayCurrency = account.displayCurrency || account.currencyCode || 'USD';
+  const originalCurrency = account.currencyCode || 'USD';
+  const originalBalance = account.originalBalance || account.balance || 0;
   const convertedBalance = account.convertedBalance || 
     (originalCurrency !== displayCurrency ? 
       convertAmount(originalBalance, originalCurrency, displayCurrency) || originalBalance :
@@ -135,11 +135,11 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                 {formatAccountType(account.type)}
               </p>
               <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 flex-shrink-0">
-                {getCurrencyInfo(originalCurrency)?.flag} {originalCurrency}
+                {getCurrencyInfo(originalCurrency)?.flag || '💱'} {originalCurrency}
               </span>
               {shouldShowDualCurrency && (
                 <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 flex-shrink-0">
-                  {getCurrencyInfo(displayCurrency)?.flag} {displayCurrency}
+                  {getCurrencyInfo(displayCurrency)?.flag || '💱'} {displayCurrency}
                 </span>
               )}
             </div>

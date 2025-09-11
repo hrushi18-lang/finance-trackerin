@@ -1,12 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { useFinance } from '../contexts/FinanceContext';
 import { AccountCard } from '../components/accounts/AccountCard';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { AccountForm } from '../components/accounts/AccountForm';
 import { RingChart } from '../components/analytics/RingChart';
-import { BarChart } from '../components/analytics/BarChart';
 import { AnalyticsEngine } from '../utils/analytics-engine';
 import { 
   Plus, 
@@ -15,10 +13,8 @@ import {
   Target, 
   CreditCard, 
   FileText,
-  Calendar,
   Settings,
   Bell,
-  User,
   ArrowUpRight,
   ArrowDownRight,
   Wallet,
@@ -34,7 +30,6 @@ import { useInternationalization } from '../contexts/InternationalizationContext
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
   const { formatCurrency } = useInternationalization();
   
   const { 
@@ -55,12 +50,18 @@ const Dashboard: React.FC = () => {
 
   // Initialize analytics engine
   const analyticsEngine = useMemo(() => {
+    // Filter out enhanced liabilities to match the expected type
+    const standardLiabilities = liabilities.filter(l => 
+      'type' in l && 'due_date' in l && 
+      typeof l.type === 'string' && 
+      ['loan', 'credit_card', 'mortgage', 'purchase', 'other'].includes(l.type)
+    ) as any[];
     return new AnalyticsEngine(
       transactions,
       accounts,
       goals,
       bills,
-      liabilities,
+      standardLiabilities,
       budgets,
       userCategories
     );
@@ -103,12 +104,6 @@ const Dashboard: React.FC = () => {
   const netWorth = totalBalance - liabilities.reduce((sum, l) => sum + (l.remainingAmount || 0), 0);
   
   const activeGoals = goals.filter(g => !(g as any).is_archived);
-  const totalGoalProgress = activeGoals.reduce((sum, g) => sum + ((g.currentAmount || 0) / g.targetAmount), 0);
-  const averageGoalProgress = activeGoals.length > 0 ? totalGoalProgress / activeGoals.length : 0;
-
-  const upcomingBills = bills.filter(b => 
-    new Date(b.dueDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-  );
 
   const recentTransactions = transactions
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -154,251 +149,199 @@ const Dashboard: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--background)' }}>
-      {/* Header */}
-      <div className="pt-12 pb-6 px-4">
+    <div className="min-h-screen pb-20 mobile-container" style={{ backgroundColor: 'var(--background)' }}>
+      {/* Mobile-optimized Header */}
+      <div className="mobile-header">
         <div className="flex items-center justify-between mb-4">
-            <div>
-            <h1 className="text-2xl font-heading" style={{ color: 'var(--text-primary)' }}>
-              Welcome back, {user?.email || 'User'}!
-              </h1>
-            <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
-              {format(new Date(), 'EEEE, MMMM do, yyyy')}
-              </p>
-            </div>
-          <div className="flex items-center space-x-2">
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <Bell size={20} style={{ color: 'var(--text-secondary)' }} />
-              </button>
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <Settings size={20} style={{ color: 'var(--text-secondary)' }} />
-              </button>
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <User size={20} style={{ color: 'var(--text-secondary)' }} />
-              </button>
-            </div>
-          </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div
-            className="p-4 rounded-2xl"
-            style={{
-              backgroundColor: 'var(--background-secondary)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>Net Worth</span>
-              <TrendingUp size={16} style={{ color: 'var(--success)' }} />
-            </div>
-            <p className="text-lg font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
-              ${netWorth.toLocaleString()}
+          <div className="flex-1 min-w-0">
+            <h1 className="mobile-text-display font-heading truncate" style={{ color: 'var(--text-primary)' }}>
+              Welcome back!
+            </h1>
+            <p className="mobile-text-small font-body truncate" style={{ color: 'var(--text-secondary)' }}>
+              {format(new Date(), 'EEEE, MMM do')}
             </p>
           </div>
-          <div
-            className="p-4 rounded-2xl"
-            style={{
-              backgroundColor: 'var(--background-secondary)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
-          >
-              <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>This Month</span>
+          <div className="flex items-center space-x-1">
+            <button className="mobile-touch-target p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Bell size={18} style={{ color: 'var(--text-secondary)' }} />
+            </button>
+            <button className="mobile-touch-target p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Settings size={18} style={{ color: 'var(--text-secondary)' }} />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile-optimized Quick Stats */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="mobile-card">
+            <div className="flex items-center justify-between mb-2">
+              <span className="mobile-text-small font-body" style={{ color: 'var(--text-secondary)' }}>Net Worth</span>
+              <TrendingUp size={16} style={{ color: 'var(--success)' }} />
+            </div>
+            <p className="mobile-text-large font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
+              {formatCurrency ? formatCurrency(netWorth) : `$${netWorth.toLocaleString()}`}
+            </p>
+          </div>
+          <div className="mobile-card">
+            <div className="flex items-center justify-between mb-2">
+              <span className="mobile-text-small font-body" style={{ color: 'var(--text-secondary)' }}>This Month</span>
               <TrendingDown size={16} style={{ color: 'var(--error)' }} />
             </div>
-            <p className="text-lg font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
-              ${(totalIncome - totalExpenses).toLocaleString()}
+            <p className="mobile-text-large font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
+              {formatCurrency ? formatCurrency(totalIncome - totalExpenses) : `$${(totalIncome - totalExpenses).toLocaleString()}`}
             </p>
           </div>
         </div>
             </div>
 
-      {/* Quick Actions */}
+      {/* Mobile-optimized Quick Actions */}
       <div className="px-4 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>Quick Actions</h2>
+          <h2 className="mobile-text-lg font-heading" style={{ color: 'var(--text-primary)' }}>Quick Actions</h2>
           <Button
             variant="primary"
             size="sm"
             onClick={() => setShowQuickActions(true)}
             icon={<Plus size={16} />}
+            className="mobile-button"
           >
             Add
           </Button>
         </div>
-        <div className="grid grid-cols-4 gap-3">
-              <button 
+        <div className="grid grid-cols-4 gap-2">
+          <button 
             onClick={() => handleQuickAction('add-transaction')}
-            className="p-4 rounded-xl text-center hover:scale-105 transition-transform"
-            style={{
-              backgroundColor: 'var(--background-secondary)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
+            className="mobile-touch-target p-3 rounded-xl text-center hover:scale-105 transition-transform mobile-card"
           >
-            <div className="text-2xl mb-2">💸</div>
-            <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>Transaction</p>
-              </button>
-            <button
+            <div className="text-xl mb-1">💸</div>
+            <p className="mobile-text-small font-body" style={{ color: 'var(--text-secondary)' }}>Transaction</p>
+          </button>
+          <button
             onClick={() => handleQuickAction('add-goal')}
-            className="p-4 rounded-xl text-center hover:scale-105 transition-transform"
-            style={{
-              backgroundColor: 'var(--background-secondary)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
+            className="mobile-touch-target p-3 rounded-xl text-center hover:scale-105 transition-transform mobile-card"
           >
-            <div className="text-2xl mb-2">🎯</div>
-            <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>Goal</p>
-            </button>
-            <button
+            <div className="text-xl mb-1">🎯</div>
+            <p className="mobile-text-small font-body" style={{ color: 'var(--text-secondary)' }}>Goal</p>
+          </button>
+          <button
             onClick={() => handleQuickAction('add-budget')}
-            className="p-4 rounded-xl text-center hover:scale-105 transition-transform"
-            style={{
-              backgroundColor: 'var(--background-secondary)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
+            className="mobile-touch-target p-3 rounded-xl text-center hover:scale-105 transition-transform mobile-card"
           >
-            <div className="text-2xl mb-2">📊</div>
-            <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>Budget</p>
-            </button>
-            <button
+            <div className="text-xl mb-1">📊</div>
+            <p className="mobile-text-small font-body" style={{ color: 'var(--text-secondary)' }}>Budget</p>
+          </button>
+          <button
             onClick={() => handleQuickAction('add-bill')}
-            className="p-4 rounded-xl text-center hover:scale-105 transition-transform"
-            style={{
-              backgroundColor: 'var(--background-secondary)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
+            className="mobile-touch-target p-3 rounded-xl text-center hover:scale-105 transition-transform mobile-card"
           >
-            <div className="text-2xl mb-2">📄</div>
-            <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>Bill</p>
-            </button>
-          </div>
+            <div className="text-xl mb-1">📄</div>
+            <p className="mobile-text-small font-body" style={{ color: 'var(--text-secondary)' }}>Bill</p>
+          </button>
         </div>
+      </div>
 
-      {/* Current Balance & Net Worth Widget */}
+      {/* Mobile-optimized Current Balance & Net Worth Widget */}
       <div className="px-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-4">
           {/* Current Balance */}
-          <div className="card-neumorphic p-6 slide-in-up">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
+          <div className="mobile-card mobile-fade-in">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="mobile-text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
                 Current Balance
               </h2>
               <Wallet size={20} style={{ color: 'var(--primary)' }} />
             </div>
             <div className="text-center">
-              <div className="text-3xl font-numbers mb-2" style={{ color: 'var(--text-primary)' }}>
+              <div className="mobile-text-hero font-numbers mb-2" style={{ color: 'var(--text-primary)' }}>
                 {formatCurrency ? formatCurrency(totalBalance) : `$${totalBalance.toLocaleString()}`}
               </div>
-              <div className="text-sm text-gray-500">Across {accounts.length} account{accounts.length !== 1 ? 's' : ''}</div>
+              <div className="mobile-text-small text-gray-500">Across {accounts.length} account{accounts.length !== 1 ? 's' : ''}</div>
             </div>
           </div>
 
           {/* Net Worth */}
-          <div className="card-neumorphic p-6 slide-in-up">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
+          <div className="mobile-card mobile-fade-in">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="mobile-text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
                 Net Worth
               </h2>
               <TrendingUp size={20} style={{ color: 'var(--success)' }} />
             </div>
             <div className="text-center">
-              <div className="text-3xl font-numbers mb-2" style={{ color: 'var(--text-primary)' }}>
+              <div className="mobile-text-hero font-numbers mb-2" style={{ color: 'var(--text-primary)' }}>
                 {formatCurrency ? formatCurrency(netWorth) : `$${netWorth.toLocaleString()}`}
               </div>
-              <div className="text-sm text-gray-500">Assets - Liabilities</div>
+              <div className="mobile-text-small text-gray-500">Assets - Liabilities</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Enhanced Analytics Widgets */}
+      {/* Mobile-optimized Analytics Widgets */}
       <div className="px-4 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>Analytics Overview</h2>
-          <div className="flex items-center space-x-2">
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="px-3 py-1 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
-            >
-              <option value="thisMonth">This Month</option>
-              <option value="lastMonth">Last Month</option>
-              <option value="last3Months">Last 3 Months</option>
-            </select>
-          </div>
+          <h2 className="mobile-text-lg font-heading" style={{ color: 'var(--text-primary)' }}>Analytics</h2>
+          <select
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            className="mobile-input px-3 py-2 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+          >
+            <option value="thisMonth">This Month</option>
+            <option value="lastMonth">Last Month</option>
+            <option value="last3Months">Last 3 Months</option>
+          </select>
         </div>
 
-        {/* Key Metrics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div 
-            className="p-4 rounded-2xl"
-            style={{
-              backgroundColor: 'var(--background)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
-          >
+        {/* Mobile-optimized Key Metrics Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="mobile-card">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                <TrendingUp size={20} className="text-green-600" />
+              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                <TrendingUp size={16} className="text-green-600" />
               </div>
-              <div>
-                <p className="text-xs font-body text-gray-500">Income</p>
-                <p className="text-lg font-numbers font-bold">${dashboardData.totalIncome.toLocaleString()}</p>
+              <div className="flex-1 min-w-0">
+                <p className="mobile-text-small font-body text-gray-500">Income</p>
+                <p className="mobile-text-medium font-numbers font-bold truncate">
+                  {formatCurrency ? formatCurrency(dashboardData.totalIncome) : `$${dashboardData.totalIncome.toLocaleString()}`}
+                </p>
               </div>
             </div>
           </div>
 
-          <div 
-            className="p-4 rounded-2xl"
-            style={{
-              backgroundColor: 'var(--background)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
-          >
+          <div className="mobile-card">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                <TrendingDown size={20} className="text-red-600" />
+              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                <TrendingDown size={16} className="text-red-600" />
               </div>
-              <div>
-                <p className="text-xs font-body text-gray-500">Expenses</p>
-                <p className="text-lg font-numbers font-bold">${dashboardData.totalExpenses.toLocaleString()}</p>
+              <div className="flex-1 min-w-0">
+                <p className="mobile-text-small font-body text-gray-500">Expenses</p>
+                <p className="mobile-text-medium font-numbers font-bold truncate">
+                  {formatCurrency ? formatCurrency(dashboardData.totalExpenses) : `$${dashboardData.totalExpenses.toLocaleString()}`}
+                </p>
               </div>
             </div>
           </div>
 
-          <div 
-            className="p-4 rounded-2xl"
-            style={{
-              backgroundColor: 'var(--background)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
-          >
+          <div className="mobile-card">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <PiggyBank size={20} className="text-blue-600" />
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <PiggyBank size={16} className="text-blue-600" />
               </div>
-              <div>
-                <p className="text-xs font-body text-gray-500">Savings Rate</p>
-                <p className="text-lg font-numbers font-bold">{dashboardData.savingsRate.toFixed(1)}%</p>
+              <div className="flex-1 min-w-0">
+                <p className="mobile-text-small font-body text-gray-500">Savings Rate</p>
+                <p className="mobile-text-medium font-numbers font-bold">{dashboardData.savingsRate.toFixed(1)}%</p>
               </div>
             </div>
           </div>
 
-          <div 
-            className="p-4 rounded-2xl"
-            style={{
-              backgroundColor: 'var(--background)',
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-            }}
-          >
+          <div className="mobile-card">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                <BarChart3 size={20} className="text-purple-600" />
+              <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                <BarChart3 size={16} className="text-purple-600" />
               </div>
-              <div>
-                <p className="text-xs font-body text-gray-500">Transactions</p>
-                <p className="text-lg font-numbers font-bold">{dashboardData.transactionCount}</p>
+              <div className="flex-1 min-w-0">
+                <p className="mobile-text-small font-body text-gray-500">Transactions</p>
+                <p className="mobile-text-medium font-numbers font-bold">{dashboardData.transactionCount}</p>
               </div>
             </div>
           </div>
@@ -510,7 +453,7 @@ const Dashboard: React.FC = () => {
                   <div key={bill.id} className="flex items-center justify-between p-3 rounded-lg bg-orange-50 border border-orange-200">
                     <div>
                       <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                        {bill.name}
+                        {bill.title}
                       </p>
                       <p className="text-xs text-gray-500">
                         Due: {format(new Date(bill.dueDate), 'MMM dd, yyyy')}
@@ -518,7 +461,7 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-numbers font-bold">${bill.amount.toLocaleString()}</p>
-                      <p className="text-xs text-gray-500">{bill.currency}</p>
+                      <p className="text-xs text-gray-500">{bill.currencyCode || 'USD'}</p>
                     </div>
                   </div>
                 ))
@@ -633,7 +576,7 @@ const Dashboard: React.FC = () => {
               <AccountCard
                 key={account.id}
                 account={account}
-                onClick={handleEditAccount}
+                onEdit={handleEditAccount}
               />
             ))}
                       </div>

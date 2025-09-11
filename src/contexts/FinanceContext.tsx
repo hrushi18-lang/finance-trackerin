@@ -127,6 +127,12 @@ interface FinanceContextType {
   extendGoal: (goalId: string, newTargetAmount: number, reason?: string) => Promise<any>;
   customizeGoal: (goalId: string, newTargetAmount: number, newTitle?: string, newDescription?: string, reason?: string) => Promise<any>;
   archiveGoal: (goalId: string, reason?: string) => Promise<any>;
+  
+  // Receipt generation
+  generatePaymentReceipt: (paymentData: any) => void;
+  showReceipt: boolean;
+  currentReceipt: any;
+  hideReceipt: () => void;
   // High-level flows
   fundGoalFromAccount: (fromAccountId: string, goalId: string, amount: number, description?: string) => Promise<void>;
   contributeToGoal: (goalId: string, amount: number, sourceAccountId?: string, description?: string) => Promise<void>;
@@ -198,6 +204,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [transactionSplits, setTransactionSplits] = useState<TransactionSplit[]>([]);
   const [financialInsights, setFinancialInsights] = useState<FinancialInsight[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Receipt state
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [currentReceipt, setCurrentReceipt] = useState<any>(null);
 
   // Load all data when user changes
   useEffect(() => {
@@ -587,8 +597,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const bill = bills.find(b => b.id === billId);
     if (!bill) throw new Error('Bill not found');
     const payAmount = Number(amount ?? bill.amount);
+    const account = accounts.find(a => a.id === accountId);
+    if (!account) throw new Error('Account not found');
 
-    await addTransaction({
+    const transaction = await addTransaction({
       type: 'expense',
       amount: payAmount,
       category: bill.category || 'Bills',
@@ -603,6 +615,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const nextDueDate = new Date(bill.nextDueDate);
     nextDueDate.setDate(nextDueDate.getDate() + (bill.frequency === 'weekly' ? 7 : bill.frequency === 'bi_weekly' ? 14 : bill.frequency === 'monthly' ? 30 : bill.frequency === 'quarterly' ? 90 : bill.frequency === 'semi_annual' ? 180 : bill.frequency === 'annual' ? 365 : 30));
     await updateBill(billId, { lastPaidDate: new Date(), nextDueDate });
+
+    // Generate receipt
+    generatePaymentReceipt({
+      id: transaction.id,
+      amount: payAmount,
+      currency: account.currency || 'USD',
+      description: description || `Bill Payment: ${bill.title}`,
+      accountName: account.name,
+      paymentType: 'bill_payment',
+      sourceEntity: {
+        type: 'bill',
+        name: bill.title
+      },
+      timestamp: new Date(),
+      status: 'completed',
+      reference: `BILL-${billId.slice(-8)}`,
+      notes: `Payment for ${bill.title}`
+    });
 
     // Also update recurring transaction if it exists
     const recurringBill = recurringTransactions.find(rt => rt.description === bill.title && rt.type === 'expense');
@@ -1191,7 +1221,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) return;
     
     const { data, error } = await supabase
-      .from('recurring_transactions')
+      .from('bills')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -1204,53 +1234,53 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const mappedBills: Bill[] = (data || []).map(bill => ({
       id: bill.id,
       userId: bill.user_id,
-      title: bill.description, // Use description as title
+      title: bill.title,
       description: bill.description,
       category: bill.category,
-      billType: bill.metadata?.billType || 'fixed',
+      billType: bill.bill_type || 'fixed',
       amount: Number(bill.amount),
-      estimatedAmount: bill.metadata?.estimatedAmount || Number(bill.amount),
+      estimatedAmount: Number(bill.estimated_amount || bill.amount),
       frequency: bill.frequency,
-      customFrequencyDays: bill.metadata?.customFrequencyDays,
-      dueDate: new Date(bill.start_date),
-      nextDueDate: new Date(bill.next_occurrence_date),
-      lastPaidDate: bill.last_processed_date ? new Date(bill.last_processed_date) : undefined,
-      defaultAccountId: bill.account_id,
-      autoPay: bill.metadata?.autoPay || false,
-      linkedLiabilityId: bill.metadata?.linkedLiabilityId,
-      isEmi: bill.metadata?.isEmi || false,
+      customFrequencyDays: bill.custom_frequency_days,
+      dueDate: new Date(bill.due_date),
+      nextDueDate: new Date(bill.next_due_date),
+      lastPaidDate: bill.last_paid_date ? new Date(bill.last_paid_date) : undefined,
+      defaultAccountId: bill.default_account_id,
+      autoPay: bill.auto_pay || false,
+      linkedLiabilityId: bill.linked_liability_id,
+      isEmi: bill.is_emi || false,
       isActive: bill.is_active,
-      isEssential: bill.metadata?.isEssential || false,
-      reminderDaysBefore: bill.metadata?.reminderDaysBefore || 3,
-      sendDueDateReminder: bill.metadata?.sendDueDateReminder || false,
-      sendOverdueReminder: bill.metadata?.sendOverdueReminder || false,
-      billCategory: 'general_expense',
-      targetCategory: bill.metadata?.targetCategory,
-      isRecurring: true, // All recurring_transactions are recurring
-      paymentMethod: 'bank_transfer',
-      notes: '',
-      priority: 'medium',
-      status: 'active',
-      activityScope: bill.metadata?.activityScope || 'general',
-      accountIds: bill.metadata?.accountIds || [],
-      linkedAccountsCount: bill.metadata?.accountIds?.length || 0,
+      isEssential: bill.is_essential || false,
+      reminderDaysBefore: bill.reminder_days_before || 3,
+      sendDueDateReminder: bill.send_due_date_reminder || false,
+      sendOverdueReminder: bill.send_overdue_reminder || false,
+      billCategory: bill.bill_category || 'general_expense',
+      targetCategory: bill.target_category,
+      isRecurring: bill.is_recurring || false,
+      paymentMethod: bill.payment_method || 'bank_transfer',
+      notes: bill.notes || '',
+      priority: bill.priority || 'medium',
+      status: bill.status || 'active',
+      activityScope: bill.activity_scope || 'general',
+      accountIds: [],
+      linkedAccountsCount: bill.linked_accounts_count || 0,
       // New fields
-      currencyCode: 'USD',
-      isIncome: bill.type === 'income',
-      billStage: 'pending',
-      movedToDate: undefined,
-      stageReason: undefined,
-      isVariableAmount: false,
-      minAmount: undefined,
-      maxAmount: undefined,
-      completionAction: 'continue',
-      completionDate: undefined,
-      completionNotes: undefined,
-      originalAmount: undefined,
-      extendedAmount: undefined,
-      isArchived: false,
-      archivedDate: undefined,
-      archivedReason: undefined,
+      currencyCode: bill.currency_code || 'USD',
+      isIncome: bill.is_income || false,
+      billStage: bill.bill_stage || 'pending',
+      movedToDate: bill.moved_to_date ? new Date(bill.moved_to_date) : undefined,
+      stageReason: bill.stage_reason,
+      isVariableAmount: bill.is_variable_amount || false,
+      minAmount: bill.min_amount,
+      maxAmount: bill.max_amount,
+      completionAction: bill.completion_action || 'continue',
+      completionDate: bill.completion_date ? new Date(bill.completion_date) : undefined,
+      completionNotes: bill.completion_notes,
+      originalAmount: bill.original_amount,
+      extendedAmount: bill.extended_amount,
+      isArchived: bill.is_archived || false,
+      archivedDate: bill.archived_date ? new Date(bill.archived_date) : undefined,
+      archivedReason: bill.archived_reason,
       createdAt: new Date(bill.created_at),
       updatedAt: new Date(bill.updated_at)
     }));
@@ -3149,6 +3179,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setBudgets(prev => [newBudget, ...prev]);
+
+    // Create account links for general budgets with account IDs
+    if (budgetData.activityScope === 'general' && budgetData.accountIds && budgetData.accountIds.length > 0) {
+      const accountLinks = budgetData.accountIds.map((accountId, index) => ({
+        activity_type: 'budget',
+        activity_id: data.id,
+        account_id: accountId,
+        user_id: user.id,
+        is_primary: index === 0
+      }));
+
+      await supabase
+        .from('activity_account_links')
+        .insert(accountLinks);
+    }
   };
 
   const updateBudget = async (id: string, updates: Partial<Budget>) => {
@@ -3908,6 +3953,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
+  // Receipt functions
+  const generatePaymentReceipt = (paymentData: any) => {
+    setCurrentReceipt(paymentData);
+    setShowReceipt(true);
+  };
+
+  const hideReceipt = () => {
+    setShowReceipt(false);
+    setCurrentReceipt(null);
+  };
+
   // Calculate statistics
   const stats = {
     totalIncome: transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0),
@@ -4109,7 +4165,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     updateUserCategory,
     deleteUserCategory,
     getUserCategoriesByType,
-    stats
+    stats,
+    
+    // Receipt functions
+    generatePaymentReceipt,
+    showReceipt,
+    currentReceipt,
+    hideReceipt
   };
 
   return (

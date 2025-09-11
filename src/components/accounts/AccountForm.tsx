@@ -31,6 +31,8 @@ export const AccountForm: React.FC<AccountFormProps> = ({
     currency: 'USD'
   });
 
+  const [showInitialBalance, setShowInitialBalance] = useState(false);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -44,6 +46,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
         account_number: account.account_number || '',
         currency: account.currency
       });
+      setShowInitialBalance(false);
     } else {
       setFormData({
         name: '',
@@ -54,6 +57,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
         account_number: '',
         currency: 'USD'
       });
+      setShowInitialBalance(true);
     }
     setErrors({});
   }, [account, isOpen]);
@@ -154,43 +158,71 @@ export const AccountForm: React.FC<AccountFormProps> = ({
         </div>
 
         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <div className="flex items-center space-x-2 mb-3">
-            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 text-sm">💰</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-blue-600 text-sm">💰</span>
+              </div>
+              <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Initial Balance *
+              </label>
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                Current amount in account
+              </span>
             </div>
-            <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-              Initial Balance *
-            </label>
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              Current amount in account
-            </span>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-lg font-semibold text-gray-600">
-              {formatCurrency(1, formData.currency || 'USD').charAt(0)}
-            </span>
-            <Input
-              type="number"
-              placeholder={['credit_card', 'investment'].includes(formData.type) ? "-0.00" : "0.00"}
-              value={formData.balance || ''}
-              onChange={(e) => handleInputChange('balance', parseFloat(e.target.value) || 0)}
-              error={errors.balance || ''}
-              className="flex-1"
-            />
-          </div>
-          
-          <div className="mt-2 space-y-1">
-            <p className="text-xs text-gray-600">
-              {['credit_card', 'investment'].includes(formData.type) 
-                ? "Enter current balance (negative for debt/overdrawn accounts)"
-                : "This will be your starting balance for this account"
-              }
-            </p>
-            {errors.balance && (
-              <p className="text-xs text-red-600">{errors.balance}</p>
+            {!account && (
+              <button
+                type="button"
+                onClick={() => setShowInitialBalance(!showInitialBalance)}
+                className="text-xs text-blue-600 hover:text-blue-800 underline"
+              >
+                {showInitialBalance ? 'Hide' : 'Set Initial Balance'}
+              </button>
             )}
           </div>
+          
+          {showInitialBalance && (
+            <>
+              <div className="flex items-center space-x-2">
+                <span className="text-lg font-semibold text-gray-600">
+                  {formatCurrency(1, formData.currency || 'USD').charAt(0)}
+                </span>
+                <Input
+                  type="number"
+                  placeholder={['credit_card', 'investment'].includes(formData.type) ? "-0.00" : "0.00"}
+                  value={formData.balance || ''}
+                  onChange={(e) => handleInputChange('balance', parseFloat(e.target.value) || 0)}
+                  error={errors.balance || ''}
+                  className="flex-1"
+                />
+              </div>
+              
+              <div className="mt-2 space-y-1">
+                <p className="text-xs text-gray-600">
+                  {['credit_card', 'investment'].includes(formData.type) 
+                    ? "Enter current balance (negative for debt/overdrawn accounts)"
+                    : "This will be your starting balance for this account"
+                  }
+                </p>
+                {errors.balance && (
+                  <p className="text-xs text-red-600">{errors.balance}</p>
+                )}
+              </div>
+            </>
+          )}
+          
+          {!showInitialBalance && !account && (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-600 mb-2">Start with zero balance</p>
+              <button
+                type="button"
+                onClick={() => setShowInitialBalance(true)}
+                className="text-xs text-blue-600 hover:text-blue-800 underline"
+              >
+                Or set initial balance
+              </button>
+            </div>
+          )}
         </div>
 
         <div>
