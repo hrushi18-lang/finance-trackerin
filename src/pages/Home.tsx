@@ -22,14 +22,11 @@ import {
   PieChart,
   FileText,
   Wallet,
-  ChevronLeft,
-  ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
-import { useSwipeGestures } from '../hooks/useMobileGestures';
 import { format } from 'date-fns';
 
 const Home: React.FC = () => {
@@ -48,24 +45,6 @@ const Home: React.FC = () => {
   } = useFinance();
 
   const [hideBalance, setHideBalance] = useState(false);
-  const [currentAccountPage, setCurrentAccountPage] = useState(0);
-
-  // Swipe gestures for accounts
-  const { elementRef: accountsRef } = useSwipeGestures({
-    onSwipeLeft: () => {
-      const maxPages = Math.ceil(accounts.length / 4) - 1;
-      if (currentAccountPage < maxPages) {
-        setCurrentAccountPage(currentAccountPage + 1);
-      }
-    },
-    onSwipeRight: () => {
-      if (currentAccountPage > 0) {
-        setCurrentAccountPage(currentAccountPage - 1);
-      }
-    },
-    threshold: 50,
-    velocityThreshold: 0.3
-  });
 
   // Calculate net worth
   const netWorth = useMemo(() => {
@@ -233,81 +212,52 @@ const Home: React.FC = () => {
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>Accounts</h2>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setCurrentAccountPage(Math.max(0, currentAccountPage - 1))}
-                  disabled={currentAccountPage === 0}
-                  className="p-2 rounded-full transition-all duration-200 disabled:opacity-50"
-                  style={{ backgroundColor: 'var(--background-secondary)' }}
-                >
-                  <ChevronLeft size={16} style={{ color: 'var(--text-secondary)' }} />
-                </button>
-                <span className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>
-                  {currentAccountPage + 1} of {Math.ceil(accounts.length / 4)}
-                </span>
-                <button
-                  onClick={() => setCurrentAccountPage(Math.min(Math.ceil(accounts.length / 4) - 1, currentAccountPage + 1))}
-                  disabled={currentAccountPage >= Math.ceil(accounts.length / 4) - 1}
-                  className="p-2 rounded-full transition-all duration-200 disabled:opacity-50"
-                  style={{ backgroundColor: 'var(--background-secondary)' }}
-                >
-                  <ChevronRight size={16} style={{ color: 'var(--text-secondary)' }} />
-                </button>
-              </div>
+              <button
+                onClick={() => navigate('/accounts')}
+                className="text-sm font-medium px-3 py-1 rounded-lg transition-all duration-200"
+                style={{ 
+                  backgroundColor: 'var(--background-secondary)',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                View All
+              </button>
             </div>
             
-            <div ref={accountsRef} className="overflow-hidden">
-              <div 
-                className="flex transition-transform duration-300 ease-out"
-                style={{ transform: `translateX(-${currentAccountPage * 100}%)` }}
-              >
-                {Array.from({ length: Math.ceil(accounts.length / 4) }).map((_, pageIndex) => (
-                  <div key={pageIndex} className="w-full flex-shrink-0">
-                    <div className="grid grid-cols-2 gap-3">
-                      {accounts.slice(pageIndex * 4, (pageIndex + 1) * 4).map((account) => (
-                        <div
-                          key={account.id}
-                          className="p-4 rounded-2xl cursor-pointer transition-all duration-200 hover:scale-105"
-                          style={{
-                            backgroundColor: 'var(--background-secondary)',
-                            boxShadow: '4px 4px 8px rgba(0,0,0,0.1), -4px -4px 8px rgba(255,255,255,0.7)'
-                          }}
-                          onClick={() => navigate(`/account/${account.id}`)}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center space-x-2">
-                              {account.type === 'bank_savings' && <PiggyBank size={16} style={{ color: 'var(--primary)' }} />}
-                              {account.type === 'bank_current' && <CreditCard size={16} style={{ color: 'var(--primary)' }} />}
-                              {account.type === 'digital_wallet' && <Smartphone size={16} style={{ color: 'var(--primary)' }} />}
-                              {account.type === 'investment' && <TrendingUp size={16} style={{ color: 'var(--success)' }} />}
-                              {account.type === 'cash' && <Wallet size={16} style={{ color: 'var(--warning)' }} />}
-                            </div>
-                            <div className="text-right">
-                              <div className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
-                                {account.type.replace('_', ' ').toUpperCase()}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="mb-2">
-                            <h3 className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                              {account.name}
-                            </h3>
-                            {account.institution && (
-                              <p className="text-xs font-body truncate" style={{ color: 'var(--text-secondary)' }}>
-                                {account.institution}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-numbers" style={{ color: 'var(--text-primary)' }}>
-                              {hideBalance ? '••••••' : formatCurrency(account.balance || 0)}
-                            </div>
-                            <div className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
-                              {account.currency}
-                            </div>
-                          </div>
+            <div className="overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <div className="flex space-x-3 pb-2" style={{ width: 'max-content' }}>
+                {accounts.map((account) => (
+                  <div
+                    key={account.id}
+                    className="w-40 h-24 rounded-xl cursor-pointer transition-all duration-200 hover:scale-105 flex-shrink-0"
+                    style={{
+                      backgroundColor: 'var(--background-secondary)',
+                      border: '1px solid #fed7aa'
+                    }}
+                    onClick={() => navigate(`/account/${account.id}`)}
+                  >
+                    <div className="p-3 h-full flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1">
+                          {account.type === 'bank_savings' && <PiggyBank size={14} style={{ color: 'var(--primary)' }} />}
+                          {account.type === 'bank_current' && <CreditCard size={14} style={{ color: 'var(--primary)' }} />}
+                          {account.type === 'digital_wallet' && <Smartphone size={14} style={{ color: 'var(--primary)' }} />}
+                          {account.type === 'investment' && <TrendingUp size={14} style={{ color: 'var(--success)' }} />}
+                          {account.type === 'cash' && <Wallet size={14} style={{ color: 'var(--warning)' }} />}
                         </div>
-                      ))}
+                        <div className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
+                          {account.type.replace('_', ' ').toUpperCase()}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-xs font-medium truncate mb-1" style={{ color: 'var(--text-primary)' }}>
+                          {account.name}
+                        </h3>
+                        <div className="text-sm font-numbers" style={{ color: 'var(--text-primary)' }}>
+                          {hideBalance ? '••••••' : formatCurrency(account.balance || 0)}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
