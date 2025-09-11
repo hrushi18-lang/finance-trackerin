@@ -1,0 +1,89 @@
+/* Self-Hosted Fonts - Complete Local Font Solution */
+
+/* Archivo Variable Font - Normal */
+@font-face {
+  font-family: 'Archivo';
+  src: url('./assets/fonts/Archivo-VariableFont.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Archivo Variable Font - Italic */
+@font-face {
+  font-family: 'Archivo';
+  src: url('./assets/fonts/Archivo-Italic-VariableFont.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Archivo Black - Regular */
+@font-face {
+  font-family: 'Archivo Black';
+  src: url('./assets/fonts/ArchivoBlack-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Playfair Display Variable Font - Normal */
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('./assets/fonts/Playfair-VariableFont.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Playfair Display Variable Font - Italic */
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('./assets/fonts/Playfair-Italic-VariableFont.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* CSS Variables for easy usage */
+:root {
+  --font-heading: 'Archivo Black', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-numbers: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-titles: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-description: 'Playfair Display', 'Times New Roman', 'Times', serif;
+}
+
+/* Utility classes for direct font usage */
+.font-heading {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-numbers {
+  font-family: var(--font-numbers);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-titles {
+  font-family: var(--font-titles);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-description {
+  font-family: var(--font-description);
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.025em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
