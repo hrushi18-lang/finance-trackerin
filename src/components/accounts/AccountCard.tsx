@@ -91,10 +91,10 @@ export const AccountCard: React.FC<AccountCardProps> = ({
 
 
   // Get display currency and converted balance
-  const displayCurrency = account.displayCurrency || account.currencyCode || 'USD';
+  const displayCurrency = account.display_currency || account.currencyCode || 'USD';
   const originalCurrency = account.currencyCode || 'USD';
-  const originalBalance = account.originalBalance || account.balance || 0;
-  const convertedBalance = account.convertedBalance || 
+  const originalBalance = account.original_balance || account.balance || 0;
+  const convertedBalance = account.converted_balance || 
     (originalCurrency !== displayCurrency ? 
       convertAmount(originalBalance, originalCurrency, displayCurrency) || originalBalance :
       originalBalance);
@@ -189,7 +189,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                 </span>
                 <p className={`text-lg font-heading ${originalBalance < 0 ? 'text-red-600' : ''}`} 
                    style={{ color: originalBalance < 0 ? 'var(--error)' : 'var(--text-primary)' }}>
-                  {formatCurrencyI18n(originalBalance)}
+                  {formatCurrencyI18n(originalBalance, originalCurrency)}
                 </p>
               </div>
               
@@ -200,21 +200,21 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                 </span>
                 <p className={`text-xl font-heading ${convertedBalance < 0 ? 'text-red-600' : 'text-blue-600 dark:text-blue-400'}`} 
                    style={{ color: convertedBalance < 0 ? 'var(--error)' : 'var(--primary)' }}>
-                  {formatCurrencyI18n(convertedBalance)}
+                  {formatCurrencyI18n(convertedBalance, displayCurrency)}
                 </p>
               </div>
               
               {/* Exchange rate info */}
-              {account.exchangeRateUsed && (
+              {account.exchange_rate_used && (
                 <div className="text-xs text-gray-400 dark:text-gray-500 text-right">
-                  1 {originalCurrency} = {account.exchangeRateUsed.toFixed(4)} {displayCurrency}
+                  1 {originalCurrency} = {account.exchange_rate_used.toFixed(4)} {displayCurrency}
                 </div>
               )}
             </div>
           ) : (
             <p className={`text-xl font-heading ${account.balance < 0 ? 'text-red-600' : ''}`} 
                style={{ color: account.balance < 0 ? 'var(--error)' : 'var(--text-primary)' }}>
-              {formatCurrencyI18n(account.balance)}
+              {formatCurrencyI18n(account.balance, originalCurrency)}
             </p>
           )}
         </div>

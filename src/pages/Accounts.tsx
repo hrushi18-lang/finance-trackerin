@@ -564,6 +564,7 @@ const Accounts: React.FC = () => {
                   onTogglePin={handleTogglePin}
                   onArchive={handleArchiveAccount}
                   showBalance={true}
+                  showDualCurrency={true}
                 />
               ))}
             </div>

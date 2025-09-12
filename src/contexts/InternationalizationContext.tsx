@@ -28,7 +28,7 @@ interface InternationalizationContextType {
   setCurrency: (currency: CurrencyConfig) => void;
   setSecondaryCurrency: (currency: CurrencyConfig | null) => void;
   setRegion: (region: RegionConfig) => void;
-  formatCurrency: (amount: number) => string;
+  formatCurrency: (amount: number, currencyCode?: string) => string;
   formatCurrencyWithSecondary: (amount: number) => string;
   formatTransactionAmount: (amount: number, originalCurrency?: string, convertedAmount?: number) => string;
   formatDate: (date: Date, format?: string) => string;
@@ -261,32 +261,34 @@ export const InternationalizationProvider: React.FC<InternationalizationProvider
   };
 
   // Format currency according to local conventions
-  const formatCurrency = (amount: number): string => {
+  const formatCurrency = (amount: number, currencyCode?: string): string => {
     // Handle invalid amounts
     if (amount === null || amount === undefined || isNaN(amount)) {
-      return `${currency.symbol}0.00`;
+      const targetCurrency = currencyCode ? supportedCurrencies.find(c => c.code === currencyCode) || currency : currency;
+      return `${targetCurrency.symbol}0.00`;
     }
     
+    const targetCurrency = currencyCode ? supportedCurrencies.find(c => c.code === currencyCode) || currency : currency;
     const absAmount = Math.abs(amount);
     const isNegative = amount < 0;
     
     // Format the number according to currency settings
-    let formattedNumber = absAmount.toFixed(currency.decimals);
+    let formattedNumber = absAmount.toFixed(targetCurrency.decimals);
     
     // Apply thousands separator
     const parts = formattedNumber.split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, currency.thousandsSeparator);
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, targetCurrency.thousandsSeparator);
     
-    if (currency.decimals > 0 && parts[1]) {
-      formattedNumber = parts.join(currency.decimalSeparator);
+    if (targetCurrency.decimals > 0 && parts[1]) {
+      formattedNumber = parts.join(targetCurrency.decimalSeparator);
     } else {
       formattedNumber = parts[0];
     }
 
     // Add currency symbol
-    const result = currency.symbolPosition === 'before' 
-      ? `${currency.symbol}${formattedNumber}`
-      : `${formattedNumber} ${currency.symbol}`;
+    const result = targetCurrency.symbolPosition === 'before' 
+      ? `${targetCurrency.symbol}${formattedNumber}`
+      : `${formattedNumber} ${targetCurrency.symbol}`;
 
     return isNegative ? `-${result}` : result;
   };
