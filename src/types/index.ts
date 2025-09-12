@@ -273,7 +273,7 @@ export interface Bill { // Enhanced Bill interface with all new features
   sendDueDateReminder: boolean;
   sendOverdueReminder: boolean;
   // Enhanced fields
-  billCategory: 'account_specific' | 'category_based' | 'general_expense';
+  billCategory: 'account_specific' | 'category_based' | 'general';
   targetCategory?: string;
   isRecurring: boolean;
   paymentMethod?: string;
