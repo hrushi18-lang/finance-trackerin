@@ -94,7 +94,7 @@ const OnboardingWrapper: React.FC = () => {
         });
 
         // Mark onboarding as completed
-        setData('onboarding_completed', true);
+        localStorage.setItem('onboarding_completed', 'true');
         
         // Navigate to home
         navigate('/');

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useProfile } from './ProfileContext';
 
 interface CurrencyConfig {
   code: string;
@@ -22,10 +23,14 @@ interface RegionConfig {
 
 interface InternationalizationContextType {
   currency: CurrencyConfig;
+  secondaryCurrency: CurrencyConfig | null;
   region: RegionConfig;
   setCurrency: (currency: CurrencyConfig) => void;
+  setSecondaryCurrency: (currency: CurrencyConfig | null) => void;
   setRegion: (region: RegionConfig) => void;
   formatCurrency: (amount: number) => string;
+  formatCurrencyWithSecondary: (amount: number) => string;
+  formatTransactionAmount: (amount: number, originalCurrency?: string, convertedAmount?: number) => string;
   formatDate: (date: Date, format?: string) => string;
   formatNumber: (number: number) => string;
   detectUserLocation: () => Promise<void>;
@@ -49,6 +54,7 @@ interface InternationalizationProviderProps {
 
 export const InternationalizationProvider: React.FC<InternationalizationProviderProps> = ({ children }) => {
   const { i18n } = useTranslation();
+  const { profile } = useProfile();
 
   // Comprehensive currency configurations
   const supportedCurrencies: CurrencyConfig[] = [
@@ -156,6 +162,7 @@ export const InternationalizationProvider: React.FC<InternationalizationProvider
   ];
 
   const [currency, setCurrency] = useState<CurrencyConfig>(supportedCurrencies[0]); // Default to USD
+  const [secondaryCurrency, setSecondaryCurrency] = useState<CurrencyConfig | null>(null);
   const [region, setRegion] = useState<RegionConfig>(supportedRegions[0]); // Default to US
 
   // Load saved preferences
@@ -173,6 +180,25 @@ export const InternationalizationProvider: React.FC<InternationalizationProvider
       if (found) setRegion(found);
     }
   }, []);
+
+  // Load currency from profile when available
+  useEffect(() => {
+    if (profile?.primaryCurrency) {
+      const found = supportedCurrencies.find(c => c.code === profile.primaryCurrency);
+      if (found) {
+        setCurrency(found);
+        // Also save to localStorage for consistency
+        localStorage.setItem('finspire_currency', profile.primaryCurrency);
+      }
+    }
+
+    if (profile?.displayCurrency && profile.displayCurrency !== profile.primaryCurrency) {
+      const found = supportedCurrencies.find(c => c.code === profile.displayCurrency);
+      if (found) {
+        setSecondaryCurrency(found);
+      }
+    }
+  }, [profile]);
 
   // Save preferences when changed
   useEffect(() => {
@@ -265,6 +291,63 @@ export const InternationalizationProvider: React.FC<InternationalizationProvider
     return isNegative ? `-${result}` : result;
   };
 
+  // Format transaction amount with both original and converted currencies
+  const formatTransactionAmount = (amount: number, originalCurrency?: string, convertedAmount?: number): string => {
+    if (!originalCurrency || !convertedAmount || originalCurrency === currency.code) {
+      return formatCurrency(amount);
+    }
+
+    const originalFormatted = formatCurrency(amount, originalCurrency);
+    const convertedFormatted = formatCurrency(convertedAmount);
+    
+    return `${originalFormatted} (≈ ${convertedFormatted})`;
+  };
+
+  // Format currency with secondary currency display
+  const formatCurrencyWithSecondary = (amount: number): string => {
+    const primaryFormatted = formatCurrency(amount);
+    
+    if (!secondaryCurrency) {
+      return primaryFormatted;
+    }
+
+    // Simple conversion rate (in real app, this would come from an API)
+    const conversionRates: { [key: string]: { [key: string]: number } } = {
+      'USD': { 'EUR': 0.85, 'GBP': 0.73, 'INR': 83.0, 'JPY': 110.0, 'CAD': 1.25, 'AUD': 1.35 },
+      'EUR': { 'USD': 1.18, 'GBP': 0.86, 'INR': 97.5, 'JPY': 129.0, 'CAD': 1.47, 'AUD': 1.59 },
+      'GBP': { 'USD': 1.37, 'EUR': 1.16, 'INR': 113.5, 'JPY': 150.0, 'CAD': 1.71, 'AUD': 1.85 },
+      'INR': { 'USD': 0.012, 'EUR': 0.010, 'GBP': 0.009, 'JPY': 1.32, 'CAD': 0.015, 'AUD': 0.016 },
+      'JPY': { 'USD': 0.009, 'EUR': 0.008, 'GBP': 0.007, 'INR': 0.76, 'CAD': 0.011, 'AUD': 0.012 },
+      'CAD': { 'USD': 0.80, 'EUR': 0.68, 'GBP': 0.58, 'INR': 66.4, 'JPY': 87.5, 'AUD': 1.08 },
+      'AUD': { 'USD': 0.74, 'EUR': 0.63, 'GBP': 0.54, 'INR': 61.5, 'JPY': 81.0, 'CAD': 0.93 }
+    };
+
+    const rate = conversionRates[currency.code]?.[secondaryCurrency.code] || 1;
+    const convertedAmount = amount * rate;
+    
+    // Format secondary currency
+    const isNegative = convertedAmount < 0;
+    const absAmount = Math.abs(convertedAmount);
+    const formattedNumber = absAmount.toFixed(secondaryCurrency.decimals);
+    const parts = formattedNumber.split('.');
+    
+    let formattedNumberWithSeparators;
+    if (parts.length > 1) {
+      const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, secondaryCurrency.thousandsSeparator);
+      formattedNumberWithSeparators = `${integerPart}${secondaryCurrency.decimalSeparator}${parts[1]}`;
+    } else {
+      formattedNumberWithSeparators = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, secondaryCurrency.thousandsSeparator);
+    }
+
+    const secondaryResult = secondaryCurrency.symbolPosition === 'before' 
+      ? `${secondaryCurrency.symbol}${formattedNumberWithSeparators}`
+      : `${formattedNumberWithSeparators} ${secondaryCurrency.symbol}`;
+
+    const finalSecondaryResult = isNegative ? `-${secondaryResult}` : secondaryResult;
+
+    return `${primaryFormatted} (≈ ${finalSecondaryResult})`;
+  };
+
   // Format date according to regional preferences
   const formatDate = (date: Date, format?: string): string => {
     const formatToUse = format || region.dateFormat;
@@ -293,10 +376,14 @@ export const InternationalizationProvider: React.FC<InternationalizationProvider
 
   const value = {
     currency,
+    secondaryCurrency,
     region,
     setCurrency,
+    setSecondaryCurrency,
     setRegion,
     formatCurrency,
+    formatCurrencyWithSecondary,
+    formatTransactionAmount,
     formatDate,
     formatNumber,
     detectUserLocation,

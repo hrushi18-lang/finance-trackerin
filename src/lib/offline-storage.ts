@@ -3,7 +3,7 @@
  * Handles local data persistence and synchronization
  */
 
-import { Database } from '../types/supabase';
+// Remove unused import
 
 export type LocalStorageKey = 
   | 'user_profile'
@@ -28,7 +28,7 @@ export interface OfflineQueueItem {
   id: string;
   action: 'create' | 'update' | 'delete';
   table: string;
-  data: any;
+  data: Record<string, unknown>;
   timestamp: string;
   retryCount: number;
 }
@@ -210,7 +210,7 @@ class OfflineStorage {
   }
 
   // Local storage operations
-  private async saveToLocal(table: string, data: any): Promise<void> {
+  private async saveToLocal(table: string, data: Record<string, unknown>): Promise<void> {
     if (window.indexedDB) {
       return this.saveToIndexedDB(table, data);
     } else {
@@ -243,7 +243,7 @@ class OfflineStorage {
   }
 
   // IndexedDB operations
-  private async saveToIndexedDB(table: string, data: any): Promise<void> {
+  private async saveToIndexedDB(table: string, data: Record<string, unknown>): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open('FinTrackDB', 1);
       
@@ -323,10 +323,10 @@ class OfflineStorage {
   }
 
   // LocalStorage fallback operations
-  private async saveToLocalStorage(table: string, data: any): Promise<void> {
+  private async saveToLocalStorage(table: string, data: Record<string, unknown>): Promise<void> {
     const key = `fintrack_${table}`;
     const existing = JSON.parse(localStorage.getItem(key) || '[]');
-    const index = existing.findIndex((item: any) => item.id === data.id);
+    const index = existing.findIndex((item: Record<string, unknown>) => item.id === data.id);
     
     if (index >= 0) {
       existing[index] = data;
@@ -337,37 +337,37 @@ class OfflineStorage {
     localStorage.setItem(key, JSON.stringify(existing));
   }
 
-  private async getFromLocalStorage(table: string, userId?: string): Promise<any[]> {
+  private async getFromLocalStorage(table: string, userId?: string): Promise<Record<string, unknown>[]> {
     const key = `fintrack_${table}`;
     const items = JSON.parse(localStorage.getItem(key) || '[]');
     
     if (userId) {
-      return items.filter((item: any) => item.user_id === userId);
+      return items.filter((item: Record<string, unknown>) => item.user_id === userId);
     }
     
     return items;
   }
 
-  private async getFromLocalStorageById(table: string, id: string): Promise<any> {
+  private async getFromLocalStorageById(table: string, id: string): Promise<Record<string, unknown> | null> {
     const items = await this.getFromLocalStorage(table);
-    return items.find((item: any) => item.id === id) || null;
+    return items.find((item: Record<string, unknown>) => item.id === id) || null;
   }
 
   private async removeFromLocalStorage(table: string, id: string): Promise<void> {
     const key = `fintrack_${table}`;
     const existing = JSON.parse(localStorage.getItem(key) || '[]');
-    const filtered = existing.filter((item: any) => item.id !== id);
+    const filtered = existing.filter((item: Record<string, unknown>) => item.id !== id);
     localStorage.setItem(key, JSON.stringify(filtered));
   }
 
   // Sync operations
-  private async syncCreate(table: string, data: any): Promise<any> {
+  private async syncCreate(table: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
     // This would integrate with your Supabase client
     // For now, return the data as-is
     return data;
   }
 
-  private async syncUpdate(table: string, id: string, data: any): Promise<any> {
+  private async syncUpdate(table: string, id: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
     // This would integrate with your Supabase client
     return data;
   }
@@ -377,7 +377,7 @@ class OfflineStorage {
   }
 
   // Sync queue management
-  private async addToSyncQueue(action: 'create' | 'update' | 'delete', table: string, data: any): Promise<void> {
+  private async addToSyncQueue(action: 'create' | 'update' | 'delete', table: string, data: Record<string, unknown>): Promise<void> {
     const queueItem: OfflineQueueItem = {
       id: this.generateId(),
       action,
@@ -476,7 +476,7 @@ class OfflineStorage {
     } else {
       const key = 'fintrack_sync_queue';
       const existing = JSON.parse(localStorage.getItem(key) || '[]');
-      const filtered = existing.filter((item: any) => item.id !== id);
+      const filtered = existing.filter((item: Record<string, unknown>) => item.id !== id);
       localStorage.setItem(key, JSON.stringify(filtered));
     }
   }

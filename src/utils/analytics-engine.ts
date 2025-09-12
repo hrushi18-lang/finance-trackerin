@@ -1,5 +1,6 @@
 import { Transaction, FinancialAccount, Goal, Bill, Liability, Budget, UserCategory, FinancialHealthScore } from '../types';
 import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
+import { convertCurrency } from './currency-converter';
 
 export interface CategoryAnalytics {
   category: string;
@@ -659,11 +660,11 @@ export class AnalyticsEngine {
     // 1. LIQUIDITY RATIO (25% weight)
     const liquidAssets = this.accounts
       .filter(acc => ['checking', 'savings', 'money_market'].includes(acc.type))
-      .reduce((sum, acc) => sum + this.convertToTargetCurrency(acc.balance, acc.currency, primaryCurrency), 0);
+      .reduce((sum, acc) => sum + (convertCurrency(acc.balance, acc.currency, primaryCurrency) || acc.balance), 0);
 
     const monthlyExpenses = this.transactions
       .filter(t => t.type === 'expense' && isWithinInterval(new Date(t.date), { start: lastMonth, end: endOfMonth(lastMonth) }))
-      .reduce((sum, t) => sum + this.convertToTargetCurrency(t.amount, t.currencyCode || primaryCurrency, primaryCurrency), 0);
+      .reduce((sum, t) => sum + (convertCurrency(t.amount, t.currencyCode || primaryCurrency, primaryCurrency) || t.amount), 0);
 
     const liquidityRatio = monthlyExpenses > 0 ? liquidAssets / monthlyExpenses : 0;
     const liquidityScore = Math.min(100, Math.max(0, (liquidityRatio / 6) * 100)); // 6 months = 100%
@@ -671,10 +672,10 @@ export class AnalyticsEngine {
     // 2. DEBT-TO-INCOME RATIO (20% weight)
     const monthlyIncome = this.transactions
       .filter(t => t.type === 'income' && isWithinInterval(new Date(t.date), { start: lastMonth, end: endOfMonth(lastMonth) }))
-      .reduce((sum, t) => sum + this.convertToTargetCurrency(t.amount, t.currencyCode || primaryCurrency, primaryCurrency), 0);
+      .reduce((sum, t) => sum + (convertCurrency(t.amount, t.currencyCode || primaryCurrency, primaryCurrency) || t.amount), 0);
 
     const totalDebt = this.liabilities
-      .reduce((sum, l) => sum + this.convertToTargetCurrency(l.remainingAmount, l.currencyCode || primaryCurrency, primaryCurrency), 0);
+      .reduce((sum, l) => sum + (convertCurrency(l.remainingAmount, l.currencyCode || primaryCurrency, primaryCurrency) || l.remainingAmount), 0);
 
     const debtToIncomeRatio = monthlyIncome > 0 ? totalDebt / (monthlyIncome * 12) : 0;
     const debtScore = Math.max(0, 100 - (debtToIncomeRatio * 100)); // Lower ratio = higher score
@@ -688,7 +689,7 @@ export class AnalyticsEngine {
     const emergencyFundGoal = monthlyExpenses * 6; // 6 months of expenses
     const emergencyFundActual = this.goals
       .filter(g => g.category.toLowerCase().includes('emergency'))
-      .reduce((sum, g) => sum + this.convertToTargetCurrency(g.currentAmount, g.currencyCode || primaryCurrency, primaryCurrency), 0);
+      .reduce((sum, g) => sum + (convertCurrency(g.currentAmount, g.currencyCode || primaryCurrency, primaryCurrency) || g.currentAmount), 0);
 
     const emergencyFundRatio = emergencyFundGoal > 0 ? emergencyFundActual / emergencyFundGoal : 0;
     const emergencyScore = Math.min(100, emergencyFundRatio * 100);

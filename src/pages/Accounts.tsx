@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Filter, Eye, EyeOff, ArrowLeft, BarChart3, PieChart, TrendingUp, TrendingDown, DollarSign, Calendar, Clock, CreditCard, Shield } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Search, Eye, EyeOff, ArrowLeft, BarChart3, Shield, CreditCard } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { AccountCard } from '../components/accounts/AccountCard';
 import { AccountForm } from '../components/accounts/AccountForm';
 import { GoalsVaultManager } from '../components/accounts/GoalsVaultManager';
 import { TransferModal } from '../components/accounts/TransferModal';
-import { RingChart } from '../components/analytics/RingChart';
-import { BarChart } from '../components/analytics/BarChart';
+// import { RingChart } from '../components/analytics/RingChart'; // Unused import
+// import { BarChart } from '../components/analytics/BarChart'; // Unused import
 import { AnalyticsEngine } from '../utils/analytics-engine';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { useEnhancedCurrency } from '../contexts/EnhancedCurrencyContext';
 import { useNavigate } from 'react-router-dom';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
-import { CurrencySelector } from '../components/currency/CurrencySelector';
+// import { CurrencySelector } from '../components/currency/CurrencySelector'; // Unused import
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
 const Accounts: React.FC = () => {
@@ -26,14 +26,14 @@ const Accounts: React.FC = () => {
     deleteAccount,
     duplicateAccount,
     archiveAccount,
-    restoreAccount,
-    softDeleteAccount,
-    toggleAccountVisibility,
+    // restoreAccount, // Unused
+    // softDeleteAccount, // Unused
+    // toggleAccountVisibility, // Unused
     toggleAccountPin,
     transferBetweenAccounts,
-    getAccountSummary,
-    getAccountTransfers,
-    getAccountAnalytics,
+    // getAccountSummary, // Unused
+    // getAccountTransfers, // Unused
+    // getAccountAnalytics, // Unused
     transactions,
     goals,
     bills,
@@ -41,24 +41,24 @@ const Accounts: React.FC = () => {
     budgets,
     userCategories,
     isLoading,
-    error 
+    // error // Unused
   } = useFinance();
   const { formatCurrency } = useInternationalization();
   const { 
     displayCurrency, 
-    setDisplayCurrency, 
+    // setDisplayCurrency, // Unused
     convertAmount, 
     formatCurrency: formatCurrencyEnhanced,
-    getCurrencySymbol,
-    supportedCurrencies 
+    // getCurrencySymbol, // Unused
+    // supportedCurrencies // Unused
   } = useEnhancedCurrency();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<any>(null);
+  const [editingAccount, setEditingAccount] = useState<Record<string, unknown> | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
-  const [transferFromAccount, setTransferFromAccount] = useState<any>(null);
+  const [transferFromAccount, setTransferFromAccount] = useState<Record<string, unknown> | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
@@ -152,7 +152,7 @@ const Accounts: React.FC = () => {
     }, 0);
   }, [accounts, displayCurrency, convertAmount]);
 
-  const handleCreateAccount = async (data: any) => {
+  const handleCreateAccount = async (data: Record<string, unknown>) => {
     try {
       await addAccount(data);
       setShowForm(false);
@@ -162,7 +162,7 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleUpdateAccount = async (data: any) => {
+  const handleUpdateAccount = async (data: Record<string, unknown>) => {
     if (!editingAccount) return;
 
     try {
@@ -174,7 +174,7 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleDeleteAccount = async (account: any) => {
+  const handleDeleteAccount = async (account: Record<string, unknown>) => {
     if (!confirm(`Are you sure you want to delete "${account.name}"? This action cannot be undone.`)) {
       return;
     }
@@ -187,7 +187,7 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleToggleVisibility = async (account: any) => {
+  const handleToggleVisibility = async (account: Record<string, unknown>) => {
     try {
       await updateAccount(account.id, {
         is_visible: !account.is_visible
@@ -198,7 +198,7 @@ const Accounts: React.FC = () => {
   };
 
   // New handler functions for account actions
-  const handleDuplicateAccount = async (account: any) => {
+  const handleDuplicateAccount = async (account: Record<string, unknown>) => {
     try {
       await duplicateAccount(account.id);
     } catch (error) {
@@ -206,12 +206,12 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleTransfer = (account: any) => {
+  const handleTransfer = (account: Record<string, unknown>) => {
     setTransferFromAccount(account);
     setShowTransferModal(true);
   };
 
-  const handleTransferSubmit = async (transferData: any) => {
+  const handleTransferSubmit = async (transferData: Record<string, unknown>) => {
     try {
       await transferBetweenAccounts(
         transferData.fromAccountId,
@@ -225,17 +225,17 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleViewHistory = (account: any) => {
+  const handleViewHistory = (account: Record<string, unknown>) => {
     // Navigate to transaction history filtered by account
     navigate(`/transactions?account=${account.id}`);
   };
 
-  const handleViewAnalytics = (account: any) => {
+  const handleViewAnalytics = (account: Record<string, unknown>) => {
     // Navigate to analytics page filtered by account
     navigate(`/analytics?account=${account.id}`);
   };
 
-  const handleTogglePin = async (account: any) => {
+  const handleTogglePin = async (account: Record<string, unknown>) => {
     try {
       await toggleAccountPin(account.id);
     } catch (error) {
@@ -243,7 +243,7 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleArchiveAccount = async (account: any) => {
+  const handleArchiveAccount = async (account: Record<string, unknown>) => {
     try {
       await archiveAccount(account.id);
     } catch (error) {
@@ -251,7 +251,7 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleEditAccount = (account: any) => {
+  const handleEditAccount = (account: Record<string, unknown>) => {
     setEditingAccount(account);
   };
 

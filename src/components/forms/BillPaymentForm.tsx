@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { FileText, Calculator, Info, AlertTriangle, CreditCard } from 'lucide-react';
+import { FileText, Calculator, Info, AlertTriangle, CreditCard, ArrowRightLeft } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { Bill, FinancialAccount } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
+import { CurrencyConversionModal } from '../modals/CurrencyConversionModal';
+import { useCurrencyConversion } from '../../hooks/useCurrencyConversion';
 
 interface BillPaymentFormData {
   amount: number;
@@ -22,12 +24,20 @@ interface BillPaymentFormProps {
 
 export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts, onSubmit, onCancel }) => {
   const { currency, formatCurrency } = useInternationalization();
+  const { needsConversion, convertAmount, formatCurrencyAmount } = useCurrencyConversion();
   const [paymentImpact, setPaymentImpact] = useState<{
     newBalance: number;
     accountName: string;
   } | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConversionModal, setShowConversionModal] = useState(false);
+  const [conversionData, setConversionData] = useState<{
+    originalAmount: number;
+    convertedAmount: number;
+    originalCurrency: string;
+    targetCurrency: string;
+  } | null>(null);
   
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<BillPaymentFormData>({
     defaultValues: {
@@ -39,6 +49,12 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
 
   const watchedAmount = watch('amount');
   const watchedAccountId = watch('accountId');
+
+  // Check if currency conversion is needed
+  const selectedAccount = accounts.find(a => a.id === watchedAccountId);
+  const billCurrency = bill?.currencyCode || currency.code;
+  const accountCurrency = selectedAccount?.currency || currency.code;
+  const needsCurrencyConversion = needsConversion(billCurrency, accountCurrency);
 
   // Calculate payment impact when amount or account changes
   React.useEffect(() => {
@@ -57,6 +73,36 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
       setPaymentImpact(null);
     }
   }, [watchedAmount, watchedAccountId, bill, accounts]);
+
+  const handleCurrencyConversion = async () => {
+    if (!bill || !selectedAccount) return;
+
+    const amount = Number(watchedAmount) || 0;
+    if (amount <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    try {
+      const conversion = await convertAmount(amount, billCurrency, accountCurrency);
+      setConversionData({
+        originalAmount: conversion.originalAmount,
+        convertedAmount: conversion.convertedAmount,
+        originalCurrency: conversion.originalCurrency,
+        targetCurrency: conversion.targetCurrency
+      });
+      setShowConversionModal(true);
+    } catch (error) {
+      console.error('Conversion error:', error);
+      alert('Failed to convert currency');
+    }
+  };
+
+  const handleConversionConfirm = (convertedAmount: number, originalAmount: number, rate: number) => {
+    // Update the form with the converted amount
+    setValue('amount', convertedAmount);
+    setConversionData(null);
+  };
 
   const handleFormSubmit = (data: BillPaymentFormData) => {
     try {
@@ -207,6 +253,24 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
             className="bg-black/40 border-white/20 text-white"
             placeholder={`e.g., ${bill.amount}`}
           />
+          
+          {/* Currency Conversion Button */}
+          {needsCurrencyConversion && watchedAmount && watchedAmount > 0 && (
+            <div className="mt-3">
+              <Button
+                type="button"
+                onClick={handleCurrencyConversion}
+                variant="outline"
+                className="w-full bg-blue-500/20 border-blue-400/30 text-blue-300 hover:bg-blue-500/30"
+              >
+                <ArrowRightLeft className="w-4 h-4 mr-2" />
+                Convert {formatCurrencyAmount(Number(watchedAmount), billCurrency)} to {accountCurrency}
+              </Button>
+              <p className="text-xs text-gray-400 mt-1 text-center">
+                Bill is in {billCurrency}, account is in {accountCurrency}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Description */}
@@ -291,6 +355,20 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({ bill, accounts
           </Button>
         </div>
       </form>
+
+      {/* Currency Conversion Modal */}
+      {conversionData && (
+        <CurrencyConversionModal
+          isOpen={showConversionModal}
+          onClose={() => setShowConversionModal(false)}
+          onConfirm={handleConversionConfirm}
+          originalAmount={conversionData.originalAmount}
+          originalCurrency={conversionData.originalCurrency}
+          targetCurrency={conversionData.targetCurrency}
+          billTitle={bill?.title}
+          paymentType="payment"
+        />
+      )}
     </div>
   );
 };

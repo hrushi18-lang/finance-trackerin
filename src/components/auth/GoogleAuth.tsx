@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '../common/Button';
 
 interface GoogleAuthProps {
-  onSuccess: (user: any) => void;
+  onSuccess: (user: Record<string, unknown>) => void;
   onError: (error: string) => void;
   loading?: boolean;
   mode: 'signin' | 'signup';
@@ -22,7 +22,7 @@ export const GoogleAuth: React.FC<GoogleAuthProps> = ({ onSuccess, onError, load
       };
       
       onSuccess(mockUser);
-    } catch (error) {
+    } catch {
       onError('Failed to authenticate with Google');
     }
   };

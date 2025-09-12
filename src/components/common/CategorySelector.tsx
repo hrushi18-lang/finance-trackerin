@@ -55,7 +55,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         : [...DEFAULT_CATEGORIES.TRANSACTION.INCOME, ...DEFAULT_CATEGORIES.TRANSACTION.EXPENSE];
       
       // Get user categories from database
-      const userCategoriesForType = userCategories.filter(cat => cat.type === (transactionType as any));
+      const userCategoriesForType = userCategories.filter(cat => cat.type === (transactionType as 'income' | 'expense'));
       const userCategoryNames = userCategoriesForType.map(cat => cat.name);
       
       return [...baseCategories, ...userCategoryNames];
@@ -63,7 +63,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
     
     // For non-transaction types, get default + user categories
     const defaultCategories = getAllCategories(type);
-    const userCategoriesForType = userCategories.filter(cat => cat.type === (type as any));
+    const userCategoriesForType = userCategories.filter(cat => cat.type === (type as 'income' | 'expense' | 'goal' | 'liability' | 'bill'));
     const userCategoryNames = userCategoriesForType.map(cat => cat.name);
     
     return [...defaultCategories, ...userCategoryNames];
@@ -81,7 +81,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
     if (newCategory.trim() && !categories.some(cat => cat.toLowerCase() === newCategory.trim().toLowerCase())) {
       try {
         setIsAdding(true);
-        const categoryType = type === 'transaction' && transactionType ? transactionType : type as any;
+        const categoryType = type === 'transaction' && transactionType ? transactionType : type as 'income' | 'expense' | 'goal' | 'liability' | 'bill';
         await addUserCategory({
           name: newCategory.trim(),
           type: categoryType,
@@ -103,7 +103,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
 
   // Dynamic icon component
   const getIconComponent = (iconName: string) => {
-    const Icon = (Icons as any)[iconName];
+    const Icon = (Icons as Record<string, React.ComponentType<{ size: number; className: string }>>)[iconName];
     return Icon ? <Icon size={16} className="text-gray-600 dark:text-gray-400" /> : 
       <div className="w-4 h-4 rounded-full bg-current opacity-60" />;
   };

@@ -24,7 +24,8 @@ import {
   Edit,
   Save,
   X,
-  Palette
+  Palette,
+  Globe
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CustomCategoriesManager from '../components/settings/CustomCategoriesManager';
@@ -201,6 +202,17 @@ const Settings: React.FC = () => {
           title: 'Custom Categories',
           subtitle: 'Manage your custom income and expense categories',
           onClick: () => setShowCustomCategories(true)
+        }
+      ]
+    },
+    {
+      title: 'Currency & Region',
+      items: [
+        {
+          icon: <Globe size={20} />,
+          title: 'Currency Settings',
+          subtitle: 'Change your primary and secondary currencies',
+          onClick: () => navigate('/currency-settings')
         }
       ]
     },

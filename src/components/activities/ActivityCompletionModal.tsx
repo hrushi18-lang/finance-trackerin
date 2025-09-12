@@ -7,7 +7,7 @@ interface ActivityCompletionModalProps {
   onClose: () => void;
   activityType: 'goal' | 'bill' | 'liability' | 'budget';
   activityName: string;
-  onComplete: (action: 'continue' | 'extend' | 'archive' | 'delete', data?: any) => Promise<void>;
+  onComplete: (action: 'continue' | 'extend' | 'archive' | 'delete', data?: Record<string, unknown>) => Promise<void>;
   loading?: boolean;
 }
 

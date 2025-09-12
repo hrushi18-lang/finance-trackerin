@@ -8,7 +8,7 @@ interface AnalyticsEvent {
   category: string;
   label?: string;
   value?: number;
-  custom_parameters?: Record<string, any>;
+  custom_parameters?: Record<string, unknown>;
 }
 
 interface UserProperties {
@@ -26,7 +26,7 @@ interface PageView {
   page_title: string;
   page_location: string;
   page_path: string;
-  custom_parameters?: Record<string, any>;
+  custom_parameters?: Record<string, unknown>;
 }
 
 class AnalyticsService {
@@ -71,7 +71,7 @@ class AnalyticsService {
 
     // Initialize gtag
     window.dataLayer = window.dataLayer || [];
-    function gtag(...args: any[]) {
+    function gtag(...args: unknown[]) {
       window.dataLayer.push(args);
     }
     window.gtag = gtag;
@@ -399,13 +399,13 @@ export const analytics = new AnalyticsService(measurementId);
 // Export convenience functions
 export const trackPageView = (pageView: PageView) => analytics.trackPageView(pageView);
 export const trackEvent = (event: AnalyticsEvent) => analytics.trackEvent(event);
-export const trackFinancialAction = (action: string, details: any) => analytics.trackFinancialAction(action, details);
-export const trackEngagement = (action: string, details: any) => analytics.trackEngagement(action, details);
+export const trackFinancialAction = (action: string, details: Record<string, unknown>) => analytics.trackFinancialAction(action, details);
+export const trackEngagement = (action: string, details: Record<string, unknown>) => analytics.trackEngagement(action, details);
 export const trackPerformance = (metric: string, value: number, unit?: string) => analytics.trackPerformance(metric, value, unit);
-export const trackError = (error: any) => analytics.trackError(error);
+export const trackError = (error: Error | Record<string, unknown>) => analytics.trackError(error);
 export const trackOnboardingStep = (step: string, completed: boolean, timeSpent?: number) => analytics.trackOnboardingStep(step, completed, timeSpent);
 export const trackFeatureUsage = (feature: string, action: string, metadata?: Record<string, any>) => analytics.trackFeatureUsage(feature, action, metadata);
-export const trackConversion = (conversion: any) => analytics.trackConversion(conversion);
+export const trackConversion = (conversion: Record<string, unknown>) => analytics.trackConversion(conversion);
 export const setUserId = (userId: string) => analytics.setUserId(userId);
 export const setUserProperties = (properties: UserProperties) => analytics.setUserProperties(properties);
 export const clearUserData = () => analytics.clearUserData();

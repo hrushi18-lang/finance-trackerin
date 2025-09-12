@@ -20,7 +20,46 @@ const Bills: React.FC = () => {
     payBillFromAccount, updateLiability, updateBillStage, handleBillCompletion, createVariableAmountBill, 
     createIncomeBill, payBillFromMultipleAccounts, goals, budgets, userCategories
   } = useFinance();
-  const { formatCurrency, currency } = useInternationalization();
+  const { formatCurrency, formatCurrencyWithSecondary, currency, supportedCurrencies } = useInternationalization();
+  
+  // Format bill amount with currency conversion info
+  const formatBillAmount = (bill: any) => {
+    const billCurrency = bill.currencyCode || currency.code;
+    const needsConversion = billCurrency !== currency.code;
+    
+    if (needsConversion) {
+      // Simple conversion rate (in real app, this would come from an API)
+      const conversionRates: { [key: string]: { [key: string]: number } } = {
+        'USD': { 'INR': 83.0, 'EUR': 0.85, 'GBP': 0.73, 'JPY': 110.0, 'CAD': 1.25, 'AUD': 1.35 },
+        'EUR': { 'USD': 1.18, 'INR': 97.5, 'GBP': 0.86, 'JPY': 129.0, 'CAD': 1.47, 'AUD': 1.59 },
+        'GBP': { 'USD': 1.37, 'INR': 113.5, 'EUR': 1.16, 'JPY': 150.0, 'CAD': 1.71, 'AUD': 1.85 },
+        'INR': { 'USD': 0.012, 'EUR': 0.010, 'GBP': 0.009, 'JPY': 1.32, 'CAD': 0.015, 'AUD': 0.016 },
+        'JPY': { 'USD': 0.009, 'INR': 0.76, 'EUR': 0.008, 'GBP': 0.007, 'CAD': 0.011, 'AUD': 0.012 },
+        'CAD': { 'USD': 0.80, 'INR': 66.4, 'EUR': 0.68, 'GBP': 0.58, 'JPY': 87.5, 'AUD': 1.08 },
+        'AUD': { 'USD': 0.74, 'INR': 61.5, 'EUR': 0.63, 'GBP': 0.54, 'JPY': 81.0, 'CAD': 0.93 }
+      };
+      
+      const rate = conversionRates[billCurrency]?.[currency.code] || 1;
+      const convertedAmount = bill.amount * rate;
+      
+      const billCurrencyInfo = supportedCurrencies.find(c => c.code === billCurrency);
+      const billSymbol = billCurrencyInfo?.symbol || billCurrency;
+      
+      return (
+        <div className="text-right">
+          <div className="text-lg font-bold text-blue-600">
+            {billSymbol}{bill.amount.toFixed(2)} {billCurrency}
+          </div>
+          <div className="text-sm text-gray-500">
+            ≈ {formatCurrency(convertedAmount)}
+          </div>
+        </div>
+      );
+    }
+    
+    return <span className="font-numbers">{formatCurrency(bill.amount)}</span>;
+  };
+  
   const [showModal, setShowModal] = useState(false);
   const [editingBill, setEditingBill] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -79,31 +118,31 @@ const Bills: React.FC = () => {
   const categorizedBills = {
     upcoming: bills?.filter(bill => {
       const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
-      return daysUntilDue >= 0 && daysUntilDue <= 15 && bill.isActive;
+      return daysUntilDue >= 0 && daysUntilDue <= 15 && bill.status === 'active';
     }) || [],
     current: bills?.filter(bill => {
       const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
-      return daysUntilDue >= 0 && daysUntilDue <= 3 && bill.isActive;
+      return daysUntilDue >= 0 && daysUntilDue <= 3 && bill.status === 'active';
     }) || [],
     overdue: bills?.filter(bill => {
       const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
-      return daysUntilDue < 0 && bill.isActive;
+      return daysUntilDue < 0 && bill.status === 'active';
     }) || [],
-    paid: bills?.filter(bill => !bill.isActive || bill.lastPaidDate) || [],
+    paid: bills?.filter(bill => bill.status === 'completed' || bill.billStage === 'paid') || [],
     all: bills || []
   };
 
   // Calculate bill statistics
   const billStats = {
     totalBills: bills?.length || 0,
-    activeBills: bills?.filter(b => b.isActive).length || 0,
+    activeBills: bills?.filter(b => b.status === 'active').length || 0,
     overdueBills: categorizedBills.overdue.length,
     upcomingBills: categorizedBills.upcoming.length,
     totalMonthlyAmount: bills
-      ?.filter(b => b.isActive && b.frequency === 'monthly')
+      ?.filter(b => b.status === 'active' && b.frequency === 'monthly')
       .reduce((sum, bill) => sum + bill.amount, 0) || 0,
     totalAnnualAmount: bills
-      .filter(b => b.isActive)
+      ?.filter(b => b.status === 'active')
       .reduce((sum, bill) => {
         const multiplier = bill.frequency === 'weekly' ? 52 : 
                           bill.frequency === 'bi_weekly' ? 26 :
@@ -445,7 +484,7 @@ const Bills: React.FC = () => {
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
                           <span style={{ color: 'var(--text-secondary)' }}>Amount</span>
-                          <span className="font-numbers">{formatCurrency(bill.amount)}</span>
+                          {formatBillAmount(bill)}
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span style={{ color: 'var(--text-secondary)' }}>Due Date</span>
@@ -479,7 +518,7 @@ const Bills: React.FC = () => {
                           <p className="text-xs text-gray-500">{payment.accountName}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-numbers">{formatCurrency(payment.amount)}</p>
+                          <p className="text-sm font-numbers">{formatCurrencyWithSecondary(payment.amount)}</p>
                           <p className="text-xs text-gray-500">
                             {format(payment.paymentDate, 'MMM dd')}
                           </p>

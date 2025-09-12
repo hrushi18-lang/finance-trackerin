@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, TrendingUp, AlertCircle, Target, Calendar, DollarSign } from 'lucide-react';
+import { Sparkles, TrendingUp, AlertCircle, Target, Calendar } from 'lucide-react';
 
 interface PredictionData {
   period: string;

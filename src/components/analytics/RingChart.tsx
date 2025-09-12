@@ -120,7 +120,7 @@ export const RingChart: React.FC<RingChartProps> = ({
       {/* Legend */}
       {showLegend && (
         <div className="space-y-2 w-full">
-          {segments.map((segment, index) => (
+          {segments.map((segment) => (
             <div key={segment.key} className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <div

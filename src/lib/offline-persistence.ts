@@ -1,21 +1,12 @@
 import { offlineStorage } from './offline-storage';
 import { financeManager } from './finance-manager';
 import { syncManager } from './sync-manager';
-import { Database } from '../types/supabase';
-
-type Profile = Database['public']['Tables']['profiles']['Row'];
-type FinancialAccount = Database['public']['Tables']['financial_accounts']['Row'];
-type Transaction = Database['public']['Tables']['transactions']['Row'];
-type Goal = Database['public']['Tables']['goals']['Row'];
-type Budget = Database['public']['Tables']['budgets']['Row'];
-type Liability = Database['public']['Tables']['liabilities']['Row'];
-type Bill = Database['public']['Tables']['bills']['Row'];
 
 interface OfflineOperation {
   id: string;
   table: string;
   operation: 'insert' | 'update' | 'delete';
-  data: any;
+  data: Record<string, unknown>;
   timestamp: Date;
   synced: boolean;
   retryCount: number;
@@ -61,7 +52,7 @@ class OfflinePersistence {
   async queueOperation(
     table: string,
     operation: 'insert' | 'update' | 'delete',
-    data: any,
+    data: Record<string, unknown>,
     recordId?: string
   ): Promise<void> {
     if (!this.userId) return;
@@ -310,7 +301,7 @@ class OfflinePersistence {
   }
 
   // Calculate checksum for data
-  private calculateChecksum(data: any[]): string {
+  private calculateChecksum(data: Record<string, unknown>[]): string {
     const dataString = JSON.stringify(data);
     let hash = 0;
     for (let i = 0; i < dataString.length; i++) {

@@ -22,7 +22,7 @@ interface PaymentModalConfig {
   title?: string;
   showDeductToggle?: boolean;
   paymentType?: 'contribution' | 'payment' | 'transfer' | 'withdrawal';
-  onSuccess?: (transactionData?: any) => void;
+  onSuccess?: (transactionData?: Record<string, unknown>) => void;
 }
 
 const PaymentContext = createContext<PaymentContextType | undefined>(undefined);

@@ -70,10 +70,10 @@ void main() {
 `;
 
 interface SilkPlaneProps {
-  uniforms: any;
+  uniforms: Record<string, unknown>;
 }
 
-const SilkPlane = forwardRef<any, SilkPlaneProps>(function SilkPlane({ uniforms }, ref) {
+const SilkPlane = forwardRef<THREE.Mesh, SilkPlaneProps>(function SilkPlane({ uniforms }, ref) {
   const { viewport } = useThree();
 
   useLayoutEffect(() => {

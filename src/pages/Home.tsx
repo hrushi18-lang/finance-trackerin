@@ -35,7 +35,7 @@ import { format } from 'date-fns';
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { formatCurrency, currency } = useInternationalization();
+  const { formatCurrency, formatCurrencyWithSecondary, formatTransactionAmount, currency } = useInternationalization();
   const { 
     accounts, 
     transactions, 
@@ -401,7 +401,13 @@ const Home: React.FC = () => {
                           transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                         }`}>
                           {transaction.type === 'income' ? '+' : '-'}
-                          {hideBalance ? '••••' : formatCurrency(transaction.amount)}
+                          {hideBalance ? '••••' : formatTransactionAmount(
+                            transaction.amount, 
+                            transaction.original_currency, 
+                            transaction.original_currency && transaction.original_currency !== currency.code 
+                              ? transaction.amount * (transaction.exchange_rate_used || 1) 
+                              : transaction.amount
+                          )}
                         </p>
                         <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${tag.color}`}>
                           {tag.text}

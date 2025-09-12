@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, TrendingUp, TrendingDown, Calendar, BarChart3, Target, CreditCard, Plus, ArrowLeftRight, DollarSign, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Calendar, BarChart3, Target, Plus, ArrowLeftRight, DollarSign, Eye, EyeOff } from 'lucide-react';
 import { format } from 'date-fns';
 import { FinancialAccount, Transaction, Goal } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
@@ -178,7 +178,7 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'overview' | 'transactions' | 'analytics')}
               className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? 'bg-forest-600 text-white'

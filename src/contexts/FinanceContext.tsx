@@ -67,7 +67,7 @@ interface FinanceContextType {
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   
-  addGoal: (goal: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addGoal: (goal: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<Goal>;
   updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
   deleteGoalSoft: (goalId: string, reason?: string) => Promise<any>;
@@ -91,7 +91,7 @@ interface FinanceContextType {
   updateBudget: (id: string, updates: Partial<Budget>) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
   
-  addBill: (bill: Omit<Bill, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addBill: (bill: Omit<Bill, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<Bill>;
   updateBill: (id: string, updates: Partial<Bill>) => Promise<void>;
   deleteBill: (id: string) => Promise<void>;
   
@@ -135,8 +135,8 @@ interface FinanceContextType {
   currentReceipt: any;
   hideReceipt: () => void;
   // High-level flows
-  fundGoalFromAccount: (fromAccountId: string, goalId: string, amount: number, description?: string) => Promise<void>;
-  contributeToGoal: (goalId: string, amount: number, sourceAccountId?: string, description?: string) => Promise<void>;
+  fundGoalFromAccount: (fromAccountId: string, goalId: string, amount: number, description?: string) => Promise<Transaction>;
+  contributeToGoal: (goalId: string, amount: number, sourceAccountId?: string, description?: string) => Promise<Transaction>;
   withdrawGoalToAccount: (toAccountId: string, goalId: string, amount: number, description?: string) => Promise<void>;
   payBillFromAccount: (accountId: string, billId: string, amount?: number, description?: string) => Promise<void>;
   repayLiabilityFromAccount: (accountId: string, liabilityId: string, amount: number, description?: string) => Promise<void>;
@@ -149,6 +149,10 @@ interface FinanceContextType {
     skipReason?: string;
   }) => Promise<void>;
   skipBillPayment: (billId: string, reason?: string) => Promise<void>;
+  pauseBill: (billId: string, reason?: string) => Promise<void>;
+  resumeBill: (billId: string) => Promise<void>;
+  completeBill: (billId: string, reason?: string) => Promise<void>;
+  cancelBill: (billId: string, reason?: string) => Promise<void>;
   getBillPaymentHistory: (billId: string) => Promise<any[]>;
   markRecurringTransactionAsPaid: (recurringTransactionId: string, paidDate?: Date) => Promise<void>;
   
@@ -527,31 +531,73 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const fundGoalFromAccount = async (fromAccountId: string, goalId: string, amount: number, description?: string) => {
     if (!user) throw new Error('User not authenticated');
-    const vault = getGoalsVaultAccount();
-    if (!vault) throw new Error('Goals Vault not available');
-
-    // Move funds from source to vault
-    await transferBetweenAccounts(fromAccountId, vault.id, amount, description || 'Goal Funding');
-
-    // Update goal allocation
+    
+    // Validate inputs
+    if (!fromAccountId) throw new Error('Source account is required');
+    if (!goalId) throw new Error('Goal ID is required');
+    if (!amount || amount <= 0) throw new Error('Amount must be greater than 0');
+    
+    const sourceAccount = accounts.find(acc => acc.id === fromAccountId);
+    if (!sourceAccount) throw new Error('Source account not found');
+    
     const goal = goals.find(g => g.id === goalId);
-    if (goal) {
-      const newAmount = Math.min(Number(goal.currentAmount || 0) + Number(amount || 0), Number(goal.targetAmount || 0));
+    if (!goal) throw new Error('Goal not found');
+    
+    // Check if source account has sufficient balance
+    if (sourceAccount.balance < amount) {
+      throw new Error(`Insufficient funds. Available: $${sourceAccount.balance.toFixed(2)}, Required: $${amount.toFixed(2)}`);
+    }
+
+    try {
+      // Create a transaction directly from the source account to track the goal payment
+      const transaction = await addTransaction({
+        type: 'expense',
+        amount: amount,
+        category: 'Savings',
+        description: description || `Goal payment: ${goal.title}`,
+        accountId: fromAccountId,
+        date: new Date(),
+        goalId: goalId,
+        affectsBalance: true,
+        status: 'completed'
+      });
+
+      // Update goal current amount
+      const newAmount = Math.min(Number(goal.currentAmount || 0) + Number(amount), Number(goal.targetAmount || 0));
       await updateGoal(goalId, { currentAmount: newAmount });
+
+      return transaction;
+    } catch (error) {
+      console.error('Error funding goal:', error);
+      throw new Error(`Failed to fund goal: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
   const contributeToGoal = async (goalId: string, amount: number, sourceAccountId?: string, description?: string) => {
     if (!user) throw new Error('User not authenticated');
     
+    // Validate inputs
+    if (!goalId) throw new Error('Goal ID is required');
+    if (!amount || amount <= 0) throw new Error('Amount must be greater than 0');
+    
     const goal = goals.find(g => g.id === goalId);
     if (!goal) throw new Error('Goal not found');
 
-    // If no source account specified, use Goals Vault
+    // If no source account specified, use the first available account with sufficient balance
     if (!sourceAccountId) {
-      const vault = getGoalsVaultAccount();
-      if (!vault) throw new Error('Goals Vault not available. Please create one first.');
-      sourceAccountId = vault.id;
+      const availableAccount = accounts.find(acc => acc.balance >= amount);
+      if (!availableAccount) {
+        throw new Error('No accounts with sufficient balance available. Please add funds to an account first.');
+      }
+      sourceAccountId = availableAccount.id;
+    }
+
+    const sourceAccount = accounts.find(acc => acc.id === sourceAccountId);
+    if (!sourceAccount) throw new Error('Source account not found');
+    
+    // Check if source account has sufficient balance
+    if (sourceAccount.balance < amount) {
+      throw new Error(`Insufficient funds. Available: $${sourceAccount.balance.toFixed(2)}, Required: $${amount.toFixed(2)}`);
     }
 
     // Update goal current amount
@@ -561,14 +607,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Send notification for goal progress
     sendGoalProgressUpdate(goal.title, newAmount, goal.targetAmount);
 
-    // If goal is linked to Goals Vault, transfer funds there (this will create transactions)
+    // Create transaction for goal contribution
+    let transaction;
     if (goal.accountId) {
       const vault = getGoalsVaultAccount();
       if (vault && sourceAccountId !== vault.id) {
         await transferBetweenAccounts(sourceAccountId, vault.id, amount, `Goal: ${goal.title}`);
-      } else {
-        // If transferring to same vault or no vault, create direct transaction
-        await addTransaction({
+        // Create a transaction record for the contribution
+        transaction = await addTransaction({
           type: 'expense',
           amount: amount,
           category: 'Savings',
@@ -577,6 +623,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           accountId: sourceAccountId,
           affectsBalance: true,
           status: 'completed',
+          goalId: goalId
+        });
+      } else {
+        // If transferring to same vault or no vault, create direct transaction
+        transaction = await addTransaction({
+          type: 'expense',
+          amount: amount,
+          category: 'Savings',
+          description: description || `Contribution to ${goal.title}`,
+          date: new Date(),
+          accountId: sourceAccountId,
+          affectsBalance: true,
+          status: 'completed',
+          goalId: goalId,
           // Currency fields
           currencyCode: getUserCurrency(),
           originalAmount: amount,
@@ -592,7 +652,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     } else {
       // If goal is not linked to vault, create direct transaction
-      await addTransaction({
+      transaction = await addTransaction({
         type: 'expense',
         amount: amount,
         category: 'Savings',
@@ -601,6 +661,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         accountId: sourceAccountId,
         affectsBalance: true,
         status: 'completed',
+        goalId: goalId,
         // Currency fields
         currencyCode: getUserCurrency(),
         originalAmount: amount,
@@ -614,6 +675,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         paymentContext: 'goal_funding'
       } as any);
     }
+
+    return transaction;
   };
 
   const withdrawGoalToAccount = async (toAccountId: string, goalId: string, amount: number, description?: string) => {
@@ -652,6 +715,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       accountId,
       affectsBalance: true,
       status: 'completed',
+      billId: billId,
       // Currency fields
       currencyCode: getUserCurrency(),
       originalAmount: payAmount,
@@ -668,7 +732,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Update bill schedule and mark as paid
     const nextDueDate = new Date(bill.nextDueDate);
     nextDueDate.setDate(nextDueDate.getDate() + (bill.frequency === 'weekly' ? 7 : bill.frequency === 'bi_weekly' ? 14 : bill.frequency === 'monthly' ? 30 : bill.frequency === 'quarterly' ? 90 : bill.frequency === 'semi_annual' ? 180 : bill.frequency === 'annual' ? 365 : 30));
-    await updateBill(billId, { lastPaidDate: new Date(), nextDueDate });
+    await updateBill(billId, { 
+      lastPaidDate: new Date(), 
+      nextDueDate,
+      billStage: 'paid',
+      status: bill.frequency === 'one_time' ? 'completed' : 'active'
+    });
 
     // Generate receipt
     generatePaymentReceipt({
@@ -716,6 +785,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       accountId,
       affectsBalance: true,
       status: 'completed',
+      liabilityId: liabilityId, // Link to liability
       // Currency fields
       currencyCode: getUserCurrency(),
       originalAmount: Number(amount),
@@ -746,7 +816,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     await updateBill(billId, { 
       lastPaidDate: paymentDate, 
-      nextDueDate: nextDueDate 
+      nextDueDate: nextDueDate,
+      billStage: 'paid',
+      status: bill.frequency === 'one_time' ? 'completed' : 'active'
     });
 
     // If this bill is linked to a liability (EMI), update the liability
@@ -981,6 +1053,107 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return data || [];
   };
 
+  // Pause bill
+  const pauseBill = async (billId: string, reason?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    const bill = bills.find(b => b.id === billId);
+    if (!bill) throw new Error('Bill not found');
+
+    await updateBill(billId, {
+      status: 'paused',
+      billStage: 'stopped',
+      stageReason: reason || 'Paused by user'
+    });
+
+    // Record staging history
+    await supabase
+      .from('bill_staging_history')
+      .insert({
+        bill_id: billId,
+        user_id: user.id,
+        from_stage: bill.billStage || 'pending',
+        to_stage: 'stopped',
+        stage_reason: reason || 'Paused by user',
+        changed_by: 'user'
+      });
+  };
+
+  // Resume bill
+  const resumeBill = async (billId: string) => {
+    if (!user) throw new Error('User not authenticated');
+    const bill = bills.find(b => b.id === billId);
+    if (!bill) throw new Error('Bill not found');
+
+    await updateBill(billId, {
+      status: 'active',
+      billStage: 'pending',
+      stageReason: 'Resumed by user'
+    });
+
+    // Record staging history
+    await supabase
+      .from('bill_staging_history')
+      .insert({
+        bill_id: billId,
+        user_id: user.id,
+        from_stage: bill.billStage || 'stopped',
+        to_stage: 'pending',
+        stage_reason: 'Resumed by user',
+        changed_by: 'user'
+      });
+  };
+
+  // Complete bill
+  const completeBill = async (billId: string, reason?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    const bill = bills.find(b => b.id === billId);
+    if (!bill) throw new Error('Bill not found');
+
+    await updateBill(billId, {
+      status: 'completed',
+      billStage: 'paid',
+      stageReason: reason || 'Completed by user',
+      completionDate: new Date()
+    });
+
+    // Record staging history
+    await supabase
+      .from('bill_staging_history')
+      .insert({
+        bill_id: billId,
+        user_id: user.id,
+        from_stage: bill.billStage || 'pending',
+        to_stage: 'paid',
+        stage_reason: reason || 'Completed by user',
+        changed_by: 'user'
+      });
+  };
+
+  // Cancel bill
+  const cancelBill = async (billId: string, reason?: string) => {
+    if (!user) throw new Error('User not authenticated');
+    const bill = bills.find(b => b.id === billId);
+    if (!bill) throw new Error('Bill not found');
+
+    await updateBill(billId, {
+      status: 'cancelled',
+      billStage: 'stopped',
+      stageReason: reason || 'Cancelled by user'
+    });
+
+    // Record staging history
+    await supabase
+      .from('bill_staging_history')
+      .insert({
+        bill_id: billId,
+        user_id: user.id,
+        from_stage: bill.billStage || 'pending',
+        to_stage: 'stopped',
+        stage_reason: reason || 'Cancelled by user',
+        changed_by: 'user'
+      });
+  };
+
   const markRecurringTransactionAsPaid = async (recurringTransactionId: string, paidDate?: Date) => {
     if (!user) throw new Error('User not authenticated');
     const recurringTransaction = recurringTransactions.find(rt => rt.id === recurringTransactionId);
@@ -1042,7 +1215,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       userId: account.user_id,
       name: account.name,
       type: account.type,
-      balance: Number(account.balance),
+      balance: Number(account.balance) || 0,
       institution: account.institution,
       platform: account.platform,
       accountNumber: account.account_number,
@@ -1052,10 +1225,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       updatedAt: new Date(account.updated_at),
       
       // Dual currency support
-      original_balance: account.original_balance ? Number(account.original_balance) : Number(account.balance),
-      converted_balance: account.converted_balance ? Number(account.converted_balance) : Number(account.balance),
+      original_balance: Number(account.original_balance) || Number(account.balance) || 0,
+      converted_balance: Number(account.converted_balance) || Number(account.balance) || 0,
       display_currency: account.display_currency || account.currencycode,
-      exchangeRateUsed: account.exchange_rate_used ? Number(account.exchange_rate_used) : 1.0,
+      exchangeRateUsed: Number(account.exchange_rate_used) || 1.0,
       lastConversionDate: account.last_conversion_date ? new Date(account.last_conversion_date) : undefined,
       conversionSource: account.conversion_source,
       
@@ -1063,23 +1236,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       routingNumber: account.routing_number,
       cardLastFour: account.card_last_four,
       cardType: account.card_type,
-      spendingLimit: account.spending_limit ? Number(account.spending_limit) : undefined,
-      monthlyLimit: account.monthly_limit ? Number(account.monthly_limit) : undefined,
-      dailyLimit: account.daily_limit ? Number(account.daily_limit) : undefined,
+      spendingLimit: Number(account.spending_limit) || undefined,
+      monthlyLimit: Number(account.monthly_limit) || undefined,
+      dailyLimit: Number(account.daily_limit) || undefined,
       isPrimary: account.is_primary,
       notes: account.notes,
       accountTypeCustom: account.account_type_custom,
       isLiability: account.is_liability,
-      outstandingBalance: account.outstanding_balance ? Number(account.outstanding_balance) : undefined,
-      creditLimit: account.credit_limit ? Number(account.credit_limit) : undefined,
-      minimumDue: account.minimum_due ? Number(account.minimum_due) : undefined,
+      outstandingBalance: Number(account.outstanding_balance) || undefined,
+      creditLimit: Number(account.credit_limit) || undefined,
+      minimumDue: Number(account.minimum_due) || undefined,
       dueDate: account.due_date ? new Date(account.due_date) : undefined,
-      interestRate: account.interest_rate ? Number(account.interest_rate) : undefined,
+      interestRate: Number(account.interest_rate) || undefined,
       isBalanceHidden: account.is_balance_hidden,
       linkedBankAccountId: account.linked_bank_account_id,
       autoSync: account.auto_sync,
       lastSyncedAt: account.last_synced_at ? new Date(account.last_synced_at) : undefined,
-      exchangeRate: account.exchange_rate ? Number(account.exchange_rate) : undefined,
+      exchangeRate: Number(account.exchange_rate) || undefined,
       homeCurrency: account.home_currency,
       currency: account.currency,
       subtypeId: account.subtype_id,
@@ -1133,7 +1306,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       id: transaction.id,
       userId: transaction.user_id,
       type: transaction.type,
-      amount: Number(transaction.amount),
+      amount: Number(transaction.amount) || 0,
       category: transaction.category,
       description: transaction.description,
       date: new Date(transaction.date),
@@ -1168,8 +1341,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       userId: goal.user_id,
       title: goal.title,
       description: goal.description,
-      targetAmount: Number(goal.target_amount),
-      currentAmount: Number(goal.current_amount || 0),
+      targetAmount: Number(goal.target_amount) || 0,
+      currentAmount: Number(goal.current_amount) || 0,
       targetDate: new Date(goal.target_date),
       category: goal.category,
       accountId: goal.account_id,
@@ -1235,11 +1408,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         liabilityType: liability.liability_type,
         description: liability.description,
         liabilityStatus: liability.liability_status || 'existing',
-        totalAmount: Number(liability.total_amount),
-        remainingAmount: Number(liability.remaining_amount),
-        interestRate: Number(liability.interest_rate || 0),
-        monthlyPayment: Number(liability.monthly_payment || 0),
-        minimumPayment: Number(liability.minimum_payment || 0),
+        totalAmount: Number(liability.total_amount) || 0,
+        remainingAmount: Number(liability.remaining_amount) || 0,
+        interestRate: Number(liability.interest_rate) || 0,
+        monthlyPayment: Number(liability.monthly_payment) || 0,
+        minimumPayment: Number(liability.minimum_payment) || 0,
         paymentDay: liability.payment_day,
         loanTermMonths: liability.loan_term_months,
         remainingTermMonths: liability.remaining_term_months,
@@ -1299,8 +1472,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       id: budget.id,
       userId: budget.user_id,
       category: budget.category,
-      amount: Number(budget.amount),
-      spent: Number(budget.spent || 0),
+      amount: Number(budget.amount) || 0,
+      spent: Number(budget.spent) || 0,
       period: budget.period,
       // Add scoping fields
       accountId: budget.account_id,
@@ -1338,8 +1511,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       description: bill.description,
       category: bill.category,
       billType: bill.bill_type || 'fixed',
-      amount: Number(bill.amount),
-      estimatedAmount: Number(bill.estimated_amount || bill.amount),
+      amount: Number(bill.amount) || 0,
+      estimatedAmount: Number(bill.estimated_amount) || Number(bill.amount) || 0,
       frequency: bill.frequency,
       customFrequencyDays: bill.custom_frequency_days,
       dueDate: new Date(bill.due_date),
@@ -2480,40 +2653,63 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addGoal = async (goalData: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
-    const { data, error } = await supabase
-      .from('goals')
-      .insert({
-        user_id: user.id,
-        title: goalData.title,
-        description: goalData.description || null,
-        target_amount: goalData.targetAmount,
-        current_amount: goalData.currentAmount || 0,
-        target_date: goalData.targetDate.toISOString().split('T')[0],
-        category: goalData.category,
-        // Add all missing fields with proper defaults
-        account_id: goalData.accountId || null,
-        goal_type: goalData.goalType || 'general_savings',
-        target_category: goalData.targetCategory || null,
-        period_type: goalData.periodType || 'monthly',
-        custom_period_days: goalData.customPeriodDays || null,
-        is_recurring: goalData.isRecurring || false,
-        recurring_frequency: goalData.recurringFrequency || (goalData.isRecurring ? 'monthly' : null),
-        priority: goalData.priority || 'medium',
-        status: goalData.status || 'active',
-        activity_scope: goalData.activityScope || 'general',
-        linked_accounts_count: goalData.linkedAccountsCount || 0,
-        currency_code: (goalData as any).currencyCode || getUserCurrency(),
-        // Currency tracking fields
-        original_current_amount: goalData.original_current_amount || goalData.currentAmount || 0,
-        original_currency: goalData.original_currency || getUserCurrency(),
-        exchange_rate_used: goalData.exchange_rate_used || 1.0
-      })
-      .select()
-      .single();
+    // Validate required fields
+    if (!goalData.title || goalData.title.trim().length === 0) {
+      throw new Error('Goal title is required');
+    }
+    if (!goalData.targetAmount || goalData.targetAmount <= 0) {
+      throw new Error('Target amount must be greater than 0');
+    }
+    if (!goalData.targetDate || goalData.targetDate <= new Date()) {
+      throw new Error('Target date must be in the future');
+    }
 
-    if (error) throw error;
+    try {
+      const { data, error } = await supabase
+        .from('goals')
+        .insert({
+          user_id: user.id,
+          title: goalData.title,
+          description: goalData.description || null,
+          target_amount: goalData.targetAmount,
+          current_amount: goalData.currentAmount || 0,
+          target_date: goalData.targetDate.toISOString().split('T')[0],
+          category: goalData.category,
+          // Add all missing fields with proper defaults
+          account_id: goalData.accountId || null,
+          goal_type: goalData.goalType || 'general_savings',
+          target_category: goalData.targetCategory || null,
+          period_type: goalData.periodType || 'monthly',
+          custom_period_days: goalData.customPeriodDays || null,
+          is_recurring: goalData.isRecurring || false,
+          recurring_frequency: goalData.recurringFrequency || (goalData.isRecurring ? 'monthly' : null),
+          priority: goalData.priority || 'medium',
+          status: goalData.status || 'active',
+          activity_scope: goalData.activityScope || 'general',
+          linked_accounts_count: goalData.linkedAccountsCount || 0,
+          currency_code: (goalData as any).currencyCode || getUserCurrency(),
+          // Currency tracking fields
+          original_current_amount: goalData.original_current_amount || goalData.currentAmount || 0,
+          original_currency: goalData.original_currency || getUserCurrency(),
+          exchange_rate_used: goalData.exchange_rate_used || 1.0
+        })
+        .select()
+        .single();
 
-    const newGoal: Goal = {
+      if (error) {
+        console.error('Database error creating goal:', error);
+        if (error.code === '23505') {
+          throw new Error('A goal with this title already exists. Please choose a different title.');
+        } else if (error.code === '23503') {
+          throw new Error('Invalid account reference. Please select a valid account.');
+        } else if (error.code === '23514') {
+          throw new Error('Invalid data provided. Please check your input values.');
+        } else {
+          throw new Error(`Failed to create goal: ${error.message}`);
+        }
+      }
+
+      const newGoal: Goal = {
       id: data.id,
       userId: data.user_id,
       title: data.title,
@@ -2560,6 +2756,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       await supabase
         .from('activity_account_links')
         .insert(accountLinks);
+    }
+
+    return newGoal;
+    } catch (error) {
+      console.error('Error creating goal:', error);
+      throw error;
     }
   };
 
@@ -2739,6 +2941,29 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return data;
   };
 
+  // Map liability type to the correct type field value
+  const mapLiabilityTypeToType = (liabilityType: string): string => {
+    const typeMapping: { [key: string]: string } = {
+      'credit_card': 'credit_card',
+      'personal_loan': 'loan',
+      'student_loan': 'loan',
+      'education_loan': 'loan',
+      'auto_loan': 'loan',
+      'home_loan': 'mortgage',
+      'mortgage': 'mortgage',
+      'bnpl': 'purchase',
+      'family_debt': 'loan',
+      'gold_loan': 'loan',
+      'utility_debt': 'other',
+      'tax_debt': 'other',
+      'international_debt': 'other',
+      'business_loan': 'loan',
+      'medical_debt': 'other',
+      'installment': 'purchase'
+    };
+    return typeMapping[liabilityType] || 'other';
+  };
+
   const addLiability = async (liabilityData: Omit<EnhancedLiability, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
@@ -2747,7 +2972,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       .insert({
         user_id: user.id,
         name: liabilityData.name,
-        type: liabilityData.liabilityType,
+        type: mapLiabilityTypeToType(liabilityData.liabilityType),
         liability_type: liabilityData.liabilityType,
         notes: liabilityData.description,
         liability_status: liabilityData.liabilityStatus || 'new',
@@ -3394,7 +3619,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addBill = async (billData: Omit<Bill, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
-    const { data, error } = await supabase
+    // Validate required fields
+    if (!billData.title || billData.title.trim().length === 0) {
+      throw new Error('Bill title is required');
+    }
+    if (!billData.amount || billData.amount <= 0) {
+      throw new Error('Amount must be greater than 0');
+    }
+    if (!billData.dueDate || billData.dueDate <= new Date()) {
+      throw new Error('Due date must be in the future');
+    }
+
+    try {
+      const { data, error } = await supabase
       .from('bills')
       .insert({
         user_id: user.id,
@@ -3438,7 +3675,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       .select()
       .single();
 
-    if (error) throw error;
+      if (error) {
+        console.error('Database error creating bill:', error);
+        if (error.code === '23505') {
+          throw new Error('A bill with this title already exists. Please choose a different title.');
+        } else if (error.code === '23503') {
+          throw new Error('Invalid account reference. Please select a valid account.');
+        } else if (error.code === '23514') {
+          throw new Error('Invalid data provided. Please check your input values.');
+        } else {
+          throw new Error(`Failed to create bill: ${error.message}`);
+        }
+      }
 
     const newBill: Bill = {
       id: data.id,
@@ -3509,6 +3757,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       await supabase
         .from('activity_account_links')
         .insert(accountLinks);
+    }
+
+    return newBill;
+    } catch (error) {
+      console.error('Error creating bill:', error);
+      throw error;
     }
   };
 
@@ -4314,6 +4568,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     markBillAsPaid,
     payBillFlexible,
     skipBillPayment,
+    pauseBill,
+    resumeBill,
+    completeBill,
+    cancelBill,
     getBillPaymentHistory,
     markRecurringTransactionAsPaid,
     getMonthlyTrends,

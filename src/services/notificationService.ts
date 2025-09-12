@@ -1,9 +1,17 @@
 // Notification service to handle financial notifications
 // This service can be called from anywhere in the app without context dependencies
 
-let notificationContext: any = null;
+interface NotificationContextType {
+  sendGoalProgressUpdate: (goalTitle: string, currentAmount: number, targetAmount: number) => void;
+  sendSpendingAlert: (message: string, amount: number, category: string) => void;
+  sendBudgetWarning: (budgetCategory: string, spent: number, limit: number) => void;
+  sendBillReminder: (billTitle: string, dueDate: Date, amount: number) => void;
+  generateFinancialInsights: (financialData: Record<string, unknown>) => void;
+}
 
-export const setNotificationContext = (context: any) => {
+let notificationContext: NotificationContextType | null = null;
+
+export const setNotificationContext = (context: NotificationContextType) => {
   notificationContext = context;
 };
 
@@ -31,7 +39,7 @@ export const sendBillReminder = (billTitle: string, dueDate: Date, amount: numbe
   }
 };
 
-export const generateFinancialInsights = (financialData: any) => {
+export const generateFinancialInsights = (financialData: Record<string, unknown>) => {
   if (notificationContext?.generateFinancialInsights) {
     notificationContext.generateFinancialInsights(financialData);
   }

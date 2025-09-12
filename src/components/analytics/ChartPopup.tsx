@@ -5,7 +5,7 @@ interface ChartPopupProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  data: any;
+  data: Record<string, unknown>;
   type: 'ring' | 'bar';
   onRangeSelect?: (startDate: Date, endDate: Date) => void;
 }

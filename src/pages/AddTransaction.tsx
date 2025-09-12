@@ -336,15 +336,18 @@ const AddTransaction: React.FC = () => {
 
   const getLinkedEntityName = (type: string, id: string) => {
     switch (type) {
-      case 'goal':
+      case 'goal': {
         const goal = goals.find(g => g.id === id);
         return goal ? goal.title : 'Unknown Goal';
-      case 'bill':
+      }
+      case 'bill': {
         const bill = bills.find(b => b.id === id);
         return bill ? bill.title : 'Unknown Bill';
-      case 'liability':
+      }
+      case 'liability': {
         const liability = liabilities.find(l => l.id === id);
         return liability ? liability.name : 'Unknown Liability';
+      }
       default:
         return 'Unknown';
     }

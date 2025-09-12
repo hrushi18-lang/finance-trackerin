@@ -20,7 +20,7 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       cacheTime: 10 * 60 * 1000, // 10 minutes
-      retry: (failureCount, error: any) => {
+      retry: (failureCount, error: Error) => {
         if (error?.code === 'PGRST301' || error?.message?.includes('JWT')) {
           return false;
         }

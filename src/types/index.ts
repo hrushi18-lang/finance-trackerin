@@ -113,6 +113,9 @@ export interface Transaction {
   transferToAccountId?: string; // For cross-account transfers
   recurringTransactionId?: string; // Link to parent recurring transaction
   parentTransactionId?: string; // Link to parent transaction (for split transactions)
+  goalId?: string; // Link to goal for goal-related transactions
+  billId?: string; // Link to bill for bill-related transactions
+  liabilityId?: string; // Link to liability for liability-related transactions
   originalAmount?: number;
   originalCurrency?: string;
   exchangeRate?: number;
@@ -300,6 +303,16 @@ export interface Bill { // Enhanced Bill interface with all new features
   archivedReason?: string;
   // Multi-account support
   linkedAccountsCount: number;
+  // Credit Card Bill specific fields
+  isCreditCardBill?: boolean;
+  creditCardAccountId?: string;
+  billCycleId?: string;
+  minimumDue?: number;
+  fullBalanceDue?: number;
+  paymentType?: 'full' | 'minimum' | 'partial' | 'overpayment';
+  carryForwardAmount?: number;
+  interestCharged?: number;
+  feesCharged?: number;
   // Currency tracking fields (matching database schema)
   original_amount?: number;
   original_currency?: string;

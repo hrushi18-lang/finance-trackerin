@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Volume2, VolumeX, Eye, EyeOff, Type, Contrast, MousePointer } from 'lucide-react';
+import { Volume2, Eye, Type, Contrast, MousePointer } from 'lucide-react';
 import { Button } from './Button';
 
 interface AccessibilitySettings {

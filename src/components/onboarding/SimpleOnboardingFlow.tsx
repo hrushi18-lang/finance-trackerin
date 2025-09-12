@@ -7,6 +7,7 @@ import { CategorySelector } from '../common/CategorySelector';
 import { useFinance } from '../../contexts/FinanceContext';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useProfile } from '../../contexts/ProfileContext';
 
 interface OnboardingStep {
   id: string;
@@ -22,8 +23,9 @@ interface SimpleOnboardingFlowProps {
 
 export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onComplete }) => {
   const { addUserCategory } = useFinance();
-  const { setCurrency, supportedCurrencies } = useInternationalization();
+  const { setCurrency, setSecondaryCurrency, supportedCurrencies } = useInternationalization();
   const { user } = useAuth();
+  const { updateProfile } = useProfile();
   
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,8 +34,11 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
   // Form data
   const [formData, setFormData] = useState({
     name: user?.user_metadata?.name || '',
+    age: '',
+    profession: '',
     country: '',
     currency: 'USD',
+    secondaryCurrency: '',
     customCategories: [] as Array<{
       name: string;
       type: 'income' | 'expense';
@@ -60,6 +65,21 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
   ];
 
   const handleNext = () => {
+    // Validate current step before proceeding
+    if (currentStep === 1) { // Profile step
+      if (!formData.name.trim() || !formData.age || !formData.profession.trim()) {
+        setError('Please fill in all required fields');
+        return;
+      }
+    } else if (currentStep === 2) { // Currency step
+      if (!formData.currency) {
+        setError('Please select a primary currency');
+        return;
+      }
+    }
+    
+    setError(null);
+    
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -98,10 +118,28 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
   const handleComplete = async () => {
     setIsLoading(true);
     try {
+      // Update user profile with collected data
+      await updateProfile({
+        name: formData.name,
+        age: parseInt(formData.age),
+        profession: formData.profession,
+        country: formData.country,
+        primaryCurrency: formData.currency,
+        displayCurrency: formData.secondaryCurrency || formData.currency
+      });
+
       // Set currency
       const selectedCurrency = supportedCurrencies.find(c => c.code === formData.currency);
       if (selectedCurrency) {
         setCurrency(selectedCurrency);
+      }
+
+      // Set secondary currency if provided
+      if (formData.secondaryCurrency) {
+        const selectedSecondaryCurrency = supportedCurrencies.find(c => c.code === formData.secondaryCurrency);
+        if (selectedSecondaryCurrency) {
+          setSecondaryCurrency(selectedSecondaryCurrency);
+        }
       }
 
       // Add custom categories
@@ -170,6 +208,40 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
           
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
+              Age *
+            </label>
+            <Input
+              type="number"
+              placeholder="Enter your age"
+              value={formData.age}
+              onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
+              min="13"
+              max="120"
+              className={`py-3 ${formData.age === '' ? 'border-red-300 focus:border-red-500' : 'border-green-300 focus:border-green-500'}`}
+            />
+            {formData.age === '' && (
+              <p className="text-xs text-red-500 mt-1">Age is required</p>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">
+              Profession *
+            </label>
+            <Input
+              type="text"
+              placeholder="e.g., Software Engineer, Teacher, Doctor"
+              value={formData.profession}
+              onChange={(e) => setFormData(prev => ({ ...prev, profession: e.target.value }))}
+              className={`py-3 ${formData.profession.trim() === '' ? 'border-red-300 focus:border-red-500' : 'border-green-300 focus:border-green-500'}`}
+            />
+            {formData.profession.trim() === '' && (
+              <p className="text-xs text-red-500 mt-1">Profession is required</p>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">
               Country
             </label>
             <Input
@@ -186,10 +258,10 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
     {
       id: 'currency',
       title: 'Select Currency',
-      description: 'Choose your primary currency',
+      description: 'Choose your primary and secondary currencies',
       icon: <Globe size={24} />,
       component: (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700">
               Primary Currency *
@@ -202,8 +274,27 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
               popularOnly={false}
             />
             {formData.currency === '' && (
-              <p className="text-xs text-red-500 mt-1">Currency selection is required</p>
+              <p className="text-xs text-red-500 mt-1">Primary currency is required</p>
             )}
+            <p className="text-xs text-gray-500 mt-1">
+              This will be your main currency for all transactions
+            </p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-700">
+              Secondary Currency (Optional)
+            </label>
+            <CurrencySelector
+              value={formData.secondaryCurrency}
+              onChange={(currency) => setFormData(prev => ({ ...prev, secondaryCurrency: currency }))}
+              showFlag={true}
+              showFullName={true}
+              popularOnly={false}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              This will be shown alongside your primary currency for reference
+            </p>
           </div>
         </div>
       )

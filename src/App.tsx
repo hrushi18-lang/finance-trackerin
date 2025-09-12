@@ -34,7 +34,7 @@ import Auth from './pages/Auth';
 import Home from './pages/Home';
 import AddTransaction from './pages/AddTransaction';
 import TransactionsCalendar from './pages/TransactionsCalendar';
-import Cards from './pages/Cards';
+// import Cards from './pages/Cards'; // Unused import
 import Activities from './pages/Activities';
 import Calendar from './pages/Calendar';
 import Goals from './pages/Goals';
@@ -49,6 +49,7 @@ import GoalDetail from './pages/GoalDetail';
 import BillDetail from './pages/BillDetail';
 import Settings from './pages/Settings';
 import ThemeSettings from './pages/ThemeSettings';
+import CurrencySettings from './pages/CurrencySettings';
 import Bills from './pages/Bills';
 import ProfileNew from './pages/ProfileNew';
 import CurrencyDemo from './pages/CurrencyDemo';
@@ -65,7 +66,7 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes
-      retry: (failureCount, error: any) => {
+      retry: (failureCount, error: Error) => {
         if (error?.code === 'PGRST301' || error?.message?.includes('JWT')) {
           return false;
         }
@@ -412,6 +413,15 @@ function App() {
                                 element={
                                   <ProtectedRoute>
                                     <ThemeSettings />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/currency-settings" 
+                                element={
+                                  <ProtectedRoute>
+                                    <CurrencySettings />
                                   </ProtectedRoute>
                                 } 
                               />

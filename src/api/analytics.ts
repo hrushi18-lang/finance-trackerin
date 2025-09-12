@@ -4,9 +4,9 @@
  */
 
 interface AnalyticsData {
-  errors: any[];
-  performance: any[];
-  events?: any[];
+  errors: Record<string, unknown>[];
+  performance: Record<string, unknown>[];
+  events?: Record<string, unknown>[];
   user_id?: string;
   timestamp: number;
 }
@@ -62,7 +62,7 @@ class AnalyticsAPI {
   /**
    * Send error data specifically
    */
-  async sendErrors(errors: any[], userId?: string): Promise<AnalyticsResponse> {
+  async sendErrors(errors: Record<string, unknown>[], userId?: string): Promise<AnalyticsResponse> {
     return this.sendAnalytics({
       errors,
       performance: [],
@@ -74,7 +74,7 @@ class AnalyticsAPI {
   /**
    * Send performance data specifically
    */
-  async sendPerformance(performance: any[], userId?: string): Promise<AnalyticsResponse> {
+  async sendPerformance(performance: Record<string, unknown>[], userId?: string): Promise<AnalyticsResponse> {
     return this.sendAnalytics({
       errors: [],
       performance,
@@ -86,7 +86,7 @@ class AnalyticsAPI {
   /**
    * Send events data specifically
    */
-  async sendEvents(events: any[], userId?: string): Promise<AnalyticsResponse> {
+  async sendEvents(events: Record<string, unknown>[], userId?: string): Promise<AnalyticsResponse> {
     return this.sendAnalytics({
       errors: [],
       performance: [],
@@ -100,9 +100,9 @@ class AnalyticsAPI {
    * Batch send multiple types of data
    */
   async sendBatch(data: {
-    errors?: any[];
-    performance?: any[];
-    events?: any[];
+    errors?: Record<string, unknown>[];
+    performance?: Record<string, unknown>[];
+    events?: Record<string, unknown>[];
     user_id?: string;
   }): Promise<AnalyticsResponse> {
     return this.sendAnalytics({
@@ -155,10 +155,10 @@ export const analyticsAPI = new AnalyticsAPI();
 
 // Export convenience functions
 export const sendAnalytics = (data: AnalyticsData) => analyticsAPI.sendAnalytics(data);
-export const sendErrors = (errors: any[], userId?: string) => analyticsAPI.sendErrors(errors, userId);
-export const sendPerformance = (performance: any[], userId?: string) => analyticsAPI.sendPerformance(performance, userId);
-export const sendEvents = (events: any[], userId?: string) => analyticsAPI.sendEvents(events, userId);
-export const sendBatch = (data: any) => analyticsAPI.sendBatch(data);
+export const sendErrors = (errors: Record<string, unknown>[], userId?: string) => analyticsAPI.sendErrors(errors, userId);
+export const sendPerformance = (performance: Record<string, unknown>[], userId?: string) => analyticsAPI.sendPerformance(performance, userId);
+export const sendEvents = (events: Record<string, unknown>[], userId?: string) => analyticsAPI.sendEvents(events, userId);
+export const sendBatch = (data: Record<string, unknown>) => analyticsAPI.sendBatch(data);
 export const testAnalyticsConnection = () => analyticsAPI.testConnection();
 
 export default analyticsAPI;

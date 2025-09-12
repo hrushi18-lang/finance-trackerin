@@ -103,7 +103,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     initializeApp();
 
     return () => clearTimeout(timeoutId);
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, isInitialized]);
 
   // Handle routing after initialization
   useEffect(() => {

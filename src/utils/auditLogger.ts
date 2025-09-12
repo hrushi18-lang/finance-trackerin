@@ -11,9 +11,9 @@ export interface AuditLogEntry {
   action: string;
   resource_type: string;
   resource_id?: string;
-  old_values?: Record<string, any>;
-  new_values?: Record<string, any>;
-  metadata?: Record<string, any>;
+  old_values?: Record<string, unknown>;
+  new_values?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   ip_address?: string | null;
   user_agent?: string;
   timestamp: Date;
@@ -59,9 +59,9 @@ class AuditLogger {
     userId: string,
     action: 'create' | 'update' | 'delete' | 'view',
     transactionId: string,
-    oldValues?: any,
-    newValues?: any,
-    metadata?: Record<string, any>
+    oldValues?: Record<string, unknown>,
+    newValues?: Record<string, unknown>,
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.log({
       user_id: userId,
@@ -84,9 +84,9 @@ class AuditLogger {
     userId: string,
     action: 'create' | 'update' | 'delete' | 'view',
     accountId: string,
-    oldValues?: any,
-    newValues?: any,
-    metadata?: Record<string, any>
+    oldValues?: Record<string, unknown>,
+    newValues?: Record<string, unknown>,
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.log({
       user_id: userId,
@@ -109,9 +109,9 @@ class AuditLogger {
     userId: string,
     action: 'create' | 'update' | 'delete' | 'view' | 'contribute' | 'withdraw',
     goalId: string,
-    oldValues?: any,
-    newValues?: any,
-    metadata?: Record<string, any>
+    oldValues?: Record<string, unknown>,
+    newValues?: Record<string, unknown>,
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.log({
       user_id: userId,
@@ -134,9 +134,9 @@ class AuditLogger {
     userId: string,
     action: 'create' | 'update' | 'delete' | 'view' | 'pay',
     liabilityId: string,
-    oldValues?: any,
-    newValues?: any,
-    metadata?: Record<string, any>
+    oldValues?: Record<string, unknown>,
+    newValues?: Record<string, unknown>,
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.log({
       user_id: userId,
@@ -159,9 +159,9 @@ class AuditLogger {
     userId: string,
     action: 'create' | 'update' | 'delete' | 'view' | 'pay',
     billId: string,
-    oldValues?: any,
-    newValues?: any,
-    metadata?: Record<string, any>
+    oldValues?: Record<string, unknown>,
+    newValues?: Record<string, unknown>,
+    metadata?: Record<string, unknown>
   ): Promise<void> {
     await this.log({
       user_id: userId,
@@ -248,9 +248,9 @@ class AuditLogger {
     action: string,
     resourceType: string,
     resourceId?: string,
-    oldValues?: any,
-    newValues?: any,
-    metadata?: Record<string, any>,
+    oldValues?: Record<string, unknown>,
+    newValues?: Record<string, unknown>,
+    metadata?: Record<string, unknown>,
     severity: 'low' | 'medium' | 'high' | 'critical' = 'medium',
     category: AuditLogEntry['category'] = 'system'
   ): Promise<void> {
@@ -521,20 +521,20 @@ class AuditLogger {
 export const auditLogger = new AuditLogger();
 
 // Export convenience functions
-export const logTransaction = (userId: string, action: string, transactionId: string, oldValues?: any, newValues?: any, metadata?: Record<string, any>) => 
-  auditLogger.logTransaction(userId, action as any, transactionId, oldValues, newValues, metadata);
+export const logTransaction = (userId: string, action: string, transactionId: string, oldValues?: Record<string, unknown>, newValues?: Record<string, unknown>, metadata?: Record<string, unknown>) => 
+  auditLogger.logTransaction(userId, action as 'create' | 'update' | 'delete' | 'view', transactionId, oldValues, newValues, metadata);
 
-export const logAccount = (userId: string, action: string, accountId: string, oldValues?: any, newValues?: any, metadata?: Record<string, any>) => 
-  auditLogger.logAccount(userId, action as any, accountId, oldValues, newValues, metadata);
+export const logAccount = (userId: string, action: string, accountId: string, oldValues?: Record<string, unknown>, newValues?: Record<string, unknown>, metadata?: Record<string, unknown>) => 
+  auditLogger.logAccount(userId, action as 'create' | 'update' | 'delete' | 'view', accountId, oldValues, newValues, metadata);
 
-export const logGoal = (userId: string, action: string, goalId: string, oldValues?: any, newValues?: any, metadata?: Record<string, any>) => 
-  auditLogger.logGoal(userId, action as any, goalId, oldValues, newValues, metadata);
+export const logGoal = (userId: string, action: string, goalId: string, oldValues?: Record<string, unknown>, newValues?: Record<string, unknown>, metadata?: Record<string, unknown>) => 
+  auditLogger.logGoal(userId, action as 'create' | 'update' | 'delete' | 'view' | 'contribute' | 'withdraw', goalId, oldValues, newValues, metadata);
 
-export const logLiability = (userId: string, action: string, liabilityId: string, oldValues?: any, newValues?: any, metadata?: Record<string, any>) => 
-  auditLogger.logLiability(userId, action as any, liabilityId, oldValues, newValues, metadata);
+export const logLiability = (userId: string, action: string, liabilityId: string, oldValues?: Record<string, unknown>, newValues?: Record<string, unknown>, metadata?: Record<string, unknown>) => 
+  auditLogger.logLiability(userId, action as 'create' | 'update' | 'delete' | 'view' | 'pay', liabilityId, oldValues, newValues, metadata);
 
-export const logBill = (userId: string, action: string, billId: string, oldValues?: any, newValues?: any, metadata?: Record<string, any>) => 
-  auditLogger.logBill(userId, action as any, billId, oldValues, newValues, metadata);
+export const logBill = (userId: string, action: string, billId: string, oldValues?: Record<string, unknown>, newValues?: Record<string, unknown>, metadata?: Record<string, unknown>) => 
+  auditLogger.logBill(userId, action as 'create' | 'update' | 'delete' | 'view' | 'pay', billId, oldValues, newValues, metadata);
 
 export const logUser = (userId: string, action: string, metadata?: Record<string, any>) => 
   auditLogger.logUser(userId, action as any, metadata);
@@ -545,7 +545,7 @@ export const logSecurity = (userId: string, action: string, resourceType: string
 export const logSystem = (action: string, resourceType: string, resourceId?: string, metadata?: Record<string, any>) => 
   auditLogger.logSystem(action, resourceType, resourceId, metadata);
 
-export const logCustom = (userId: string, action: string, resourceType: string, resourceId?: string, oldValues?: any, newValues?: any, metadata?: Record<string, any>, severity?: 'low' | 'medium' | 'high' | 'critical', category?: AuditLogEntry['category']) => 
+export const logCustom = (userId: string, action: string, resourceType: string, resourceId?: string, oldValues?: Record<string, unknown>, newValues?: Record<string, unknown>, metadata?: Record<string, unknown>, severity?: 'low' | 'medium' | 'high' | 'critical', category?: AuditLogEntry['category']) => 
   auditLogger.logCustom(userId, action, resourceType, resourceId, oldValues, newValues, metadata, severity, category);
 
 export const queryLogs = (query: AuditLogQuery) => auditLogger.queryLogs(query);

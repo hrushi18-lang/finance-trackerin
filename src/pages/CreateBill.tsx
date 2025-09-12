@@ -99,13 +99,49 @@ const CreateBill: React.FC = () => {
         isEmi: false,
         sendDueDateReminder: true,
         sendOverdueReminder: true,
+        // Add missing required fields
+        currencyCode: 'USD',
+        isRecurring: isRecurring,
+        activityScope: data.billCategory,
+        accountIds: data.accountId ? [data.accountId] : [],
+        linkedAccountsCount: data.accountId ? 1 : 0,
+        isIncome: false,
+        billStage: 'pending' as const,
+        isVariableAmount: false,
+        completionAction: 'continue' as const,
+        isArchived: false,
+        linkedAccountsCount: data.accountId ? 1 : 0,
+        // Currency tracking fields
+        original_amount: Number(data.amount),
+        original_currency: 'USD',
+        exchange_rate_used: 1.0
       };
 
       await addBill(billData);
       navigate('/bills');
     } catch (error: any) {
       console.error('Error creating bill:', error);
-      setError(error.message || 'Failed to create bill. Please try again.');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to create bill. Please try again.';
+      
+      if (error.message) {
+        if (error.message.includes('title already exists')) {
+          errorMessage = 'A bill with this title already exists. Please choose a different title.';
+        } else if (error.message.includes('Amount must be greater than 0')) {
+          errorMessage = 'Amount must be greater than 0';
+        } else if (error.message.includes('Due date is required')) {
+          errorMessage = 'Due date is required';
+        } else if (error.message.includes('Invalid account reference')) {
+          errorMessage = 'Please select a valid account for this bill';
+        } else if (error.message.includes('Invalid data provided')) {
+          errorMessage = 'Please check your input values and try again';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

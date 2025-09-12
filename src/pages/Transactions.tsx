@@ -340,19 +340,22 @@ const Transactions: React.FC = () => {
         switch (selectedDateRange) {
           case 'today':
             return format(transactionDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
-          case 'yesterday':
+          case 'yesterday': {
             const yesterday = new Date(now);
             yesterday.setDate(yesterday.getDate() - 1);
             return format(transactionDate, 'yyyy-MM-dd') === format(yesterday, 'yyyy-MM-dd');
-          case 'this_week':
+          }
+          case 'this_week': {
             const startOfWeek = new Date(now);
             startOfWeek.setDate(now.getDate() - now.getDay());
             return transactionDate >= startOfWeek;
+          }
           case 'this_month':
             return transactionDate >= startOfMonth(now) && transactionDate <= endOfMonth(now);
-          case 'last_month':
+          case 'last_month': {
             const lastMonth = subMonths(now, 1);
             return transactionDate >= startOfMonth(lastMonth) && transactionDate <= endOfMonth(lastMonth);
+          }
           default:
             return true;
         }

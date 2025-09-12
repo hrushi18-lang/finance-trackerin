@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { useFinance } from '../../contexts/FinanceContext';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
-import { Modal } from '../common/Modal';
+// import { Modal } from '../common/Modal'; // Unused import
 import { Plus, PiggyBank, Settings, AlertCircle } from 'lucide-react';
 
 interface GoalsVaultManagerProps {
   onClose?: () => void;
 }
 
-export const GoalsVaultManager: React.FC<GoalsVaultManagerProps> = ({ onClose }) => {
-  const { accounts, getGoalsVaultAccount, createGoalsVaultAccount, ensureGoalsVaultAccount, cleanupDuplicateGoalsVaults } = useFinance();
+export const GoalsVaultManager: React.FC<GoalsVaultManagerProps> = () => {
+  const { getGoalsVaultAccount, createGoalsVaultAccount, ensureGoalsVaultAccount, cleanupDuplicateGoalsVaults } = useFinance();
   const [isCreating, setIsCreating] = useState(false);
   const [vaultName, setVaultName] = useState('Goals Vault');
   const [currencyCode, setCurrencyCode] = useState('USD');

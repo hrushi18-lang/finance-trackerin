@@ -77,8 +77,8 @@ const Budgets: React.FC = () => {
   // Calculate budget progress
   const getBudgetProgress = (budget: Budget) => {
     const spent = budget.spent || 0;
-    const limit = budget.limit;
-    const percentage = (spent / limit) * 100;
+    const limit = budget.amount || 0;
+    const percentage = limit > 0 ? (spent / limit) * 100 : 0;
     return { spent, limit, percentage: Math.min(percentage, 100) };
   };
 
@@ -180,8 +180,8 @@ const Budgets: React.FC = () => {
                           <Target size={16} className="text-blue-600" />
                         </div>
                         <div>
-                          <h4 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{budget.name}</h4>
-                          <p className="text-sm font-body">{budget.category}</p>
+                          <h4 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{budget.category}</h4>
+                          <p className="text-sm font-body">{budget.period}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-1">

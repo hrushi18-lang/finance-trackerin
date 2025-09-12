@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Minus, Calendar, DollarSign, Target } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, DollarSign } from 'lucide-react';
 
 interface TrendData {
   period: string;
