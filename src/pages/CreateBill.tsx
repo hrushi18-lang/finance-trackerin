@@ -110,7 +110,6 @@ const CreateBill: React.FC = () => {
         isVariableAmount: false,
         completionAction: 'continue' as const,
         isArchived: false,
-        linkedAccountsCount: data.accountId ? 1 : 0,
         // Currency tracking fields
         original_amount: Number(data.amount),
         original_currency: 'USD',
