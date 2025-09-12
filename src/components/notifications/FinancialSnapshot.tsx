@@ -10,13 +10,7 @@ const FinancialSnapshot: React.FC = () => {
     goals, 
     budgets, 
     bills, 
-    liabilities,
-    loadAccounts,
-    loadTransactions,
-    loadGoals,
-    loadBudgets,
-    loadBills,
-    loadLiabilities
+    liabilities
   } = useFinance();
   
   const { showFinancialSnapshot } = useNotifications();
@@ -30,15 +24,8 @@ const FinancialSnapshot: React.FC = () => {
   const generateSnapshot = async () => {
     setIsLoading(true);
     
-    // Load all financial data
-    await Promise.all([
-      loadAccounts(),
-      loadTransactions(),
-      loadGoals(),
-      loadBudgets(),
-      loadBills(),
-      loadLiabilities()
-    ]);
+    // Data is already loaded by the FinanceContext
+    // No need to reload here
 
     // Calculate financial metrics
     const totalAssets = accounts.reduce((sum, account) => sum + (account.balance || 0), 0);
