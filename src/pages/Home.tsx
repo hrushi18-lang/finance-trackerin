@@ -58,7 +58,17 @@ const Home: React.FC = () => {
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [isFinancialSnapshotMinimized, setIsFinancialSnapshotMinimized] = useState(false);
 
-  // Calculate net worth
+  // Calculate current balance (sum of all account balances)
+  const currentBalance = useMemo(() => {
+    return accounts.reduce((sum, account) => {
+      // Use converted amount (primary currency) for balance calculation
+      const convertedBalance = account.converted_amount || account.balance || 0;
+      
+      return account.type === 'credit_card' ? sum - convertedBalance : sum + convertedBalance;
+    }, 0);
+  }, [accounts]);
+
+  // Calculate net worth (assets - liabilities)
   const netWorth = useMemo(() => {
     const primaryCurrency = profile?.primaryCurrency || currency.code;
     
@@ -251,7 +261,7 @@ const Home: React.FC = () => {
             {/* Current Balance - Single Focus */}
             <div className="mb-6">
               <div className="text-5xl font-numbers text-black mb-2">
-                {hideBalance ? '••••••' : formatCurrency(netWorth)}
+                {hideBalance ? '••••••' : formatCurrency(currentBalance)}
               </div>
               <div className="flex items-center justify-center space-x-1 text-sm text-gray-700">
                 <span>Across {accounts.length} account{accounts.length !== 1 ? 's' : ''}</span>
