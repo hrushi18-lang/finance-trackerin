@@ -1,17 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { FileText, Calculator, Info, AlertTriangle } from 'lucide-react';
+import { FileText, Calculator, Info, AlertTriangle, Globe } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { Liability, FinancialAccount } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
+import { 
+  convertTransactionCurrency, 
+  generateTransactionDisplayText, 
+  generateStorageData,
+  type CurrencyConversionResult
+} from '../../utils/multi-currency-converter';
+import { getCurrencyInfo } from '../../utils/currency-converter';
 
 interface PaymentFormData {
   amount: number;
   description: string;
   createTransaction: boolean;
   accountId: string;
+  currency: string;
 }
 
 interface PaymentFormProps {
@@ -30,6 +38,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
   } | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [conversionResult, setConversionResult] = useState<CurrencyConversionResult | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<FinancialAccount | null>(null);
   
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<PaymentFormData>({
     defaultValues: {
@@ -37,12 +47,42 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
       amount: liability?.monthlyPayment || 0,
       createTransaction: true,
       accountId: liability?.defaultPaymentAccountId || accounts?.[0]?.id || '',
+      currency: currency || 'USD',
     },
   });
 
   const watchedAmount = watch('amount');
   const createTransaction = watch('createTransaction');
   const watchedAccountId = watch('accountId');
+  const watchedCurrency = watch('currency');
+
+  // Update selected account when accountId changes
+  useEffect(() => {
+    if (watchedAccountId) {
+      const account = accounts.find(acc => acc.id === watchedAccountId);
+      setSelectedAccount(account || null);
+    }
+  }, [watchedAccountId, accounts]);
+
+  // Handle currency conversion when amount, currency, or account changes
+  useEffect(() => {
+    if (watchedAmount && watchedCurrency && selectedAccount) {
+      const amount = parseFloat(watchedAmount.toString());
+      if (!isNaN(amount) && amount > 0) {
+        const result = convertTransactionCurrency({
+          amount,
+          currency: watchedCurrency,
+          accountCurrency: selectedAccount.currencycode || currency,
+          primaryCurrency: currency
+        });
+        setConversionResult(result);
+      } else {
+        setConversionResult(null);
+      }
+    } else {
+      setConversionResult(null);
+    }
+  }, [watchedAmount, watchedCurrency, selectedAccount, currency]);
 
   // Calculate payment impact when amount or account changes
   React.useEffect(() => {
@@ -86,10 +126,29 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
         data.amount = remainingAmount;
       }
       
+      // Generate multi-currency data if conversion is available
+      let multiCurrencyData = {};
+      if (conversionResult) {
+        const storageData = generateStorageData(conversionResult);
+        multiCurrencyData = {
+          native_amount: storageData.nativeAmount,
+          native_currency: storageData.nativeCurrency,
+          native_symbol: storageData.nativeSymbol,
+          converted_amount: storageData.convertedAmount,
+          converted_currency: storageData.convertedCurrency,
+          converted_symbol: storageData.convertedSymbol,
+          exchange_rate: storageData.exchangeRate,
+          exchange_rate_used: storageData.exchangeRateUsed
+        };
+      }
+
       onSubmit({
         amount: Number(amount) || 0,
         description: data.description || `Payment for ${liability?.name}`,
         createTransaction: data.createTransaction,
+        accountId: data.accountId,
+        currency: data.currency,
+        ...multiCurrencyData
       });
     } catch (error: any) {
       console.error('Error processing payment:', error);
@@ -202,6 +261,44 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
             placeholder={`e.g., ${monthlyPayment}`}
           />
         </div>
+
+        {/* Currency Selection */}
+        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+          <label className="block text-sm font-medium text-gray-300 mb-3">
+            Currency
+          </label>
+          <select
+            {...register('currency', { required: 'Please select a currency' })}
+            className="w-full bg-black/40 border border-white/20 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+          >
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="JPY">JPY (¥)</option>
+            <option value="INR">INR (₹)</option>
+            <option value="CAD">CAD (C$)</option>
+            <option value="AUD">AUD (A$)</option>
+            <option value="CHF">CHF (CHF)</option>
+            <option value="CNY">CNY (¥)</option>
+            <option value="SEK">SEK (kr)</option>
+          </select>
+          {errors.currency && (
+            <p className="text-red-400 text-sm mt-1">{errors.currency.message}</p>
+          )}
+        </div>
+
+        {/* Currency Conversion Display */}
+        {conversionResult && (
+          <div className="bg-blue-900/30 border border-blue-500/30 rounded-xl p-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <Globe size={16} className="text-blue-400" />
+              <span className="text-sm font-medium text-blue-300">Currency Conversion</span>
+            </div>
+            <div className="text-sm text-blue-200">
+              {generateTransactionDisplayText(conversionResult)}
+            </div>
+          </div>
+        )}
 
         {/* Account Selection */}
         {createTransaction && (

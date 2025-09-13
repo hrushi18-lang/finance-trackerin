@@ -98,7 +98,7 @@ const Overview: React.FC = () => {
 
   // Calculate comprehensive financial metrics
   const financialMetrics = useMemo(() => {
-    const totalAssets = accounts.reduce((sum, account) => sum + (account.balance || 0), 0);
+    const totalAssets = accounts.reduce((sum, account) => sum + (account.converted_amount || account.balance || 0), 0);
     const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.remaining_amount || 0), 0);
     const netWorth = totalAssets - totalLiabilities;
     

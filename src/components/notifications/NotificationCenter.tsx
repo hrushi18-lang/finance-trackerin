@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Bell, Eye, EyeOff, Trash2, CheckCircle } from 'lucide-react';
+import { X, Bell, Eye, EyeOff, Trash2, CheckCircle, TrendingUp } from 'lucide-react';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { Notification, FinancialInsight } from '../../contexts/NotificationContext';
 
@@ -110,22 +110,23 @@ const NotificationCenter: React.FC = () => {
           />
           
           {/* Panel */}
-          <div className="fixed top-4 right-4 z-50 w-full max-w-sm sm:max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden mobile-fade-in">
+          <div className="fixed top-4 right-4 z-50 w-full max-w-sm sm:max-w-md bg-gray-900/95 dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-700 dark:border-gray-600 overflow-hidden mobile-fade-in backdrop-blur-xl">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-              <div className="flex space-x-1">
+            <div className="flex items-center justify-between p-6 border-b border-gray-500 dark:border-gray-600 bg-gradient-to-r from-gray-900 to-black dark:from-gray-900 dark:to-gray-800">
+              <div className="flex space-x-2">
                 <button
                   onClick={() => setActiveTab('notifications')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 font-playfair ${
                     activeTab === 'notifications'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
+                      : 'text-white hover:bg-gray-800 hover:shadow-md border border-gray-600'
                   }`}
                 >
                   <div className="flex items-center space-x-2">
+                    <Bell size={16} />
                     <span>Notifications</span>
                     {unreadCount > 0 && (
-                      <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                      <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center font-bold animate-pulse">
                         {unreadCount}
                       </span>
                     )}
@@ -133,16 +134,17 @@ const NotificationCenter: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab('insights')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 font-playfair ${
                     activeTab === 'insights'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      ? 'bg-green-600 text-white shadow-lg shadow-green-600/50'
+                      : 'text-white hover:bg-gray-800 hover:shadow-md border border-gray-600'
                   }`}
                 >
                   <div className="flex items-center space-x-2">
+                    <TrendingUp size={16} />
                     <span>Insights</span>
                     {insights.length > 0 && (
-                      <span className="bg-gray-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                      <span className="bg-green-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center font-bold">
                         {insights.length}
                       </span>
                     )}

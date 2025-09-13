@@ -31,10 +31,14 @@ import { useNotifications } from '../contexts/NotificationContext';
 import NotificationCenter from '../components/notifications/NotificationCenter';
 import FinancialSnapshot from '../components/notifications/FinancialSnapshot';
 import { format } from 'date-fns';
+import { currencyService } from '../services/currencyService';
+import { useProfile } from '../contexts/ProfileContext';
+import { TransactionDetailsModal } from '../components/modals/TransactionDetailsModal';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { profile } = useProfile();
   const { formatCurrency, formatCurrencyWithSecondary, formatTransactionAmount, currency } = useInternationalization();
   const { 
     accounts, 
@@ -50,13 +54,34 @@ const Home: React.FC = () => {
   const { generateFinancialInsights } = useNotifications();
 
   const [hideBalance, setHideBalance] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
 
   // Calculate net worth
   const netWorth = useMemo(() => {
-    const totalAssets = accounts.reduce((sum, account) => sum + (account.balance || 0), 0);
-    const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.remaining_amount || 0), 0);
+    const primaryCurrency = profile?.primaryCurrency || currency.code;
+    
+    const totalAssets = accounts.reduce((sum, account) => {
+      // Use converted amount (primary currency) for net worth calculation
+      const convertedBalance = account.converted_amount || account.balance || 0;
+      
+      return account.type === 'credit_card' ? sum - convertedBalance : sum + convertedBalance;
+    }, 0);
+    
+    const totalLiabilities = liabilities.reduce((sum, liability) => {
+      const liabilityAmount = liability.remainingAmount || 0;
+      const liabilityCurrency = liability.currencycode || primaryCurrency;
+      
+      // Convert to primary currency if different
+      const convertedAmount = liabilityCurrency !== primaryCurrency 
+        ? (currencyService.convertAmount(liabilityAmount, liabilityCurrency, primaryCurrency) || liabilityAmount)
+        : liabilityAmount;
+      
+      return sum + convertedAmount;
+    }, 0);
+    
     return totalAssets - totalLiabilities;
-  }, [accounts, liabilities]);
+  }, [accounts, liabilities, profile?.primaryCurrency, currency.code]);
 
   // Calculate net worth change (mock data for now)
   const netWorthChange = useMemo(() => {
@@ -199,7 +224,7 @@ const Home: React.FC = () => {
             <p className="text-sm font-body mb-3" style={{ color: 'var(--text-secondary)' }}>Current Balance</p>
             <div className="mb-3">
               <span className="text-4xl font-numbers" style={{ color: 'var(--text-primary)' }}>
-                {hideBalance ? '••••••' : formatCurrency(accounts.reduce((sum, account) => sum + (account.balance || 0), 0))}
+                {hideBalance ? '••••••' : formatCurrency(netWorth)}
               </span>
             </div>
             <div className="flex items-center justify-center space-x-2">
@@ -378,10 +403,14 @@ const Home: React.FC = () => {
                 return (
                   <div 
                     key={transaction.id} 
-                    className="p-4 rounded-2xl"
+                    className="p-4 rounded-2xl cursor-pointer hover:scale-[1.02] transition-transform"
                     style={{
                       backgroundColor: 'var(--background-secondary)',
                       boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+                    }}
+                    onClick={() => {
+                      setSelectedTransaction(transaction);
+                      setShowTransactionModal(true);
                     }}
                   >
                     <div className="flex items-center justify-between">
@@ -448,6 +477,16 @@ const Home: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Transaction Details Modal */}
+      <TransactionDetailsModal
+        isOpen={showTransactionModal}
+        onClose={() => {
+          setShowTransactionModal(false);
+          setSelectedTransaction(null);
+        }}
+        transaction={selectedTransaction}
+      />
     </div>
   );
 };

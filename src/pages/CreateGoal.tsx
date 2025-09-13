@@ -16,32 +16,9 @@ const CreateGoal: React.FC = () => {
       setIsSubmitting(true);
       setError(null);
 
-      // Validate form data before submission
-      if (!data.title || data.title.trim().length === 0) {
-        setError('Goal title is required');
-        return;
-      }
-      if (!data.targetAmount || Number(data.targetAmount) <= 0) {
-        setError('Target amount must be greater than 0');
-        return;
-      }
-      if (!data.targetDate || new Date(data.targetDate) <= new Date()) {
-        setError('Target date must be in the future');
-        return;
-      }
-
-      const goalData = {
-        ...data,
-        targetAmount: Number(data.targetAmount),
-        targetDate: new Date(data.targetDate),
-        currentAmount: Number(data.currentAmount) || 0,
-        status: 'active' as const,
-        activityScope: data.activityScope || 'general',
-        accountIds: data.accountIds || [],
-        targetCategory: data.targetCategory || null,
-      };
-
-      await addGoal(goalData);
+      // The GoalForm already handles validation and data transformation
+      // Just pass the data directly to addGoal
+      await addGoal(data);
       navigate('/goals');
     } catch (error: any) {
       console.error('Error creating goal:', error);

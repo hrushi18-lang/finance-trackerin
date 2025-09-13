@@ -5,6 +5,7 @@ import { FinancialAccount, Transaction, Goal } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { Button } from '../common/Button';
+import { TransactionDetailsModal } from '../modals/TransactionDetailsModal';
 
 interface AccountDetailViewProps {
   account: FinancialAccount;
@@ -31,6 +32,8 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
 }) => {
   const { formatCurrency, currency } = useInternationalization();
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'analytics'>('overview');
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
 
   const getAccountIcon = (type: string) => {
     const icons = {
@@ -151,10 +154,30 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
           <div className="mt-6">
             <div className={`${balanceStatus.bgColor} rounded-xl p-4 border border-current`}>
               <p className="text-sm text-forest-300 mb-2 font-body">Current Balance</p>
+              
+              {/* Primary Currency Balance */}
               <p className="text-3xl font-numbers font-bold text-white">
                 <CurrencyIcon currencyCode={currency.code} size={24} className="inline mr-2" />
                 {formatCurrency(account.balance)}
               </p>
+              
+              {/* Dual Currency Display if different */}
+              {account.native_currency && account.native_currency !== currency.code && (
+                <div className="mt-2 p-2 bg-forest-800/30 rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-forest-300">Native Currency:</span>
+                    <span className="text-white font-medium">
+                      {formatCurrency(account.native_amount || account.balance, account.native_currency)}
+                    </span>
+                  </div>
+                  {account.exchange_rate && account.exchange_rate !== 1.0 && (
+                    <div className="text-xs text-forest-400 mt-1">
+                      1 {account.native_currency} = {account.exchange_rate.toFixed(4)} {currency.code}
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <div className="flex items-center justify-between mt-2">
                 <span className={`text-sm font-medium ${balanceStatus.color}`}>
                   {balanceStatus.status.charAt(0).toUpperCase() + balanceStatus.status.slice(1)} Balance
@@ -289,7 +312,14 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
             ) : (
               <div className="space-y-3">
                 {recentTransactions.map((transaction) => (
-                  <div key={transaction.id} className="bg-forest-900/30 backdrop-blur-md rounded-xl p-4 border border-forest-600/20">
+                  <div 
+                    key={transaction.id} 
+                    className="bg-forest-900/30 backdrop-blur-md rounded-xl p-4 border border-forest-600/20 cursor-pointer hover:bg-forest-800/40 transition-colors"
+                    onClick={() => {
+                      setSelectedTransaction(transaction);
+                      setShowTransactionModal(true);
+                    }}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
@@ -336,6 +366,16 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Transaction Details Modal */}
+      <TransactionDetailsModal
+        isOpen={showTransactionModal}
+        onClose={() => {
+          setShowTransactionModal(false);
+          setSelectedTransaction(null);
+        }}
+        transaction={selectedTransaction}
+      />
     </div>
   );
 };

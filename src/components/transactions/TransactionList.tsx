@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { format, isToday, isYesterday, isThisWeek, isThisMonth } from 'date-fns';
 import LuxuryCategoryIcon from '../common/LuxuryCategoryIcon';
+import { TransactionDetailsModal } from '../modals/TransactionDetailsModal';
 
 interface TransactionListProps {
   accountId?: string;
@@ -48,6 +49,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
 
   // Filter transactions
   const filteredTransactions = useMemo(() => {
@@ -347,10 +349,14 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           {filteredTransactions.map((transaction) => (
             <div
               key={transaction.id}
-              className="p-4 rounded-2xl flex items-center justify-between hover:bg-gray-50 transition-colors"
+              className="p-4 rounded-2xl flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
               style={{
                 backgroundColor: 'var(--background-secondary)',
                 boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+              }}
+              onClick={() => {
+                setSelectedTransaction(transaction);
+                setShowTransactionModal(true);
               }}
             >
               <div className="flex items-center space-x-3">
@@ -414,6 +420,16 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         onClose={() => setShowTransactionForm(false)}
         transaction={selectedTransaction}
         defaultAccountId={accountId}
+      />
+
+      {/* Transaction Details Modal */}
+      <TransactionDetailsModal
+        isOpen={showTransactionModal}
+        onClose={() => {
+          setShowTransactionModal(false);
+          setSelectedTransaction(null);
+        }}
+        transaction={selectedTransaction}
       />
     </div>
   );
