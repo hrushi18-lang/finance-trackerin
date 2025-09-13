@@ -56,6 +56,7 @@ const Home: React.FC = () => {
   const [hideBalance, setHideBalance] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [isFinancialSnapshotMinimized, setIsFinancialSnapshotMinimized] = useState(false);
 
   // Calculate net worth
   const netWorth = useMemo(() => {
@@ -210,28 +211,73 @@ const Home: React.FC = () => {
         </div>
 
         {/* Financial Snapshot */}
-        <FinancialSnapshot />
+        <div className="relative">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
+              Financial Snapshot
+            </h2>
+            <button
+              onClick={() => setIsFinancialSnapshotMinimized(!isFinancialSnapshotMinimized)}
+              className="p-2 rounded-lg transition-all duration-200 hover:bg-gray-100"
+              style={{ 
+                backgroundColor: 'var(--background-secondary)',
+                color: 'var(--text-secondary)'
+              }}
+            >
+              {isFinancialSnapshotMinimized ? (
+                <ArrowDownRight size={16} />
+              ) : (
+                <ArrowUpRight size={16} />
+              )}
+            </button>
+          </div>
+          {!isFinancialSnapshotMinimized && <FinancialSnapshot />}
+        </div>
 
-        {/* Current Balance Card */}
+        {/* Main Financial Overview Card */}
         <div 
-          className="p-8 rounded-3xl"
+          className="p-8 rounded-3xl border-2 border-black"
           style={{
-            backgroundColor: 'var(--background-secondary)',
-            boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+            backgroundColor: '#fef7ed', // cream background
+            boxShadow: '8px 8px 16px rgba(0,0,0,0.3), -4px -4px 8px rgba(0,0,0,0.1)'
           }}
         >
-          <div className="text-center">
-            <p className="text-sm font-body mb-3" style={{ color: 'var(--text-secondary)' }}>Current Balance</p>
-            <div className="mb-3">
-              <span className="text-4xl font-numbers" style={{ color: 'var(--text-primary)' }}>
-                {hideBalance ? '••••••' : formatCurrency(netWorth)}
-              </span>
+          <div className="text-center text-black">
+            <div className="flex items-center justify-center space-x-2 mb-4">
+              <Wallet size={20} />
+              <h2 className="text-lg font-heading text-black">Current Balance</h2>
             </div>
-            <div className="flex items-center justify-center space-x-2">
-              <Wallet size={16} style={{ color: 'var(--primary)' }} />
-              <span className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
-                Across {accounts.length} account{accounts.length !== 1 ? 's' : ''}
-              </span>
+            
+            {/* Current Balance - Single Focus */}
+            <div className="mb-6">
+              <div className="text-5xl font-numbers text-black mb-2">
+                {hideBalance ? '••••••' : formatCurrency(netWorth)}
+              </div>
+              <div className="flex items-center justify-center space-x-1 text-sm text-gray-700">
+                <span>Across {accounts.length} account{accounts.length !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-gray-300">
+                <div className="text-lg font-numbers text-black">
+                  {hideBalance ? '••••' : formatCurrency(accounts.reduce((sum, acc) => sum + (acc.converted_amount || acc.balance || 0), 0))}
+                </div>
+                <div className="text-xs text-gray-600">Total Assets</div>
+              </div>
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-gray-300">
+                <div className="text-lg font-numbers text-black">
+                  {hideBalance ? '••••' : formatCurrency(liabilities.reduce((sum, liab) => sum + (liab.remainingAmount || 0), 0))}
+                </div>
+                <div className="text-xs text-gray-600">Total Liabilities</div>
+              </div>
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-gray-300">
+                <div className="text-lg font-numbers text-black">
+                  {goals.length}
+                </div>
+                <div className="text-xs text-gray-600">Active Goals</div>
+              </div>
             </div>
           </div>
         </div>

@@ -6,6 +6,7 @@ import { useInternationalization } from '../../contexts/InternationalizationCont
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { Button } from '../common/Button';
 import { TransactionDetailsModal } from '../modals/TransactionDetailsModal';
+import { AccountAnalyticsChart } from '../analytics/AccountAnalyticsChart';
 
 interface AccountDetailViewProps {
   account: FinancialAccount;
@@ -34,6 +35,7 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'analytics'>('overview');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showAnalyticsChart, setShowAnalyticsChart] = useState(false);
 
   const getAccountIcon = (type: string) => {
     const icons = {
@@ -357,10 +359,59 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
         {activeTab === 'analytics' && (
           <div className="space-y-6">
             <div className="bg-forest-900/30 backdrop-blur-md rounded-xl p-6 border border-forest-600/20">
-              <h3 className="text-lg font-heading font-semibold text-white mb-4">Transaction Analytics</h3>
-              <div className="text-center py-8">
-                <BarChart3 size={48} className="mx-auto text-gray-600 mb-4" />
-                <p className="text-gray-400">Analytics coming soon</p>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-heading font-semibold text-white">Transaction Analytics</h3>
+                <button
+                  onClick={() => setShowAnalyticsChart(true)}
+                  className="px-4 py-2 bg-forest-600 hover:bg-forest-500 text-white rounded-lg transition-colors flex items-center space-x-2"
+                >
+                  <BarChart3 size={16} />
+                  <span>View Full Chart</span>
+                </button>
+              </div>
+              
+              {/* Mini Analytics Preview */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-forest-800/50 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <TrendingUp size={16} className="text-green-400" />
+                      <span className="text-sm text-gray-300">Total Income</span>
+                    </div>
+                    <div className="text-xl font-bold text-white">
+                      {formatCurrency(transactions
+                        .filter(t => t.type === 'income')
+                        .reduce((sum, t) => sum + (t.amount || 0), 0)
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-forest-800/50 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <TrendingDown size={16} className="text-red-400" />
+                      <span className="text-sm text-gray-300">Total Expenses</span>
+                    </div>
+                    <div className="text-xl font-bold text-white">
+                      {formatCurrency(transactions
+                        .filter(t => t.type === 'expense')
+                        .reduce((sum, t) => sum + (t.amount || 0), 0)
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-forest-800/50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <BarChart3 size={16} className="text-blue-400" />
+                    <span className="text-sm text-gray-300">Transaction Timeline</span>
+                  </div>
+                  <div className="text-sm text-gray-400 mb-3">
+                    Click "View Full Chart" to see detailed income vs expenses over time
+                  </div>
+                  <div className="h-16 bg-forest-700/50 rounded-lg flex items-center justify-center">
+                    <div className="text-gray-500 text-sm">Interactive Chart Preview</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -375,6 +426,14 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
           setSelectedTransaction(null);
         }}
         transaction={selectedTransaction}
+      />
+
+      {/* Analytics Chart Modal */}
+      <AccountAnalyticsChart
+        isOpen={showAnalyticsChart}
+        onClose={() => setShowAnalyticsChart(false)}
+        transactions={transactions}
+        accountName={account.name}
       />
     </div>
   );
