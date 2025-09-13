@@ -543,23 +543,43 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Add triggers for updated_at columns
-CREATE TRIGGER update_financial_accounts_updated_at
-  BEFORE UPDATE ON financial_accounts
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_income_sources_updated_at
-  BEFORE UPDATE ON income_sources
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_category_budgets_updated_at
-  BEFORE UPDATE ON category_budgets
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_bill_reminders_updated_at
-  BEFORE UPDATE ON bill_reminders
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+-- Add triggers for updated_at columns (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'update_financial_accounts_updated_at'
+  ) THEN
+    CREATE TRIGGER update_financial_accounts_updated_at
+      BEFORE UPDATE ON financial_accounts
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+  
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'update_income_sources_updated_at'
+  ) THEN
+    CREATE TRIGGER update_income_sources_updated_at
+      BEFORE UPDATE ON income_sources
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+  
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'update_category_budgets_updated_at'
+  ) THEN
+    CREATE TRIGGER update_category_budgets_updated_at
+      BEFORE UPDATE ON category_budgets
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+  
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'update_bill_reminders_updated_at'
+  ) THEN
+    CREATE TRIGGER update_bill_reminders_updated_at
+      BEFORE UPDATE ON bill_reminders
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END;
+$$;

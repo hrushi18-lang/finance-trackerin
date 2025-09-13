@@ -370,16 +370,28 @@ CREATE POLICY "Users can delete own account goals"
   TO authenticated
   USING (auth.uid() = user_id);
 
--- Create trigger functions for updated_at columns
-CREATE TRIGGER update_account_analytics_updated_at
-  BEFORE UPDATE ON account_analytics
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_account_goals_updated_at
-  BEFORE UPDATE ON account_goals
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+-- Create trigger functions for updated_at columns (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'update_account_analytics_updated_at'
+  ) THEN
+    CREATE TRIGGER update_account_analytics_updated_at
+      BEFORE UPDATE ON account_analytics
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+  
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'update_account_goals_updated_at'
+  ) THEN
+    CREATE TRIGGER update_account_goals_updated_at
+      BEFORE UPDATE ON account_goals
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END;
+$$;
 
 -- Function to update account last activity
 CREATE OR REPLACE FUNCTION update_account_last_activity()
@@ -403,16 +415,28 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create triggers to update last activity
-CREATE TRIGGER update_account_activity_on_transaction
-  AFTER INSERT OR UPDATE ON transactions
-  FOR EACH ROW
-  EXECUTE FUNCTION update_account_last_activity();
-
-CREATE TRIGGER update_account_activity_on_transfer
-  AFTER INSERT OR UPDATE ON account_transfers
-  FOR EACH ROW
-  EXECUTE FUNCTION update_account_last_activity();
+-- Create triggers to update last activity (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'update_account_activity_on_transaction'
+  ) THEN
+    CREATE TRIGGER update_account_activity_on_transaction
+      AFTER INSERT OR UPDATE ON transactions
+      FOR EACH ROW
+      EXECUTE FUNCTION update_account_last_activity();
+  END IF;
+  
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'update_account_activity_on_transfer'
+  ) THEN
+    CREATE TRIGGER update_account_activity_on_transfer
+      AFTER INSERT OR UPDATE ON account_transfers
+      FOR EACH ROW
+      EXECUTE FUNCTION update_account_last_activity();
+  END IF;
+END;
+$$;
 
 -- Function to soft delete account
 CREATE OR REPLACE FUNCTION soft_delete_account(account_uuid uuid)
