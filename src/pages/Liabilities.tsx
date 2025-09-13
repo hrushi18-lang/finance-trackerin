@@ -44,7 +44,7 @@ const Liabilities: React.FC = () => {
             {liabilitySymbol}{liability.remainingAmount.toFixed(2)} {liabilityCurrency}
           </div>
           <div className="text-sm text-gray-500">
-            ≈ {formatCurrency(convertedAmount)}
+            ≈ {formatCurrency(convertedAmount, currency.code)}
           </div>
         </div>
       );

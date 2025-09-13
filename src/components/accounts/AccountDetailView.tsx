@@ -157,19 +157,19 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
             <div className={`${balanceStatus.bgColor} rounded-xl p-4 border border-current`}>
               <p className="text-sm text-forest-300 mb-2 font-body">Current Balance</p>
               
-              {/* Primary Currency Balance */}
+              {/* Main Balance - Native Currency */}
               <p className="text-3xl font-numbers font-bold text-white">
-                <CurrencyIcon currencyCode={currency.code} size={24} className="inline mr-2" />
-                {formatCurrency(account.balance)}
+                <CurrencyIcon currencyCode={account.native_currency || currency.code} size={24} className="inline mr-2" />
+                {formatCurrency(account.native_amount || account.balance, account.native_currency || currency.code)}
               </p>
               
-              {/* Dual Currency Display if different */}
+              {/* Description - Primary Currency if different */}
               {account.native_currency && account.native_currency !== currency.code && (
                 <div className="mt-2 p-2 bg-forest-800/30 rounded-lg">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-forest-300">Native Currency:</span>
+                    <span className="text-forest-300">≈ {currency.code}:</span>
                     <span className="text-white font-medium">
-                      {formatCurrency(account.native_amount || account.balance, account.native_currency)}
+                      {formatCurrency(account.converted_amount || account.balance, currency.code)}
                     </span>
                   </div>
                   {account.exchange_rate && account.exchange_rate !== 1.0 && (

@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Calendar, Filter, TrendingUp, TrendingDown } from 'lucide-react';
+import { useInternationalization } from '../../contexts/InternationalizationContext';
 
 interface ChartPopupProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const ChartPopup: React.FC<ChartPopupProps> = ({
   type,
   onRangeSelect
 }) => {
+  const { formatCurrency } = useInternationalization();
   if (!isOpen) return null;
 
   return (
@@ -125,7 +127,7 @@ export const ChartPopup: React.FC<ChartPopupProps> = ({
               <div className="space-y-4">
                 <div className="text-center">
                   <div className="text-3xl font-numbers font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
-                    {data.value?.toLocaleString() || '0'}
+                    {formatCurrency(data.value || 0)}
                   </div>
                   <div className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>
                     {data.label}
@@ -144,7 +146,7 @@ export const ChartPopup: React.FC<ChartPopupProps> = ({
                       Amount
                     </div>
                     <div className="text-lg font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
-                      {data.value?.toLocaleString() || '0'}
+                      {formatCurrency(data.value || 0)}
                     </div>
                   </div>
                   
@@ -192,7 +194,7 @@ export const ChartPopup: React.FC<ChartPopupProps> = ({
                       </div>
                     </div>
                     <div className="text-lg font-numbers font-bold" style={{ color: 'var(--success)' }}>
-                      {data.income?.toLocaleString() || '0'}
+                      {formatCurrency(data.income || 0)}
                     </div>
                   </div>
                   
@@ -210,7 +212,7 @@ export const ChartPopup: React.FC<ChartPopupProps> = ({
                       </div>
                     </div>
                     <div className="text-lg font-numbers font-bold" style={{ color: 'var(--error)' }}>
-                      {data.spending?.toLocaleString() || '0'}
+                      {formatCurrency(data.spending || 0)}
                     </div>
                   </div>
                 </div>
@@ -228,7 +230,7 @@ export const ChartPopup: React.FC<ChartPopupProps> = ({
                   <div className={`text-xl font-numbers font-bold ${
                     (data.income - data.spending) >= 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {((data.income || 0) - (data.spending || 0)).toLocaleString()}
+                    {formatCurrency((data.income || 0) - (data.spending || 0))}
                   </div>
                 </div>
               </div>

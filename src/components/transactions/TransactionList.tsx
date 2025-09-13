@@ -239,11 +239,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-gray-300 text-sm"
+                className="px-3 py-2 rounded-xl border border-amber-200 text-sm bg-amber-50 text-amber-900"
                 style={{
-                  backgroundColor: 'var(--background)',
-                  color: 'var(--text-primary)',
-                  borderColor: 'var(--border)'
+                  fontFamily: 'ArchivoBold, sans-serif'
                 }}
               >
                 <option value="">All Categories</option>
@@ -257,11 +255,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-gray-300 text-sm"
+                className="px-3 py-2 rounded-xl border border-amber-200 text-sm bg-amber-50 text-amber-900"
                 style={{
-                  backgroundColor: 'var(--background)',
-                  color: 'var(--text-primary)',
-                  borderColor: 'var(--border)'
+                  fontFamily: 'ArchivoBold, sans-serif'
                 }}
               >
                 <option value="">All Types</option>
@@ -273,11 +269,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
               <select
                 value={selectedDateRange}
                 onChange={(e) => setSelectedDateRange(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-gray-300 text-sm"
+                className="px-3 py-2 rounded-xl border border-amber-200 text-sm bg-amber-50 text-amber-900"
                 style={{
-                  backgroundColor: 'var(--background)',
-                  color: 'var(--text-primary)',
-                  borderColor: 'var(--border)'
+                  fontFamily: 'ArchivoBold, sans-serif'
                 }}
               >
                 <option value="">All Time</option>

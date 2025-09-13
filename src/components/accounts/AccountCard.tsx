@@ -105,9 +105,9 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   // Check if we should show dual currency
   const shouldShowDualCurrency = showDualCurrency && needsConversion;
   
-  // Display amount - always use converted amount (primary currency) for overview
-  const displayAmount = convertedAmount;
-  const displayCurrency = convertedCurrency;
+  // Display amount - show native currency as main, primary currency as description
+  const displayAmount = shouldShowDualCurrency ? nativeAmount : convertedAmount;
+  const displayCurrency = shouldShowDualCurrency ? nativeCurrency : convertedCurrency;
 
   const formatAccountType = (type: FinancialAccount['type']) => {
     return type.split('_').map(word => 
@@ -189,24 +189,23 @@ export const AccountCard: React.FC<AccountCardProps> = ({
         <div className="mb-3">
           {shouldShowDualCurrency ? (
             <div className="space-y-1">
-              {/* Native currency balance */}
+              {/* Main balance - Native currency */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                   {nativeCurrency}
                 </span>
-                <p className={`text-lg font-heading ${nativeAmount < 0 ? 'text-red-600' : ''}`} 
+                <p className={`text-xl font-heading ${nativeAmount < 0 ? 'text-red-600' : ''}`} 
                    style={{ color: nativeAmount < 0 ? 'var(--error)' : 'var(--text-primary)' }}>
                   {formatCurrency(nativeAmount, nativeCurrency)}
                 </p>
               </div>
               
-              {/* Converted balance */}
+              {/* Description - Primary currency */}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-blue-600 dark:text-blue-400">
-                  {convertedCurrency}
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  ≈ {convertedCurrency}
                 </span>
-                <p className={`text-xl font-heading ${convertedAmount < 0 ? 'text-red-600' : 'text-blue-600 dark:text-blue-400'}`} 
-                   style={{ color: convertedAmount < 0 ? 'var(--error)' : 'var(--primary)' }}>
+                <p className={`text-sm font-medium ${convertedAmount < 0 ? 'text-red-500' : 'text-gray-600 dark:text-gray-400'}`}>
                   {formatCurrency(convertedAmount, convertedCurrency)}
                 </p>
               </div>
