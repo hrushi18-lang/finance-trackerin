@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS exchange_rates (
   source text NOT NULL CHECK (source = ANY (ARRAY['api', 'manual', 'fallback'])),
   api_provider text,
   created_at timestamptz DEFAULT now(),
-  UNIQUE(from_currency, to_currency, date(created_at))
+  -- Note: Unique constraint removed due to PostgreSQL limitations with date functions in constraints
 );
 
 -- User Currency Preferences
