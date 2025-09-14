@@ -7,6 +7,7 @@ interface ProfileContextType {
   loading: boolean;
   error: string | null;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  createProfile: (profileData: Omit<UserProfile, 'id' | 'userId' | 'createdAt' | 'updatedAt'>, userId: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -40,6 +41,22 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
     } catch (err) {
       console.error('Failed to load profile:', err);
       setError('Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const createProfile = useCallback(async (profileData: Omit<UserProfile, 'id' | 'userId' | 'createdAt' | 'updatedAt'>, userId: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const userProfile = await profileManager.createUserProfile(profileData, userId);
+      setProfile(userProfile);
+    } catch (err) {
+      console.error('Failed to create profile:', err);
+      setError('Failed to create profile');
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -79,6 +96,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
     loading,
     error,
     updateProfile,
+    createProfile,
     refreshProfile,
   };
 

@@ -194,6 +194,11 @@ class ProfileManager {
         .single();
 
       if (error) {
+        if (error.code === 'PGRST116') {
+          // No profile found - this is normal for new users
+          return null;
+        }
+        console.error('Error fetching profile:', error);
         return null;
       }
 
@@ -220,6 +225,37 @@ class ProfileManager {
     } catch (error) {
       console.error('Failed to get user profile:', error);
       return null;
+    }
+  }
+
+  async getOrCreateUserProfile(userId: string, defaultProfileData?: Partial<UserProfile>): Promise<UserProfile> {
+    try {
+      // Try to get existing profile
+      let profile = await this.getUserProfile(userId);
+      
+      if (profile) {
+        return profile;
+      }
+      
+      // Create new profile with default data
+      const defaultData: Omit<UserProfile, 'id' | 'userId' | 'createdAt' | 'updatedAt'> = {
+        name: defaultProfileData?.name || 'New User',
+        age: defaultProfileData?.age || 25,
+        profession: defaultProfileData?.profession || '',
+        country: defaultProfileData?.country || '',
+        monthlyIncome: defaultProfileData?.monthlyIncome || 0,
+        primaryCurrency: defaultProfileData?.primaryCurrency || 'USD',
+        displayCurrency: defaultProfileData?.displayCurrency || 'USD',
+        autoConvert: defaultProfileData?.autoConvert ?? true,
+        showOriginalAmounts: defaultProfileData?.showOriginalAmounts ?? true,
+        email: defaultProfileData?.email || '',
+        avatar: defaultProfileData?.avatar || '',
+      };
+      
+      return await this.createUserProfile(defaultData, userId);
+    } catch (error) {
+      console.error('Failed to get or create user profile:', error);
+      throw error;
     }
   }
 

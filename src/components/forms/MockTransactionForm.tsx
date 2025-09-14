@@ -153,10 +153,15 @@ export const MockTransactionForm: React.FC<MockTransactionFormProps> = ({
             min="0"
             {...register('amount', { 
               required: 'Amount is required',
-              min: { value: 0.01, message: 'Amount must be greater than 0' }
+              min: { value: 0.01, message: 'Amount must be greater than 0' },
+              valueAsNumber: true
             })}
             className="modal-input pl-10 w-full"
             placeholder="0.00"
+            onChange={(e) => {
+              const value = parseFloat(e.target.value) || 0;
+              setValue('amount', value);
+            }}
           />
         </div>
         {errors.amount && (

@@ -25,7 +25,7 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
   const { addUserCategory } = useFinance();
   const { setCurrency, setSecondaryCurrency, supportedCurrencies } = useInternationalization();
   const { user } = useAuth();
-  const { updateProfile } = useProfile();
+  const { updateProfile, createProfile } = useProfile();
   
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -125,7 +125,7 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
         throw new Error('Primary currency is required');
       }
 
-      // Update user profile with collected data
+      // Create user profile with collected data
       const profileData = {
         name: formData.name,
         age: parseInt(formData.age),
@@ -139,7 +139,15 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
       };
 
       console.log('Creating profile with data:', profileData);
-      await updateProfile(profileData);
+      
+      // Check if profile already exists
+      if (profile) {
+        // Update existing profile
+        await updateProfile(profileData);
+      } else {
+        // Create new profile using context method
+        await createProfile(profileData, user!.id);
+      }
 
       // Set primary currency in internationalization context
       const selectedCurrency = supportedCurrencies.find(c => c.code === formData.currency);

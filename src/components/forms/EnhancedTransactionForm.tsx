@@ -256,7 +256,10 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
                     step="0.01"
                     min="0"
                     value={amount || ''}
-                    onChange={(e) => setValue('amount', parseFloat(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      setValue('amount', value);
+                    }}
                     error={errors.amount?.message}
                     className="flex-1 text-xl font-semibold"
                     required
