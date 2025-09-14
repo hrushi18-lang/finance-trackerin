@@ -203,6 +203,17 @@ async function getExchangeRate(fromCurrency: string, toCurrency: string): Promis
  * Format currency amount with symbol
  */
 export function formatCurrencyAmount(amount: number, currency: string, symbol: string): string {
+  // Validate inputs
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    console.warn('formatCurrencyAmount: Invalid amount provided:', amount);
+    return `${symbol || '$'}0.00`;
+  }
+  
+  if (!currency || !symbol) {
+    console.warn('formatCurrencyAmount: Invalid currency or symbol:', { currency, symbol });
+    return `${symbol || '$'}0.00`;
+  }
+  
   const info = getCurrencyInfo(currency);
   const decimalPlaces = info?.decimal_places || 2;
   
@@ -221,6 +232,17 @@ export function generateTransactionDisplayText(conversion: CurrencyConversionRes
   totalDisplay: string;
   conversionNote: string;
 } {
+  // Validate conversion object
+  if (!conversion) {
+    console.error('generateTransactionDisplayText: conversion object is null or undefined');
+    return {
+      transactionDisplay: '$0.00',
+      accountDisplay: '$0.00',
+      totalDisplay: '$0.00',
+      conversionNote: 'Invalid conversion data'
+    };
+  }
+  
   const { case: caseType } = conversion;
   
   // Debug logging to help identify the issue

@@ -115,22 +115,31 @@ const AddTransaction: React.FC = () => {
     const amount = watch('amount');
     const accountId = watch('accountId');
     
-    if (amount && transactionCurrency && accountId) {
-      const account = accounts.find(acc => acc.id === accountId);
-      if (account) {
-        const result = convertTransactionCurrency({
-          amount: Number(amount) || 0,
-          currency: transactionCurrency,
-          accountCurrency: account.currencycode || displayCurrency,
-          primaryCurrency: displayCurrency
-        });
-        setConversionResult(result);
+    const performConversion = async () => {
+      if (amount && transactionCurrency && accountId) {
+        const account = accounts.find(acc => acc.id === accountId);
+        if (account) {
+          try {
+            const result = await convertTransactionCurrency(
+              Number(amount) || 0,
+              transactionCurrency,
+              account.currencycode || displayCurrency,
+              displayCurrency
+            );
+            setConversionResult(result);
+          } catch (error) {
+            console.error('Currency conversion error:', error);
+            setConversionResult(null);
+          }
+        } else {
+          setConversionResult(null);
+        }
       } else {
         setConversionResult(null);
       }
-    } else {
-      setConversionResult(null);
-    }
+    };
+    
+    performConversion();
   }, [watch('amount'), transactionCurrency, watch('accountId'), accounts, displayCurrency]);
 
   const type = watch('type');
