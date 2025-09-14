@@ -531,7 +531,25 @@ const AddTransaction: React.FC = () => {
                       <span className="text-sm font-medium text-blue-800">Currency Conversion</span>
                     </div>
                     <div className="text-sm text-blue-700">
-                      {generateTransactionDisplayText(conversionResult)}
+                      {(() => {
+                        const displayText = generateTransactionDisplayText(conversionResult);
+                        return (
+                          <div className="space-y-2">
+                            <div>
+                              <span className="font-medium">Transaction:</span> {displayText.transactionDisplay}
+                            </div>
+                            <div>
+                              <span className="font-medium">Account:</span> {displayText.accountDisplay}
+                            </div>
+                            <div>
+                              <span className="font-medium">Total:</span> {displayText.totalDisplay}
+                            </div>
+                            <div className="text-xs text-blue-600 mt-2">
+                              {displayText.conversionNote}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
