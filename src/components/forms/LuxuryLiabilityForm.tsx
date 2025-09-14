@@ -7,6 +7,7 @@ import { useInternationalization } from '../../contexts/InternationalizationCont
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { CurrencyInput } from '../currency/CurrencyInput';
 import { LiabilityType, getLiabilityBehavior } from '../../lib/liability-behaviors';
+import { getCurrencyInfo } from '../../utils/currency-converter';
 
 interface LuxuryLiabilityFormProps {
   onComplete: (liability: any) => void;
@@ -346,7 +347,7 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
             onChange={(e) => updateFormData('currencyCode', e.target.value)}
             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="USD">USD - US Dollar</option>
+            <option value={displayCurrency}>{displayCurrency} - {getCurrencyInfo(displayCurrency)?.name || 'US Dollar'}</option>
             <option value="EUR">EUR - Euro</option>
             <option value="GBP">GBP - British Pound</option>
             <option value="INR">INR - Indian Rupee</option>

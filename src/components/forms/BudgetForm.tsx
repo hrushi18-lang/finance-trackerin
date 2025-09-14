@@ -101,7 +101,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
         activityScope: validatedData.activity_scope,
         accountIds: validatedData.account_ids || [],
         targetCategory: validatedData.target_category,
-        currencyCode: 'USD' // Default currency
+        currencyCode: currency.code // Default currency
       });
       
     } catch (error: any) {

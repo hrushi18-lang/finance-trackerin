@@ -7,6 +7,7 @@ import { Button } from '../components/common/Button';
 import { CategorySelector } from '../components/common/CategorySelector';
 import { toNumber } from '../utils/validation';
 import { useFinance } from '../contexts/FinanceContext';
+import { useInternationalization } from '../contexts/InternationalizationContext';
 import { convertCurrency, formatCurrency, needsConversion, getCurrencyInfo } from '../utils/currency-converter';
 import { 
   convertTransactionCurrency, 
@@ -31,6 +32,7 @@ interface TransactionFormData {
   originalAmount?: number;
   originalCurrency?: string;
   exchangeRateUsed?: number;
+  notes?: string;
 }
 
 interface SplitFormData {
@@ -42,8 +44,9 @@ interface SplitFormData {
 const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  // Get display currency from user profile (simplified)
-  const displayCurrency = 'USD'; // This should come from user profile
+  // Get display currency from user profile
+  const { currency } = useInternationalization();
+  const displayCurrency = currency.code;
   const { 
     addTransaction, 
     userCategories, 
@@ -296,6 +299,7 @@ const AddTransaction: React.FC = () => {
             affectsBalance: affectsBalance,
             status: isScheduled ? 'scheduled' as const : 'completed' as const,
             currencycode: displayCurrency,
+            notes: data.notes,
             ...multiCurrencyData
           };
 
@@ -451,7 +455,10 @@ const AddTransaction: React.FC = () => {
             ].map(({ type, icon: Icon, label, color }) => (
               <button
                 key={type}
-                onClick={() => setTransactionType(type as any)}
+                onClick={() => {
+                  setTransactionType(type as any);
+                  setValue('type', type as any);
+                }}
                 className={`p-4 rounded-xl border transition-all ${
                   transactionType === type
                     ? 'bg-gray-900 border-gray-900 text-white'
@@ -493,10 +500,14 @@ const AddTransaction: React.FC = () => {
                     {getCurrencyInfo(transactionCurrency)?.symbol || '$'}
                   </span>
                   <Input
+                    {...register('amount', { 
+                      required: 'Amount is required',
+                      min: { value: 0.01, message: 'Amount must be greater than 0' }
+                    })}
                     type="number"
+                    step="0.01"
+                    min="0"
                     placeholder="0.00"
-                    value={typeof watch('amount') === 'number' ? watch('amount') : ''}
-                    onChange={(e) => setValue('amount', parseFloat(e.target.value) || 0)}
                     error={errors.amount?.message}
                     className="flex-1 text-lg"
                     style={{
@@ -563,7 +574,7 @@ const AddTransaction: React.FC = () => {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setValue('amount', 100)}
+                    onClick={() => setValue('amount', 100, { shouldValidate: true })}
                     className="text-xs"
                   >
                     ₹100
@@ -572,7 +583,7 @@ const AddTransaction: React.FC = () => {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setValue('amount', 500)}
+                    onClick={() => setValue('amount', 500, { shouldValidate: true })}
                     className="text-xs"
                   >
                     ₹500
@@ -581,7 +592,7 @@ const AddTransaction: React.FC = () => {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setValue('amount', 1000)}
+                    onClick={() => setValue('amount', 1000, { shouldValidate: true })}
                     className="text-xs"
                   >
                     ₹1,000
@@ -590,7 +601,7 @@ const AddTransaction: React.FC = () => {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setValue('amount', 5000)}
+                    onClick={() => setValue('amount', 5000, { shouldValidate: true })}
                     className="text-xs"
                   >
                     ₹5,000
@@ -599,7 +610,7 @@ const AddTransaction: React.FC = () => {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setValue('amount', 10000)}
+                    onClick={() => setValue('amount', 10000, { shouldValidate: true })}
                     className="text-xs"
                   >
                     ₹10,000
@@ -776,6 +787,19 @@ const AddTransaction: React.FC = () => {
               {errors.date && (
                 <p className="text-red-400 text-sm mt-1">{errors.date.message}</p>
               )}
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-forest-300 mb-2">
+                Notes (Optional)
+              </label>
+              <textarea
+                {...register('notes')}
+                placeholder="Add any additional notes about this transaction..."
+                className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-4 py-3 text-white placeholder-forest-400 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-forest-500 transition-colors resize-none"
+                rows={3}
+              />
             </div>
 
             {/* Link Options */}

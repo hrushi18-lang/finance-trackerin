@@ -296,7 +296,7 @@ export const SmartAccountForm: React.FC<SmartAccountFormProps> = ({
                   {...register('currency', { required: 'Currency is required' })}
                   className="w-full py-3 px-4 bg-black/20 border border-white/20 text-white rounded-lg focus:border-primary-400 focus:ring-2 focus:ring-primary-400/20"
                 >
-                  <option value="USD">USD - US Dollar</option>
+                  <option value={currency.code}>{currency.code} - {currency.name}</option>
                   <option value="EUR">EUR - Euro</option>
                   <option value="GBP">GBP - British Pound</option>
                   <option value="INR">INR - Indian Rupee</option>

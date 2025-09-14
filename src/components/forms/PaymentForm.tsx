@@ -47,7 +47,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
       amount: liability?.monthlyPayment || 0,
       createTransaction: true,
       accountId: liability?.defaultPaymentAccountId || accounts?.[0]?.id || '',
-      currency: currency || 'USD',
+      currency: currency.code,
     },
   });
 

@@ -1,14 +1,16 @@
 /**
- * Simple Currency Converter
- * Handles basic currency conversion with fallback rates
+ * Enhanced Currency Converter
+ * Uses real-time exchange rates with fallback support
  */
 
-// Exchange rates relative to USD (will be converted to user's primary currency)
-const USD_BASE_RATES: Record<string, number> = {
+import { exchangeRateService } from '../services/exchangeRateService';
+
+// Fallback rates (used when API is unavailable)
+const FALLBACK_RATES: Record<string, number> = {
   USD: 1.0,      // United States
   EUR: 0.92,     // Europe (Euro)
   GBP: 0.79,     // United Kingdom
-  INR: 83.45,    // India
+  INR: 83.45,    // India (₹83.45 = $1)
   CNY: 7.24,     // China
   RUB: 92.5,     // Russia
   AUD: 1.53,     // Australia
@@ -28,16 +30,42 @@ const USD_BASE_RATES: Record<string, number> = {
   NPR: 133.5     // Nepal
 };
 
-// Get exchange rates relative to a specific base currency
-export function getExchangeRates(baseCurrency: string): Record<string, number> {
-  const baseRate = USD_BASE_RATES[baseCurrency];
-  if (!baseRate) return USD_BASE_RATES;
+// Cache for exchange rates
+let ratesCache: Record<string, number> | null = null;
+let lastCacheUpdate: Date | null = null;
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
-  const rates: Record<string, number> = {};
-  for (const [currency, usdRate] of Object.entries(USD_BASE_RATES)) {
-    rates[currency] = usdRate / baseRate;
+// Get exchange rates relative to a specific base currency
+export async function getExchangeRates(baseCurrency: string): Promise<Record<string, number>> {
+  try {
+    // Check if cache is valid
+    if (ratesCache && lastCacheUpdate && 
+        Date.now() - lastCacheUpdate.getTime() < CACHE_DURATION) {
+      return convertRatesToBase(ratesCache, baseCurrency);
+    }
+
+    // Fetch fresh rates
+    const rates = await exchangeRateService.getAllRates('USD');
+    ratesCache = rates;
+    lastCacheUpdate = new Date();
+    
+    return convertRatesToBase(rates, baseCurrency);
+  } catch (error) {
+    console.error('Failed to fetch exchange rates, using fallback:', error);
+    return convertRatesToBase(FALLBACK_RATES, baseCurrency);
   }
-  return rates;
+}
+
+// Convert rates to a specific base currency
+function convertRatesToBase(rates: Record<string, number>, baseCurrency: string): Record<string, number> {
+  const baseRate = rates[baseCurrency];
+  if (!baseRate) return rates;
+
+  const convertedRates: Record<string, number> = {};
+  for (const [currency, rate] of Object.entries(rates)) {
+    convertedRates[currency] = rate / baseRate;
+  }
+  return convertedRates;
 }
 
 export interface CurrencyInfo {
@@ -91,7 +119,37 @@ export function formatCurrency(amount: number, currencyCode: string): string {
   return `${currency.symbol}${formatted}`;
 }
 
-export function convertCurrency(
+export async function convertCurrency(
+  amount: number, 
+  fromCurrency: string, 
+  toCurrency: string,
+  baseCurrency: string
+): Promise<number | null> {
+  if (fromCurrency === toCurrency) return amount;
+  
+  try {
+    const rates = await getExchangeRates(baseCurrency);
+    const fromRate = rates[fromCurrency];
+    const toRate = rates[toCurrency];
+    
+    if (!fromRate || !toRate) return null;
+    
+    // Convert through the base currency
+    const baseAmount = amount / fromRate;
+    const convertedAmount = baseAmount * toRate;
+    
+    // Round to appropriate decimal places
+    const noDecimalCurrencies = ['JPY', 'KRW', 'VND', 'IDR'];
+    const decimalPlaces = noDecimalCurrencies.includes(toCurrency) ? 0 : 2;
+    return Number(convertedAmount.toFixed(decimalPlaces));
+  } catch (error) {
+    console.error('Currency conversion failed:', error);
+    return null;
+  }
+}
+
+// Synchronous version for backward compatibility (uses cached rates)
+export function convertCurrencySync(
   amount: number, 
   fromCurrency: string, 
   toCurrency: string,
@@ -99,7 +157,7 @@ export function convertCurrency(
 ): number | null {
   if (fromCurrency === toCurrency) return amount;
   
-  const rates = getExchangeRates(baseCurrency);
+  const rates = convertRatesToBase(ratesCache || FALLBACK_RATES, baseCurrency);
   const fromRate = rates[fromCurrency];
   const toRate = rates[toCurrency];
   
@@ -115,14 +173,36 @@ export function convertCurrency(
   return Number(convertedAmount.toFixed(decimalPlaces));
 }
 
-export function getExchangeRate(
+export async function getExchangeRate(
+  fromCurrency: string, 
+  toCurrency: string, 
+  baseCurrency: string
+): Promise<number | null> {
+  if (fromCurrency === toCurrency) return 1.0;
+  
+  try {
+    const rates = await getExchangeRates(baseCurrency);
+    const fromRate = rates[fromCurrency];
+    const toRate = rates[toCurrency];
+    
+    if (!fromRate || !toRate) return null;
+    
+    return toRate / fromRate;
+  } catch (error) {
+    console.error('Failed to get exchange rate:', error);
+    return null;
+  }
+}
+
+// Synchronous version for backward compatibility
+export function getExchangeRateSync(
   fromCurrency: string, 
   toCurrency: string, 
   baseCurrency: string
 ): number | null {
   if (fromCurrency === toCurrency) return 1.0;
   
-  const rates = getExchangeRates(baseCurrency);
+  const rates = convertRatesToBase(ratesCache || FALLBACK_RATES, baseCurrency);
   const fromRate = rates[fromCurrency];
   const toRate = rates[toCurrency];
   

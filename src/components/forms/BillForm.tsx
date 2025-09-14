@@ -38,7 +38,7 @@ export const BillForm: React.FC<BillFormProps> = ({
   const { accounts } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [billCurrency, setBillCurrency] = useState(initialData?.currencyCode || 'USD');
+  const [billCurrency, setBillCurrency] = useState(initialData?.currencyCode || currency.code);
   
   const { register, handleSubmit, watch, formState: { errors } } = useForm<BillFormData>({
     defaultValues: initialData || {

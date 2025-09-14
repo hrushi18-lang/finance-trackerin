@@ -65,7 +65,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
   const { accounts } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [goalCurrency, setGoalCurrency] = useState(initialData?.currencyCode || 'USD');
+  const [goalCurrency, setGoalCurrency] = useState(initialData?.currencyCode || currency.code);
   const [selectedGoalType, setSelectedGoalType] = useState<'general' | 'account_specific' | 'category_based'>(
     initialData?.activityScope || 'general'
   );
@@ -81,7 +81,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       activityScope: initialData?.activityScope || 'general',
       accountIds: initialData?.accountIds || [],
       targetCategory: initialData?.targetCategory || '',
-      currencyCode: initialData?.currencyCode || 'USD'
+      currencyCode: initialData?.currencyCode || currency.code
     },
   });
 

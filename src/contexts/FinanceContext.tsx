@@ -1203,6 +1203,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
     
+    // Get user profile for primary currency
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('primary_currency')
+      .eq('user_id', user.id)
+      .single();
+    
+    const primaryCurrency = profileData?.primary_currency || 'USD';
+    
     const { data, error } = await supabase
       .from('financial_accounts')
       .select('*')
@@ -1233,7 +1242,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Dual currency support - properly map database fields
       original_balance: Number(account.native_amount) || Number(account.balance) || 0,
       converted_balance: Number(account.converted_amount) || Number(account.balance) || 0,
-      display_currency: account.converted_currency || account.currency || 'USD',
+      // Fix: If converted_currency is missing but we have converted_amount, use primary currency
+      display_currency: account.converted_currency || (account.converted_amount ? primaryCurrency : (account.currency || 'USD')),
       exchangeRateUsed: Number(account.exchange_rate) || 1.0,
       lastConversionDate: account.last_conversion_date ? new Date(account.last_conversion_date) : undefined,
       conversionSource: account.rate_source,
@@ -1243,7 +1253,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       native_currency: account.native_currency || account.currency || 'USD',
       native_symbol: account.native_symbol || '$',
       converted_amount: Number(account.converted_amount) || Number(account.balance) || 0,
-      converted_currency: account.converted_currency || account.currency || 'USD',
+      // Fix: If converted_currency is missing but we have converted_amount, use primary currency
+      converted_currency: account.converted_currency || (account.converted_amount ? primaryCurrency : (account.currency || 'USD')),
       converted_symbol: account.converted_symbol || '$',
       exchange_rate: Number(account.exchange_rate) || 1.0,
       conversion_metadata: account.conversion_metadata,
@@ -1302,6 +1313,56 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     
     // Cache the results for 5 minutes
     queryCache.set(cacheKey, mappedAccounts, 5 * 60 * 1000);
+    
+    // Fix accounts with missing converted_currency data
+    await fixAccountsWithMissingCurrencyData(mappedAccounts);
+  };
+
+  // Fix accounts with missing converted_currency data
+  const fixAccountsWithMissingCurrencyData = async (accounts: FinancialAccount[]) => {
+    if (!user) return;
+    
+    // Get primary currency from profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('primary_currency')
+      .eq('user_id', user.id)
+      .single();
+    
+    const primaryCurrency = profileData?.primary_currency || 'USD';
+    
+    // Find accounts that have converted_amount but missing converted_currency
+    const accountsToFix = accounts.filter(account => 
+      account.converted_amount && 
+      account.converted_amount !== account.balance && 
+      (!account.converted_currency || account.converted_currency === account.currencycode)
+    );
+    
+    if (accountsToFix.length === 0) return;
+    
+    console.log(`Fixing ${accountsToFix.length} accounts with missing converted_currency data`);
+    
+    // Update each account
+    for (const account of accountsToFix) {
+      try {
+        const { error } = await supabase
+          .from('financial_accounts')
+          .update({
+            converted_currency: primaryCurrency,
+            converted_symbol: getCurrencyInfo(primaryCurrency)?.symbol || '$',
+            last_conversion_date: new Date()
+          })
+          .eq('id', account.id);
+        
+        if (error) {
+          console.error(`Error fixing account ${account.id}:`, error);
+        } else {
+          console.log(`Fixed account ${account.name} - set converted_currency to ${primaryCurrency}`);
+        }
+      } catch (error) {
+        console.error(`Error fixing account ${account.id}:`, error);
+      }
+    }
   };
 
   const loadTransactions = async () => {

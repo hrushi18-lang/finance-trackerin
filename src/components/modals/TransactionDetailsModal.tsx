@@ -173,17 +173,17 @@ export const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = (
                 <label className="text-sm font-medium text-gray-500">Amount</label>
                 <div className="flex items-center space-x-2">
                   <DollarSign size={16} className="text-gray-400" />
-                  {/* Main amount - Native currency if different from primary */}
-                  {transaction.native_currency && transaction.native_currency !== transaction.currencycode ? (
+                  {/* Main amount - Original currency if different from primary */}
+                  {transaction.originalCurrency && transaction.originalCurrency !== transaction.currencycode ? (
                     <div className="space-y-1">
                       <span className={`text-2xl font-bold ${
                         transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.native_amount || transaction.amount, transaction.native_currency)}
+                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.originalAmount || transaction.amount, transaction.originalCurrency)}
                       </span>
                       {/* Description - Primary currency */}
                       <div className="text-sm text-gray-500">
-                        ≈ {formatCurrency(transaction.converted_amount || transaction.amount, transaction.currencycode)}
+                        ≈ {formatCurrency(transaction.amount, transaction.currencycode)}
                       </div>
                     </div>
                   ) : (

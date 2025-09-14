@@ -54,7 +54,7 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
   } = useFinance();
   
   const [transactionType, setTransactionType] = useState<'income' | 'expense' | 'transfer'>(defaultType);
-  const [transactionCurrency, setTransactionCurrency] = useState('USD');
+  const [transactionCurrency, setTransactionCurrency] = useState(primaryCurrency);
   const [selectedAccount, setSelectedAccount] = useState<typeof accounts[0] | null>(null);
   const [conversionResult, setConversionResult] = useState<CurrencyConversionResult | null>(null);
   const [isConverting, setIsConverting] = useState(false);
@@ -107,7 +107,7 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
       const result = await convertTransactionCurrency(
         amount,
         transactionCurrency,
-        selectedAccount.currencycode || 'USD',
+        selectedAccount.currencycode || primaryCurrency,
         primaryCurrency
       );
       
@@ -305,7 +305,7 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
                 <option value="">Choose your account...</option>
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.name} ({account.type.replace('_', ' ')}) - {formatCurrencyAmount(account.balance, account.currencycode || 'USD', getCurrencyInfo(account.currencycode || 'USD')?.symbol || '$')}
+                    {account.name} ({account.type.replace('_', ' ')}) - {formatCurrencyAmount(account.balance, account.currencycode || primaryCurrency, getCurrencyInfo(account.currencycode || primaryCurrency)?.symbol || '$')}
                   </option>
                 ))}
               </select>
@@ -418,7 +418,7 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
                   <option value="">Choose target account...</option>
                   {accounts.filter(acc => acc.id !== accountId).map((account) => (
                     <option key={account.id} value={account.id}>
-                      {account.name} ({account.type.replace('_', ' ')}) - {formatCurrencyAmount(account.balance, account.currencycode || 'USD', getCurrencyInfo(account.currencycode || 'USD')?.symbol || '$')}
+                      {account.name} ({account.type.replace('_', ' ')}) - {formatCurrencyAmount(account.balance, account.currencycode || primaryCurrency, getCurrencyInfo(account.currencycode || primaryCurrency)?.symbol || '$')}
                     </option>
                   ))}
                 </select>

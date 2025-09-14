@@ -194,8 +194,8 @@ async function getExchangeRate(fromCurrency: string, toCurrency: string): Promis
     return 1.0;
   }
   
-  // Use the existing currency converter
-  const rate = convertCurrency(1, fromCurrency, toCurrency);
+  // Use the existing currency converter with USD as base currency
+  const rate = await convertCurrency(1, fromCurrency, toCurrency, 'USD');
   return rate || 1.0;
 }
 

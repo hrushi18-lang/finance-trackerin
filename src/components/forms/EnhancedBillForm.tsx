@@ -10,6 +10,7 @@ import { CurrencyIcon } from '../common/CurrencyIcon';
 import { CurrencyInput } from '../currency/CurrencyInput';
 import { useFinance } from '../../contexts/FinanceContext';
 import { validateBill, sanitizeFinancialData, toNumber } from '../../utils/validation';
+import { getCurrencyInfo } from '../../utils/currency-converter';
 
 interface EnhancedBillFormData {
   title: string;
@@ -274,7 +275,7 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
           {...register('currencyCode')}
           className="block w-full rounded-xl border-white/20 bg-black/20 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
         >
-          <option value="USD">USD - US Dollar</option>
+          <option value={displayCurrency}>{displayCurrency} - {getCurrencyInfo(displayCurrency)?.name || 'US Dollar'}</option>
           <option value="EUR">EUR - Euro</option>
           <option value="GBP">GBP - British Pound</option>
           <option value="JPY">JPY - Japanese Yen</option>
