@@ -57,9 +57,29 @@ export async function convertTransactionCurrency(
   accountCurrency: string,
   primaryCurrency: string
 ): Promise<CurrencyConversionResult> {
+  // Validate inputs
+  if (!transactionCurrency || !accountCurrency || !primaryCurrency) {
+    throw new Error('All currency parameters must be provided');
+  }
+  
+  if (transactionAmount <= 0) {
+    throw new Error('Transaction amount must be greater than 0');
+  }
+  
   const transactionInfo = getCurrencyInfo(transactionCurrency);
   const accountInfo = getCurrencyInfo(accountCurrency);
   const primaryInfo = getCurrencyInfo(primaryCurrency);
+  
+  // Validate currency info
+  if (!transactionInfo) {
+    throw new Error(`Invalid transaction currency: ${transactionCurrency}`);
+  }
+  if (!accountInfo) {
+    throw new Error(`Invalid account currency: ${accountCurrency}`);
+  }
+  if (!primaryInfo) {
+    throw new Error(`Invalid primary currency: ${primaryCurrency}`);
+  }
   
   // Determine the case
   const caseType = determineCurrencyCase(transactionCurrency, accountCurrency, primaryCurrency);
@@ -142,15 +162,26 @@ function determineCurrencyCase(
   accountCurrency: string,
   primaryCurrency: string
 ): CurrencyConversionResult['case'] {
+  console.log('determineCurrencyCase called with:', {
+    transactionCurrency,
+    accountCurrency,
+    primaryCurrency
+  });
+  
   if (transactionCurrency === accountCurrency && accountCurrency === primaryCurrency) {
+    console.log('Case: T=A=P');
     return 'T=A=P';
   } else if (transactionCurrency === accountCurrency && accountCurrency !== primaryCurrency) {
+    console.log('Case: T=A≠P');
     return 'T=A≠P';
   } else if (transactionCurrency !== accountCurrency && accountCurrency === primaryCurrency) {
+    console.log('Case: T≠A,A=P');
     return 'T≠A,A=P';
   } else if (transactionCurrency !== accountCurrency && transactionCurrency === primaryCurrency) {
+    console.log('Case: T≠A,T=P');
     return 'T≠A,T=P';
   } else {
+    console.log('Case: T≠A≠P');
     return 'T≠A≠P';
   }
 }
@@ -191,6 +222,10 @@ export function generateTransactionDisplayText(conversion: CurrencyConversionRes
   conversionNote: string;
 } {
   const { case: caseType } = conversion;
+  
+  // Debug logging to help identify the issue
+  console.log('generateTransactionDisplayText called with case:', caseType);
+  console.log('conversion object:', conversion);
   
   let transactionDisplay: string;
   let accountDisplay: string;
@@ -299,7 +334,26 @@ export function generateTransactionDisplayText(conversion: CurrencyConversionRes
       break;
       
     default:
-      throw new Error('Invalid currency case');
+      console.error('Invalid currency case:', caseType);
+      console.error('Available cases: T=A=P, T=A≠P, T≠A,A=P, T≠A,T=P, T≠A≠P');
+      // Fallback to T≠A≠P case for safety
+      transactionDisplay = formatCurrencyAmount(
+        conversion.transactionAmount,
+        conversion.transactionCurrency,
+        conversion.transactionSymbol
+      );
+      accountDisplay = formatCurrencyAmount(
+        conversion.accountAmount,
+        conversion.accountCurrency,
+        conversion.accountSymbol
+      );
+      totalDisplay = formatCurrencyAmount(
+        conversion.primaryAmount,
+        conversion.primaryCurrency,
+        conversion.primarySymbol
+      );
+      conversionNote = `Multi-currency conversion: ${conversion.transactionSymbol}1 = ${conversion.accountSymbol}${conversion.transactionToAccountRate.toFixed(4)} = ${conversion.primarySymbol}${conversion.transactionToPrimaryRate.toFixed(4)}`;
+      break;
   }
   
   return {
