@@ -1,77 +1,224 @@
-import { useState, useCallback } from 'react';
-import { useInternationalization } from '../contexts/InternationalizationContext';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Decimal } from 'decimal.js';
+import { 
+  currencyConversionService, 
+  ConversionResult, 
+  ConversionRequest 
+} from '../services/currencyConversionService';
+import { transferService, TransferRequest, TransferResult } from '../services/transferService';
+import { timezoneService } from '../services/timezoneService';
+import { reconciliationService } from '../services/reconciliationService';
+import { complianceService, TransactionContext } from '../services/complianceService';
 
-interface ConversionResult {
-  originalAmount: number;
-  convertedAmount: number;
-  exchangeRate: number;
-  originalCurrency: string;
-  targetCurrency: string;
+export interface CurrencyConversionHook {
+  // Basic conversion
+  convertAmount: (amount: number, fromCurrency: string, toCurrency: string) => Promise<ConversionResult>;
+  convertCurrency: (request: ConversionRequest) => Promise<ConversionResult>;
+  
+  // Transfer operations
+  createTransfer: (request: TransferRequest) => Promise<TransferResult>;
+  createSameCurrencyTransfer: (
+    amount: number,
+    fromAccountId: string,
+    toAccountId: string,
+    currency: string,
+    primaryCurrency: string,
+    description: string
+  ) => Promise<TransferResult>;
+  
+  // Compliance checking
+  checkCompliance: (context: TransactionContext) => Promise<boolean>;
+  
+  // Utility functions
+  formatAmount: (amount: Decimal, currency: string) => string;
+  getCurrencySymbol: (currency: string) => string;
+  getCurrencyPrecision: (currency: string) => number;
+  isCurrencyRestricted: (currency: string) => boolean;
+  
+  // State
+  isLoading: boolean;
+  error: string | null;
+  lastConversion: ConversionResult | null;
+  rateStatistics: {
+    totalRates: number;
+    staleRates: number;
+    providers: string[];
+    lastUpdate: Date | null;
+  };
 }
 
-export const useCurrencyConversion = () => {
-  const { supportedCurrencies } = useInternationalization();
-  const [isConverting, setIsConverting] = useState(false);
+export const useCurrencyConversion = (): CurrencyConversionHook => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastConversion, setLastConversion] = useState<ConversionResult | null>(null);
 
-  const getConversionRate = useCallback((fromCurrency: string, toCurrency: string): number => {
-    if (fromCurrency === toCurrency) return 1;
-
-    // Simple conversion rates (in real app, this would come from an API)
-    const conversionRates: { [key: string]: { [key: string]: number } } = {
-      'USD': { 'INR': 83.0, 'EUR': 0.85, 'GBP': 0.73, 'JPY': 110.0, 'CAD': 1.25, 'AUD': 1.35 },
-      'EUR': { 'USD': 1.18, 'INR': 97.5, 'GBP': 0.86, 'JPY': 129.0, 'CAD': 1.47, 'AUD': 1.59 },
-      'GBP': { 'USD': 1.37, 'INR': 113.5, 'EUR': 1.16, 'JPY': 150.0, 'CAD': 1.71, 'AUD': 1.85 },
-      'INR': { 'USD': 0.012, 'EUR': 0.010, 'GBP': 0.009, 'JPY': 1.32, 'CAD': 0.015, 'AUD': 0.016 },
-      'JPY': { 'USD': 0.009, 'INR': 0.76, 'EUR': 0.008, 'GBP': 0.007, 'CAD': 0.011, 'AUD': 0.012 },
-      'CAD': { 'USD': 0.80, 'INR': 66.4, 'EUR': 0.68, 'GBP': 0.58, 'JPY': 87.5, 'AUD': 1.08 },
-      'AUD': { 'USD': 0.74, 'INR': 61.5, 'EUR': 0.63, 'GBP': 0.54, 'JPY': 81.0, 'CAD': 0.93 }
-    };
-
-    return conversionRates[fromCurrency]?.[toCurrency] || 1;
+  // Get rate statistics
+  const rateStatistics = useMemo(() => {
+    return currencyConversionService.getRateStatistics();
   }, []);
 
+  // Basic conversion function
   const convertAmount = useCallback(async (
-    amount: number, 
-    fromCurrency: string, 
+    amount: number,
+    fromCurrency: string,
     toCurrency: string
   ): Promise<ConversionResult> => {
-    setIsConverting(true);
-    
+    setIsLoading(true);
+    setError(null);
+
     try {
-      const rate = getConversionRate(fromCurrency, toCurrency);
-      const convertedAmount = amount * rate;
-      
-      return {
-        originalAmount: amount,
-        convertedAmount,
-        exchangeRate: rate,
-        originalCurrency: fromCurrency,
-        targetCurrency: toCurrency
-      };
+      const result = await currencyConversionService.convertCurrency({
+        amount,
+        enteredCurrency: fromCurrency,
+        accountCurrency: toCurrency,
+        primaryCurrency: fromCurrency, // Use entered currency as primary for simple conversion
+        includeFees: false,
+        auditContext: 'simple_conversion'
+      });
+
+      setLastConversion(result);
+      return result;
+    } catch (err: any) {
+      setError(err.message || 'Conversion failed');
+      throw err;
     } finally {
-      setIsConverting(false);
+      setIsLoading(false);
     }
-  }, [getConversionRate]);
+  }, []);
 
-  const formatCurrencyAmount = useCallback((amount: number, currencyCode: string): string => {
-    const currency = supportedCurrencies.find(c => c.code === currencyCode);
-    if (!currency) return amount.toString();
+  // Full conversion function
+  const convertCurrency = useCallback(async (request: ConversionRequest): Promise<ConversionResult> => {
+    setIsLoading(true);
+    setError(null);
 
-    const formatted = amount.toFixed(currency.decimals);
-    return currency.symbolPosition === 'before' 
-      ? `${currency.symbol}${formatted}`
-      : `${formatted} ${currency.symbol}`;
-  }, [supportedCurrencies]);
+    try {
+      const result = await currencyConversionService.convertCurrency(request);
+      setLastConversion(result);
+      return result;
+    } catch (err: any) {
+      setError(err.message || 'Conversion failed');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const needsConversion = useCallback((fromCurrency: string, toCurrency: string): boolean => {
-    return fromCurrency !== toCurrency;
+  // Create transfer
+  const createTransfer = useCallback(async (request: TransferRequest): Promise<TransferResult> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Check compliance first
+      const complianceContext: TransactionContext = {
+        amount: request.amount,
+        currency: request.fromAccountCurrency,
+        fromAccountId: request.fromAccountId,
+        toAccountId: request.toAccountId,
+        userId: 'current_user', // This would come from auth context
+        userCountry: 'US', // This would come from user profile
+        userIP: '127.0.0.1', // This would come from request
+        userAgent: navigator.userAgent,
+        transactionType: 'transfer',
+        description: request.description,
+        timestamp: new Date()
+      };
+
+      const complianceCheck = await complianceService.checkTransactionCompliance(complianceContext);
+      if (!complianceCheck.isCompliant) {
+        throw new Error(`Compliance check failed: ${complianceCheck.restrictions.join(', ')}`);
+      }
+
+      const result = await transferService.createTransfer(request);
+      return result;
+    } catch (err: any) {
+      setError(err.message || 'Transfer failed');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Create same currency transfer
+  const createSameCurrencyTransfer = useCallback(async (
+    amount: number,
+    fromAccountId: string,
+    toAccountId: string,
+    currency: string,
+    primaryCurrency: string,
+    description: string
+  ): Promise<TransferResult> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await transferService.createSameCurrencyTransfer(
+        amount,
+        fromAccountId,
+        toAccountId,
+        currency,
+        primaryCurrency,
+        description
+      );
+      return result;
+    } catch (err: any) {
+      setError(err.message || 'Transfer failed');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Check compliance
+  const checkCompliance = useCallback(async (context: TransactionContext): Promise<boolean> => {
+    try {
+      const complianceCheck = await complianceService.checkTransactionCompliance(context);
+      return complianceCheck.isCompliant;
+    } catch (err: any) {
+      setError(err.message || 'Compliance check failed');
+      return false;
+    }
+  }, []);
+
+  // Utility functions
+  const formatAmount = useCallback((amount: Decimal, currency: string): string => {
+    return currencyConversionService.formatAmount(amount, currency);
+  }, []);
+
+  const getCurrencySymbol = useCallback((currency: string): string => {
+    return currencyConversionService.getCurrencySymbol(currency);
+  }, []);
+
+  const getCurrencyPrecision = useCallback((currency: string): number => {
+    return currencyConversionService.getCurrencyPrecision(currency);
+  }, []);
+
+  const isCurrencyRestricted = useCallback((currency: string): boolean => {
+    return currencyConversionService.isCurrencyRestricted(currency);
+  }, []);
+
+  // Clean up stale rates periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      currencyConversionService.clearStaleRates();
+    }, 5 * 60 * 1000); // Every 5 minutes
+
+    return () => clearInterval(interval);
   }, []);
 
   return {
     convertAmount,
-    getConversionRate,
-    formatCurrencyAmount,
-    needsConversion,
-    isConverting
+    convertCurrency,
+    createTransfer,
+    createSameCurrencyTransfer,
+    checkCompliance,
+    formatAmount,
+    getCurrencySymbol,
+    getCurrencyPrecision,
+    isCurrencyRestricted,
+    isLoading,
+    error,
+    lastConversion,
+    rateStatistics
   };
 };

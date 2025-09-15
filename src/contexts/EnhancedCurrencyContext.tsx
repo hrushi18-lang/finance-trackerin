@@ -310,23 +310,32 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
   };
 
   // Get conversion rate between two currencies
-  const getConversionRate = (fromCurrency: string, toCurrency: string): number | null => {
+  const getConversionRate = async (fromCurrency: string, toCurrency: string): Promise<number | null> => {
     if (fromCurrency === toCurrency) return 1.0;
 
-    const rates = Object.keys(exchangeRates).length > 0 ? exchangeRates : fallbackRates;
-    
-    const fromRate = rates[fromCurrency];
-    const toRate = rates[toCurrency];
-    
-    if (!fromRate || !toRate) return null;
-    
-    // Convert through USD as base currency
-    return toRate / fromRate;
+    try {
+      // Use the live exchange rate service for September 2025
+      const { simpleCurrencyService } = await import('../services/simpleCurrencyService');
+      const rate = simpleCurrencyService.getRate(fromCurrency, toCurrency);
+      return rate;
+    } catch (error) {
+      console.error('Failed to get live conversion rate:', error);
+      
+      // Fallback to hardcoded rates
+      const rates = Object.keys(exchangeRates).length > 0 ? exchangeRates : fallbackRates;
+      const fromRate = rates[fromCurrency];
+      const toRate = rates[toCurrency];
+      
+      if (!fromRate || !toRate) return null;
+      
+      // Convert through USD as base currency (fallback)
+      return toRate / fromRate;
+    }
   };
 
   // Convert amount between currencies
-  const convertAmount = (amount: number, fromCurrency: string, toCurrency: string): number | null => {
-    const rate = getConversionRate(fromCurrency, toCurrency);
+  const convertAmount = async (amount: number, fromCurrency: string, toCurrency: string): Promise<number | null> => {
+    const rate = await getConversionRate(fromCurrency, toCurrency);
     if (rate === null) return null;
     
     const convertedAmount = amount * rate;

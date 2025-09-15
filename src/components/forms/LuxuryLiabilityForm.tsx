@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Check, CreditCard, GraduationCap, Users, ShoppingCart, Wallet, Car, Home, Scale, Zap, FileText, Globe, Building, DollarSign, Calendar, Percent, Target, Settings } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, CreditCard, GraduationCap, Users, ShoppingCart, Wallet, Car, Home, Scale, Zap, FileText, Globe, Building, DollarSign, Calendar, Percent, Target, Settings, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
+import { Select } from '../common/Select';
 import { useFinance } from '../../contexts/FinanceContext';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { CurrencyInput } from '../currency/CurrencyInput';
 import { LiabilityType, getLiabilityBehavior } from '../../lib/liability-behaviors';
 import { getCurrencyInfo } from '../../utils/currency-converter';
+import { DualCurrencyDisplay } from '../currency/DualCurrencyDisplay';
+import { convertToAccountAndPrimaryCurrency } from '../../utils/dual-currency-converter';
+import { currencyConversionService } from '../../services/currencyConversionService';
+import { Decimal } from 'decimal.js';
 
 interface LuxuryLiabilityFormProps {
   onComplete: (liability: any) => void;
@@ -29,13 +34,36 @@ const liabilityTypes = [
   { id: 'international_debt', name: 'International Debt', icon: <Globe size={24} />, description: 'Multi-currency obligations' }
 ];
 
+const currencyOptions = [
+  { value: 'USD', label: 'USD - US Dollar' },
+  { value: 'INR', label: 'INR - Indian Rupee' },
+  { value: 'EUR', label: 'EUR - Euro' },
+  { value: 'GBP', label: 'GBP - British Pound' },
+  { value: 'CAD', label: 'CAD - Canadian Dollar' },
+  { value: 'AUD', label: 'AUD - Australian Dollar' }
+];
+
 export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComplete, onCancel }) => {
-  const { addLiability, accounts } = useFinance();
-  const { formatCurrency: formatCurrencyOld } = useInternationalization();
+  const { addLiability, accounts, executeLiabilityCreation } = useFinance();
+  const { primaryCurrency } = useInternationalization();
   const { displayCurrency, formatCurrency, convertAmount } = useEnhancedCurrency();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dualCurrencyData, setDualCurrencyData] = useState<{
+    account: any;
+    primary: any;
+  } | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
+  
+  // Currency conversion state
+  const [conversionPreview, setConversionPreview] = useState<{
+    primaryAmount: number;
+    primaryCurrency: string;
+    exchangeRate: number;
+    conversionCase: string;
+  } | null>(null);
+  const [conversionError, setConversionError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     // Step 1: Type Selection
     liabilityType: '' as LiabilityType | '',
@@ -104,30 +132,46 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
     try {
       setIsSubmitting(true);
       
-      const liabilityData = {
-        name: formData.name,
-        liabilityType: formData.liabilityType,
+      // Use currency execution engine for liability creation
+      const executionRequest = {
+        amount: 0, // No initial amount for liability creation
+        currency: formData.currency,
+        accountId: 'default',
+        operation: 'create' as const,
         description: formData.description,
-        liabilityStatus: formData.liabilityStatus,
-        totalAmount: parseFloat(formData.totalAmount),
-        remainingAmount: formData.liabilityStatus === 'new' 
-          ? parseFloat(formData.totalAmount) 
-          : parseFloat(formData.remainingAmount),
-        interestRate: parseFloat(formData.interestRate),
-        monthlyPayment: parseFloat(formData.monthlyPayment),
-        minimumPayment: parseFloat(formData.minimumPayment),
-        paymentDay: parseInt(formData.paymentDay),
-        loanTermMonths: 0, // Will be calculated
-        remainingTermMonths: 0, // Will be calculated
-        startDate: new Date(),
-        dueDate: undefined,
-        nextPaymentDate: undefined,
-        linkedAssetId: undefined,
-        status: 'active',
-        isActive: true,
-        affectsCreditScore: formData.affectsCreditScore,
-        isSecured: formData.isSecured,
-        providesFunds: formData.providesFunds,
+        liabilityName: formData.name,
+        liabilityAmount: parseFloat(formData.totalAmount),
+        liabilityCurrency: formData.currency,
+        liabilityType: formData.liabilityType
+      };
+
+      const result = await executeLiabilityCreation(executionRequest);
+
+      if (result.success) {
+        const liabilityData = {
+          name: formData.name,
+          liabilityType: formData.liabilityType,
+          description: formData.description,
+          liabilityStatus: formData.liabilityStatus,
+          totalAmount: result.accountAmount, // Use account currency amount for liability
+          remainingAmount: formData.liabilityStatus === 'new' 
+            ? result.accountAmount 
+            : parseFloat(formData.remainingAmount),
+          interestRate: parseFloat(formData.interestRate),
+          monthlyPayment: parseFloat(formData.monthlyPayment),
+          minimumPayment: parseFloat(formData.minimumPayment),
+          paymentDay: parseInt(formData.paymentDay),
+          loanTermMonths: 0, // Will be calculated
+          remainingTermMonths: 0, // Will be calculated
+          startDate: new Date(),
+          dueDate: undefined,
+          nextPaymentDate: undefined,
+          linkedAssetId: undefined,
+          status: 'active',
+          isActive: true,
+          affectsCreditScore: formData.affectsCreditScore,
+          isSecured: formData.isSecured,
+          providesFunds: formData.providesFunds,
         autoGenerateBills: formData.autoGenerateBills,
         billGenerationDay: parseInt(formData.paymentDay),
         sendReminders: formData.sendReminders,
@@ -144,8 +188,11 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
         priority: formData.priority
       };
 
-      await addLiability(liabilityData);
-      onComplete(liabilityData);
+        await addLiability(liabilityData);
+        onComplete(liabilityData);
+      } else {
+        throw new Error(result.error || 'Liability creation failed');
+      }
     } catch (error: any) {
       console.error('Error creating liability:', error);
     } finally {
@@ -155,6 +202,45 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
 
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Trigger dual currency conversion when amount or currency changes
+  useEffect(() => {
+    if (formData.totalAmount && formData.currencyCode) {
+      const amount = parseFloat(formData.totalAmount);
+      if (!isNaN(amount) && amount > 0) {
+        handleDualCurrencyConversion(amount, formData.currencyCode);
+      }
+    }
+  }, [formData.totalAmount, formData.currencyCode, formData.disbursementAccountId]);
+
+  // Handle dual currency conversion
+  const handleDualCurrencyConversion = async (amount: number, fromCurrency: string) => {
+    if (!amount || amount <= 0) {
+      setDualCurrencyData(null);
+      return;
+    }
+
+    setIsConverting(true);
+    try {
+      const selectedAccount = accounts.find(acc => acc.id === formData.disbursementAccountId);
+      const accountCurrency = selectedAccount?.currencycode || displayCurrency;
+      
+      const conversion = await convertToAccountAndPrimaryCurrency(
+        amount,
+        fromCurrency,
+        accountCurrency,
+        displayCurrency,
+        { precision: 2, showSymbols: true }
+      );
+      
+      setDualCurrencyData(conversion);
+    } catch (error) {
+      console.error('Dual currency conversion failed:', error);
+      setDualCurrencyData(null);
+    } finally {
+      setIsConverting(false);
+    }
   };
 
   const renderStepIndicator = () => (
@@ -356,22 +442,62 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
           </select>
         </div>
 
-        {/* Live Rate Display */}
-        {formData.currencyCode !== displayCurrency && formData.totalAmount && (
+        {/* Dual Currency Display */}
+        {formData.totalAmount && formData.currencyCode && (
           <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-4 border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-medium text-blue-600 mb-1">Live Conversion</h4>
-                <p className="text-xs text-gray-600">
-                  {formatCurrency(parseFloat(formData.totalAmount), formData.currencyCode)} = {' '}
-                  {convertAmount(parseFloat(formData.totalAmount), formData.currencyCode, displayCurrency) 
-                    ? formatCurrency(convertAmount(parseFloat(formData.totalAmount), formData.currencyCode, displayCurrency)!, displayCurrency)
-                    : 'N/A'
-                  }
-                </p>
-              </div>
-              {/* LiveRateDisplay removed for simplified currency system */}
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium text-blue-600">Currency Conversion</h4>
+              {isConverting && (
+                <div className="flex items-center text-xs text-gray-500">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
+                  Converting...
+                </div>
+              )}
             </div>
+            
+            {dualCurrencyData && (
+              <div className="space-y-3">
+                {/* Account Currency Conversion */}
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Account Currency</div>
+                    <div className="font-medium text-gray-900">
+                      {dualCurrencyData.account.convertedSymbol}{dualCurrencyData.account.convertedAmount.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-gray-500">{dualCurrencyData.account.convertedCurrency}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500">Rate</div>
+                    <div className="text-sm font-medium text-blue-600">
+                      {dualCurrencyData.account.exchangeRate.toFixed(4)}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Primary Currency Conversion */}
+                <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Primary Currency</div>
+                    <div className="font-medium text-gray-900">
+                      {dualCurrencyData.primary.convertedSymbol}{dualCurrencyData.primary.convertedAmount.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-gray-500">{dualCurrencyData.primary.convertedCurrency}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500">Rate</div>
+                    <div className="text-sm font-medium text-blue-600">
+                      {dualCurrencyData.primary.exchangeRate.toFixed(4)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {!dualCurrencyData && !isConverting && formData.totalAmount && (
+              <div className="text-sm text-gray-500 text-center py-2">
+                Enter an amount to see currency conversion
+              </div>
+            )}
           </div>
         )}
       </div>

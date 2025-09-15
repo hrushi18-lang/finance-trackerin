@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { liveExchangeRateService } from './liveExchangeRateService';
 
 export interface ExchangeRateData {
   from_currency: string;
@@ -41,78 +42,38 @@ export class ExchangeRateService {
   async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number> {
     if (fromCurrency === toCurrency) return 1.0;
 
-    const cacheKey = `${fromCurrency}_${toCurrency}`;
-    
-    // Check cache first
-    if (this.cache.has(cacheKey)) {
-      const cached = this.cache.get(cacheKey)!;
-      const isExpired = Date.now() - new Date(cached.updated_at).getTime() > this.CACHE_DURATION;
-      
-      if (!isExpired) {
-        return cached.rate;
-      }
-    }
-
-    // Try to get from database
-    const dbRate = await this.getRateFromDatabase(fromCurrency, toCurrency);
-    if (dbRate) {
-      this.cache.set(cacheKey, dbRate);
-      return dbRate.rate;
-    }
-
-    // Fallback to API or hardcoded rates
-    return await this.fetchAndStoreRate(fromCurrency, toCurrency);
+    // Use the live exchange rate service for September 2025
+    return await liveExchangeRateService.getExchangeRate(fromCurrency, toCurrency);
   }
 
   /**
    * Get all exchange rates for a base currency
    */
   async getAllRates(baseCurrency: string = 'USD'): Promise<Record<string, number>> {
-    const rates: Record<string, number> = {};
-    
-    // Check if we need to refresh rates
-    const shouldRefresh = !this.lastFetch || 
-      Date.now() - this.lastFetch.getTime() > this.CACHE_DURATION;
-
-    if (shouldRefresh) {
-      await this.refreshAllRates();
-    }
-
-    // Get rates from database
-    const { data, error } = await supabase
-      .from('exchange_rates')
-      .select('*')
-      .eq('from_currency', baseCurrency)
-      .gte('created_at', new Date(Date.now() - this.CACHE_DURATION).toISOString())
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching rates from database:', error);
-      return this.getFallbackRates();
-    }
-
-    if (data && data.length > 0) {
-      data.forEach(rate => {
-        rates[rate.to_currency] = rate.rate;
-        this.cache.set(`${rate.from_currency}_${rate.to_currency}`, rate);
-      });
-      return rates;
-    }
-
-    // If no recent rates, fetch from API
-    return await this.fetchAllRatesFromAPI(baseCurrency);
+    // Use the live exchange rate service for September 2025
+    return await liveExchangeRateService.getAllRates(baseCurrency);
   }
 
   /**
    * Refresh all exchange rates
    */
-  async refreshAllRates(): Promise<RateResponse> {
+  async refreshAllRates(baseCurrency: string = 'USD'): Promise<RateResponse> {
     try {
-      const response = await this.fetchAllRatesFromAPI();
+      console.log(`🔄 Refreshing live exchange rates for ${baseCurrency}...`);
+      
+      // Use the live exchange rate service
+      await liveExchangeRateService.refreshRatesForToday();
+      const rates = await liveExchangeRateService.getAllRates(baseCurrency);
+      
       this.lastFetch = new Date();
-      return response;
+      return {
+        rates: rates,
+        source: 'live_api',
+        lastUpdated: this.lastFetch,
+        apiProvider: 'multiple'
+      };
     } catch (error) {
-      console.error('Failed to refresh rates:', error);
+      console.error('Failed to refresh live rates:', error);
       return {
         rates: this.getFallbackRates(),
         source: 'fallback',
@@ -137,7 +98,7 @@ export class ExchangeRateService {
         try {
           const result = await api();
           if (result) {
-            await this.storeRatesInDatabase(result.rates, result.source, result.apiProvider);
+            await this.storeRatesInDatabase(result.rates, result.source, result.apiProvider, baseCurrency);
             return result;
           }
         } catch (error) {
@@ -181,7 +142,7 @@ export class ExchangeRateService {
    * Fetch from Fixer.io (requires API key)
    */
   private async fetchFromFixerIO(baseCurrency: string): Promise<RateResponse | null> {
-    const apiKey = process.env.REACT_APP_FIXER_API_KEY;
+    const apiKey = import.meta.env.VITE_FIXER_API_KEY;
     if (!apiKey) return null;
 
     const response = await fetch(`http://data.fixer.io/api/latest?access_key=${apiKey}&base=${baseCurrency}`);
@@ -208,7 +169,7 @@ export class ExchangeRateService {
    * Fetch from CurrencyAPI (free tier: 300 requests/month)
    */
   private async fetchFromCurrencyAPI(baseCurrency: string): Promise<RateResponse | null> {
-    const apiKey = process.env.REACT_APP_CURRENCY_API_KEY;
+    const apiKey = import.meta.env.VITE_CURRENCY_API_KEY;
     if (!apiKey) return null;
 
     const response = await fetch(`https://api.currencyapi.com/v3/latest?apikey=${apiKey}&base_currency=${baseCurrency}`);
@@ -233,10 +194,11 @@ export class ExchangeRateService {
   private async storeRatesInDatabase(
     rates: Record<string, number>, 
     source: string, 
-    apiProvider?: string
+    apiProvider?: string,
+    baseCurrency: string = 'USD'
   ): Promise<void> {
     const rateEntries = Object.entries(rates).map(([toCurrency, rate]) => ({
-      from_currency: 'USD', // We always store rates relative to USD
+      from_currency: baseCurrency, // Store rates relative to the actual base currency
       to_currency: toCurrency,
       rate: rate,
       source: source,

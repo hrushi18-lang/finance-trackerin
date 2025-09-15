@@ -101,7 +101,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         date: format(new Date(transaction.date), 'yyyy-MM-dd'),
         type: transaction.type,
         account_id: transaction.account_id,
-        target_account_id: transaction.target_account_id || '',
+        target_account_id: transaction.transferToAccountId || '',
         notes: transaction.notes || ''
       });
     } else {
@@ -162,7 +162,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         transferToAccountId: formData.target_account_id || undefined,
         notes: formData.notes,
         affectsBalance: true,
-        currencycode: getUserCurrency(),
+        currencycode: selectedAccount?.currencycode || getUserCurrency(),
         ...multiCurrencyData
       };
 

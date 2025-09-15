@@ -131,7 +131,7 @@ const CurrencySettings: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold text-gray-900">
-                    {secondaryCurrency.formatCurrency(1000)}
+                    {formatCurrency(1000, secondaryCurrencyCode)}
                   </p>
                   <p className="text-xs text-gray-500">Example: 1,000</p>
                 </div>

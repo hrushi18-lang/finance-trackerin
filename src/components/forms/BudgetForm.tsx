@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Calculator, Tag, Calendar, AlertCircle } from 'lucide-react';
+import { Calculator, Tag, Calendar, AlertCircle, CheckCircle, Loader2, DollarSign } from 'lucide-react';
 import { validateBudget, sanitizeFinancialData, toNumber } from '../../utils/validation';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { CategorySelector } from '../common/CategorySelector';
+import { Select } from '../common/Select';
 import { Budget } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { useFinance } from '../../contexts/FinanceContext';
+import { currencyConversionService } from '../../services/currencyConversionService';
+import { Decimal } from 'decimal.js';
 
 interface BudgetFormData {
   category: string;
@@ -17,6 +20,9 @@ interface BudgetFormData {
   activityScope: 'general' | 'account_specific' | 'category_based';
   accountIds: string[];
   targetCategory?: string;
+  // Currency conversion fields
+  budgetCurrency: string;
+  primaryCurrency: string;
 }
 
 interface BudgetFormProps {
@@ -32,11 +38,30 @@ const periodOptions = [
   { value: 'yearly', label: 'Yearly', description: 'Annual planning' }
 ];
 
+const currencyOptions = [
+  { value: 'USD', label: 'USD - US Dollar' },
+  { value: 'INR', label: 'INR - Indian Rupee' },
+  { value: 'EUR', label: 'EUR - Euro' },
+  { value: 'GBP', label: 'GBP - British Pound' },
+  { value: 'CAD', label: 'CAD - Canadian Dollar' },
+  { value: 'AUD', label: 'AUD - Australian Dollar' }
+];
+
 export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId, onSubmit, onCancel }) => {
-  const { currency } = useInternationalization();
-  const { userCategories, accounts } = useFinance();
+  const { primaryCurrency } = useInternationalization();
+  const { userCategories, accounts, executeBudgetCreation } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Currency conversion state
+  const [budgetCurrency, setBudgetCurrency] = useState(initialData?.currency || primaryCurrency.code);
+  const [conversionPreview, setConversionPreview] = useState<{
+    primaryAmount: number;
+    primaryCurrency: string;
+    exchangeRate: number;
+    conversionCase: string;
+  } | null>(null);
+  const [conversionError, setConversionError] = useState<string | null>(null);
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BudgetFormData>({
     defaultValues: initialData ? {
@@ -62,6 +87,79 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
     ? userExpenseCategories.map(c => c.name)
     : defaultExpenseCategories;
 
+  // Generate conversion preview when amount or currency changes
+  useEffect(() => {
+    const watchedAmount = watch('amount');
+    const watchedCurrency = watch('budgetCurrency');
+    
+    if (watchedAmount && watchedCurrency) {
+      generateConversionPreview(watchedAmount, watchedCurrency);
+    } else {
+      setConversionPreview(null);
+      setConversionError(null);
+    }
+  }, [watch('amount'), watch('budgetCurrency')]);
+
+  const generateConversionPreview = async (amount: number, currency: string) => {
+    if (!amount || !currency) return;
+
+    try {
+      setConversionError(null);
+      
+      // Create a preview request
+      const previewRequest = {
+        amount: 0, // No initial amount for budget creation
+        currency: currency,
+        accountId: 'preview', // Dummy account for preview
+        operation: 'create' as const,
+        description: 'Preview',
+        budgetName: 'Preview Budget',
+        budgetAmount: amount,
+        budgetCurrency: currency,
+        budgetPeriod: 'monthly'
+      };
+
+      // Use the execution engine to get conversion preview
+      const { CurrencyExecutionEngine } = await import('../../services/currencyExecutionEngine');
+      const engine = new CurrencyExecutionEngine([], primaryCurrency.code);
+      
+      const result = await engine.executeBudgetCreation(previewRequest);
+      
+      if (result.success) {
+        setConversionPreview({
+          primaryAmount: result.primaryAmount,
+          primaryCurrency: result.primaryCurrency,
+          exchangeRate: result.exchangeRate || 1,
+          conversionCase: result.auditData.conversionCase
+        });
+      } else {
+        setConversionError(result.error || 'Conversion failed');
+      }
+    } catch (error: any) {
+      console.error('Conversion preview error:', error);
+      setConversionError(error.message);
+    }
+  };
+
+  const getConversionCaseDescription = (caseType: string) => {
+    switch (caseType) {
+      case 'all_same':
+        return 'No conversion needed - all currencies match';
+      case 'amount_account_same':
+        return 'Amount matches account currency, converting to primary for net worth';
+      case 'amount_primary_same':
+        return 'Amount matches primary currency, converting to account currency';
+      case 'account_primary_same':
+        return 'Account and primary currencies match, converting amount';
+      case 'all_different':
+        return 'All currencies different - converting to both account and primary';
+      case 'amount_different_others_same':
+        return 'Amount currency different, account and primary match';
+      default:
+        return 'Currency conversion';
+    }
+  };
+
   const handleFormSubmit = async (data: BudgetFormData) => {
     try {
       setIsSubmitting(true);
@@ -70,39 +168,59 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
       // Sanitize and validate data
       const sanitizedData = sanitizeFinancialData(data, ['amount']);
       
-      // Transform to snake_case for validation
-      const validationData = {
-        category: sanitizedData.category,
-        amount: toNumber(sanitizedData.amount),
-        spent: 0, // New budget starts with 0 spent
-        period: sanitizedData.period,
-        start_date: new Date(), // Start from today
-        end_date: new Date(Date.now() + (sanitizedData.period === 'weekly' ? 7 : sanitizedData.period === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000), // Calculate end date
-        account_id: sanitizedData.accountIds?.[0] || undefined, // Use first selected account
-        // Add missing fields for validation
-        activity_scope: data.activityScope,
-        account_ids: data.accountIds || [],
-        target_category: data.targetCategory || undefined,
+      // Use currency execution engine for budget creation
+      const executionRequest = {
+        amount: 0, // No initial amount for budget creation
+        currency: data.budgetCurrency,
+        accountId: data.accountIds?.[0] || 'default',
+        operation: 'create' as const,
+        description: `Budget for ${data.category}`,
+        budgetName: `${data.category} Budget`,
+        budgetAmount: toNumber(sanitizedData.amount),
+        budgetCurrency: data.budgetCurrency,
+        budgetPeriod: data.period,
+        category: data.category
       };
-      
-      const validatedData = validateBudget(validationData);
-      
-      await onSubmit({
-        // Map validated snake_case data to camelCase for the API
-        category: validatedData.category,
-        amount: validatedData.amount,
-        period: validatedData.period,
-        startDate: validatedData.start_date,
-        endDate: validatedData.end_date,
-        accountId: validatedData.account_id,
-        categoryId: categoryId || '', // Added categoryId
-        spent: initialData?.spent || 0,
-        // Add scoping fields from validated data
-        activityScope: validatedData.activity_scope,
-        accountIds: validatedData.account_ids || [],
-        targetCategory: validatedData.target_category,
-        currencyCode: currency.code // Default currency
-      });
+
+      const result = await executeBudgetCreation(executionRequest);
+
+      if (result.success) {
+        // Transform to snake_case for validation
+        const validationData = {
+          category: sanitizedData.category,
+          amount: result.accountAmount, // Use account currency amount for budget
+          spent: 0, // New budget starts with 0 spent
+          period: sanitizedData.period,
+          start_date: new Date(), // Start from today
+          end_date: new Date(Date.now() + (sanitizedData.period === 'weekly' ? 7 : sanitizedData.period === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000), // Calculate end date
+          account_id: sanitizedData.accountIds?.[0] || undefined, // Use first selected account
+          // Add missing fields for validation
+          activity_scope: data.activityScope,
+          account_ids: data.accountIds || [],
+          target_category: data.targetCategory || undefined,
+        };
+        
+        const validatedData = validateBudget(validationData);
+        
+        await onSubmit({
+          // Map validated snake_case data to camelCase for the API
+          category: validatedData.category,
+          amount: validatedData.amount,
+          period: validatedData.period,
+          startDate: validatedData.start_date,
+          endDate: validatedData.end_date,
+          accountId: validatedData.account_id,
+          categoryId: categoryId || '', // Added categoryId
+          spent: initialData?.spent || 0,
+          // Add scoping fields from validated data
+          activityScope: validatedData.activity_scope,
+          accountIds: validatedData.account_ids || [],
+          targetCategory: validatedData.target_category,
+          currencyCode: result.primaryCurrency // Use primary currency
+        });
+      } else {
+        throw new Error(result.error || 'Budget creation failed');
+      }
       
     } catch (error: any) {
       console.error('Error submitting budget:', error);

@@ -25,6 +25,15 @@ import {
 } from '../types';
 import { CreateAccountData } from '../lib/finance-manager';
 import { currencyService } from '../services/currencyService';
+import { BillLiabilityService } from '../services/billLiabilityService';
+import { simpleCurrencyService } from '../services/simpleCurrencyService';
+import { CurrencyExecutionRequest, CurrencyExecutionResult } from '../services/currencyExecutionEngine';
+
+// Helper function to get currency symbol
+const getCurrencySymbol = (currencyCode: string): string => {
+  const currencyInfo = getCurrencyInfo(currencyCode);
+  return currencyInfo?.symbol || '$';
+};
 
 interface FinanceContextType {
   // Data
@@ -69,6 +78,20 @@ interface FinanceContextType {
   addTransaction: (transaction: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<Transaction>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
+  
+  // New Currency Execution Methods
+  executeCurrencyTransaction: (request: CurrencyExecutionRequest) => Promise<CurrencyExecutionResult>;
+  executeBillPayment: (billId: string, request: CurrencyExecutionRequest) => Promise<CurrencyExecutionResult>;
+  executeLiabilityPayment: (liabilityId: string, request: CurrencyExecutionRequest) => Promise<CurrencyExecutionResult>;
+  executeGoalContribution: (goalId: string, request: CurrencyExecutionRequest) => Promise<CurrencyExecutionResult>;
+  executeBudgetSpending: (budgetId: string, request: CurrencyExecutionRequest) => Promise<CurrencyExecutionResult>;
+  
+  // Creation methods with currency conversion
+  executeGoalCreation: (request: CurrencyExecutionRequest) => Promise<CurrencyExecutionResult>;
+  executeBudgetCreation: (request: CurrencyExecutionRequest) => Promise<CurrencyExecutionResult>;
+  executeBillCreation: (request: CurrencyExecutionRequest) => Promise<CurrencyExecutionResult>;
+  executeLiabilityCreation: (request: CurrencyExecutionRequest) => Promise<CurrencyExecutionResult>;
+  executeAccountCreation: (request: CurrencyExecutionRequest) => Promise<CurrencyExecutionResult>;
   
   addGoal: (goal: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<Goal>;
   updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
@@ -782,28 +805,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const liability = liabilities.find(l => l.id === liabilityId);
     if (!liability) throw new Error('Liability not found');
 
-    await addTransaction({
-      type: 'expense',
-      amount: Number(amount),
-      category: 'Liability Payment',
-      description: description || `Payment: ${liability.name}`,
-      date: new Date(),
+    // Get account and liability currencies for proper conversion
+    const account = accounts.find(acc => acc.id === accountId);
+    const accountCurrency = account?.currencycode || getUserCurrency();
+    const liabilityCurrency = liability.currencyCode || getUserCurrency();
+    
+    // Use the BillLiabilityService for consistent multi-currency handling
+    const transactionData = await BillLiabilityService.createLiabilityPaymentTransaction(
+      Number(amount),
       accountId,
-      affectsBalance: true,
-      status: 'completed',
-      liabilityId: liabilityId, // Link to liability
-      // Currency fields
-      currencycode: getUserCurrency(),
-      originalAmount: Number(amount),
-      originalCurrency: getUserCurrency(),
-      exchangeRateUsed: 1.0,
-      // Payment source tracking
-      paymentSource: 'liability_payment',
-      sourceEntityId: liabilityId,
-      sourceEntityType: 'liability',
-      deductFromBalance: true,
-      paymentContext: 'liability_payment'
-    } as any);
+      accountCurrency,
+      liabilityCurrency,
+      liability.name,
+      liabilityId,
+      description
+    );
+
+    await addTransaction(transactionData as any);
 
     const newRemaining = Math.max(0, Number(liability.remainingAmount || 0) - Number(amount || 0));
     await updateLiability(liabilityId, { remainingAmount: newRemaining, status: newRemaining === 0 ? 'paid_off' : liability.status });
@@ -878,18 +896,25 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    // Create transaction for the payment
+    // Create transaction for the payment with multi-currency support
     if (paymentAmount > 0) {
-      await addTransaction({
-        type: 'expense',
-        amount: paymentAmount,
-        category: bill.category || 'Bills',
-        description: paymentData.description || `Bill Payment: ${bill.title}`,
-        date: paymentDate,
-        accountId: paymentData.accountId,
-        affectsBalance: true,
-        status: 'completed'
-      });
+      // Get account currency for proper conversion
+      const account = accounts.find(acc => acc.id === paymentData.accountId);
+      const accountCurrency = account?.currencycode || getUserCurrency();
+      const billCurrency = bill.currencycode || getUserCurrency();
+      
+      // Use the BillLiabilityService for consistent multi-currency handling
+      const transactionData = await BillLiabilityService.createBillPaymentTransaction(
+        paymentAmount,
+        paymentData.accountId,
+        accountCurrency,
+        billCurrency,
+        bill.title,
+        billId,
+        paymentData.description
+      );
+
+      await addTransaction(transactionData as any);
     }
 
     // Create bill instance record
@@ -2553,9 +2578,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addTransaction = async (transactionData: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
-    // Validate required fields
-    if (!transactionData.type || !transactionData.amount || !transactionData.accountId) {
-      throw new Error('Missing required transaction fields');
+    // Enhanced validation with detailed error messages
+    const missingFields = [];
+    
+    if (!transactionData.type) missingFields.push('type');
+    if (!transactionData.amount || transactionData.amount <= 0) missingFields.push('amount');
+    if (!transactionData.accountId) missingFields.push('accountId');
+    if (!transactionData.description) missingFields.push('description');
+    if (!transactionData.category) missingFields.push('category');
+    if (!transactionData.date) missingFields.push('date');
+    if (transactionData.affectsBalance === undefined) missingFields.push('affectsBalance');
+    if (!transactionData.status) missingFields.push('status');
+    
+    if (missingFields.length > 0) {
+      console.error('Missing required transaction fields:', missingFields);
+      console.error('Transaction data received:', transactionData);
+      throw new Error(`Missing required transaction fields: ${missingFields.join(', ')}`);
     }
 
     // Get primary currency from profile
@@ -2569,26 +2607,83 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const account = accounts.find(acc => acc.id === transactionData.accountId);
     const accountCurrency = account?.currencycode || primaryCurrency;
     
-    // Extract currency information from transaction data (from multi-currency converter)
-    const nativeAmount = (transactionData as any).native_amount || transactionData.amount;
-    const nativeCurrency = (transactionData as any).native_currency || (transactionData as any).currencycode || accountCurrency;
-    const nativeSymbol = (transactionData as any).native_symbol || getCurrencyInfo(nativeCurrency)?.symbol || '$';
-    const convertedAmount = (transactionData as any).converted_amount || transactionData.amount;
-    const convertedCurrency = (transactionData as any).converted_currency || accountCurrency;
-    const convertedSymbol = (transactionData as any).converted_symbol || getCurrencyInfo(convertedCurrency)?.symbol || '$';
-    const exchangeRate = (transactionData as any).exchange_rate || 1.0;
-    const exchangeRateUsed = (transactionData as any).exchange_rate_used || 1.0;
+    // Extract currency information from transaction data
+    let nativeAmount = (transactionData as any).native_amount || transactionData.amount;
+    let nativeCurrency = (transactionData as any).native_currency || (transactionData as any).currencycode || accountCurrency;
+    let nativeSymbol = (transactionData as any).native_symbol || getCurrencyInfo(nativeCurrency)?.symbol || '$';
+    
+    // Convert to account currency (not primary currency)
+    let convertedAmount = (transactionData as any).converted_amount || transactionData.amount;
+    let convertedCurrency = accountCurrency; // Always convert to account currency
+    let convertedSymbol = getCurrencyInfo(convertedCurrency)?.symbol || '$';
+    let exchangeRate = (transactionData as any).exchange_rate || 1.0;
+    let exchangeRateUsed = (transactionData as any).exchange_rate_used || 1.0;
+    let conversionSource = (transactionData as any).conversion_source || 'manual';
 
-    // Check for sufficient funds for expense transactions
+    // If no multi-currency data provided, calculate conversion to account currency
+    if (!(transactionData as any).native_amount && nativeCurrency !== convertedCurrency) {
+      try {
+        console.log(`🔄 Converting to account currency: ${nativeAmount} ${nativeCurrency} → ${convertedCurrency}`);
+        exchangeRate = simpleCurrencyService.getRate(nativeCurrency, convertedCurrency);
+        convertedAmount = nativeAmount * exchangeRate;
+        exchangeRateUsed = exchangeRate;
+        conversionSource = 'api';
+        console.log(`✅ Account conversion: ${nativeAmount} ${nativeCurrency} = ${convertedAmount.toFixed(2)} ${convertedCurrency} (rate: ${exchangeRate.toFixed(4)})`);
+      } catch (error) {
+        console.error('Failed to get exchange rate, using fallback:', error);
+        // Use fallback rates
+        const fallbackRates: { [key: string]: number } = {
+          'USD': 1.0, 'EUR': 0.87, 'GBP': 0.76, 'INR': 88.22, 'JPY': 152.0,
+          'CAD': 1.38, 'AUD': 1.55, 'CHF': 0.89, 'CNY': 7.15, 'SGD': 1.37
+        };
+        exchangeRate = (fallbackRates[convertedCurrency] || 1.0) / (fallbackRates[nativeCurrency] || 1.0);
+        convertedAmount = nativeAmount * exchangeRate;
+        exchangeRateUsed = exchangeRate;
+        conversionSource = 'fallback';
+        console.log(`⚠️ Fallback conversion: ${nativeAmount} ${nativeCurrency} = ${convertedAmount.toFixed(2)} ${convertedCurrency} (rate: ${exchangeRate.toFixed(4)})`);
+      }
+    }
+
+    // Calculate primary currency amount for reporting
+    let primaryAmount = convertedAmount;
+    let primaryCurrencyCode = primaryCurrency;
+    if (convertedCurrency !== primaryCurrencyCode) {
+      try {
+        const primaryRate = simpleCurrencyService.getRate(convertedCurrency, primaryCurrencyCode);
+        primaryAmount = convertedAmount * primaryRate;
+        console.log(`📊 Primary conversion: ${convertedAmount.toFixed(2)} ${convertedCurrency} = ${primaryAmount.toFixed(2)} ${primaryCurrencyCode} (rate: ${primaryRate.toFixed(4)})`);
+      } catch (error) {
+        console.warn('Failed to convert to primary currency, using converted amount:', error);
+        primaryAmount = convertedAmount;
+        primaryCurrencyCode = convertedCurrency;
+      }
+    }
+
+    // Check for sufficient funds for expense transactions using live converted amount
     if (transactionData.type === 'expense' && transactionData.affectsBalance !== false) {
       if (account) {
         // Allow negative balances for credit cards and investment accounts
         if (account.type !== 'credit_card' && account.type !== 'investment') {
-          // Use converted amount for balance check
-          if (account.balance < convertedAmount) {
-            throw new Error(`Insufficient funds. Account balance (${account.balance.toFixed(2)}) is less than transaction amount (${convertedAmount.toFixed(2)})`);
+          // Use live converted amount for balance check
+          const finalAmount = convertedAmount; // This now uses live rates
+          if (account.balance < finalAmount) {
+            throw new Error(`Insufficient funds. Account balance (${account.balance.toFixed(2)} ${account.currencycode}) is less than transaction amount (${finalAmount.toFixed(2)} ${convertedCurrency})`);
           }
+          console.log(`💰 Balance check: ${account.balance.toFixed(2)} ${account.currencycode} >= ${finalAmount.toFixed(2)} ${convertedCurrency} ✅`);
         }
+      } else {
+        throw new Error('Account not found');
+      }
+    }
+
+    // Validate transfer logic
+    if ((transactionData.type === 'expense' || transactionData.type === 'income') && transactionData.transferToAccountId) {
+      const targetAccount = accounts.find(acc => acc.id === transactionData.transferToAccountId);
+      if (!targetAccount) {
+        throw new Error('Target account not found');
+      }
+      if (transactionData.accountId === transactionData.transferToAccountId) {
+        throw new Error('Cannot transfer to the same account');
       }
     }
 
@@ -2597,16 +2692,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ? transactionData.date.toISOString().split('T')[0]
       : new Date(transactionData.date).toISOString().split('T')[0];
 
-    // Use the safe insert function with multi-currency data
+    // Use the safe insert function with correct currency conversion
     const { data, error } = await supabase.rpc('safe_insert_transaction_with_conversion', {
       p_user_id: user.id,
       p_type: transactionData.type,
-      p_amount: convertedAmount, // Use converted amount for account
+      p_amount: convertedAmount, // Use converted amount (in account currency) for account balance
       p_category: transactionData.category || 'Uncategorized',
       p_description: transactionData.description || '',
       p_date: dateString,
       p_account_id: transactionData.accountId,
-      p_currency_code: primaryCurrency, // Use primary currency for totals
+      p_currency_code: convertedCurrency, // Use account currency (not primary currency)
       p_affects_balance: transactionData.affectsBalance ?? true,
       p_reason: transactionData.reason || null,
       p_transfer_to_account_id: transactionData.transferToAccountId || null,
@@ -2622,8 +2717,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       p_converted_amount: convertedAmount,
       p_converted_currency: convertedCurrency,
       p_converted_symbol: convertedSymbol,
-      p_exchange_rate: exchangeRate,
-      p_exchange_rate_used: exchangeRateUsed
+      p_exchange_rate: exchangeRate, // Exchange rate from native to account currency
+      p_exchange_rate_used: exchangeRateUsed, // Exchange rate used
+      p_conversion_source: conversionSource, // Conversion source
+      // Primary currency fields for reporting
+      p_primary_amount: primaryAmount,
+      p_primary_currency: primaryCurrencyCode
     });
 
     if (error) {
@@ -2659,7 +2758,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       createdAt: new Date(createdTransaction.created_at),
       updatedAt: new Date(createdTransaction.updated_at),
       // Currency information
-      currencycode: primaryCurrency,
+      currencycode: convertedCurrency, // Use account currency
       originalAmount: nativeAmount,
       originalCurrency: nativeCurrency,
       exchange_rate_used: exchangeRateUsed
@@ -2671,22 +2770,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (newTransaction.affectsBalance !== false) {
       setAccounts(prev => prev.map(account => {
         if (account.id === newTransaction.accountId) {
-          // Calculate new native and converted amounts
-          const nativeBalanceChange = newTransaction.type === 'income' 
-            ? nativeAmount 
-            : -nativeAmount;
-          const convertedBalanceChange = newTransaction.type === 'income' 
+          // Calculate balance change in account currency
+          const balanceChange = newTransaction.type === 'income' 
             ? convertedAmount 
             : -convertedAmount;
           
-          const newNativeAmount = (account.native_amount || account.balance || 0) + nativeBalanceChange;
-          const newConvertedAmount = (account.converted_amount || account.balance || 0) + convertedBalanceChange;
+          const newBalance = (account.balance || 0) + balanceChange;
+          
+          console.log(`💰 Account balance update: ${account.balance?.toFixed(2)} ${convertedCurrency} + ${balanceChange.toFixed(2)} = ${newBalance.toFixed(2)} ${convertedCurrency}`);
           
           return {
             ...account,
-            balance: newConvertedAmount, // Main balance uses converted amount
-            native_amount: newNativeAmount,
-            converted_amount: newConvertedAmount,
+            balance: newBalance,
             last_conversion_date: new Date()
           };
         }
@@ -2766,6 +2861,611 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ));
   };
 
+  // New Currency Execution Methods
+  const executeCurrencyTransaction = async (request: CurrencyExecutionRequest): Promise<CurrencyExecutionResult> => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      // Update the execution engine with current accounts
+      const accountBalances = accounts.map(acc => ({
+        id: acc.id,
+        balance: acc.balance,
+        currency: acc.currencycode,
+        name: acc.name,
+        type: acc.type
+      }));
+
+      // Create new engine instance with current data
+      const engine = new (await import('../services/currencyExecutionEngine')).CurrencyExecutionEngine(
+        accountBalances,
+        'USD', // Primary currency
+        user?.id || null // User ID for database logging
+      );
+
+      // Execute the transaction
+      const result = await engine.execute(request);
+
+      if (result.success) {
+        // Update account balance
+        const balanceOperation = request.operation === 'transfer' ? 'deduct' : request.operation;
+        engine.updateAccountBalance(request.accountId, result.accountAmount, balanceOperation as 'add' | 'deduct');
+
+        // Create transaction record
+        const transactionData: Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'> = {
+          type: request.operation === 'deduct' ? 'expense' : 'income',
+          amount: result.accountAmount,
+          description: request.description,
+          category: 'General',
+          date: new Date(),
+          accountId: request.accountId,
+          affectsBalance: true,
+          status: 'completed',
+          currencycode: result.accountCurrency,
+          // Multi-currency data
+          original_amount: result.auditData.originalAmount,
+          original_currency: result.auditData.originalCurrency,
+          exchange_rate_used: result.exchangeRate || 1
+        };
+
+        // Add the transaction
+        await addTransaction(transactionData);
+
+        // Update local state
+        setAccounts(prev => prev.map(acc => 
+          acc.id === request.accountId 
+            ? { 
+                ...acc, 
+                balance: acc.balance + (request.operation === 'add' ? result.accountAmount : -result.accountAmount)
+              }
+            : acc
+        ));
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Currency execution failed:', error);
+      return {
+        success: false,
+        accountAmount: 0,
+        accountCurrency: request.currency,
+        primaryAmount: 0,
+        primaryCurrency: 'USD',
+        error: error.message,
+        auditData: {
+          originalAmount: request.amount,
+          originalCurrency: request.currency,
+          conversionCase: 'error',
+          timestamp: new Date()
+        }
+      };
+    }
+  };
+
+  const executeBillPayment = async (billId: string, request: CurrencyExecutionRequest): Promise<CurrencyExecutionResult> => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      // Execute the currency transaction
+      const result = await executeCurrencyTransaction(request);
+
+      if (result.success) {
+        // Update bill status - mark as completed and set last paid date
+        setBills(prev => prev.map(bill => 
+          bill.id === billId 
+            ? { ...bill, status: 'completed', lastPaidDate: new Date() }
+            : bill
+        ));
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Bill payment execution failed:', error);
+      return {
+        success: false,
+        accountAmount: 0,
+        accountCurrency: request.currency,
+        primaryAmount: 0,
+        primaryCurrency: 'USD',
+        error: error.message,
+        auditData: {
+          originalAmount: request.amount,
+          originalCurrency: request.currency,
+          conversionCase: 'error',
+          timestamp: new Date()
+        }
+      };
+    }
+  };
+
+  const executeLiabilityPayment = async (liabilityId: string, request: CurrencyExecutionRequest): Promise<CurrencyExecutionResult> => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      // Execute the currency transaction
+      const result = await executeCurrencyTransaction(request);
+
+      if (result.success) {
+        // Update liability balance
+        const liability = liabilities.find(l => l.id === liabilityId);
+        if (liability) {
+          const newRemainingAmount = Math.max(0, liability.remainingAmount - result.accountAmount);
+          
+          // Update liability remaining amount in local state
+          
+          // Update local state
+          setLiabilities(prev => prev.map(l => 
+            l.id === liabilityId 
+              ? { ...l, remainingAmount: newRemainingAmount }
+              : l
+          ));
+        }
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Liability payment execution failed:', error);
+      return {
+        success: false,
+        accountAmount: 0,
+        accountCurrency: request.currency,
+        primaryAmount: 0,
+        primaryCurrency: 'USD',
+        error: error.message,
+        auditData: {
+          originalAmount: request.amount,
+          originalCurrency: request.currency,
+          conversionCase: 'error',
+          timestamp: new Date()
+        }
+      };
+    }
+  };
+
+  const executeGoalContribution = async (goalId: string, request: CurrencyExecutionRequest): Promise<CurrencyExecutionResult> => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      // Execute the currency transaction
+      const result = await executeCurrencyTransaction(request);
+
+      if (result.success) {
+        // Update goal progress
+        const goal = goals.find(g => g.id === goalId);
+        if (goal) {
+          const newCurrentAmount = goal.currentAmount + result.primaryAmount;
+          
+          // Update goal progress in local state
+          
+          // Update local state
+          setGoals(prev => prev.map(g => 
+            g.id === goalId 
+              ? { ...g, currentAmount: newCurrentAmount }
+              : g
+          ));
+        }
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Goal contribution execution failed:', error);
+      return {
+        success: false,
+        accountAmount: 0,
+        accountCurrency: request.currency,
+        primaryAmount: 0,
+        primaryCurrency: 'USD',
+        error: error.message,
+        auditData: {
+          originalAmount: request.amount,
+          originalCurrency: request.currency,
+          conversionCase: 'error',
+          timestamp: new Date()
+        }
+      };
+    }
+  };
+
+  const executeBudgetSpending = async (budgetId: string, request: CurrencyExecutionRequest): Promise<CurrencyExecutionResult> => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      // Execute the currency transaction
+      const result = await executeCurrencyTransaction(request);
+
+      if (result.success) {
+        // Update budget spending
+        const budget = budgets.find(b => b.id === budgetId);
+        if (budget) {
+          const newSpentAmount = (budget.spent || 0) + result.primaryAmount;
+          
+          // Update budget in database
+          const { error } = await supabase
+            .from('budgets')
+            .update({ spent: newSpentAmount })
+            .eq('id', budgetId);
+          
+          if (error) throw error;
+          
+          // Update local state
+          setBudgets(prev => prev.map(b => 
+            b.id === budgetId 
+              ? { ...b, spent: newSpentAmount }
+              : b
+          ));
+        }
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Budget spending execution failed:', error);
+      return {
+        success: false,
+        accountAmount: 0,
+        accountCurrency: request.currency,
+        primaryAmount: 0,
+        primaryCurrency: 'USD',
+        error: error.message,
+        auditData: {
+          originalAmount: request.amount,
+          originalCurrency: request.currency,
+          conversionCase: 'error',
+          timestamp: new Date()
+        }
+      };
+    }
+  };
+
+  const executeGoalCreation = async (request: CurrencyExecutionRequest): Promise<CurrencyExecutionResult> => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      // Update the execution engine with current accounts
+      const accountBalances = accounts.map(acc => ({
+        id: acc.id,
+        balance: acc.balance,
+        currency: acc.currencycode,
+        name: acc.name,
+        type: acc.type
+      }));
+
+      // Create new engine instance with current data
+      const engine = new (await import('../services/currencyExecutionEngine')).CurrencyExecutionEngine(
+        accountBalances,
+        'USD', // Primary currency
+        user?.id || null // User ID for database logging
+      );
+
+      // Execute goal creation
+      const result = await engine.executeGoalCreation(request);
+
+      if (result.success) {
+        // Create goal with converted amounts
+        const goalData: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'> = {
+          title: request.goalName!,
+          targetAmount: result.primaryAmount, // Use primary currency amount
+          currentAmount: 0,
+          targetDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+          category: request.category || 'General',
+          priority: 'medium',
+          status: 'active',
+          description: request.description,
+          currencycode: result.primaryCurrency,
+          goalType: 'general_savings',
+          periodType: 'yearly',
+          isRecurring: false,
+          withdrawalAmount: 0,
+          isWithdrawn: false,
+          completionAction: 'waiting',
+          // Multi-currency data
+          original_currency: result.auditData.originalCurrency,
+          exchange_rate_used: result.exchangeRate || 1
+        };
+
+        // Add the goal
+        await addGoal(goalData);
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Goal creation execution failed:', error);
+      return {
+        success: false,
+        accountAmount: 0,
+        accountCurrency: request.currency,
+        primaryAmount: 0,
+        primaryCurrency: 'USD',
+        error: error.message,
+        auditData: {
+          originalAmount: request.amount,
+          originalCurrency: request.currency,
+          conversionCase: 'error',
+          timestamp: new Date()
+        }
+      };
+    }
+  };
+
+  const executeBudgetCreation = async (request: CurrencyExecutionRequest): Promise<CurrencyExecutionResult> => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      // Update the execution engine with current accounts
+      const accountBalances = accounts.map(acc => ({
+        id: acc.id,
+        balance: acc.balance,
+        currency: acc.currencycode,
+        name: acc.name,
+        type: acc.type
+      }));
+
+      // Create new engine instance with current data
+      const engine = new (await import('../services/currencyExecutionEngine')).CurrencyExecutionEngine(
+        accountBalances,
+        'USD', // Primary currency
+        user?.id || null // User ID for database logging
+      );
+
+      // Execute budget creation
+      const result = await engine.executeBudgetCreation(request);
+
+      if (result.success) {
+        // Create budget with converted amounts
+        const budgetData = {
+          name: request.budgetName!,
+          amount: result.primaryAmount, // Use primary currency amount
+          spentAmount: 0,
+          category: request.category || 'General',
+          period: request.budgetPeriod || 'monthly',
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+          // Multi-currency data
+          native_amount: result.auditData.originalAmount,
+          native_currency: result.auditData.originalCurrency,
+          converted_amount: result.primaryAmount,
+          converted_currency: result.primaryCurrency,
+          exchange_rate: result.exchangeRate || 1,
+          conversion_source: result.conversionSource || 'manual'
+        };
+
+        // Add the budget
+        const { data, error } = await supabase
+          .from('budgets')
+          .insert([budgetData])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Update local state
+        setBudgets(prev => [...prev, data]);
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Budget creation execution failed:', error);
+      return {
+        success: false,
+        accountAmount: 0,
+        accountCurrency: request.currency,
+        primaryAmount: 0,
+        primaryCurrency: 'USD',
+        error: error.message,
+        auditData: {
+          originalAmount: request.amount,
+          originalCurrency: request.currency,
+          conversionCase: 'error',
+          timestamp: new Date()
+        }
+      };
+    }
+  };
+
+  const executeBillCreation = async (request: CurrencyExecutionRequest): Promise<CurrencyExecutionResult> => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      // Update the execution engine with current accounts
+      const accountBalances = accounts.map(acc => ({
+        id: acc.id,
+        balance: acc.balance,
+        currency: acc.currencycode,
+        name: acc.name,
+        type: acc.type
+      }));
+
+      // Create new engine instance with current data
+      const engine = new (await import('../services/currencyExecutionEngine')).CurrencyExecutionEngine(
+        accountBalances,
+        'USD', // Primary currency
+        user?.id || null // User ID for database logging
+      );
+
+      // Execute bill creation
+      const result = await engine.executeBillCreation(request);
+
+      if (result.success) {
+        // Create bill with converted amounts
+        const billData = {
+          title: request.billName!,
+          amount: result.primaryAmount, // Use primary currency amount
+          currency: result.primaryCurrency,
+          dueDate: request.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          status: 'pending',
+          category: request.category || 'General',
+          description: request.description,
+          // Multi-currency data
+          native_amount: result.auditData.originalAmount,
+          native_currency: result.auditData.originalCurrency,
+          converted_amount: result.primaryAmount,
+          converted_currency: result.primaryCurrency,
+          exchange_rate: result.exchangeRate || 1,
+          conversion_source: result.conversionSource || 'manual'
+        };
+
+        // Add the bill
+        const { data, error } = await supabase
+          .from('bills')
+          .insert([billData])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Update local state
+        setBills(prev => [...prev, data]);
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Bill creation execution failed:', error);
+      return {
+        success: false,
+        accountAmount: 0,
+        accountCurrency: request.currency,
+        primaryAmount: 0,
+        primaryCurrency: 'USD',
+        error: error.message,
+        auditData: {
+          originalAmount: request.amount,
+          originalCurrency: request.currency,
+          conversionCase: 'error',
+          timestamp: new Date()
+        }
+      };
+    }
+  };
+
+  const executeLiabilityCreation = async (request: CurrencyExecutionRequest): Promise<CurrencyExecutionResult> => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      // Update the execution engine with current accounts
+      const accountBalances = accounts.map(acc => ({
+        id: acc.id,
+        balance: acc.balance,
+        currency: acc.currencycode,
+        name: acc.name,
+        type: acc.type
+      }));
+
+      // Create new engine instance with current data
+      const engine = new (await import('../services/currencyExecutionEngine')).CurrencyExecutionEngine(
+        accountBalances,
+        'USD', // Primary currency
+        user?.id || null // User ID for database logging
+      );
+
+      // Execute liability creation
+      const result = await engine.executeLiabilityCreation(request);
+
+      if (result.success) {
+        // Create liability with converted amounts
+        const liabilityData = {
+          name: request.liabilityName!,
+          totalAmount: result.primaryAmount, // Use primary currency amount
+          remainingAmount: result.primaryAmount,
+          currency: result.primaryCurrency,
+          type: request.liabilityType || 'loan',
+          status: 'active',
+          description: request.description,
+          // Multi-currency data
+          native_amount: result.auditData.originalAmount,
+          native_currency: result.auditData.originalCurrency,
+          converted_amount: result.primaryAmount,
+          converted_currency: result.primaryCurrency,
+          exchange_rate: result.exchangeRate || 1,
+          conversion_source: result.conversionSource || 'manual'
+        };
+
+        // Add the liability
+        const { data, error } = await supabase
+          .from('enhanced_liabilities')
+          .insert([liabilityData])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Update local state
+        setLiabilities(prev => [...prev, data]);
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Liability creation execution failed:', error);
+      return {
+        success: false,
+        accountAmount: 0,
+        accountCurrency: request.currency,
+        primaryAmount: 0,
+        primaryCurrency: 'USD',
+        error: error.message,
+        auditData: {
+          originalAmount: request.amount,
+          originalCurrency: request.currency,
+          conversionCase: 'error',
+          timestamp: new Date()
+        }
+      };
+    }
+  };
+
+  const executeAccountCreation = async (request: CurrencyExecutionRequest): Promise<CurrencyExecutionResult> => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      // Update the execution engine with current accounts
+      const accountBalances = accounts.map(acc => ({
+        id: acc.id,
+        balance: acc.balance,
+        currency: acc.currencycode,
+        name: acc.name,
+        type: acc.type
+      }));
+
+      // Create new engine instance with current data
+      const engine = new (await import('../services/currencyExecutionEngine')).CurrencyExecutionEngine(
+        accountBalances,
+        'USD', // Primary currency
+        user?.id || null // User ID for database logging
+      );
+
+      // Execute account creation
+      const result = await engine.executeAccountCreation(request);
+
+      if (result.success) {
+        // Create account with converted amounts
+        const accountData: CreateAccountData = {
+          name: request.accountName!,
+          type: request.accountType! as 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment' | 'goals_vault',
+          balance: result.accountAmount, // Use account currency amount
+          currency: result.accountCurrency
+        };
+
+        // Add the account
+        await addAccount(accountData);
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('Account creation execution failed:', error);
+      return {
+        success: false,
+        accountAmount: 0,
+        accountCurrency: request.currency,
+        primaryAmount: 0,
+        primaryCurrency: 'USD',
+        error: error.message,
+        auditData: {
+          originalAmount: request.amount,
+          originalCurrency: request.currency,
+          conversionCase: 'error',
+          timestamp: new Date()
+        }
+      };
+    }
+  };
+
   const deleteTransaction = async (id: string) => {
     if (!user) throw new Error('User not authenticated');
 
@@ -2806,7 +3506,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (needsConversion) {
       // Import currency conversion function
       const { convertCurrency } = await import('../utils/currency-converter');
-      exchangeRate = convertCurrency(1, goalCurrency, primaryCurrency, primaryCurrency) || 1.0;
+      exchangeRate = await convertCurrency(1, goalCurrency, primaryCurrency, primaryCurrency) || 1.0;
       convertedTargetAmount = goalData.targetAmount * exchangeRate;
     }
 
@@ -3131,13 +3831,28 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     let exchangeRate = 1.0;
     
     if (needsConversion) {
-      // Import currency conversion function
-      const { convertCurrency } = await import('../utils/currency-converter');
-      exchangeRate = convertCurrency(1, liabilityCurrency, primaryCurrency, primaryCurrency) || 1.0;
-      convertedTotalAmount = liabilityData.totalAmount * exchangeRate;
-      convertedRemainingAmount = liabilityData.remainingAmount * exchangeRate;
-      convertedMonthlyPayment = liabilityData.monthlyPayment * exchangeRate;
-      convertedMinimumPayment = liabilityData.minimumPayment * exchangeRate;
+      try {
+        // Use live exchange rate service
+        exchangeRate = simpleCurrencyService.getRate(liabilityCurrency, primaryCurrency);
+        convertedTotalAmount = liabilityData.totalAmount * exchangeRate;
+        convertedRemainingAmount = liabilityData.remainingAmount * exchangeRate;
+        convertedMonthlyPayment = liabilityData.monthlyPayment * exchangeRate;
+        convertedMinimumPayment = liabilityData.minimumPayment * exchangeRate;
+        console.log(`✅ Live conversion for liability: ${liabilityData.totalAmount} ${liabilityCurrency} = ${convertedTotalAmount.toFixed(2)} ${primaryCurrency} (rate: ${exchangeRate.toFixed(4)})`);
+      } catch (error) {
+        console.error('Failed to get live exchange rate, using fallback:', error);
+        // Fallback to hardcoded rates
+        const fallbackRates: { [key: string]: number } = {
+          'USD': 1.0, 'EUR': 0.87, 'GBP': 0.76, 'INR': 88.22, 'JPY': 152.0,
+          'CAD': 1.38, 'AUD': 1.55, 'CHF': 0.89, 'CNY': 7.15, 'SGD': 1.37
+        };
+        exchangeRate = (fallbackRates[primaryCurrency] || 1.0) / (fallbackRates[liabilityCurrency] || 1.0);
+        convertedTotalAmount = liabilityData.totalAmount * exchangeRate;
+        convertedRemainingAmount = liabilityData.remainingAmount * exchangeRate;
+        convertedMonthlyPayment = liabilityData.monthlyPayment * exchangeRate;
+        convertedMinimumPayment = liabilityData.minimumPayment * exchangeRate;
+        console.log(`⚠️ Fallback conversion for liability: ${liabilityData.totalAmount} ${liabilityCurrency} = ${convertedTotalAmount.toFixed(2)} ${primaryCurrency} (rate: ${exchangeRate.toFixed(4)})`);
+      }
     }
 
     const { data, error } = await supabase
@@ -3187,60 +3902,72 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         priority: liabilityData.priority || 'medium',
         // Currency tracking fields
         original_currency: liabilityCurrency, // Store original currency
-        exchange_rate_used: exchangeRate
+        exchange_rate_used: exchangeRate,
+        // Multi-currency fields
+        native_currency: liabilityCurrency,
+        native_amount: liabilityData.totalAmount,
+        native_symbol: getCurrencySymbol(liabilityCurrency),
+        converted_amount: convertedTotalAmount,
+        converted_currency: primaryCurrency,
+        converted_symbol: getCurrencySymbol(primaryCurrency),
+        exchange_rate: exchangeRate,
+        conversion_source: needsConversion ? 'api' : 'manual',
+        last_conversion_date: new Date().toISOString()
       })
-      .select()
-      .single();
+      .select('*');
 
     if (error) throw error;
 
+    // Handle both single object and array responses
+    const dbResponse = Array.isArray(data) ? data[0] : data;
+
     const newLiability: EnhancedLiability = {
-      id: data.id,
-      userId: data.user_id,
-      name: data.name,
-      liabilityType: data.liability_type,
-      description: data.description,
-      liabilityStatus: data.liability_status || 'new',
-      totalAmount: Number(data.total_amount),
-      remainingAmount: Number(data.remaining_amount),
-      interestRate: Number(data.interest_rate || 0),
-      monthlyPayment: Number(data.monthly_payment || 0),
-      minimumPayment: Number(data.minimum_payment || 0),
-      paymentDay: data.payment_day,
-      loanTermMonths: data.loan_term_months,
-      remainingTermMonths: data.remaining_term_months,
-      startDate: new Date(data.start_date),
-      dueDate: data.due_date ? new Date(data.due_date) : undefined,
-      nextPaymentDate: data.next_payment_date ? new Date(data.next_payment_date) : undefined,
-      linkedAssetId: data.linked_asset_id,
-      isSecured: data.is_secured,
-      disbursementAccountId: data.disbursement_account_id,
-      defaultPaymentAccountId: data.default_payment_account_id,
-      providesFunds: data.provides_funds,
-      affectsCreditScore: data.affects_credit_score,
-      status: data.status,
-      isActive: data.is_active,
-      autoGenerateBills: data.auto_generate_bills,
-      billGenerationDay: data.bill_generation_day,
-      sendReminders: data.send_reminders ?? true,
-      reminderDays: data.reminder_days ?? 7,
-      paymentStrategy: data.payment_strategy || 'equal',
-      paymentAccounts: data.payment_accounts || [],
-      paymentPercentages: data.payment_percentages || [],
-      originalAmount: data.original_amount,
-      originalTermMonths: data.original_term_months,
-      originalStartDate: data.original_start_date ? new Date(data.original_start_date) : undefined,
-      modificationCount: data.modification_count || 0,
-      lastModifiedDate: data.last_modified_date ? new Date(data.last_modified_date) : undefined,
-      modificationReason: data.modification_reason,
-      typeSpecificData: data.type_specific_data || {},
-      currencyCode: data.currency_code || getUserCurrency(),
-      activityScope: liabilityData.activityScope || 'general',
-      accountIds: liabilityData.accountIds || [],
-      targetCategory: liabilityData.targetCategory,
-      priority: liabilityData.priority || 'medium',
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at)
+      id: dbResponse.id,
+      userId: dbResponse.user_id,
+      name: dbResponse.name,
+      liabilityType: dbResponse.liability_type,
+      description: dbResponse.description,
+      liabilityStatus: dbResponse.liability_status || 'new',
+      totalAmount: Number(dbResponse.total_amount),
+      remainingAmount: Number(dbResponse.remaining_amount),
+      interestRate: Number(dbResponse.interest_rate || 0),
+      monthlyPayment: Number(dbResponse.monthly_payment || 0),
+      minimumPayment: Number(dbResponse.minimum_payment || 0),
+      paymentDay: dbResponse.payment_day,
+      loanTermMonths: dbResponse.loan_term_months,
+      remainingTermMonths: dbResponse.remaining_term_months,
+      startDate: new Date(dbResponse.start_date),
+      dueDate: dbResponse.due_date ? new Date(dbResponse.due_date) : undefined,
+      nextPaymentDate: dbResponse.next_payment_date ? new Date(dbResponse.next_payment_date) : undefined,
+      linkedAssetId: dbResponse.linked_asset_id,
+      isSecured: dbResponse.is_secured,
+      disbursementAccountId: dbResponse.disbursement_account_id,
+      defaultPaymentAccountId: dbResponse.default_payment_account_id,
+      providesFunds: dbResponse.provides_funds,
+      affectsCreditScore: dbResponse.affects_credit_score,
+      status: dbResponse.status,
+      isActive: dbResponse.is_active,
+      autoGenerateBills: dbResponse.auto_generate_bills,
+      billGenerationDay: dbResponse.bill_generation_day,
+      sendReminders: dbResponse.send_reminders ?? true,
+      reminderDays: dbResponse.reminder_days ?? 7,
+      paymentStrategy: dbResponse.payment_strategy || 'equal',
+      paymentAccounts: dbResponse.payment_accounts || [],
+      paymentPercentages: dbResponse.payment_percentages || [],
+      originalAmount: dbResponse.original_amount,
+      originalTermMonths: dbResponse.original_term_months,
+      originalStartDate: dbResponse.original_start_date ? new Date(dbResponse.original_start_date) : undefined,
+      modificationCount: dbResponse.modification_count || 0,
+      lastModifiedDate: dbResponse.last_modified_date ? new Date(dbResponse.last_modified_date) : undefined,
+      modificationReason: dbResponse.modification_reason,
+      typeSpecificData: dbResponse.type_specific_data || {},
+      currencyCode: dbResponse.currency_code || getUserCurrency(),
+      activityScope: dbResponse.activity_scope || 'general',
+      accountIds: dbResponse.payment_accounts || [],
+      targetCategory: dbResponse.target_category,
+      priority: dbResponse.priority || 'medium',
+      createdAt: new Date(dbResponse.created_at),
+      updatedAt: new Date(dbResponse.updated_at)
     };
 
     setLiabilities(prev => [newLiability, ...prev]);
@@ -3249,7 +3976,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (liabilityData.activityScope === 'account_specific' && liabilityData.accountIds && liabilityData.accountIds.length > 0) {
       const accountLinks = liabilityData.accountIds.map((accountId, index) => ({
         activity_type: 'liability',
-        activity_id: data.id,
+        activity_id: dbResponse.id,
         account_id: accountId,
         user_id: user.id,
         is_primary: index === 0
@@ -3262,27 +3989,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Auto-generate bills if enabled
     if (liabilityData.autoGenerateBills && liabilityData.monthlyPayment && liabilityData.monthlyPayment > 0) {
-      await createLiabilityBills(data.id, liabilityData, user.id);
+      await createLiabilityBills(dbResponse.id, liabilityData, user.id);
     }
 
     // Create calendar events for liability payments
-    await createLiabilityCalendarEvents(data.id, liabilityData, user.id);
+    await createLiabilityCalendarEvents(dbResponse.id, liabilityData, user.id);
   };
 
   // Helper function to create bills for liability
-  const createLiabilityBills = async (liabilityId: string, liabilityData: any, userId: string) => {
+  const createLiabilityBills = async (liabilityId: string, liabilityInfo: any, userId: string) => {
     try {
       const billInsertData = {
         user_id: userId,
-        title: `${liabilityData.name} Payment`,
-        description: `Monthly payment for ${liabilityData.name}`,
+        title: `${liabilityInfo.name} Payment`,
+        description: `Monthly payment for ${liabilityInfo.name}`,
         category: 'Debt Payment',
         bill_type: 'fixed',
-        amount: liabilityData.monthlyPayment,
+        amount: liabilityInfo.monthlyPayment,
         frequency: 'monthly',
         due_date: new Date().toISOString().split('T')[0],
         next_due_date: new Date().toISOString().split('T')[0],
-        default_account_id: liabilityData.defaultPaymentAccountId,
+        default_account_id: liabilityInfo.defaultPaymentAccountId,
         auto_pay: false,
         linked_liability_id: liabilityId,
         is_emi: true,
@@ -3291,10 +4018,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         reminder_days_before: 3,
         send_due_date_reminder: true,
         send_overdue_reminder: true,
-        activity_scope: liabilityData.activityScope || 'general',
-        target_category: liabilityData.targetCategory || 'debt_payment',
-        linked_accounts_count: liabilityData.accountIds?.length || 0,
-        priority: liabilityData.priority || 'high',
+        activity_scope: liabilityInfo.activityScope || 'general',
+        target_category: liabilityInfo.targetCategory || 'debt_payment',
+        linked_accounts_count: liabilityInfo.accountIds?.length || 0,
+        priority: liabilityInfo.priority || 'high',
         status: 'active'
       };
 
@@ -3310,8 +4037,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       // Create activity account links for the bill if account-specific
-      if (liabilityData.activityScope === 'account_specific' && liabilityData.accountIds && liabilityData.accountIds.length > 0) {
-        const accountLinks = liabilityData.accountIds.map((accountId: string, index: number) => ({
+      if (liabilityInfo.activityScope === 'account_specific' && liabilityInfo.accountIds && liabilityInfo.accountIds.length > 0) {
+        const accountLinks = liabilityInfo.accountIds.map((accountId: string, index: number) => ({
           activity_type: 'bill',
           activity_id: billData.id,
           account_id: accountId,
@@ -3332,12 +4059,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   // Helper function to create calendar events for liability
-  const createLiabilityCalendarEvents = async (liabilityId: string, liabilityData: any, userId: string) => {
+  const createLiabilityCalendarEvents = async (liabilityId: string, liabilityInfo: any, userId: string) => {
     try {
-      if (!liabilityData.monthlyPayment || liabilityData.monthlyPayment <= 0) return;
+      if (!liabilityInfo.monthlyPayment || liabilityInfo.monthlyPayment <= 0) return;
 
-      const startDate = new Date(liabilityData.startDate || new Date());
-      const paymentDay = liabilityData.paymentDay || 1;
+      const startDate = new Date(liabilityInfo.startDate || new Date());
+      const paymentDay = liabilityInfo.paymentDay || 1;
       
       // Create events for the next 12 months
       for (let i = 0; i < 12; i++) {
@@ -3351,15 +4078,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const eventData = {
           user_id: userId,
           event_type: 'debt_payment',
-          title: `${liabilityData.name} Payment Due`,
-          description: `Monthly payment of $${liabilityData.monthlyPayment} for ${liabilityData.name}`,
+          title: `${liabilityInfo.name} Payment Due`,
+          description: `Monthly payment of $${liabilityInfo.monthlyPayment} for ${liabilityInfo.name}`,
           event_date: eventDate.toISOString().split('T')[0],
           is_all_day: true,
           is_recurring: true,
           recurring_pattern: 'monthly',
           source_id: liabilityId,
           source_type: 'liability',
-          priority: liabilityData.priority || 'high',
+          priority: liabilityInfo.priority || 'high',
           is_completed: false
         };
 
@@ -3633,7 +4360,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (needsConversion) {
       // Import currency conversion function
       const { convertCurrency } = await import('../utils/currency-converter');
-      exchangeRate = convertCurrency(1, budgetCurrency, primaryCurrency, primaryCurrency) || 1.0;
+      exchangeRate = await convertCurrency(1, budgetCurrency, primaryCurrency, primaryCurrency) || 1.0;
       convertedAmount = budgetData.amount * exchangeRate;
     }
 
@@ -3751,12 +4478,25 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Calculate currency conversion if needed
     let convertedAmount = billData.amount;
     let exchangeRate = 1.0;
+    let conversionSource = 'manual';
     
     if (needsConversion) {
-      // Import currency conversion function
-      const { convertCurrency } = await import('../utils/currency-converter');
-      exchangeRate = convertCurrency(1, billCurrency, primaryCurrency, primaryCurrency) || 1.0;
+      try {
+        // Use live exchange rate service for September 2025
+        exchangeRate = simpleCurrencyService.getRate(billCurrency, primaryCurrency);
       convertedAmount = billData.amount * exchangeRate;
+        conversionSource = 'api';
+      } catch (error) {
+        console.error('Failed to get live exchange rate, using fallback:', error);
+        // Fallback to hardcoded rates
+        const fallbackRates: { [key: string]: number } = {
+          'USD': 1.0, 'EUR': 0.87, 'GBP': 0.76, 'INR': 88.22, 'JPY': 152.0,
+          'CAD': 1.38, 'AUD': 1.55, 'CHF': 0.89, 'CNY': 7.15, 'SGD': 1.37
+        };
+        exchangeRate = (fallbackRates[primaryCurrency] || 1.0) / (fallbackRates[billCurrency] || 1.0);
+        convertedAmount = billData.amount * exchangeRate;
+        conversionSource = 'fallback';
+      }
     }
 
     try {
@@ -3782,7 +4522,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         p_is_essential: billData.isEssential || false,
         p_reminder_days_before: billData.reminderDaysBefore || 3,
         p_send_due_date_reminder: billData.sendDueDateReminder || false,
-        p_send_overdue_reminder: billData.sendOverdueReminder || false
+        p_send_overdue_reminder: billData.sendOverdueReminder || false,
+        // Multi-currency fields
+        p_native_amount: billData.amount,
+        p_native_currency: billCurrency,
+        p_converted_amount: convertedAmount,
+        p_converted_currency: primaryCurrency,
+        p_exchange_rate: exchangeRate,
+        p_conversion_source: conversionSource,
+        p_last_conversion_date: new Date().toISOString()
       });
 
       if (error) {
@@ -4626,6 +5374,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     addTransaction,
     updateTransaction,
     deleteTransaction,
+    
+    // New Currency Execution Methods
+    executeCurrencyTransaction,
+    executeBillPayment,
+    executeLiabilityPayment,
+    executeGoalContribution,
+    executeBudgetSpending,
+    
+    // Creation methods with currency conversion
+    executeGoalCreation,
+    executeBudgetCreation,
+    executeBillCreation,
+    executeLiabilityCreation,
+    executeAccountCreation,
     addGoal,
     updateGoal,
     deleteGoal,
@@ -4726,5 +5488,11 @@ export const useFinance = () => {
   if (context === undefined) {
     throw new Error('useFinance must be used within a FinanceProvider');
   }
+  return context;
+};
+
+// Safe version of useFinance that doesn't throw errors
+export const useFinanceSafe = () => {
+  const context = useContext(FinanceContext);
   return context;
 };

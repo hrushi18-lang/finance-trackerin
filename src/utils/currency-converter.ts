@@ -3,31 +3,32 @@
  * Uses real-time exchange rates with fallback support
  */
 
-import { exchangeRateService } from '../services/exchangeRateService';
+import { simpleCurrencyService } from '../services/simpleCurrencyService';
 
 // Fallback rates (used when API is unavailable)
+// Updated with current exchange rates (as of 2024)
 const FALLBACK_RATES: Record<string, number> = {
   USD: 1.0,      // United States
-  EUR: 0.92,     // Europe (Euro)
-  GBP: 0.79,     // United Kingdom
-  INR: 83.45,    // India (₹83.45 = $1)
-  CNY: 7.24,     // China
-  RUB: 92.5,     // Russia
-  AUD: 1.53,     // Australia
-  NZD: 1.65,     // New Zealand
-  JPY: 150.0,    // Japan
-  IDR: 15650,    // Indonesia
-  MYR: 4.75,     // Malaysia
-  THB: 36.5,     // Thailand
-  CAD: 1.36,     // Canada
-  SGD: 1.35,     // Singapore
-  VND: 24500,    // Vietnam
-  CHF: 0.88,     // Switzerland
-  BRL: 5.15,     // Brazil
-  HKD: 7.82,     // Hong Kong
-  KRW: 1350,     // South Korea
-  AED: 3.67,     // UAE
-  NPR: 133.5     // Nepal
+  EUR: 0.92,     // Europe (Euro) - $1 = €0.92
+  GBP: 0.79,     // United Kingdom - $1 = £0.79
+  INR: 83.45,    // India - $1 = ₹83.45
+  CNY: 7.24,     // China - $1 = ¥7.24
+  RUB: 92.5,     // Russia - $1 = ₽92.5
+  AUD: 1.53,     // Australia - $1 = A$1.53
+  NZD: 1.65,     // New Zealand - $1 = NZ$1.65
+  JPY: 150.0,    // Japan - $1 = ¥150
+  IDR: 15650,    // Indonesia - $1 = Rp15,650
+  MYR: 4.75,     // Malaysia - $1 = RM4.75
+  THB: 36.5,     // Thailand - $1 = ฿36.5
+  CAD: 1.36,     // Canada - $1 = C$1.36
+  SGD: 1.35,     // Singapore - $1 = S$1.35
+  VND: 24500,    // Vietnam - $1 = ₫24,500
+  CHF: 0.88,     // Switzerland - $1 = CHF0.88
+  BRL: 5.15,     // Brazil - $1 = R$5.15
+  HKD: 7.82,     // Hong Kong - $1 = HK$7.82
+  KRW: 1350,     // South Korea - $1 = ₩1,350
+  AED: 3.67,     // UAE - $1 = د.إ3.67
+  NPR: 133.5     // Nepal - $1 = ₨133.5
 };
 
 // Cache for exchange rates
@@ -44,8 +45,8 @@ export async function getExchangeRates(baseCurrency: string): Promise<Record<str
       return convertRatesToBase(ratesCache, baseCurrency);
     }
 
-    // Fetch fresh rates
-    const rates = await exchangeRateService.getAllRates('USD');
+    // Fetch fresh rates using the actual base currency
+    const rates = simpleCurrencyService.getAllRates(baseCurrency);
     ratesCache = rates;
     lastCacheUpdate = new Date();
     

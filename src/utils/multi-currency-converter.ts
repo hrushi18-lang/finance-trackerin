@@ -84,10 +84,26 @@ export async function convertTransactionCurrency(
   // Determine the case
   const caseType = determineCurrencyCase(transactionCurrency, accountCurrency, primaryCurrency);
   
-  // Get exchange rates
-  const transactionToAccountRate = await getExchangeRate(transactionCurrency, accountCurrency);
-  const transactionToPrimaryRate = await getExchangeRate(transactionCurrency, primaryCurrency);
-  const accountToPrimaryRate = await getExchangeRate(accountCurrency, primaryCurrency);
+  // Get live exchange rates
+  let transactionToAccountRate: number;
+  let transactionToPrimaryRate: number;
+  let accountToPrimaryRate: number;
+  
+  try {
+    // Import the live currency service
+    const { simpleCurrencyService } = await import('../services/simpleCurrencyService');
+    
+    transactionToAccountRate = simpleCurrencyService.getRate(transactionCurrency, accountCurrency);
+    transactionToPrimaryRate = simpleCurrencyService.getRate(transactionCurrency, primaryCurrency);
+    accountToPrimaryRate = simpleCurrencyService.getRate(accountCurrency, primaryCurrency);
+  } catch (error) {
+    console.error('Failed to get live exchange rates, using fallback:', error);
+    
+    // Fallback to the old method
+    transactionToAccountRate = await getExchangeRate(transactionCurrency, accountCurrency);
+    transactionToPrimaryRate = await getExchangeRate(transactionCurrency, primaryCurrency);
+    accountToPrimaryRate = await getExchangeRate(accountCurrency, primaryCurrency);
+  }
   
   // Calculate amounts based on case
   let accountAmount: number;
@@ -194,9 +210,16 @@ async function getExchangeRate(fromCurrency: string, toCurrency: string): Promis
     return 1.0;
   }
   
-  // Use the existing currency converter with USD as base currency
-  const rate = await convertCurrency(1, fromCurrency, toCurrency, 'USD');
-  return rate || 1.0;
+  try {
+    // Use live exchange rate service for September 2025
+    const { simpleCurrencyService } = await import('../services/simpleCurrencyService');
+    const rate = simpleCurrencyService.getRate(fromCurrency, toCurrency);
+    return rate;
+  } catch (error) {
+    console.error('Failed to get live exchange rate:', error);
+    // Fallback to 1.0 if conversion fails
+    return 1.0;
+  }
 }
 
 /**
@@ -240,6 +263,19 @@ export function generateTransactionDisplayText(conversion: CurrencyConversionRes
       accountDisplay: '$0.00',
       totalDisplay: '$0.00',
       conversionNote: 'Invalid conversion data'
+    };
+  }
+  
+  // Validate required properties
+  if (!conversion.transactionAmount || !conversion.transactionCurrency || 
+      !conversion.accountAmount || !conversion.accountCurrency ||
+      !conversion.primaryAmount || !conversion.primaryCurrency) {
+    console.error('Incomplete conversion data:', conversion);
+    return {
+      transactionDisplay: '$0.00',
+      accountDisplay: '$0.00',
+      totalDisplay: '$0.00',
+      conversionNote: 'Incomplete conversion data'
     };
   }
   
@@ -352,7 +388,7 @@ export function generateTransactionDisplayText(conversion: CurrencyConversionRes
         conversion.primaryCurrency,
         conversion.primarySymbol
       );
-      conversionNote = `Multi-currency conversion: ${conversion.transactionSymbol}1 = ${conversion.accountSymbol}${conversion.transactionToAccountRate.toFixed(4)} = ${conversion.primarySymbol}${conversion.transactionToPrimaryRate.toFixed(4)}`;
+      conversionNote = `Multi-currency conversion: ${conversion.transactionSymbol}1 = ${conversion.accountSymbol}${(conversion.transactionToAccountRate || 1).toFixed(4)} = ${conversion.primarySymbol}${(conversion.transactionToPrimaryRate || 1).toFixed(4)}`;
       break;
       
     default:
@@ -374,7 +410,7 @@ export function generateTransactionDisplayText(conversion: CurrencyConversionRes
         conversion.primaryCurrency,
         conversion.primarySymbol
       );
-      conversionNote = `Multi-currency conversion: ${conversion.transactionSymbol}1 = ${conversion.accountSymbol}${conversion.transactionToAccountRate.toFixed(4)} = ${conversion.primarySymbol}${conversion.transactionToPrimaryRate.toFixed(4)}`;
+      conversionNote = `Multi-currency conversion: ${conversion.transactionSymbol}1 = ${conversion.accountSymbol}${(conversion.transactionToAccountRate || 1).toFixed(4)} = ${conversion.primarySymbol}${(conversion.transactionToPrimaryRate || 1).toFixed(4)}`;
       break;
   }
   

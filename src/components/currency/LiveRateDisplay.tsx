@@ -36,10 +36,25 @@ export const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   const [previousRate, setPreviousRate] = useState<number | null>(null);
   const [trend, setTrend] = useState<'up' | 'down' | 'neutral'>('neutral');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentRate, setCurrentRate] = useState<number | null>(null);
 
-  const currentRate = getConversionRate(fromCurrency, toCurrency);
   const fromCurrencyInfo = getCurrencyInfo(fromCurrency);
   const toCurrencyInfo = getCurrencyInfo(toCurrency);
+
+  // Fetch conversion rate asynchronously
+  useEffect(() => {
+    const fetchRate = async () => {
+      try {
+        const rate = await getConversionRate(fromCurrency, toCurrency);
+        setCurrentRate(rate);
+      } catch (error) {
+        console.error('Failed to fetch conversion rate:', error);
+        setCurrentRate(null);
+      }
+    };
+
+    fetchRate();
+  }, [fromCurrency, toCurrency, getConversionRate]);
 
   // Track rate changes for trend
   useEffect(() => {
@@ -57,8 +72,16 @@ export const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await refreshRates();
-    setTimeout(() => setIsRefreshing(false), 1000);
+    try {
+      await refreshRates();
+      // Re-fetch the current rate after refresh
+      const rate = await getConversionRate(fromCurrency, toCurrency);
+      setCurrentRate(rate);
+    } catch (error) {
+      console.error('Failed to refresh rates:', error);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 1000);
+    }
   };
 
   const handleRateClick = () => {
@@ -114,7 +137,7 @@ export const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
     );
   }
 
-  const convertedAmount = amount * currentRate;
+  const convertedAmount = typeof currentRate === 'number' ? amount * currentRate : 0;
 
   if (compact) {
     return (
@@ -196,7 +219,7 @@ export const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
               {formatCurrency(amount, fromCurrency)} = {formatCurrency(convertedAmount, toCurrency)}
             </div>
             <div className="text-sm text-gray-500">
-              1 {fromCurrency} = {currentRate.toFixed(toCurrencyInfo?.decimal_places || 2)} {toCurrency}
+              1 {fromCurrency} = {typeof currentRate === 'number' ? currentRate.toFixed(toCurrencyInfo?.decimal_places || 2) : 'N/A'} {toCurrency}
             </div>
           </div>
           {showTrend && (
@@ -204,7 +227,10 @@ export const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
               {getTrendIcon()}
               <span className="text-xs font-medium">
                 {trend === 'up' ? '+' : trend === 'down' ? '-' : ''}
-                {Math.abs((currentRate - (previousRate || currentRate)) / (previousRate || currentRate) * 100).toFixed(2)}%
+                {typeof currentRate === 'number' && typeof previousRate === 'number' && previousRate !== 0 
+                  ? Math.abs((currentRate - previousRate) / previousRate * 100).toFixed(2) + '%'
+                  : '0.00%'
+                }
               </span>
             </div>
           )}

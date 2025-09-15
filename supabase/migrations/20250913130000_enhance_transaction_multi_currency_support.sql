@@ -47,8 +47,9 @@ BEGIN
   WHERE p.id = p_user_id;
   
   -- Get account currency
-  SELECT fa.currencycode, fa.currency_symbol INTO v_account_currency, v_account_symbol
+  SELECT fa.currencycode, sc.symbol INTO v_account_currency, v_account_symbol
   FROM financial_accounts fa
+  LEFT JOIN supported_currencies sc ON fa.currencycode = sc.code
   WHERE fa.id = p_account_id;
   
   -- Get primary currency symbol
@@ -133,17 +134,99 @@ BEGIN
       END,
       -- Update dual currency amounts
       native_amount = CASE 
-        WHEN p_type = 'income' THEN COALESCE(native_amount, balance) + p_native_amount
-        WHEN p_type = 'expense' THEN COALESCE(native_amount, balance) - p_native_amount
-        ELSE COALESCE(native_amount, balance)
+        WHEN p_type = 'income' THEN COALESCE(native_amount, 0) + p_native_amount
+        WHEN p_type = 'expense' THEN COALESCE(native_amount, 0) - p_native_amount
+        ELSE COALESCE(native_amount, 0)
       END,
       converted_amount = CASE 
-        WHEN p_type = 'income' THEN COALESCE(converted_amount, balance) + p_converted_amount
-        WHEN p_type = 'expense' THEN COALESCE(converted_amount, balance) - p_converted_amount
-        ELSE COALESCE(converted_amount, balance)
+        WHEN p_type = 'income' THEN COALESCE(converted_amount, 0) + p_converted_amount
+        WHEN p_type = 'expense' THEN COALESCE(converted_amount, 0) - p_converted_amount
+        ELSE COALESCE(converted_amount, 0)
       END,
       last_conversion_date = NOW()
     WHERE id = p_account_id;
+  END IF;
+  
+  -- Handle transfer logic - create corresponding transaction for target account
+  IF p_type = 'expense' AND p_transfer_to_account_id IS NOT NULL THEN
+    -- Get target account currency
+    DECLARE
+      v_target_currency TEXT;
+      v_target_symbol TEXT;
+    BEGIN
+      SELECT fa.currencycode, sc.symbol INTO v_target_currency, v_target_symbol
+      FROM financial_accounts fa
+      LEFT JOIN supported_currencies sc ON fa.currencycode = sc.code
+      WHERE fa.id = p_transfer_to_account_id;
+      
+      -- Create corresponding income transaction for target account
+      INSERT INTO transactions (
+        user_id,
+        type,
+        amount,
+        category,
+        description,
+        date,
+        account_id,
+        affects_balance,
+        reason,
+        transfer_to_account_id,
+        status,
+        goal_id,
+        bill_id,
+        liability_id,
+        notes,
+        currency_code,
+        -- Multi-currency fields
+        native_amount,
+        native_currency,
+        native_symbol,
+        converted_amount,
+        converted_currency,
+        converted_symbol,
+        exchange_rate,
+        exchange_rate_used,
+        conversion_source
+      ) VALUES (
+        p_user_id,
+        'income',
+        p_converted_amount,
+        p_category,
+        'Transfer from ' || p_description,
+        p_date,
+        p_transfer_to_account_id,
+        p_affects_balance,
+        p_reason,
+        p_account_id,
+        p_status,
+        p_goal_id,
+        p_bill_id,
+        p_liability_id,
+        p_notes,
+        v_primary_currency,
+        -- Multi-currency fields
+        p_native_amount,
+        p_native_currency,
+        p_native_symbol,
+        p_converted_amount,
+        p_converted_currency,
+        p_converted_symbol,
+        p_exchange_rate,
+        p_exchange_rate_used,
+        'api'
+      );
+      
+      -- Update target account balance
+      IF p_affects_balance THEN
+        UPDATE financial_accounts
+        SET 
+          balance = balance + p_converted_amount,
+          native_amount = COALESCE(native_amount, 0) + p_native_amount,
+          converted_amount = COALESCE(converted_amount, 0) + p_converted_amount,
+          last_conversion_date = NOW()
+        WHERE id = p_transfer_to_account_id;
+      END IF;
+    END;
   END IF;
   
   RETURN v_transaction_id;

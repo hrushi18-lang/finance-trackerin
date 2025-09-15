@@ -1,18 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { ArrowLeft, Plus, Minus, CreditCard, AlertCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, CreditCard, AlertCircle, RefreshCw, ArrowRightLeft, Loader2 } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { CategorySelector } from '../common/CategorySelector';
 import { useFinance } from '../../contexts/FinanceContext';
-import { 
-  convertTransactionCurrency, 
-  generateTransactionDisplayText, 
-  generateStorageData,
-  formatCurrencyAmount,
-  type CurrencyConversionResult,
-  type MultiCurrencyTransaction 
-} from '../../utils/multi-currency-converter';
+import { useCurrencyConversion } from '../../hooks/useCurrencyConversion';
+import { ConversionResult } from '../../services/currencyConversionService';
 import { getCurrencyInfo } from '../../utils/currency-converter';
 
 interface TransactionFormData {
@@ -25,6 +19,17 @@ interface TransactionFormData {
   transferToAccountId?: string;
   affectsBalance: boolean;
   notes?: string;
+  currency?: string;
+  // Multi-currency fields
+  native_amount?: number;
+  native_currency?: string;
+  native_symbol?: string;
+  converted_amount?: number;
+  converted_currency?: string;
+  converted_symbol?: string;
+  exchange_rate?: number;
+  exchange_rate_used?: number;
+  conversion_source?: string;
 }
 
 interface EnhancedTransactionFormProps {
@@ -53,11 +58,19 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
     getUserCurrency 
   } = useFinance();
   
+  const { 
+    convertCurrency, 
+    formatAmount, 
+    getCurrencySymbol, 
+    getCurrencyPrecision,
+    isLoading: isConverting,
+    error: conversionError 
+  } = useCurrencyConversion();
+  
   const [transactionType, setTransactionType] = useState<'income' | 'expense' | 'transfer'>(defaultType);
-  const [transactionCurrency, setTransactionCurrency] = useState(primaryCurrency);
+  const [selectedCurrency, setSelectedCurrency] = useState(getUserCurrency());
   const [selectedAccount, setSelectedAccount] = useState<typeof accounts[0] | null>(null);
-  const [conversionResult, setConversionResult] = useState<CurrencyConversionResult | null>(null);
-  const [isConverting, setIsConverting] = useState(false);
+  const [conversionResult, setConversionResult] = useState<ConversionResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -72,6 +85,7 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
       category: '',
       accountId: defaultAccountId || '',
       affectsBalance: true,
+      currency: primaryCurrency
     },
   });
   
@@ -88,37 +102,58 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
     }
   }, [accountId, accounts]);
   
-  // Perform currency conversion when amount, currency, or account changes
-  useEffect(() => {
-    if (amount > 0 && transactionCurrency && selectedAccount) {
-      performCurrencyConversion();
-    } else {
+  // 6-Case Currency Conversion Logic
+  const performCurrencyConversion = useCallback(async () => {
+    if (!amount || !selectedCurrency || !selectedAccount) {
+      setConversionResult(null);
+      return;
+    }
+
+    const amountValue = Number(amount);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      setConversionResult(null);
+      return;
+    }
+
+    try {
+      console.log(`🔄 EnhancedTransactionForm: Converting ${amountValue} ${selectedCurrency}`, {
+        enteredCurrency: selectedCurrency,
+        accountCurrency: selectedAccount.currencycode,
+        primaryCurrency: primaryCurrency
+      });
+
+      const result = await convertCurrency({
+        amount: amountValue,
+        enteredCurrency: selectedCurrency,
+        accountCurrency: selectedAccount.currencycode,
+        primaryCurrency: primaryCurrency,
+        includeFees: true,
+        feePercentage: 0.0025, // 0.25% fee
+        auditContext: 'transaction_form'
+      });
+
+      console.log(`✅ EnhancedTransactionForm: Conversion result:`, {
+        case: result.conversionCase,
+        entered: `${result.enteredSymbol}${result.enteredAmount.toFixed(getCurrencyPrecision(result.enteredCurrency))}`,
+        account: `${result.accountSymbol}${result.accountAmount.toFixed(getCurrencyPrecision(result.accountCurrency))}`,
+        primary: `${result.primarySymbol}${result.primaryAmount.toFixed(getCurrencyPrecision(result.primaryCurrency))}`,
+        rate: result.exchangeRate.toFixed(6),
+        source: result.conversionSource
+      });
+
+      setConversionResult(result);
+    } catch (error: any) {
+      console.error('❌ EnhancedTransactionForm: Conversion failed:', error);
       setConversionResult(null);
     }
-  }, [amount, transactionCurrency, selectedAccount]);
+  }, [amount, selectedCurrency, selectedAccount, primaryCurrency, convertCurrency, getCurrencyPrecision]);
+
+  // Perform conversion when dependencies change
+  useEffect(() => {
+    performCurrencyConversion();
+  }, [performCurrencyConversion]);
   
-  const performCurrencyConversion = async () => {
-    if (!amount || !transactionCurrency || !selectedAccount) return;
-    
-    setIsConverting(true);
-    setError(null);
-    
-    try {
-      const result = await convertTransactionCurrency(
-        amount,
-        transactionCurrency,
-        selectedAccount.currencycode || primaryCurrency,
-        primaryCurrency
-      );
-      
-      setConversionResult(result);
-    } catch (err) {
-      console.error('Currency conversion error:', err);
-      setError('Failed to convert currency. Please try again.');
-    } finally {
-      setIsConverting(false);
-    }
-  };
+  // Old conversion logic removed - now handled by new system
   
   const handleFormSubmit = async (data: TransactionFormData) => {
     if (!conversionResult) {
@@ -130,13 +165,14 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
     setError(null);
     
     try {
-      // Generate storage data for database
-      const storageData = generateStorageData(conversionResult);
+      // CORRECT LOGIC: Use account currency amount for actual deduction
+      const accountAmount = conversionResult.accountAmount.toNumber();
+      const primaryAmount = conversionResult.primaryAmount.toNumber();
       
-      // Create transaction data
+      // Create transaction data with correct conversion logic
       const transactionData = {
         type: data.type,
-        amount: conversionResult.accountAmount, // Use account currency amount
+        amount: accountAmount, // Use account currency amount for actual deduction
         description: data.description,
         category: data.category,
         date: new Date(data.date),
@@ -146,20 +182,31 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
         status: 'completed' as const,
         notes: data.notes,
         // Currency fields
-        currencycode: conversionResult.primaryCurrency,
-        native_amount: storageData.native_amount,
-        native_currency: storageData.native_currency,
-        native_symbol: storageData.native_symbol,
-        converted_amount: storageData.converted_amount,
-        converted_currency: storageData.converted_currency,
-        converted_symbol: storageData.converted_symbol,
-        exchange_rate: storageData.exchange_rate,
-        exchange_rate_used: storageData.exchange_rate_used,
+        currencycode: conversionResult.accountCurrency, // Use account currency for the transaction
+        // Include conversion data for tracking
+        native_amount: conversionResult.enteredAmount.toNumber(), // Original entered amount
+        native_currency: conversionResult.enteredCurrency, // Original entered currency
+        native_symbol: conversionResult.enteredSymbol,
+        converted_amount: primaryAmount, // Converted to primary currency for net worth
+        converted_currency: conversionResult.primaryCurrency, // Primary currency
+        converted_symbol: conversionResult.primarySymbol,
+        exchange_rate: conversionResult.exchangeRate.toNumber(),
+        exchange_rate_used: conversionResult.exchangeRateUsed.toNumber(),
+        conversion_source: conversionResult.conversionSource,
         // Linked entities
         goalId: linkedGoalId,
         billId: linkedBillId,
         liabilityId: linkedLiabilityId,
       };
+      
+      console.log(`💳 EnhancedTransactionForm: Submitting transaction with conversion:`, {
+        originalAmount: amount,
+        accountAmount: accountAmount,
+        primaryAmount: primaryAmount,
+        accountCurrency: selectedAccount?.currencycode,
+        conversionCase: conversionResult.conversionCase,
+        exchangeRate: conversionResult.exchangeRate.toFixed(6)
+      });
       
       await addTransaction(transactionData);
       onClose();
@@ -248,7 +295,7 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
                 {/* Amount Input */}
                 <div className="flex items-center space-x-2">
                   <span className="text-2xl font-bold text-gray-800">
-                    {getCurrencyInfo(transactionCurrency)?.symbol || '$'}
+                    {getCurrencySymbol(selectedCurrency)}
                   </span>
                   <Input
                     type="number"
@@ -272,8 +319,8 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
                     Transaction Currency
                   </label>
                   <select
-                    value={transactionCurrency}
-                    onChange={(e) => setTransactionCurrency(e.target.value)}
+                    value={selectedCurrency}
+                    onChange={(e) => setSelectedCurrency(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="USD">🇺🇸 USD - US Dollar</option>
@@ -284,10 +331,83 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
                     <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
                     <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
                     <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
+                    <option value="CHF">🇨🇭 CHF - Swiss Franc</option>
+                    <option value="SGD">🇸🇬 SGD - Singapore Dollar</option>
                   </select>
                 </div>
               </div>
             </div>
+
+            {/* Currency Conversion Display */}
+            {conversionResult && (
+              <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                <div className="flex items-center space-x-2 mb-3">
+                  <ArrowRightLeft size={16} className="text-blue-600" />
+                  <span className="font-medium text-blue-800">
+                    Live Currency Conversion
+                  </span>
+                  {isConverting && <Loader2 size={16} className="animate-spin text-blue-600" />}
+                </div>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">You Entered:</span>
+                    <span className="font-medium text-gray-900">
+                      {formatAmount(conversionResult.enteredAmount, conversionResult.enteredCurrency)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Account Will Receive:</span>
+                    <span className="font-medium text-gray-900">
+                      {formatAmount(conversionResult.accountAmount, conversionResult.accountCurrency)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Primary Currency Value:</span>
+                    <span className="font-medium text-gray-900">
+                      {formatAmount(conversionResult.primaryAmount, conversionResult.primaryCurrency)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Exchange Rate:</span>
+                    <span className="font-medium text-gray-900">
+                      1 {conversionResult.enteredCurrency} = {conversionResult.exchangeRate.toFixed(6)} {conversionResult.accountCurrency}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Rate Source:</span>
+                    <span className="font-medium text-gray-900">
+                      {conversionResult.conversionSource}
+                    </span>
+                  </div>
+                  
+                  {conversionResult.conversionFee.gt(0) && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Conversion Fee:</span>
+                      <span className="font-medium text-gray-900">
+                        {formatAmount(conversionResult.conversionFee, conversionResult.primaryCurrency)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Conversion Error Display */}
+            {conversionError && (
+              <div className="bg-red-50 rounded-xl p-4 border border-red-200">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle size={16} className="text-red-600" />
+                  <span className="text-sm text-red-800">
+                    Conversion failed: {conversionError}
+                  </span>
+                </div>
+              </div>
+            )}
             
             {/* Account Selection */}
             <div className="bg-gray-50 rounded-xl p-4">

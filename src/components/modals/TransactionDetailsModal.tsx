@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, CreditCard, Target, Receipt, Building, Clock, CheckCircle, AlertCircle, TrendingUp, TrendingDown, DollarSign, Tag } from 'lucide-react';
 import { Transaction } from '../../types';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useFinanceSafe } from '../../contexts/FinanceContext';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { format } from 'date-fns';
 
@@ -16,7 +16,14 @@ export const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = (
   onClose,
   transaction
 }) => {
-  const { accounts, goals, bills, budgets } = useFinance();
+  const financeContext = useFinanceSafe();
+  
+  // Return null if context is not available yet
+  if (!financeContext) {
+    return null;
+  }
+  
+  const { accounts, goals, bills, budgets } = financeContext;
   const { formatCurrency } = useInternationalization();
   const [budgetProgress, setBudgetProgress] = useState<any>(null);
   const [goalProgress, setGoalProgress] = useState<any>(null);

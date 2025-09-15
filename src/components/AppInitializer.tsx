@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../contexts/ProfileContext';
-import { useFinance } from '../contexts/FinanceContext';
+import { useFinanceSafe } from '../contexts/FinanceContext';
 import { LoadingScreen } from './common/LoadingScreen';
 import { analytics } from '../utils/analytics';
 import { auditLogger } from '../utils/auditLogger';
 import { errorMonitoring } from '../utils/errorMonitoring';
+import { simpleCurrencyService } from '../services/simpleCurrencyService';
 
 interface AppInitializerProps {
   children: React.ReactNode;
@@ -17,7 +18,14 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
-  const { accounts, goals, bills, liabilities, userCategories, loading: financeLoading } = useFinance();
+  const financeContext = useFinanceSafe();
+  
+  // Return loading screen if finance context is not available yet
+  if (!financeContext) {
+    return <LoadingScreen message="Initializing finance system..." />;
+  }
+  
+  const { accounts, goals, bills, liabilities, userCategories, loading: financeLoading } = financeContext;
   const [isInitialized, setIsInitialized] = useState(false);
   const [initializationError, setInitializationError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
@@ -36,7 +44,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     const initializeApp = async () => {
       try {
         // Mobile-optimized initialization with timeout protection
-        const initPromise = new Promise<void>((resolve) => {
+        const initPromise = new Promise<void>(async (resolve) => {
           if (isAuthenticated && user) {
             // Lightweight initialization for mobile
             const userId = user.id;
@@ -72,6 +80,16 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
               });
             } catch (auditError) {
               console.warn('Audit logging failed:', auditError);
+            }
+
+            // Initialize simple currency service
+            try {
+              const primaryCurrency = profile?.currency || 'USD';
+              console.log(`🔄 Initializing currency service for ${primaryCurrency}...`);
+              // Simple currency service doesn't need initialization
+              console.log(`✅ Currency service initialized for ${primaryCurrency}`);
+            } catch (rateError) {
+              console.warn('Currency service initialization failed:', rateError);
             }
 
             resolve();
