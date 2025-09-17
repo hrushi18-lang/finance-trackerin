@@ -18,7 +18,7 @@ export type RecurringTransaction = Database['public']['Tables']['recurring_trans
 
 export interface CreateAccountData {
   name: string;
-  type: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment' | 'goals_vault';
+  type: FinancialAccount['type'];
   balance?: number;
   institution?: string;
   platform?: string;

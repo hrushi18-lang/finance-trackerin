@@ -81,7 +81,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
     if (newCategory.trim() && !categories.some(cat => cat.toLowerCase() === newCategory.trim().toLowerCase())) {
       try {
         setIsAdding(true);
-        const categoryType = type === 'transaction' && transactionType && transactionType !== 'transfer' ? transactionType : (type === 'transaction' ? 'expense' : (type === 'bill' || type === 'goal' || type === 'liability' || type === 'budget' || type === 'account' ? 'expense' : type as 'income' | 'expense'));
+        const categoryType = type === 'transaction' && transactionType ? transactionType : type as 'income' | 'expense' | 'goal' | 'liability' | 'bill';
         await addUserCategory({
           name: newCategory.trim(),
           type: categoryType,
@@ -103,7 +103,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
 
   // Dynamic icon component
   const getIconComponent = (iconName: string) => {
-    const Icon = (Icons as any)[iconName];
+    const Icon = (Icons as Record<string, React.ComponentType<{ size: number; className: string }>>)[iconName];
     return Icon ? <Icon size={16} className="text-gray-600 dark:text-gray-400" /> : 
       <div className="w-4 h-4 rounded-full bg-current opacity-60" />;
   };
@@ -163,27 +163,27 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         disabled={isLoading}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className={`w-full bg-gray-800 dark:bg-gray-900 border-2 border-gray-600 dark:border-gray-700 text-white rounded-2xl px-4 py-3.5 text-left focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 transition-all duration-200 hover:border-gray-500 dark:hover:border-gray-600 hover:shadow-lg ${
-          error ? 'border-red-500 focus:ring-red-500/50' : ''
+        className={`w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 ${
+          error ? 'border-red-500 focus:ring-red-500/20' : ''
         } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             {isLoading ? (
-              <span className="text-white">Loading categories...</span>
+              <span className="text-gray-500 dark:text-gray-400">Loading categories...</span>
             ) : value ? (
               <>
                 <div 
-                  className="w-3 h-3 rounded-full ring-2 ring-white/20"
+                  className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: getCategoryColor(value) }}
                 />
-                <span className="text-white font-playfair font-medium">{value}</span>
+                <span className="text-gray-900 dark:text-white">{value}</span>
               </>
             ) : (
-              <span className="text-white font-playfair">{placeholder}</span>
+              <span className="text-gray-500 dark:text-gray-400">{placeholder}</span>
             )}
           </div>
-          <ChevronDown size={16} className="text-white" />
+          <ChevronDown size={16} className="text-gray-500 dark:text-gray-400" />
         </div>
       </button>
 
@@ -193,12 +193,12 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
 
       {isOpen && (
         <div 
-          className="absolute z-50 w-full mt-3 bg-gray-800 dark:bg-gray-900 border-2 border-gray-600 dark:border-gray-700 rounded-2xl shadow-2xl max-h-64 overflow-hidden backdrop-blur-xl"
+          className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl max-h-64 overflow-hidden backdrop-blur-sm"
           role="listbox"
           aria-label="Category selection"
         >
           {/* Search */}
-          <div className="p-4 border-b border-gray-500 dark:border-gray-600 bg-gray-700 dark:bg-gray-800">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-600">
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <Input
@@ -206,7 +206,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                 placeholder="Search categories..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-600 dark:bg-gray-700 border-2 border-gray-500 dark:border-gray-600 text-white placeholder-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400"
+                className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg"
               />
             </div>
           </div>
@@ -234,19 +234,17 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                   key={category}
                   type="button"
                   onClick={() => handleCategorySelect(category)}
-                  className={`w-full px-4 py-3.5 text-left hover:bg-gray-600 flex items-center space-x-3 transition-all duration-200 rounded-lg mx-2 my-1 ${
-                    index === focusedIndex ? 'bg-blue-500/30 ring-2 ring-blue-400/50' : ''
+                  className={`w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3 transition-all duration-200 ${
+                    index === focusedIndex ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                   }`}
                   aria-selected={index === focusedIndex}
                 >
                   <div 
-                    className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm ring-1 ring-white/20"
+                    className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm"
                     style={{ backgroundColor: getCategoryColor(category) }}
                   />
-                  <div className="p-1.5 bg-gray-600 rounded-lg">
-                    {getIconComponent(getCategoryIcon(category))}
-                  </div>
-                  <span className="text-white text-sm font-medium font-playfair">{category}</span>
+                  {getIconComponent(getCategoryIcon(category))}
+                  <span className="text-gray-900 dark:text-white text-sm font-medium">{category}</span>
                 </button>
               ))
             )}

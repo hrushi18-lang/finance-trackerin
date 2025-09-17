@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Plus, Minus, Target, CreditCard, AlertCircle, Trash2, Link, Unlink, Clock, Calendar, Globe } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Target, CreditCard, AlertCircle, Trash2, Link, Unlink, Clock, Calendar } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Input } from '../components/common/Input';
@@ -8,12 +8,6 @@ import { CategorySelector } from '../components/common/CategorySelector';
 import { toNumber } from '../utils/validation';
 import { useFinance } from '../contexts/FinanceContext';
 import { convertCurrency, formatCurrency, needsConversion, getCurrencyInfo } from '../utils/currency-converter';
-import { 
-  convertTransactionCurrency, 
-  generateTransactionDisplayText, 
-  generateStorageData,
-  type CurrencyConversionResult
-} from '../utils/multi-currency-converter';
 
 interface TransactionFormData {
   type: 'income' | 'expense' | 'transfer';
@@ -64,7 +58,6 @@ const AddTransaction: React.FC = () => {
   const [transactionCurrency, setTransactionCurrency] = useState(displayCurrency);
   const [selectedAccount, setSelectedAccount] = useState<FinancialAccount | null>(null);
   const [showLinkOptions, setShowLinkOptions] = useState(false);
-  const [conversionResult, setConversionResult] = useState<CurrencyConversionResult | null>(null);
   
   // Handle location state for historical and scheduled transactions
   const { accountId, isHistorical, isScheduled } = location.state || {};
@@ -101,37 +94,6 @@ const AddTransaction: React.FC = () => {
   useEffect(() => {
     setValue('type', transactionType);
   }, [transactionType]);
-
-  // Update selected account when accountId changes
-  useEffect(() => {
-    if (watch('accountId')) {
-      const account = accounts.find(acc => acc.id === watch('accountId'));
-      setSelectedAccount(account || null);
-    }
-  }, [watch('accountId'), accounts]);
-
-  // Handle currency conversion when amount, currency, or account changes
-  useEffect(() => {
-    const amount = watch('amount');
-    const accountId = watch('accountId');
-    
-    if (amount && transactionCurrency && accountId) {
-      const account = accounts.find(acc => acc.id === accountId);
-      if (account) {
-        const result = convertTransactionCurrency({
-          amount: Number(amount) || 0,
-          currency: transactionCurrency,
-          accountCurrency: account.currencycode || displayCurrency,
-          primaryCurrency: displayCurrency
-        });
-        setConversionResult(result);
-      } else {
-        setConversionResult(null);
-      }
-    } else {
-      setConversionResult(null);
-    }
-  }, [watch('amount'), transactionCurrency, watch('accountId'), accounts, displayCurrency]);
 
   const type = watch('type');
   const linkedGoalId = watch('linkedGoalId');
@@ -182,24 +144,26 @@ const AddTransaction: React.FC = () => {
       // For historical transactions, don't affect current balance
       const affectsBalance = !isHistorical;
       
-      // Generate multi-currency data if conversion is available
-      let multiCurrencyData = {};
-      if (conversionResult) {
-        const storageData = generateStorageData(conversionResult);
-        multiCurrencyData = {
-          native_amount: storageData.nativeAmount,
-          native_currency: storageData.nativeCurrency,
-          native_symbol: storageData.nativeSymbol,
-          converted_amount: storageData.convertedAmount,
-          converted_currency: storageData.convertedCurrency,
-          converted_symbol: storageData.convertedSymbol,
-          exchange_rate: storageData.exchangeRate,
-          exchange_rate_used: storageData.exchangeRateUsed
-        };
+      // Handle currency conversion if needed
+      let finalAmount = data.amount;
+      let originalAmount = data.amount;
+      let originalCurrency = transactionCurrency;
+      let exchangeRateUsed = 1.0;
+      
+      if (transactionCurrency !== displayCurrency) {
+        const convertedAmount = convertCurrency(data.amount, transactionCurrency, displayCurrency);
+        if (convertedAmount === null) {
+          setError('Unable to convert currency. Please try again.');
+          setIsSubmitting(false);
+          return;
+        }
+        
+        finalAmount = convertedAmount;
+        exchangeRateUsed = convertCurrency(1, transactionCurrency, displayCurrency) || 1.0;
+        
+        // Log the conversion
+        console.log(`🔄 Currency conversion: ${formatCurrency(originalAmount, originalCurrency)} → ${formatCurrency(finalAmount, displayCurrency)}`);
       }
-
-      // Use converted amount for the transaction
-      const finalAmount = conversionResult ? conversionResult.convertedAmount : data.amount;
       
       if (isSplitTransaction) {
         // For split transactions, create individual transactions for each split
@@ -286,8 +250,10 @@ const AddTransaction: React.FC = () => {
             accountId: data.accountId,
             affectsBalance: affectsBalance,
             status: isScheduled ? 'scheduled' as const : 'completed' as const,
-            currencycode: displayCurrency,
-            ...multiCurrencyData
+            currencyCode: displayCurrency,
+            originalAmount: originalAmount,
+            originalCurrency: originalCurrency,
+            exchangeRateUsed: exchangeRateUsed
           };
 
           // Submit the main transaction
@@ -456,7 +422,6 @@ const AddTransaction: React.FC = () => {
           </div>
         </div>
 
-
         {/* Main Transaction Form */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Details</h3>
@@ -514,18 +479,24 @@ const AddTransaction: React.FC = () => {
                   <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
                 </select>
                 
-                {/* Multi-Currency Conversion Display */}
-                {conversionResult && (
-                  <div className="bg-blue-100 border border-blue-200 rounded-lg p-3">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Globe size={16} className="text-blue-600" />
-                      <span className="text-sm font-medium text-blue-800">Currency Conversion</span>
-                    </div>
-                    <div className="text-sm text-blue-700">
-                      {generateTransactionDisplayText(conversionResult)}
-                    </div>
-                  </div>
-                )}
+                {/* Smart Conversion Display */}
+                {(() => {
+                  const selectedAccount = accounts.find(acc => acc.id === watch('accountId'));
+                  if (selectedAccount && needsConversion(selectedAccount.currency, transactionCurrency)) {
+                    const convertedAmount = convertCurrency(watch('amount') || 0, transactionCurrency, selectedAccount.currency);
+                    return (
+                      <div className="bg-blue-100 border border-blue-200 rounded-lg p-3">
+                        <p className="text-sm text-blue-800">
+                          <span className="font-medium">Smart Conversion:</span> {formatCurrency(watch('amount') || 0, transactionCurrency)} → {formatCurrency(convertedAmount || 0, selectedAccount.currency)}
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                          This will be converted to {selectedAccount.currency} for your {selectedAccount.name} account
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
               
               {/* Quick Amount Buttons */}
@@ -973,7 +944,6 @@ const AddTransaction: React.FC = () => {
           </div>
         )}
       </div>
-
     </div>
   );
 };

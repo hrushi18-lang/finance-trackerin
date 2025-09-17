@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { queryCache, invalidateUserData } from '../lib/query-cache';
 import { sendGoalProgressUpdate, sendSpendingAlert, sendBudgetWarning } from '../services/notificationService';
-import { getCurrencyInfo } from '../utils/currency-converter';
 import { 
   FinancialAccount, 
   Transaction, 
@@ -23,8 +22,6 @@ import {
   TransactionSplit,
   FinancialInsight
 } from '../types';
-import { CreateAccountData } from '../lib/finance-manager';
-import { currencyService } from '../services/currencyService';
 
 interface FinanceContextType {
   // Data
@@ -50,7 +47,7 @@ interface FinanceContextType {
   loading: boolean;
   
   // CRUD operations
-  addAccount: (account: CreateAccountData) => Promise<void>;
+  addAccount: (account: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateAccount: (id: string, updates: Partial<FinancialAccount>) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
   
@@ -117,7 +114,7 @@ interface FinanceContextType {
   // System helpers
   getGoalsVaultAccount: () => FinancialAccount | undefined;
   ensureGoalsVaultAccount: () => Promise<void>;
-  createGoalsVaultAccount: (name?: string, currencycode?: string) => Promise<FinancialAccount>;
+  createGoalsVaultAccount: (name?: string, currencyCode?: string) => Promise<FinancialAccount>;
   cleanupDuplicateGoalsVaults: () => Promise<void>;
   
   // Dual currency functions
@@ -188,9 +185,6 @@ interface FinanceContextType {
     monthlyIncome: number;
     monthlyExpenses: number;
   };
-  
-  // Currency helper
-  getUserCurrency: () => string;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -334,7 +328,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           type: existingVault.type,
           balance: Number(existingVault.balance),
           isVisible: existingVault.is_visible,
-          currencycode: existingVault.currencycode,
+          currencyCode: existingVault.currencycode,
           institution: existingVault.institution,
           platform: existingVault.platform,
           accountNumber: existingVault.account_number,
@@ -381,7 +375,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           type: data.type,
           balance: Number(data.balance),
           isVisible: data.is_visible,
-          currencycode: data.currencycode,
+          currencyCode: data.currencycode,
           institution: data.institution,
           platform: data.platform,
           accountNumber: data.account_number,
@@ -412,7 +406,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return 'USD';
   };
 
-  const createGoalsVaultAccount = async (name: string = 'Goals Vault', currencycode: string = getUserCurrency()) => {
+  const createGoalsVaultAccount = async (name: string = 'Goals Vault', currencyCode: string = getUserCurrency()) => {
     if (!user) throw new Error('User not authenticated');
     
     // Check if Goals Vault already exists
@@ -438,7 +432,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type: existingVault.type,
         balance: Number(existingVault.balance),
         isVisible: existingVault.is_visible,
-        currencycode: existingVault.currencycode,
+        currencyCode: existingVault.currencycode,
         institution: existingVault.institution,
         platform: existingVault.platform,
         accountNumber: existingVault.account_number,
@@ -462,7 +456,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type: 'goals_vault',
         balance: 0,
         is_visible: true,
-        currencycode: currencycode
+        currencycode: currencyCode
       })
       .select()
       .single();
@@ -479,7 +473,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       type: data.type,
       balance: Number(data.balance),
       isVisible: data.is_visible,
-      currencycode: data.currencycode,
+      currencyCode: data.currencycode,
       institution: data.institution,
       platform: data.platform,
       accountNumber: data.account_number,
@@ -644,7 +638,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           status: 'completed',
           goalId: goalId,
           // Currency fields
-          currencycode: getUserCurrency(),
+          currencyCode: getUserCurrency(),
           originalAmount: amount,
           originalCurrency: getUserCurrency(),
           exchangeRateUsed: 1.0,
@@ -669,7 +663,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         status: 'completed',
         goalId: goalId,
         // Currency fields
-        currencycode: getUserCurrency(),
+        currencyCode: getUserCurrency(),
         originalAmount: amount,
         originalCurrency: getUserCurrency(),
         exchangeRateUsed: 1.0,
@@ -723,7 +717,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: 'completed',
       billId: billId,
       // Currency fields
-      currencycode: getUserCurrency(),
+      currencyCode: getUserCurrency(),
       originalAmount: payAmount,
       originalCurrency: getUserCurrency(),
       exchangeRateUsed: 1.0,
@@ -793,7 +787,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: 'completed',
       liabilityId: liabilityId, // Link to liability
       // Currency fields
-      currencycode: getUserCurrency(),
+      currencyCode: getUserCurrency(),
       originalAmount: Number(amount),
       originalCurrency: getUserCurrency(),
       exchangeRateUsed: 1.0,
@@ -1221,19 +1215,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       userId: account.user_id,
       name: account.name,
       type: account.type,
-      balance: Number(account.original_balance) || Number(account.balance) || 0,
+      balance: Number(account.balance) || 0,
       institution: account.institution,
       platform: account.platform,
       accountNumber: account.account_number,
       isVisible: account.is_visible,
-      currencycode: account.currency || account.currencycode,
+      currencyCode: account.currencycode,
       createdAt: new Date(account.created_at),
       updatedAt: new Date(account.updated_at),
       
       // Dual currency support
       original_balance: Number(account.original_balance) || Number(account.balance) || 0,
       converted_balance: Number(account.converted_balance) || Number(account.balance) || 0,
-      display_currency: account.display_currency || 'USD', // Default to USD if not set
+      display_currency: account.display_currency || account.currencycode,
       exchangeRateUsed: Number(account.exchange_rate_used) || 1.0,
       lastConversionDate: account.last_conversion_date ? new Date(account.last_conversion_date) : undefined,
       conversionSource: account.conversion_source,
@@ -1365,7 +1359,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       activityScope: goal.activity_scope || 'general',
       accountIds: goal.account_ids || [],
       targetCategory: goal.target_category,
-      currencycode: goal.currency_code || getUserCurrency(),
+      currencyCode: goal.currency_code || getUserCurrency(),
       linkedAccountsCount: goal.linked_accounts_count || 0,
       // New completion and management fields
       completionDate: goal.completion_date ? new Date(goal.completion_date) : undefined,
@@ -1486,7 +1480,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       activityScope: budget.activity_scope || 'general',
       accountIds: budget.account_ids || [],
       targetCategory: budget.target_category,
-      currencycode: budget.currency_code || getUserCurrency(),
+      currencyCode: budget.currency_code || getUserCurrency(),
       startDate: budget.start_date ? new Date(budget.start_date) : new Date(),
       endDate: budget.end_date ? new Date(budget.end_date) : undefined,
       createdAt: new Date(budget.created_at),
@@ -1533,7 +1527,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       reminderDaysBefore: bill.reminder_days_before || 3,
       sendDueDateReminder: bill.send_due_date_reminder || false,
       sendOverdueReminder: bill.send_overdue_reminder || false,
-      billCategory: bill.bill_category || 'general',
+      billCategory: bill.bill_category || 'general_expense',
       targetCategory: bill.target_category,
       isRecurring: bill.is_recurring || false,
       paymentMethod: bill.payment_method || 'bank_transfer',
@@ -1544,7 +1538,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       accountIds: [],
       linkedAccountsCount: bill.linked_accounts_count || 0,
       // New fields
-      currencycode: bill.currency_code || getUserCurrency(),
+      currencyCode: bill.currency_code || getUserCurrency(),
       isIncome: bill.is_income || false,
       billStage: bill.bill_stage || 'pending',
       movedToDate: bill.moved_to_date ? new Date(bill.moved_to_date) : undefined,
@@ -1908,74 +1902,86 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setFinancialInsights(mappedInsights);
   };
 
-  // const loadCalendarEvents = async () => {
-  //   if (!user) return;
-  //   
-  //   const { data, error } = await supabase
-  //     .from('calendar_events')
-  //     .select('*')
-  //     .eq('user_id', user.id)
-  //     .order('event_date', { ascending: true });
+  const loadCalendarEvents = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('event_date', { ascending: true });
 
-  //   if (error) {
-  //     console.error('Error loading calendar events:', error);
-  //     return;
-  //   }
+    if (error) {
+      console.error('Error loading calendar events:', error);
+      return;
+    }
 
-  //   // Calendar events are handled by the calendar component
-  //   // This method is here for consistency and future use
-  //   console.log('Calendar events loaded:', data?.length || 0);
-  // };
+    // Calendar events are handled by the calendar component
+    // This method is here for consistency and future use
+    console.log('Calendar events loaded:', data?.length || 0);
+  };
 
   // CRUD Operations
-  const addAccount = async (accountData: CreateAccountData) => {
+  const addAccount = async (accountData: Omit<FinancialAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
-
-    // Get primary currency from profile
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('primary_currency')
-      .eq('user_id', user.id)
-      .single();
-
-    const primaryCurrency = profileData?.primary_currency || 'USD';
-    const accountCurrency = accountData.currency || primaryCurrency;
-
-    // Use currency service to process account creation
-    const conversionData = currencyService.processAccountCreation(
-      accountCurrency,
-      accountData.balance || 0,
-      primaryCurrency
-    );
 
     const { data, error } = await supabase
       .from('financial_accounts')
       .insert({
         user_id: user.id,
         name: accountData.name,
-        type: accountData.type === 'goals_vault' ? 'investment' : accountData.type, // Map goals_vault to investment
-        balance: conversionData.convertedAmount, // Store converted balance in primary currency
+        type: accountData.type,
+        balance: accountData.balance || 0, // Ensure balance is never null
         institution: accountData.institution,
         platform: accountData.platform,
-        account_number: accountData.account_number,
-        is_visible: true, // Default to visible
-        currencycode: accountCurrency, // Store original currency
+        account_number: accountData.accountNumber,
+        is_visible: accountData.isVisible,
+        currency: accountData.currency,
         
-        // Dual currency storage
-        native_amount: conversionData.nativeAmount,
-        native_currency: conversionData.nativeCurrency,
-        native_symbol: conversionData.nativeSymbol,
-        converted_amount: conversionData.convertedAmount,
-        converted_currency: conversionData.convertedCurrency,
-        converted_symbol: conversionData.convertedSymbol,
-        exchange_rate: conversionData.exchangeRate,
-        conversion_metadata: {
-          needs_conversion: conversionData.needsConversion,
-          last_updated: new Date().toISOString(),
-          source: 'account_creation'
-        },
-        rate_source: conversionData.rateSource || 'api',
-        last_conversion_date: new Date()
+        // Enhanced fields
+        routing_number: accountData.routingNumber,
+        card_last_four: accountData.cardLastFour,
+        card_type: accountData.cardType,
+        spending_limit: accountData.spendingLimit,
+        monthly_limit: accountData.monthlyLimit,
+        daily_limit: accountData.dailyLimit,
+        is_primary: accountData.isPrimary,
+        notes: accountData.notes,
+        account_type_custom: accountData.accountTypeCustom,
+        is_liability: accountData.isLiability,
+        outstanding_balance: accountData.outstandingBalance,
+        credit_limit: accountData.creditLimit,
+        minimum_due: accountData.minimumDue,
+        due_date: accountData.dueDate?.toISOString().split('T')[0],
+        interest_rate: accountData.interestRate,
+        is_balance_hidden: accountData.isBalanceHidden,
+        linked_bank_account_id: accountData.linkedBankAccountId,
+        auto_sync: accountData.autoSync,
+        last_synced_at: accountData.lastSyncedAt?.toISOString(),
+        exchange_rate: accountData.exchangeRate,
+        subtype_id: accountData.subtypeId,
+        status: accountData.status,
+        account_number_masked: accountData.accountNumberMasked,
+        last_activity_date: accountData.lastActivityDate?.toISOString().split('T')[0],
+        account_holder_name: accountData.accountHolderName,
+        joint_account: accountData.jointAccount,
+        account_age_days: accountData.accountAgeDays,
+        risk_level: accountData.riskLevel,
+        interest_earned_ytd: accountData.interestEarnedYtd,
+        fees_paid_ytd: accountData.feesPaidYtd,
+        average_monthly_balance: accountData.averageMonthlyBalance,
+        account_health_score: accountData.accountHealthScore,
+        auto_categorize: accountData.autoCategorize,
+        require_approval: accountData.requireApproval,
+        max_daily_transactions: accountData.maxDailyTransactions,
+        max_daily_amount: accountData.maxDailyAmount,
+        two_factor_enabled: accountData.twoFactorEnabled,
+        biometric_enabled: accountData.biometricEnabled,
+        account_notes: accountData.accountNotes,
+        external_account_id: accountData.externalAccountId,
+        institution_logo_url: accountData.institutionLogoUrl,
+        account_color: accountData.accountColor,
+        sort_order: accountData.sortOrder
       })
       .select()
       .single();
@@ -1986,28 +1992,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       id: data.id,
       userId: data.user_id,
       name: data.name,
-      type: data.type === 'investment' && accountData.type === 'goals_vault' ? 'goals_vault' : data.type, // Map back to goals_vault if needed
-      balance: Number(accountData.balance || 0), // Use original balance as the main balance
+      type: data.type,
+      balance: Number(data.balance),
       institution: data.institution,
       platform: data.platform,
       accountNumber: data.account_number,
       isVisible: data.is_visible,
-      currencycode: data.currency, // Use original currency
+      currencyCode: data.currencycode,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
-      
-      // Store conversion data in metadata for now
-      metadata: {
-        native_balance: conversionData.nativeAmount,
-        native_currency: conversionData.nativeCurrency,
-        native_symbol: conversionData.nativeSymbol,
-        converted_balance: conversionData.convertedAmount,
-        converted_currency: conversionData.convertedCurrency,
-        converted_symbol: conversionData.convertedSymbol,
-        exchange_rate: conversionData.exchangeRate,
-        last_conversion_date: new Date().toISOString(),
-        needs_conversion: conversionData.needsConversion
-      },
       
       // Enhanced fields
       routingNumber: data.routing_number,
@@ -2076,7 +2069,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         platform: updates.platform,
         account_number: updates.accountNumber,
         is_visible: updates.isVisible,
-        currencycode: updates.currencycode,
+        currencycode: updates.currencyCode,
         // Dual currency fields
         original_balance: updates.original_balance,
         converted_balance: updates.converted_balance,
@@ -2158,7 +2151,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // This would typically use the currency conversion context
     // For now, we'll update all accounts to use the same display currency
     for (const account of accounts) {
-      if (account.currencycode !== displayCurrency) {
+      if (account.currencyCode !== displayCurrency) {
         // In a real implementation, you'd get the exchange rate from the currency service
         const exchangeRate = 1.0; // Placeholder - should get from currency service
         await convertAccountToDisplayCurrency(account.id, displayCurrency, exchangeRate);
@@ -2354,7 +2347,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: 'completed',
       transferToAccountId: toAccountId,
       // Currency fields
-      currencycode: getUserCurrency(),
+      currencyCode: getUserCurrency(),
       originalAmount: amount,
       originalCurrency: getUserCurrency(),
       exchangeRateUsed: 1.0,
@@ -2378,7 +2371,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: 'completed',
       transferToAccountId: fromAccountId,
       // Currency fields
-      currencycode: getUserCurrency(),
+      currencyCode: getUserCurrency(),
       originalAmount: amount,
       originalCurrency: getUserCurrency(),
       exchangeRateUsed: 1.0,
@@ -2484,35 +2477,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error('Missing required transaction fields');
     }
 
-    // Get primary currency from profile
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('primary_currency')
-      .eq('user_id', user.id)
-      .single();
-
-    const primaryCurrency = profileData?.primary_currency || 'USD';
-    const account = accounts.find(acc => acc.id === transactionData.accountId);
-    const accountCurrency = account?.currencycode || primaryCurrency;
-    
-    // Extract currency information from transaction data (from multi-currency converter)
-    const nativeAmount = (transactionData as any).native_amount || transactionData.amount;
-    const nativeCurrency = (transactionData as any).native_currency || (transactionData as any).currencycode || accountCurrency;
-    const nativeSymbol = (transactionData as any).native_symbol || getCurrencyInfo(nativeCurrency)?.symbol || '$';
-    const convertedAmount = (transactionData as any).converted_amount || transactionData.amount;
-    const convertedCurrency = (transactionData as any).converted_currency || accountCurrency;
-    const convertedSymbol = (transactionData as any).converted_symbol || getCurrencyInfo(convertedCurrency)?.symbol || '$';
-    const exchangeRate = (transactionData as any).exchange_rate || 1.0;
-    const exchangeRateUsed = (transactionData as any).exchange_rate_used || 1.0;
-
     // Check for sufficient funds for expense transactions
     if (transactionData.type === 'expense' && transactionData.affectsBalance !== false) {
+      const account = accounts.find(acc => acc.id === transactionData.accountId);
       if (account) {
         // Allow negative balances for credit cards and investment accounts
         if (account.type !== 'credit_card' && account.type !== 'investment') {
-          // Use converted amount for balance check
-          if (account.balance < convertedAmount) {
-            throw new Error(`Insufficient funds. Account balance (${account.balance.toFixed(2)}) is less than transaction amount (${convertedAmount.toFixed(2)})`);
+          if (account.balance < transactionData.amount) {
+            throw new Error(`Insufficient funds. Account balance (${account.balance.toFixed(2)}) is less than transaction amount (${transactionData.amount.toFixed(2)})`);
           }
         }
       }
@@ -2523,72 +2495,55 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ? transactionData.date.toISOString().split('T')[0]
       : new Date(transactionData.date).toISOString().split('T')[0];
 
-    // Use the safe insert function with multi-currency data
-    const { data, error } = await supabase.rpc('safe_insert_transaction_with_conversion', {
-      p_user_id: user.id,
-      p_type: transactionData.type,
-      p_amount: convertedAmount, // Use converted amount for account
-      p_category: transactionData.category || 'Uncategorized',
-      p_description: transactionData.description || '',
-      p_date: dateString,
-      p_account_id: transactionData.accountId,
-      p_currency_code: primaryCurrency, // Use primary currency for totals
-      p_affects_balance: transactionData.affectsBalance ?? true,
-      p_reason: transactionData.reason || null,
-      p_transfer_to_account_id: transactionData.transferToAccountId || null,
-      p_status: transactionData.status || 'completed',
-      p_goal_id: (transactionData as any).goalId || null,
-      p_bill_id: (transactionData as any).billId || null,
-      p_liability_id: (transactionData as any).liabilityId || null,
-      p_notes: (transactionData as any).notes || null,
-      // Multi-currency fields
-      p_native_amount: nativeAmount,
-      p_native_currency: nativeCurrency,
-      p_native_symbol: nativeSymbol,
-      p_converted_amount: convertedAmount,
-      p_converted_currency: convertedCurrency,
-      p_converted_symbol: convertedSymbol,
-      p_exchange_rate: exchangeRate,
-      p_exchange_rate_used: exchangeRateUsed
-    });
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: user.id,
+        type: transactionData.type,
+        amount: transactionData.amount,
+        category: transactionData.category || 'Uncategorized',
+        description: transactionData.description || '',
+        date: dateString,
+        account_id: transactionData.accountId,
+        affects_balance: transactionData.affectsBalance ?? true,
+        reason: transactionData.reason || null,
+        transfer_to_account_id: transactionData.transferToAccountId || null,
+        status: transactionData.status || 'completed',
+        // Currency fields
+        currency_code: (transactionData as any).currencyCode || getUserCurrency(),
+        original_amount: (transactionData as any).originalAmount || transactionData.amount,
+        original_currency: (transactionData as any).originalCurrency || getUserCurrency(),
+        exchange_rate_used: (transactionData as any).exchangeRateUsed || 1.0,
+        // Payment source tracking
+        payment_source: (transactionData as any).paymentSource || null,
+        source_entity_id: (transactionData as any).sourceEntityId || null,
+        source_entity_type: (transactionData as any).sourceEntityType || null,
+        deduct_from_balance: (transactionData as any).deductFromBalance ?? true,
+        payment_context: (transactionData as any).paymentContext || null
+      })
+      .select()
+      .single();
 
     if (error) {
       console.error('Supabase transaction insert error:', error);
       throw new Error(`Failed to create transaction: ${error.message}`);
     }
 
-    // Get the created transaction
-    const { data: createdTransaction, error: fetchError } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('id', data)
-      .single();
-
-    if (fetchError) {
-      console.error('Error fetching created transaction:', fetchError);
-      throw new Error(`Failed to fetch created transaction: ${fetchError.message}`);
-    }
-
     const newTransaction: Transaction = {
-      id: createdTransaction.id,
-      userId: createdTransaction.user_id,
-      type: createdTransaction.type,
-      amount: Number(convertedAmount), // Use converted amount for display
-      category: createdTransaction.category,
-      description: createdTransaction.description,
-      date: new Date(createdTransaction.date),
-      accountId: createdTransaction.account_id,
-      affectsBalance: createdTransaction.affects_balance,
-      reason: createdTransaction.reason,
-      transferToAccountId: createdTransaction.transfer_to_account_id,
-      status: createdTransaction.status,
-      createdAt: new Date(createdTransaction.created_at),
-      updatedAt: new Date(createdTransaction.updated_at),
-      // Currency information
-      currencycode: primaryCurrency,
-      originalAmount: nativeAmount,
-      originalCurrency: nativeCurrency,
-      exchange_rate_used: exchangeRateUsed
+      id: data.id,
+      userId: data.user_id,
+      type: data.type,
+      amount: Number(data.amount),
+      category: data.category,
+      description: data.description,
+      date: new Date(data.date),
+      accountId: data.account_id,
+      affectsBalance: data.affects_balance,
+      reason: data.reason,
+      transferToAccountId: data.transfer_to_account_id,
+      status: data.status,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
     };
 
     setTransactions(prev => [newTransaction, ...prev]);
@@ -2597,23 +2552,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (newTransaction.affectsBalance !== false) {
       setAccounts(prev => prev.map(account => {
         if (account.id === newTransaction.accountId) {
-          // Calculate new native and converted amounts
-          const nativeBalanceChange = newTransaction.type === 'income' 
-            ? nativeAmount 
-            : -nativeAmount;
-          const convertedBalanceChange = newTransaction.type === 'income' 
-            ? convertedAmount 
-            : -convertedAmount;
-          
-          const newNativeAmount = (account.native_amount || account.balance || 0) + nativeBalanceChange;
-          const newConvertedAmount = (account.converted_amount || account.balance || 0) + convertedBalanceChange;
-          
+          const balanceChange = newTransaction.type === 'income' 
+            ? newTransaction.amount 
+            : -newTransaction.amount;
           return {
             ...account,
-            balance: newConvertedAmount, // Main balance uses converted amount
-            native_amount: newNativeAmount,
-            converted_amount: newConvertedAmount,
-            last_conversion_date: new Date()
+            balance: account.balance + balanceChange
           };
         }
         return account;
@@ -2720,42 +2664,37 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error('Target date must be in the future');
     }
 
-    // Get currency information
-    const goalCurrency = (goalData as any).currencycode || getUserCurrency();
-    const primaryCurrency = getUserCurrency();
-    const needsConversion = goalCurrency !== primaryCurrency;
-    
-    // Calculate currency conversion if needed
-    let convertedTargetAmount = goalData.targetAmount;
-    let exchangeRate = 1.0;
-    
-    if (needsConversion) {
-      // Import currency conversion function
-      const { convertCurrency } = await import('../utils/currency-converter');
-      exchangeRate = convertCurrency(1, goalCurrency, primaryCurrency, primaryCurrency) || 1.0;
-      convertedTargetAmount = goalData.targetAmount * exchangeRate;
-    }
-
     try {
-      // Use the safe insert function
-      const { data, error } = await supabase.rpc('frontend_add_goal', {
-        p_user_id: user.id,
-        p_title: goalData.title,
-        p_description: goalData.description || '',
-        p_target_amount: convertedTargetAmount,
-        p_target_date: goalData.targetDate.toISOString().split('T')[0],
-        p_category: goalData.category,
-        p_currency_code: goalCurrency,
-        p_account_id: goalData.accountId || null,
-        p_goal_type: goalData.goalType || 'general_savings',
-        p_target_category: goalData.targetCategory || null,
-        p_period_type: goalData.periodType || 'monthly',
-        p_custom_period_days: goalData.customPeriodDays || null,
-        p_is_recurring: goalData.isRecurring || false,
-        p_recurring_frequency: goalData.recurringFrequency || (goalData.isRecurring ? 'monthly' : null),
-        p_priority: goalData.priority || 'medium',
-        p_status: goalData.status || 'active'
-      });
+      const { data, error } = await supabase
+        .from('goals')
+        .insert({
+          user_id: user.id,
+          title: goalData.title,
+          description: goalData.description || null,
+          target_amount: goalData.targetAmount,
+          current_amount: goalData.currentAmount || 0,
+          target_date: goalData.targetDate.toISOString().split('T')[0],
+          category: goalData.category,
+          // Add all missing fields with proper defaults
+          account_id: goalData.accountId || null,
+          goal_type: goalData.goalType || 'general_savings',
+          target_category: goalData.targetCategory || null,
+          period_type: goalData.periodType || 'monthly',
+          custom_period_days: goalData.customPeriodDays || null,
+          is_recurring: goalData.isRecurring || false,
+          recurring_frequency: goalData.recurringFrequency || (goalData.isRecurring ? 'monthly' : null),
+          priority: goalData.priority || 'medium',
+          status: goalData.status || 'active',
+          activity_scope: goalData.activityScope || 'general',
+          linked_accounts_count: goalData.linkedAccountsCount || 0,
+          currency_code: (goalData as any).currencyCode || getUserCurrency(),
+          // Currency tracking fields
+          original_current_amount: goalData.original_current_amount || goalData.currentAmount || 0,
+          original_currency: goalData.original_currency || getUserCurrency(),
+          exchange_rate_used: goalData.exchange_rate_used || 1.0
+        })
+        .select()
+        .single();
 
       if (error) {
         console.error('Database error creating goal:', error);
@@ -2770,52 +2709,36 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
-      // Get the created goal
-      const { data: createdGoal, error: fetchError } = await supabase
-        .from('goals')
-        .select('*')
-        .eq('id', data)
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching created goal:', fetchError);
-        throw new Error(`Failed to fetch created goal: ${fetchError.message}`);
-      }
-
       const newGoal: Goal = {
-        id: createdGoal.id,
-        userId: createdGoal.user_id,
-        title: createdGoal.title,
-        description: createdGoal.description,
-        targetAmount: Number(createdGoal.target_amount),
-        currentAmount: Number(createdGoal.current_amount || 0),
-        targetDate: new Date(createdGoal.target_date),
-        category: createdGoal.category,
-        accountId: createdGoal.account_id,
-        goalType: createdGoal.goal_type || 'general_savings',
-        targetCategory: createdGoal.target_category,
-        periodType: createdGoal.period_type || 'monthly',
-        customPeriodDays: createdGoal.custom_period_days,
-        isRecurring: createdGoal.is_recurring || false,
-        recurringFrequency: createdGoal.recurring_frequency,
-        priority: createdGoal.priority || 'medium',
-        status: createdGoal.status || 'active',
-        createdAt: new Date(createdGoal.created_at),
-        updatedAt: new Date(createdGoal.updated_at),
-        // Add completion and management fields
-      completionDate: createdGoal.completion_date ? new Date(createdGoal.completion_date) : undefined,
-      withdrawalDate: createdGoal.withdrawal_date ? new Date(createdGoal.withdrawal_date) : undefined,
-      withdrawalAmount: Number(createdGoal.withdrawal_amount || 0),
-      isWithdrawn: createdGoal.is_withdrawn || false,
-      completionAction: createdGoal.completion_action || 'waiting',
-      originalTargetAmount: createdGoal.original_target_amount ? Number(createdGoal.original_target_amount) : undefined,
-      extendedTargetAmount: createdGoal.extended_target_amount ? Number(createdGoal.extended_target_amount) : undefined,
-      completionNotes: createdGoal.completion_notes,
-      currencycode: createdGoal.currency_code || primaryCurrency,
-      // Currency conversion fields
-      original_currency: createdGoal.original_currency || goalCurrency,
-      exchange_rate_used: createdGoal.exchange_rate_used || exchangeRate,
-      original_current_amount: createdGoal.original_current_amount ? Number(createdGoal.original_current_amount) : undefined
+      id: data.id,
+      userId: data.user_id,
+      title: data.title,
+      description: data.description,
+      targetAmount: Number(data.target_amount),
+      currentAmount: Number(data.current_amount || 0),
+      targetDate: new Date(data.target_date),
+      category: data.category,
+      accountId: data.account_id,
+      goalType: data.goal_type || 'general_savings',
+      targetCategory: data.target_category,
+      periodType: data.period_type || 'monthly',
+      customPeriodDays: data.custom_period_days,
+      isRecurring: data.is_recurring || false,
+      recurringFrequency: data.recurring_frequency,
+      priority: data.priority || 'medium',
+      status: data.status || 'active',
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+      // Add completion and management fields
+      completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
+      withdrawalDate: data.withdrawal_date ? new Date(data.withdrawal_date) : undefined,
+      withdrawalAmount: Number(data.withdrawal_amount || 0),
+      isWithdrawn: data.is_withdrawn || false,
+      completionAction: data.completion_action || 'waiting',
+      originalTargetAmount: data.original_target_amount ? Number(data.original_target_amount) : undefined,
+      extendedTargetAmount: data.extended_target_amount ? Number(data.extended_target_amount) : undefined,
+      completionNotes: data.completion_notes,
+      currencyCode: data.currency_code || getUserCurrency()
     };
 
     setGoals(prev => [newGoal, ...prev]);
@@ -3044,28 +2967,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addLiability = async (liabilityData: Omit<EnhancedLiability, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
-    // Get currency information
-    const liabilityCurrency = (liabilityData as any).currencycode || getUserCurrency();
-    const primaryCurrency = getUserCurrency();
-    const needsConversion = liabilityCurrency !== primaryCurrency;
-    
-    // Calculate currency conversion if needed
-    let convertedTotalAmount = liabilityData.totalAmount;
-    let convertedRemainingAmount = liabilityData.remainingAmount;
-    let convertedMonthlyPayment = liabilityData.monthlyPayment;
-    let convertedMinimumPayment = liabilityData.minimumPayment;
-    let exchangeRate = 1.0;
-    
-    if (needsConversion) {
-      // Import currency conversion function
-      const { convertCurrency } = await import('../utils/currency-converter');
-      exchangeRate = convertCurrency(1, liabilityCurrency, primaryCurrency, primaryCurrency) || 1.0;
-      convertedTotalAmount = liabilityData.totalAmount * exchangeRate;
-      convertedRemainingAmount = liabilityData.remainingAmount * exchangeRate;
-      convertedMonthlyPayment = liabilityData.monthlyPayment * exchangeRate;
-      convertedMinimumPayment = liabilityData.minimumPayment * exchangeRate;
-    }
-
     const { data, error } = await supabase
       .from('liabilities')
       .insert({
@@ -3075,11 +2976,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         liability_type: liabilityData.liabilityType,
         notes: liabilityData.description,
         liability_status: liabilityData.liabilityStatus || 'new',
-        total_amount: convertedTotalAmount, // Store in primary currency
-        remaining_amount: convertedRemainingAmount, // Store in primary currency
+        total_amount: liabilityData.totalAmount,
+        remaining_amount: liabilityData.remainingAmount,
         interest_rate: liabilityData.interestRate,
-        monthly_payment: convertedMonthlyPayment, // Store in primary currency
-        minimum_payment: convertedMinimumPayment, // Store in primary currency
+        monthly_payment: liabilityData.monthlyPayment,
+        minimum_payment: liabilityData.minimumPayment,
         payment_day: liabilityData.paymentDay,
         loan_term_months: liabilityData.loanTermMonths,
         remaining_term_months: liabilityData.remainingTermMonths,
@@ -3108,12 +3009,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         last_modified_date: liabilityData.lastModifiedDate?.toISOString(),
         modification_reason: liabilityData.modificationReason,
         type_specific_data: liabilityData.typeSpecificData || {},
-        currency_code: primaryCurrency, // Store primary currency
+        currency_code: liabilityData.currencyCode || getUserCurrency(),
         activity_scope: liabilityData.activityScope || 'general',
         priority: liabilityData.priority || 'medium',
         // Currency tracking fields
-        original_currency: liabilityCurrency, // Store original currency
-        exchange_rate_used: exchangeRate
+        original_currency: liabilityData.original_currency || getUserCurrency(),
+        exchange_rate_used: liabilityData.exchange_rate_used || 1.0
       })
       .select()
       .single();
@@ -3547,67 +3448,127 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addBudget = async (budgetData: Omit<Budget, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
-    // Get currency information
-    const budgetCurrency = (budgetData as any).currencycode || getUserCurrency();
-    const primaryCurrency = getUserCurrency();
-    const needsConversion = budgetCurrency !== primaryCurrency;
-    
-    // Calculate currency conversion if needed
-    let convertedAmount = budgetData.amount;
-    let exchangeRate = 1.0;
-    
-    if (needsConversion) {
-      // Import currency conversion function
-      const { convertCurrency } = await import('../utils/currency-converter');
-      exchangeRate = convertCurrency(1, budgetCurrency, primaryCurrency, primaryCurrency) || 1.0;
-      convertedAmount = budgetData.amount * exchangeRate;
-    }
+    let data: any;
+    let error: any;
 
-    try {
-      // Use the safe insert function
-      const { data, error } = await supabase.rpc('frontend_add_budget', {
-        p_user_id: user.id,
-        p_category: budgetData.category,
-        p_amount: convertedAmount,
-        p_period: budgetData.period,
-        p_activity_scope: budgetData.activityScope || 'general',
-        p_linked_accounts_count: 0
-      });
+    // Handle different budget types based on activity scope
+    if (budgetData.activityScope === 'account_specific' && budgetData.accountIds && budgetData.accountIds.length > 0) {
+      // Create account-specific budgets
+      const accountBudgetPromises = budgetData.accountIds.map(accountId => 
+        supabase
+          .from('account_budgets')
+          .insert({
+            user_id: user.id,
+            account_id: accountId,
+            category: budgetData.category,
+            amount: budgetData.amount,
+            spent: budgetData.spent || 0,
+            period: budgetData.period,
+            start_date: budgetData.startDate?.toISOString().split('T')[0],
+            end_date: budgetData.endDate?.toISOString().split('T')[0],
+            is_active: true,
+            // Currency fields
+            currency_code: budgetData.currencyCode || getUserCurrency(),
+            original_amount: budgetData.original_amount || budgetData.amount,
+            original_currency: budgetData.original_currency || getUserCurrency(),
+            exchange_rate_used: budgetData.exchange_rate_used || 1.0
+          })
+          .select()
+          .single()
+      );
 
-      if (error) {
-        console.error('Database error creating budget:', error);
-        throw new Error(`Failed to create budget: ${error.message}`);
+      const results = await Promise.all(accountBudgetPromises);
+      const failedResult = results.find(result => result.error);
+      
+      if (failedResult) {
+        throw failedResult.error;
       }
 
-      // Get the created budget
-      const { data: createdBudget, error: fetchError } = await supabase
-        .from('budgets')
-        .select('*')
-        .eq('id', data)
+      // Use the first result for the main budget object
+      data = results[0].data;
+    } else if (budgetData.activityScope === 'category_based' && budgetData.targetCategory) {
+      // Create category-based budgets
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('user_categories')
+        .select('id')
+        .eq('name', budgetData.targetCategory)
+        .eq('user_id', user.id)
         .single();
 
-      if (fetchError) {
-        console.error('Error fetching created budget:', fetchError);
-        throw new Error(`Failed to fetch created budget: ${fetchError.message}`);
-      }
+      if (categoryError) throw categoryError;
 
-      const newBudget: Budget = {
-        id: createdBudget.id,
-        userId: createdBudget.user_id,
-        category: createdBudget.category,
-        amount: Number(createdBudget.amount),
-        spent: Number(createdBudget.spent || 0),
-        period: createdBudget.period,
-        createdAt: new Date(createdBudget.created_at),
-        updatedAt: new Date(createdBudget.updated_at),
-        activityScope: createdBudget.activity_scope || 'general'
-      };
+      const { data: categoryBudgetData, error: categoryBudgetError } = await supabase
+        .from('category_budgets')
+        .insert({
+          user_id: user.id,
+          category_id: categoryData.id,
+          amount: budgetData.amount,
+          period: budgetData.period,
+          alert_threshold: 80, // 80% threshold
+          rollover_unused: false
+        })
+        .select()
+        .single();
 
-      setBudgets(prev => [...prev, newBudget]);
-      await invalidateUserData(user.id);
-    } catch (error) {
-      console.error('Error creating budget:', error);
-      throw error;
+      if (categoryBudgetError) throw categoryBudgetError;
+      data = categoryBudgetData;
+    } else {
+      // Create general budgets
+      const { data: generalData, error: generalError } = await supabase
+        .from('budgets')
+        .insert({
+          user_id: user.id,
+          category: budgetData.category,
+          amount: budgetData.amount,
+          spent: budgetData.spent || 0,
+          period: budgetData.period,
+          activity_scope: budgetData.activityScope || 'general',
+          linked_accounts_count: budgetData.accountIds?.length || 0,
+          // Currency fields
+          currency_code: budgetData.currencyCode || getUserCurrency(),
+          original_amount: budgetData.original_amount || budgetData.amount,
+          original_currency: budgetData.original_currency || getUserCurrency(),
+          exchange_rate_used: budgetData.exchange_rate_used || 1.0
+        })
+        .select()
+        .single();
+
+      if (generalError) throw generalError;
+      data = generalData;
+    }
+
+    const newBudget: Budget = {
+      id: data.id,
+      userId: data.user_id,
+      category: data.category,
+      amount: Number(data.amount),
+      spent: Number(data.spent || 0),
+      period: data.period,
+      accountId: data.account_id,
+      activityScope: budgetData.activityScope || 'general',
+      accountIds: budgetData.accountIds || [],
+      targetCategory: budgetData.targetCategory,
+      currencyCode: budgetData.currencyCode || getUserCurrency(),
+      startDate: data.start_date ? new Date(data.start_date) : new Date(),
+      endDate: data.end_date ? new Date(data.end_date) : undefined,
+      createdAt: new Date(data.created_at)
+    };
+
+    setBudgets(prev => [newBudget, ...prev]);
+
+    // Create account links for general budgets with account IDs
+    if (budgetData.activityScope === 'general' && budgetData.accountIds && budgetData.accountIds.length > 0) {
+      const accountLinks = budgetData.accountIds.map((accountId, index) => ({
+        activity_type: 'budget',
+        activity_id: data.id,
+        account_id: accountId,
+        user_id: user.id,
+        is_primary: index === 0
+      }));
+
+      await supabase
+        .from('activity_account_links')
+        .insert(accountLinks);
     }
   };
 
@@ -3669,137 +3630,136 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error('Due date must be in the future');
     }
 
-    // Get currency information
-    const billCurrency = (billData as any).currencycode || getUserCurrency();
-    const primaryCurrency = getUserCurrency();
-    const needsConversion = billCurrency !== primaryCurrency;
-    
-    // Calculate currency conversion if needed
-    let convertedAmount = billData.amount;
-    let exchangeRate = 1.0;
-    
-    if (needsConversion) {
-      // Import currency conversion function
-      const { convertCurrency } = await import('../utils/currency-converter');
-      exchangeRate = convertCurrency(1, billCurrency, primaryCurrency, primaryCurrency) || 1.0;
-      convertedAmount = billData.amount * exchangeRate;
-    }
-
     try {
-      // Use the safe insert function
-      const { data, error } = await supabase.rpc('frontend_add_bill', {
-        p_user_id: user.id,
-        p_title: billData.title,
-        p_category: billData.category,
-        p_bill_type: billData.billType || 'fixed',
-        p_amount: convertedAmount,
-        p_frequency: billData.frequency,
-        p_due_date: billData.dueDate.toISOString().split('T')[0],
-        p_next_due_date: billData.nextDueDate.toISOString().split('T')[0],
-        p_currency_code: billCurrency,
-        p_default_account_id: billData.defaultAccountId || null,
-        p_description: billData.description || null,
-        p_estimated_amount: billData.estimatedAmount || null,
-        p_custom_frequency_days: billData.customFrequencyDays || null,
-        p_last_paid_date: billData.lastPaidDate?.toISOString().split('T')[0] || null,
-        p_auto_pay: billData.autoPay || false,
-        p_linked_liability_id: billData.linkedLiabilityId || null,
-        p_is_emi: billData.isEmi || false,
-        p_is_essential: billData.isEssential || false,
-        p_reminder_days_before: billData.reminderDaysBefore || 3,
-        p_send_due_date_reminder: billData.sendDueDateReminder || false,
-        p_send_overdue_reminder: billData.sendOverdueReminder || false
-      });
+      const { data, error } = await supabase
+      .from('bills')
+      .insert({
+        user_id: user.id,
+        title: billData.title,
+        description: billData.description,
+        category: billData.category,
+        bill_type: billData.billType,
+        amount: billData.amount,
+        estimated_amount: billData.estimatedAmount,
+        frequency: billData.frequency,
+        custom_frequency_days: billData.customFrequencyDays,
+        due_date: billData.dueDate.toISOString().split('T')[0],
+        next_due_date: billData.nextDueDate.toISOString().split('T')[0],
+        last_paid_date: billData.lastPaidDate?.toISOString().split('T')[0],
+        default_account_id: billData.defaultAccountId,
+        auto_pay: billData.autoPay,
+        linked_liability_id: billData.linkedLiabilityId,
+        is_emi: billData.isEmi,
+        is_active: billData.isActive,
+        is_essential: billData.isEssential,
+        reminder_days_before: billData.reminderDaysBefore,
+        send_due_date_reminder: billData.sendDueDateReminder,
+        send_overdue_reminder: billData.sendOverdueReminder,
+        activity_scope: billData.activityScope || 'general',
+        target_category: billData.targetCategory,
+        linked_accounts_count: billData.accountIds?.length || 0,
+        currency_code: billData.currencyCode || getUserCurrency(),
+        is_income: billData.isIncome || false,
+        is_variable_amount: billData.isVariableAmount || false,
+        min_amount: billData.minAmount,
+        max_amount: billData.maxAmount,
+        priority: billData.priority || 'medium',
+        status: billData.status || 'active',
+        payment_method: billData.paymentMethod,
+        notes: billData.notes,
+        // Currency tracking fields
+        original_amount: billData.original_amount || billData.amount,
+        original_currency: billData.original_currency || getUserCurrency(),
+        exchange_rate_used: billData.exchange_rate_used || 1.0
+      })
+      .select()
+      .single();
 
       if (error) {
         console.error('Database error creating bill:', error);
-        throw new Error(`Failed to create bill: ${error.message}`);
+        if (error.code === '23505') {
+          throw new Error('A bill with this title already exists. Please choose a different title.');
+        } else if (error.code === '23503') {
+          throw new Error('Invalid account reference. Please select a valid account.');
+        } else if (error.code === '23514') {
+          throw new Error('Invalid data provided. Please check your input values.');
+        } else {
+          throw new Error(`Failed to create bill: ${error.message}`);
+        }
       }
 
-      // Get the created bill
-      const { data: createdBill, error: fetchError } = await supabase
-        .from('bills')
-        .select('*')
-        .eq('id', data)
-        .single();
+    const newBill: Bill = {
+      id: data.id,
+      userId: data.user_id,
+      title: data.title,
+      description: data.description,
+      category: data.category,
+      billType: data.bill_type,
+      amount: Number(data.amount),
+      estimatedAmount: data.estimated_amount ? Number(data.estimated_amount) : undefined,
+      frequency: data.frequency,
+      customFrequencyDays: data.custom_frequency_days,
+      dueDate: new Date(data.due_date),
+      nextDueDate: new Date(data.next_due_date),
+      lastPaidDate: data.last_paid_date ? new Date(data.last_paid_date) : undefined,
+      defaultAccountId: data.default_account_id,
+      autoPay: data.auto_pay || false,
+      linkedLiabilityId: data.linked_liability_id,
+      isEmi: data.is_emi || false,
+      isActive: data.is_active,
+      isEssential: data.is_essential || false,
+      reminderDaysBefore: data.reminder_days_before || 3,
+      sendDueDateReminder: data.send_due_date_reminder || false,
+      sendOverdueReminder: data.send_overdue_reminder || false,
+      billCategory: data.bill_category || 'general_expense',
+      targetCategory: data.target_category,
+      isRecurring: data.is_recurring || false,
+      paymentMethod: data.payment_method || 'bank_transfer',
+      notes: data.notes || '',
+      priority: data.priority || 'medium',
+      status: data.status || 'active',
+      activityScope: data.activity_scope || 'general',
+      accountIds: [], // Will be loaded separately from activity_account_links
+      linkedAccountsCount: data.linked_accounts_count || 0,
+      // New fields
+      currencyCode: data.currency_code || getUserCurrency(),
+      isIncome: data.is_income || false,
+      billStage: data.bill_stage || 'pending',
+      movedToDate: data.moved_to_date ? new Date(data.moved_to_date) : undefined,
+      stageReason: data.stage_reason,
+      isVariableAmount: data.is_variable_amount || false,
+      minAmount: data.min_amount ? Number(data.min_amount) : undefined,
+      maxAmount: data.max_amount ? Number(data.max_amount) : undefined,
+      completionAction: data.completion_action || 'continue',
+      completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
+      completionNotes: data.completion_notes,
+      originalAmount: data.original_amount ? Number(data.original_amount) : undefined,
+      extendedAmount: data.extended_amount ? Number(data.extended_amount) : undefined,
+      isArchived: data.is_archived || false,
+      archivedDate: data.archived_date ? new Date(data.archived_date) : undefined,
+      archivedReason: data.archived_reason,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
 
-      if (fetchError) {
-        console.error('Error fetching created bill:', fetchError);
-        throw new Error(`Failed to fetch created bill: ${fetchError.message}`);
-      }
+    setBills(prev => [newBill, ...prev]);
 
-      const newBill: Bill = {
-        id: createdBill.id,
-        userId: createdBill.user_id,
-        title: createdBill.title,
-        description: createdBill.description,
-        category: createdBill.category,
-        billType: createdBill.bill_type,
-        amount: Number(createdBill.amount),
-        estimatedAmount: createdBill.estimated_amount ? Number(createdBill.estimated_amount) : undefined,
-        frequency: createdBill.frequency,
-        customFrequencyDays: createdBill.custom_frequency_days,
-        dueDate: new Date(createdBill.due_date),
-        nextDueDate: new Date(createdBill.next_due_date),
-        lastPaidDate: createdBill.last_paid_date ? new Date(createdBill.last_paid_date) : undefined,
-        defaultAccountId: createdBill.default_account_id,
-        autoPay: createdBill.auto_pay || false,
-        linkedLiabilityId: createdBill.linked_liability_id,
-        isEmi: createdBill.is_emi || false,
-        isActive: createdBill.is_active,
-        isEssential: createdBill.is_essential || false,
-        reminderDaysBefore: createdBill.reminder_days_before || 3,
-        sendDueDateReminder: createdBill.send_due_date_reminder || false,
-        sendOverdueReminder: createdBill.send_overdue_reminder || false,
-        billCategory: createdBill.bill_category || 'general',
-        targetCategory: createdBill.target_category,
-        isRecurring: createdBill.is_recurring || false,
-        paymentMethod: createdBill.payment_method || 'bank_transfer',
-        notes: createdBill.notes || '',
-        priority: createdBill.priority || 'medium',
-        status: createdBill.status || 'active',
-        activityScope: createdBill.activity_scope || 'general',
-        accountIds: [], // Will be loaded separately from activity_account_links
-        linkedAccountsCount: createdBill.linked_accounts_count || 0,
-        // New fields
-        currencycode: createdBill.currency_code || getUserCurrency(),
-        isIncome: createdBill.is_income || false,
-        billStage: createdBill.bill_stage || 'pending',
-        movedToDate: createdBill.moved_to_date ? new Date(createdBill.moved_to_date) : undefined,
-        stageReason: createdBill.stage_reason,
-        isVariableAmount: createdBill.is_variable_amount || false,
-        minAmount: createdBill.min_amount ? Number(createdBill.min_amount) : undefined,
-        maxAmount: createdBill.max_amount ? Number(createdBill.max_amount) : undefined,
-        completionAction: createdBill.completion_action || 'continue',
-        completionDate: createdBill.completion_date ? new Date(createdBill.completion_date) : undefined,
-        completionNotes: createdBill.completion_notes,
-        originalAmount: createdBill.original_amount ? Number(createdBill.original_amount) : undefined,
-        extendedAmount: createdBill.extended_amount ? Number(createdBill.extended_amount) : undefined,
-        isArchived: createdBill.is_archived || false,
-        archivedDate: createdBill.archived_date ? new Date(createdBill.archived_date) : undefined,
-        archivedReason: createdBill.archived_reason,
-        createdAt: new Date(createdBill.created_at),
-        updatedAt: new Date(createdBill.updated_at)
-      };
+    // Create activity account links if account-specific
+    if (billData.activityScope === 'account_specific' && billData.accountIds && billData.accountIds.length > 0) {
+      const accountLinks = billData.accountIds.map((accountId, index) => ({
+        activity_type: 'bill',
+        activity_id: data.id,
+        account_id: accountId,
+        user_id: user.id,
+        is_primary: index === 0
+      }));
 
-      setBills(prev => [newBill, ...prev]);
+      await supabase
+        .from('activity_account_links')
+        .insert(accountLinks);
+    }
 
-      // Create activity account links if account-specific
-      if (billData.activityScope === 'account_specific' && billData.accountIds && billData.accountIds.length > 0) {
-        const accountLinks = billData.accountIds.map((accountId, index) => ({
-          activity_type: 'bill',
-          activity_id: data.id,
-          account_id: accountId,
-          user_id: user.id,
-          is_primary: index === 0
-        }));
-
-        await supabase
-          .from('activity_account_links')
-          .insert(accountLinks);
-      }
-
-      return newBill;
+    return newBill;
     } catch (error) {
       console.error('Error creating bill:', error);
       throw error;
@@ -3843,7 +3803,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         target_category: updates.targetCategory,
         linked_accounts_count: updates.accountIds?.length || updates.linkedAccountsCount,
         // New multi-currency support
-        currency_code: updates.currencycode,
+        currency_code: updates.currencyCode,
         // Income bills support
         is_income: updates.isIncome,
         // Bill staging support
@@ -4634,10 +4594,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     generatePaymentReceipt,
     showReceipt,
     currentReceipt,
-    hideReceipt,
-    
-    // Currency helper
-    getUserCurrency
+    hideReceipt
   };
 
   return (

@@ -4,18 +4,9 @@ import { Button } from '../common/Button';
 import { Modal } from '../common/Modal';
 import { useFinance } from '../../contexts/FinanceContext';
 import { Transaction, FinancialAccount } from '../../types/index';
-import { Calendar, Tag, DollarSign, FileText, ArrowUpRight, ArrowDownRight, ArrowLeftRight, Globe } from 'lucide-react';
+import { Calendar, Tag, DollarSign, FileText, ArrowUpRight, ArrowDownRight, ArrowLeftRight } from 'lucide-react';
 import { format } from 'date-fns';
 import LuxuryCategoryIcon from '../common/LuxuryCategoryIcon';
-import { 
-  convertTransactionCurrency, 
-  generateTransactionDisplayText, 
-  generateStorageData,
-  formatCurrencyAmount,
-  type CurrencyConversionResult,
-  type MultiCurrencyTransaction 
-} from '../../utils/multi-currency-converter';
-import { getCurrencyInfo } from '../../utils/currency-converter';
 
 interface TransactionFormProps {
   isOpen: boolean;
@@ -32,7 +23,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   defaultType = 'expense',
   defaultAccountId
 }) => {
-  const { accounts, addTransaction, updateTransaction, getUserCurrency } = useFinance();
+  const { accounts, addTransaction, updateTransaction } = useFinance();
   const [formData, setFormData] = useState({
     amount: '',
     description: '',
@@ -41,41 +32,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     type: defaultType,
     account_id: defaultAccountId || '',
     target_account_id: '',
-    notes: '',
-    currency: getUserCurrency()
+    notes: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [conversionResult, setConversionResult] = useState<CurrencyConversionResult | null>(null);
-  const [selectedAccount, setSelectedAccount] = useState<FinancialAccount | null>(null);
-
-  // Update selected account when account_id changes
-  useEffect(() => {
-    if (formData.account_id) {
-      const account = accounts.find(acc => acc.id === formData.account_id);
-      setSelectedAccount(account || null);
-    }
-  }, [formData.account_id, accounts]);
-
-  // Handle currency conversion when amount, currency, or account changes
-  useEffect(() => {
-    if (formData.amount && formData.currency && selectedAccount) {
-      const amount = parseFloat(formData.amount);
-      if (!isNaN(amount) && amount > 0) {
-        const result = convertTransactionCurrency({
-          amount,
-          currency: formData.currency,
-          accountCurrency: selectedAccount.currencycode || getUserCurrency(),
-          primaryCurrency: getUserCurrency()
-        });
-        setConversionResult(result);
-      } else {
-        setConversionResult(null);
-      }
-    } else {
-      setConversionResult(null);
-    }
-  }, [formData.amount, formData.currency, selectedAccount, getUserCurrency]);
 
   const getCategoriesForType = (type: string) => {
     switch (type) {
@@ -131,39 +91,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     setLoading(true);
 
     try {
-      const amount = parseFloat(formData.amount);
-      if (isNaN(amount) || amount <= 0) {
-        throw new Error('Please enter a valid amount');
-      }
-
-      // Generate multi-currency data if conversion is available
-      let multiCurrencyData = {};
-      if (conversionResult) {
-        const storageData = generateStorageData(conversionResult);
-        multiCurrencyData = {
-          native_amount: storageData.nativeAmount,
-          native_currency: storageData.nativeCurrency,
-          native_symbol: storageData.nativeSymbol,
-          converted_amount: storageData.convertedAmount,
-          converted_currency: storageData.convertedCurrency,
-          converted_symbol: storageData.convertedSymbol,
-          exchange_rate: storageData.exchangeRate,
-          exchange_rate_used: storageData.exchangeRateUsed
-        };
-      }
-
       const transactionData = {
-        amount: conversionResult ? conversionResult.convertedAmount : amount,
+        amount: parseFloat(formData.amount),
         description: formData.description,
         category: formData.category,
         date: new Date(formData.date).toISOString(),
         type: formData.type,
-        accountId: formData.account_id,
-        transferToAccountId: formData.target_account_id || undefined,
-        notes: formData.notes,
-        affectsBalance: true,
-        currencycode: getUserCurrency(),
-        ...multiCurrencyData
+        account_id: formData.account_id,
+        target_account_id: formData.target_account_id || null,
+        notes: formData.notes
       };
 
       if (transaction) {
@@ -239,61 +175,17 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         </div>
 
         {/* Amount */}
-        <div className="space-y-2">
-          <Input
-            label="Amount"
-            type="number"
-            value={formData.amount}
-            onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-            placeholder="0.00"
-            step="any"
-            required
-            disabled={loading}
-            icon={<DollarSign size={16} />}
-          />
-          
-          {/* Currency Selection */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-              Currency
-            </label>
-            <select
-              value={formData.currency}
-              onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
-              className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              style={{
-                backgroundColor: 'var(--background)',
-                color: 'var(--text-primary)',
-                borderColor: 'var(--border)'
-              }}
-              disabled={loading}
-            >
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="GBP">GBP (£)</option>
-              <option value="JPY">JPY (¥)</option>
-              <option value="INR">INR (₹)</option>
-              <option value="CAD">CAD (C$)</option>
-              <option value="AUD">AUD (A$)</option>
-              <option value="CHF">CHF (CHF)</option>
-              <option value="CNY">CNY (¥)</option>
-              <option value="SEK">SEK (kr)</option>
-            </select>
-          </div>
-
-          {/* Currency Conversion Display */}
-          {conversionResult && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="flex items-center space-x-2 mb-2">
-                <Globe size={16} className="text-blue-600" />
-                <span className="text-sm font-medium text-blue-800">Currency Conversion</span>
-              </div>
-              <div className="text-sm text-blue-700">
-                {generateTransactionDisplayText(conversionResult)}
-              </div>
-            </div>
-          )}
-        </div>
+        <Input
+          label="Amount"
+          type="number"
+          value={formData.amount}
+          onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+          placeholder="0.00"
+          step="any"
+          required
+          disabled={loading}
+          icon={<DollarSign size={16} />}
+        />
 
         {/* Description */}
         <Input

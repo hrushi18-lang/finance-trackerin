@@ -1,5 +1,0 @@
-[33m18d0d7b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat: Integrate comprehensive multi-currency system into existing transaction forms
-[33m763c17e[m fix: improve currency display and onboarding flow
-[33m4c5e9b3[m fix: resolve TypeScript lint errors
-[33mf199cbf[m fix: remove duplicate linkedAccountsCount key in CreateBill.tsx
-[33m7848e1b[m feat: improve notifications with close button and mobile-friendly design

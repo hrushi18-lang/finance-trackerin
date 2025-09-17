@@ -120,7 +120,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         targetDate: new Date(data.targetDate),
         category: validatedData.category,
         accountId: validatedData.account_id,
-        currencycode: goalCurrency, // Use lowercase to match addGoal function
+        currencyCode: goalCurrency,
         // Add scoping fields from validated data
         activityScope: selectedGoalType,
         accountIds: selectedGoalType === 'account_specific' ? (data.accountIds || []) : [],
@@ -141,6 +141,19 @@ export const GoalForm: React.FC<GoalFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      {/* Tip Section */}
+      <div className="bg-gradient-to-r from-blue-500/20 to-primary-500/20 rounded-xl p-4 border border-blue-500/30">
+        <div className="flex items-start space-x-3">
+          <span className="text-blue-400 mt-0.5">🎯</span>
+          <div>
+            <p className="text-blue-400 font-medium">Goal Setting Tip</p>
+            <p className="text-gray-300 text-sm mt-1">
+              Set realistic goals that motivate you! Start small and celebrate every milestone. 
+              Manual tracking helps you stay connected to your progress.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Error Message */}
       {error && (
@@ -152,23 +165,23 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         </div>
       )}
       
-      {/* Header with Info - Simplified */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+      {/* Header with Info */}
+      <div className="bg-gradient-to-r from-primary-500/20 to-blue-500/20 rounded-xl p-4 mb-6 border border-primary-500/30">
         <h3 className="text-lg font-semibold text-white mb-2 flex items-center">
-          <Target size={20} className="mr-2 text-blue-400" />
-          {initialData ? 'Edit Goal' : 'Create Goal'}
+          <Target size={20} className="mr-2 text-primary-400" />
+          {initialData ? 'Edit Financial Goal' : 'New Financial Goal'}
         </h3>
         <p className="text-gray-300 text-sm">
           {initialData 
-            ? 'Update your goal details.'
-            : 'Set your financial target and track progress.'}
+            ? 'Update your goal details to stay on track with your financial journey.'
+            : 'Set clear targets for your financial journey. Track your progress and stay motivated!'}
         </p>
       </div>
 
-      {/* Goal Type Selection - Simplified */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-        <h4 className="text-sm font-medium text-white mb-3">Goal Type</h4>
-        <div className="space-y-2">
+      {/* Goal Type Selection */}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <h4 className="text-md font-semibold text-white mb-4">Goal Type</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {goalTypes.map((type) => (
             <button
               key={type.id}
@@ -177,17 +190,18 @@ export const GoalForm: React.FC<GoalFormProps> = ({
                 setSelectedGoalType(type.id as any);
                 setValue('activityScope', type.id as any);
               }}
-              className={`w-full p-3 rounded-lg border transition-all text-left ${
+              className={`p-4 rounded-lg border-2 transition-all ${
                 selectedGoalType === type.id
-                  ? 'border-blue-400 bg-blue-400/20 text-blue-100'
-                  : 'border-white/20 hover:border-white/40 text-gray-300'
+                  ? 'border-primary-500 bg-primary-500/20'
+                  : 'border-white/20 hover:border-white/40'
               }`}
             >
-              <div className="flex items-center space-x-3">
-                <span className="text-lg">{type.icon}</span>
-                <div>
-                  <h5 className="font-medium text-sm">{type.name}</h5>
-                  <p className="text-xs opacity-75">{type.description}</p>
+              <div className="text-center">
+                <div className="text-2xl mb-2">{type.icon}</div>
+                <h5 className="font-semibold text-white text-sm mb-1">{type.name}</h5>
+                <p className="text-xs text-gray-400 mb-2">{type.description}</p>
+                <div className="text-xs text-gray-500">
+                  Examples: {type.examples.slice(0, 2).join(', ')}
                 </div>
               </div>
             </button>
@@ -195,39 +209,49 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         </div>
       </div>
 
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
         <Input
           label="Goal Title"
           type="text"
-          icon={<Target size={18} className="text-blue-400" />}
+          icon={<Target size={18} className="text-primary-400" />}
           {...register('title', { required: 'Goal title is required' })}
           error={errors.title?.message}
-          className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+          className="bg-black/40 border-white/20 text-white"
           placeholder="e.g., Dream Vacation, New Car"
         />
       </div>
 
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
         <Input
           label="Description"
           type="text"
           icon={<FileText size={18} className="text-blue-400" />}
-          {...register('description')}
+          {...register('description', { required: 'Description is required' })}
           error={errors.description?.message}
-          className="bg-white/10 border-white/20 text-white placeholder-gray-400"
-          placeholder="What are you saving for? (optional)"
+          className="bg-black/40 border-white/20 text-white"
+          placeholder="What are you saving for?"
         />
       </div>
 
-      {/* Target Amount - Simplified */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-        <label className="block text-sm font-medium text-white mb-3">
-          Target Amount *
-        </label>
+      {/* Target Amount - Enhanced */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
+        <div className="flex items-center space-x-2 mb-4">
+          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+            <span className="text-purple-600 text-lg">🎯</span>
+          </div>
+          <div>
+            <label className="text-lg font-semibold text-gray-800">
+              Target Amount *
+            </label>
+            <p className="text-sm text-gray-600">
+              How much do you want to save?
+            </p>
+          </div>
+        </div>
         
         <div className="space-y-3">
           <div className="flex items-center space-x-2">
-            <span className="text-lg font-semibold text-white">
+            <span className="text-lg font-semibold text-gray-600">
               {getCurrencyInfo(goalCurrency)?.symbol || '$'}
             </span>
             <Input
@@ -236,7 +260,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
               value={watch('targetAmount') || ''}
               onChange={(e) => setValue('targetAmount', parseFloat(e.target.value) || 0)}
               error={errors.targetAmount?.message}
-              className="flex-1 bg-white/10 border-white/20 text-white placeholder-gray-400"
+              className="flex-1 text-lg"
             />
           </div>
           
@@ -244,7 +268,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
           <select
             value={goalCurrency}
             onChange={(e) => setGoalCurrency(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
           >
             <option value="USD">🇺🇸 USD - US Dollar</option>
             <option value="EUR">🇪🇺 EUR - Euro</option>
@@ -256,16 +280,78 @@ export const GoalForm: React.FC<GoalFormProps> = ({
             <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
           </select>
         </div>
+        
+        {/* Quick Amount Buttons */}
+        <div className="mt-4">
+          <p className="text-sm text-gray-600 mb-2">Quick amounts:</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 10000)}
+              className="text-xs"
+            >
+              ₹10K
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 50000)}
+              className="text-xs"
+            >
+              ₹50K
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 100000)}
+              className="text-xs"
+            >
+              ₹1L
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 500000)}
+              className="text-xs"
+            >
+              ₹5L
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 1000000)}
+              className="text-xs"
+            >
+              ₹10L
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Current Amount - Simplified */}
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-        <label className="block text-sm font-medium text-white mb-3">
-          Current Amount
-        </label>
+      {/* Current Amount - Enhanced */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border-2 border-green-200">
+        <div className="flex items-center space-x-2 mb-4">
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+            <span className="text-green-600 text-lg">💰</span>
+          </div>
+          <div>
+            <label className="text-lg font-semibold text-gray-800">
+              Current Amount
+            </label>
+            <p className="text-sm text-gray-600">
+              How much have you already saved?
+            </p>
+          </div>
+        </div>
         
         <div className="flex items-center space-x-2">
-          <span className="text-lg font-semibold text-white">
+          <span className="text-lg font-semibold text-gray-600">
             {getCurrencyInfo(goalCurrency)?.symbol || '$'}
           </span>
           <Input
@@ -274,38 +360,85 @@ export const GoalForm: React.FC<GoalFormProps> = ({
             value={watch('currentAmount') || ''}
             onChange={(e) => setValue('currentAmount', parseFloat(e.target.value) || 0)}
             error={errors.currentAmount?.message}
-            className="flex-1 bg-white/10 border-white/20 text-white placeholder-gray-400"
+            className="flex-1 text-lg"
           />
         </div>
         
-        <p className="text-xs text-gray-400 mt-2">
+        <p className="text-xs text-gray-500 mt-2">
           Leave as 0 if you're starting fresh
         </p>
       </div>
 
       {/* Conversion preview removed for simplified currency system */}
 
+      {/* Activity Scope Selection */}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <label className="block text-sm font-medium text-gray-300 mb-3">
+          Goal Type
+        </label>
+        <div className="space-y-3">
+          <div className="flex items-center space-x-3">
+            <input
+              type="radio"
+              id="general"
+              value="general"
+              {...register('activityScope')}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
+            />
+            <label htmlFor="general" className="text-sm text-gray-300">
+              <span className="font-medium">General Goal</span>
+              <span className="block text-xs text-gray-400">Not tied to any specific account</span>
+            </label>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <input
+              type="radio"
+              id="account_specific"
+              value="account_specific"
+              {...register('activityScope')}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
+            />
+            <label htmlFor="account_specific" className="text-sm text-gray-300">
+              <span className="font-medium">Account-Specific Goal</span>
+              <span className="block text-xs text-gray-400">Linked to one or more specific accounts</span>
+            </label>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <input
+              type="radio"
+              id="category_based"
+              value="category_based"
+              {...register('activityScope')}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
+            />
+            <label htmlFor="category_based" className="text-sm text-gray-300">
+              <span className="font-medium">Category-Based Goal</span>
+              <span className="block text-xs text-gray-400">For a specific spending category</span>
+            </label>
+          </div>
+        </div>
+      </div>
 
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-        <label className="block text-sm font-medium text-white mb-3">
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
           Category
         </label>
-        <div className="relative z-10">
-          <CategorySelector
-            value={watch('category')}
-            onChange={(category) => setValue('category', category)}
-            type="goal"
-            placeholder="Select a category"
-            error={errors.category?.message}
-          />
-        </div>
+        <CategorySelector
+          value={watch('category')}
+          onChange={(category) => setValue('category', category)}
+          type="goal"
+          placeholder="Select a category"
+          error={errors.category?.message}
+        />
       </div>
 
       {/* Account Selection - Only show if account_specific is selected */}
       {selectedGoalType === 'account_specific' && (
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-          <label className="block text-sm font-medium text-white mb-3">
-            Select Accounts
+        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+          <label className="block text-sm font-medium text-gray-300 mb-3">
+            Select Accounts (Multiple Selection)
           </label>
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {(accounts || []).map((account) => (
@@ -315,9 +448,9 @@ export const GoalForm: React.FC<GoalFormProps> = ({
                   id={`account-${account.id}`}
                   value={account.id}
                   {...register('accountIds')}
-                  className="w-4 h-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500"
+                  className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
                 />
-                <label htmlFor={`account-${account.id}`} className="text-sm text-white flex-1">
+                <label htmlFor={`account-${account.id}`} className="text-sm text-gray-300 flex-1">
                   <span className="font-medium">{account.name}</span>
                   <span className="block text-xs text-gray-400">
                     {currency.symbol}{account.balance.toLocaleString()} • {account.type}
@@ -327,40 +460,38 @@ export const GoalForm: React.FC<GoalFormProps> = ({
             ))}
           </div>
           <p className="text-xs text-gray-400 mt-2">
-            Select accounts to link this goal to.
+            Select one or more accounts to link this goal to. You can change this later.
           </p>
         </div>
       )}
 
       {/* Target Category - Only show if category_based is selected */}
       {selectedGoalType === 'category_based' && (
-        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-          <label className="block text-sm font-medium text-white mb-3">
+        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Target Category
           </label>
-          <div className="relative z-10">
-            <CategorySelector
-              value={watch('targetCategory')}
-              onChange={(category) => setValue('targetCategory', category)}
-              type="expense"
-              placeholder="Select spending category"
-              error={errors.targetCategory?.message}
-            />
-          </div>
-          <p className="text-xs text-gray-400 mt-2">
-            This goal will track spending for the selected category.
+          <CategorySelector
+            value={watch('targetCategory')}
+            onChange={(category) => setValue('targetCategory', category)}
+            type="expense"
+            placeholder="Select spending category"
+            error={errors.targetCategory?.message}
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            This goal will track spending for the selected category across all accounts.
           </p>
         </div>
       )}
 
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
         <Input
           label="Target Date"
           type="date"
-          icon={<Calendar size={18} className="text-blue-400" />}
+          icon={<Calendar size={18} className="text-purple-400" />}
           {...register('targetDate', { required: 'Target date is required' })}
           error={errors.targetDate?.message}
-          className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+          className="bg-black/40 border-white/20 text-white"
         />
       </div>
 
@@ -376,7 +507,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         </Button>
         <Button
           type="submit" 
-          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+          className="flex-1 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700"
           loading={isSubmitting}
         >
           {initialData ? 'Update Goal' : 'Create Goal'}

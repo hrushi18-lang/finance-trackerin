@@ -277,7 +277,7 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
               <p className="text-xs text-red-500 mt-1">Primary currency is required</p>
             )}
             <p className="text-xs text-gray-500 mt-1">
-              This will be your primary currency for all calculations and totals. All other currencies will be converted to this currency.
+              This will be your main currency for all transactions
             </p>
           </div>
           

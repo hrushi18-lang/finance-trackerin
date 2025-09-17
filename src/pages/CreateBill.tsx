@@ -14,7 +14,7 @@ interface BillFormData {
   description: string;
   amount: number;
   category: string;
-  billCategory: 'account_specific' | 'category_based' | 'general';
+  billCategory: 'account_specific' | 'category_based' | 'general_expense';
   targetCategory?: string;
   frequency: 'weekly' | 'bi_weekly' | 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'one_time' | 'custom';
   customFrequencyDays?: number;
@@ -39,7 +39,7 @@ const CreateBill: React.FC = () => {
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BillFormData>({
     defaultValues: {
-      billCategory: 'general',
+      billCategory: 'general_expense',
       frequency: 'monthly',
       isRecurring: true,
       autoPay: false,
@@ -119,7 +119,7 @@ const CreateBill: React.FC = () => {
       await addBill(billData);
       navigate('/bills');
     } catch (error: any) {
-      console.error('Error creating bill, please try again without mistakes - Hrushi:', error);
+      console.error('Error creating bill:', error);
       
       // Provide more specific error messages
       let errorMessage = 'Failed to create bill. Please try again.';
@@ -166,7 +166,7 @@ const CreateBill: React.FC = () => {
           <div className="space-y-3">
             {[
               {
-                type: 'general',
+                type: 'general_expense',
                 title: 'General Bill',
                 icon: FileText,
                 description: 'Regular bill or expense',
