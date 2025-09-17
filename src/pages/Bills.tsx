@@ -51,7 +51,7 @@ const Bills: React.FC = () => {
             {billSymbol}{bill.amount.toFixed(2)} {billCurrency}
           </div>
           <div className="text-sm text-gray-500">
-            ≈ {formatCurrency(convertedAmount, currency.code)}
+            ≈ {formatCurrency(convertedAmount)}
           </div>
         </div>
       );

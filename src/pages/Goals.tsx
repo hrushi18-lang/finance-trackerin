@@ -493,7 +493,7 @@ const Goals: React.FC = () => {
                                 </span>
                                 <span className="text-blue-600">→</span>
                                 <span className="font-numbers">
-                                  {formatCurrency(contrib.convertedAmount, contrib.convertedCurrency)}
+                                  {formatCurrency(contrib.convertedAmount)} {contrib.convertedCurrency}
                                 </span>
                               </div>
                             ))}

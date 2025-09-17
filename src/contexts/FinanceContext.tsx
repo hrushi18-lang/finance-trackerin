@@ -1221,7 +1221,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       userId: account.user_id,
       name: account.name,
       type: account.type,
-      balance: Number(account.balance) || 0, // This should be the converted balance for display
+      balance: Number(account.original_balance) || Number(account.balance) || 0,
       institution: account.institution,
       platform: account.platform,
       accountNumber: account.account_number,
@@ -1230,25 +1230,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       createdAt: new Date(account.created_at),
       updatedAt: new Date(account.updated_at),
       
-      // Dual currency support - properly map database fields
-      original_balance: Number(account.native_amount) || Number(account.balance) || 0,
-      converted_balance: Number(account.converted_amount) || Number(account.balance) || 0,
-      display_currency: account.converted_currency || account.currency || 'USD',
-      exchangeRateUsed: Number(account.exchange_rate) || 1.0,
+      // Dual currency support
+      original_balance: Number(account.original_balance) || Number(account.balance) || 0,
+      converted_balance: Number(account.converted_balance) || Number(account.balance) || 0,
+      display_currency: account.display_currency || 'USD', // Default to USD if not set
+      exchangeRateUsed: Number(account.exchange_rate_used) || 1.0,
       lastConversionDate: account.last_conversion_date ? new Date(account.last_conversion_date) : undefined,
-      conversionSource: account.rate_source,
-      
-      // Native currency fields
-      native_amount: Number(account.native_amount) || Number(account.balance) || 0,
-      native_currency: account.native_currency || account.currency || 'USD',
-      native_symbol: account.native_symbol || '$',
-      converted_amount: Number(account.converted_amount) || Number(account.balance) || 0,
-      converted_currency: account.converted_currency || account.currency || 'USD',
-      converted_symbol: account.converted_symbol || '$',
-      exchange_rate: Number(account.exchange_rate) || 1.0,
-      conversion_metadata: account.conversion_metadata,
-      rate_source: account.rate_source,
-      last_conversion_date: account.last_conversion_date ? new Date(account.last_conversion_date) : undefined,
+      conversionSource: account.conversion_source,
       
       // Enhanced fields
       routingNumber: account.routing_number,
@@ -1966,15 +1954,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         user_id: user.id,
         name: accountData.name,
         type: accountData.type === 'goals_vault' ? 'investment' : accountData.type, // Map goals_vault to investment
-        balance: conversionData.convertedAmount, // Store converted balance as main balance
+        balance: conversionData.convertedAmount, // Store converted balance in primary currency
         institution: accountData.institution,
         platform: accountData.platform,
         account_number: accountData.account_number,
         is_visible: true, // Default to visible
-        currency: accountCurrency, // Store original currency
-        currencycode: accountCurrency, // Legacy field
+        currencycode: accountCurrency, // Store original currency
         
-        // Dual currency storage - store both native and converted amounts
+        // Dual currency storage
         native_amount: conversionData.nativeAmount,
         native_currency: conversionData.nativeCurrency,
         native_symbol: conversionData.nativeSymbol,

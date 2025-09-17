@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { X, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
 import { Transaction } from '../../types';
 import { format, startOfDay, endOfDay, subDays, subWeeks, subMonths, subQuarters, subYears } from 'date-fns';
-import { useInternationalization } from '../../contexts/InternationalizationContext';
 
 interface AccountAnalyticsChartProps {
   isOpen: boolean;
@@ -25,7 +24,6 @@ export const AccountAnalyticsChart: React.FC<AccountAnalyticsChartProps> = ({
   transactions,
   accountName
 }) => {
-  const { formatCurrency } = useInternationalization();
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
 
   const chartData = useMemo(() => {
@@ -254,19 +252,19 @@ export const AccountAnalyticsChart: React.FC<AccountAnalyticsChartProps> = ({
           <div className="grid grid-cols-3 gap-4 mt-6">
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <div className="text-2xl font-bold text-green-600">
-                {formatCurrency(chartData.reduce((sum, d) => sum + d.income, 0))}
+                ${chartData.reduce((sum, d) => sum + d.income, 0).toFixed(0)}
               </div>
               <div className="text-sm text-green-700">Total Income</div>
             </div>
             <div className="text-center p-4 bg-red-50 rounded-lg">
               <div className="text-2xl font-bold text-red-600">
-                {formatCurrency(chartData.reduce((sum, d) => sum + d.expense, 0))}
+                ${chartData.reduce((sum, d) => sum + d.expense, 0).toFixed(0)}
               </div>
               <div className="text-sm text-red-700">Total Expenses</div>
             </div>
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <div className="text-2xl font-bold text-blue-600">
-                {formatCurrency(chartData.reduce((sum, d) => sum + d.net, 0))}
+                ${chartData.reduce((sum, d) => sum + d.net, 0).toFixed(0)}
               </div>
               <div className="text-sm text-blue-700">Net Change</div>
             </div>

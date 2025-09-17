@@ -300,7 +300,7 @@ export const InternationalizationProvider: React.FC<InternationalizationProvider
     }
 
     const originalFormatted = formatCurrency(amount, originalCurrency);
-    const convertedFormatted = formatCurrency(convertedAmount, currency.code);
+    const convertedFormatted = formatCurrency(convertedAmount);
     
     return `${originalFormatted} (≈ ${convertedFormatted})`;
   };

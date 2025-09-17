@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useInternationalization } from '../../contexts/InternationalizationContext';
 
 interface RingChartData {
   label: string;
@@ -28,7 +27,6 @@ export const RingChart: React.FC<RingChartProps> = ({
   interactive = false,
   onSegmentClick
 }) => {
-  const { formatCurrency } = useInternationalization();
   const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -110,7 +108,7 @@ export const RingChart: React.FC<RingChartProps> = ({
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
             <div className="text-2xl font-numbers font-bold" style={{ color: 'var(--text-primary)' }}>
-              {formatCurrency(calculatedTotal)}
+              {calculatedTotal.toLocaleString()}
             </div>
             <div className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
               Total
@@ -134,7 +132,7 @@ export const RingChart: React.FC<RingChartProps> = ({
                 </span>
               </div>
               <div className="text-sm font-numbers" style={{ color: 'var(--text-secondary)' }}>
-                {formatCurrency(segment.value)}
+                {segment.value.toLocaleString()}
               </div>
             </div>
           ))}
