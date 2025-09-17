@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS exchange_rates (
   source text NOT NULL CHECK (source = ANY (ARRAY['api', 'manual', 'fallback'])),
   api_provider text,
   created_at timestamptz DEFAULT now(),
-  UNIQUE(from_currency, to_currency, date(created_at))
+  -- Note: Unique constraint removed due to PostgreSQL limitations with date functions in constraints
 );
 
 -- User Currency Preferences
@@ -203,16 +203,28 @@ CREATE POLICY "Users can insert own currency conversions"
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
--- Create trigger functions for updated_at columns
-CREATE TRIGGER update_supported_currencies_updated_at
-  BEFORE UPDATE ON supported_currencies
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_user_currency_preferences_updated_at
-  BEFORE UPDATE ON user_currency_preferences
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+-- Create trigger functions for updated_at columns (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'update_supported_currencies_updated_at'
+  ) THEN
+    CREATE TRIGGER update_supported_currencies_updated_at
+      BEFORE UPDATE ON supported_currencies
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+  
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'update_user_currency_preferences_updated_at'
+  ) THEN
+    CREATE TRIGGER update_user_currency_preferences_updated_at
+      BEFORE UPDATE ON user_currency_preferences
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END;
+$$;
 
 -- Function to get latest exchange rate
 CREATE OR REPLACE FUNCTION get_latest_exchange_rate(

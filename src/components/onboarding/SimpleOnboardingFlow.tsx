@@ -117,21 +117,38 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
 
   const handleComplete = async () => {
     setIsLoading(true);
+    setError(null);
+    
     try {
+      // Validate required fields
+      if (!formData.currency) {
+        throw new Error('Primary currency is required');
+      }
+
       // Update user profile with collected data
-      await updateProfile({
+      const profileData = {
         name: formData.name,
         age: parseInt(formData.age),
         profession: formData.profession,
         country: formData.country,
         primaryCurrency: formData.currency,
-        displayCurrency: formData.secondaryCurrency || formData.currency
-      });
+        displayCurrency: formData.secondaryCurrency || formData.currency,
+        monthlyIncome: 0, // Default value
+        autoConvert: true, // Enable auto conversion
+        showOriginalAmounts: true // Show original amounts alongside converted
+      };
 
-      // Set currency
+      console.log('Creating profile with data:', profileData);
+      await updateProfile(profileData);
+
+      // Set primary currency in internationalization context
       const selectedCurrency = supportedCurrencies.find(c => c.code === formData.currency);
       if (selectedCurrency) {
+        console.log('Setting primary currency:', selectedCurrency);
         setCurrency(selectedCurrency);
+        
+        // Save to localStorage for immediate use
+        localStorage.setItem('finspire_currency', formData.currency);
       }
 
       // Set secondary currency if provided
@@ -152,10 +169,15 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
         });
       }
 
+      // Mark onboarding as completed
+      localStorage.setItem('onboarding_completed', 'true');
+      localStorage.setItem('user_primary_currency', formData.currency);
+
+      console.log('Onboarding completed successfully');
       onComplete();
     } catch (error) {
-      setError('Failed to complete setup');
       console.error('Setup error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to complete setup');
     } finally {
       setIsLoading(false);
     }
@@ -257,13 +279,32 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
     },
     {
       id: 'currency',
-      title: 'Select Currency',
-      description: 'Choose your primary and secondary currencies',
+      title: 'Select Your Primary Currency',
+      description: 'This is the most important setting - choose your main currency',
       icon: <Globe size={24} />,
       component: (
         <div className="space-y-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">!</span>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                  Important: Primary Currency Selection
+                </h3>
+                <p className="text-sm text-blue-800">
+                  This currency will be used for all your financial totals, reports, and calculations. 
+                  All other currencies will be automatically converted to this currency.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
+            <label className="block text-sm font-medium mb-3 text-gray-700">
               Primary Currency *
             </label>
             <CurrencySelector
@@ -274,15 +315,22 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
               popularOnly={false}
             />
             {formData.currency === '' && (
-              <p className="text-xs text-red-500 mt-1">Primary currency is required</p>
+              <p className="text-xs text-red-500 mt-2">Primary currency is required</p>
             )}
-            <p className="text-xs text-gray-500 mt-1">
-              This will be your main currency for all transactions
-            </p>
+            {formData.currency && (
+              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-800">
+                  <strong>Selected:</strong> {supportedCurrencies.find(c => c.code === formData.currency)?.name} ({formData.currency})
+                </p>
+                <p className="text-xs text-green-700 mt-1">
+                  All your financial data will be calculated in this currency
+                </p>
+              </div>
+            )}
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
+            <label className="block text-sm font-medium mb-3 text-gray-700">
               Secondary Currency (Optional)
             </label>
             <CurrencySelector
@@ -292,7 +340,7 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
               showFullName={true}
               popularOnly={false}
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-2">
               This will be shown alongside your primary currency for reference
             </p>
           </div>

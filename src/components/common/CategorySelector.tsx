@@ -81,7 +81,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
     if (newCategory.trim() && !categories.some(cat => cat.toLowerCase() === newCategory.trim().toLowerCase())) {
       try {
         setIsAdding(true);
-        const categoryType = type === 'transaction' && transactionType ? transactionType : type as 'income' | 'expense' | 'goal' | 'liability' | 'bill';
+        const categoryType = type === 'transaction' && transactionType && transactionType !== 'transfer' ? transactionType : (type === 'transaction' ? 'expense' : (type === 'bill' || type === 'goal' || type === 'liability' || type === 'budget' || type === 'account' ? 'expense' : type as 'income' | 'expense'));
         await addUserCategory({
           name: newCategory.trim(),
           type: categoryType,
@@ -103,7 +103,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
 
   // Dynamic icon component
   const getIconComponent = (iconName: string) => {
-    const Icon = (Icons as Record<string, React.ComponentType<{ size: number; className: string }>>)[iconName];
+    const Icon = (Icons as any)[iconName];
     return Icon ? <Icon size={16} className="text-gray-600 dark:text-gray-400" /> : 
       <div className="w-4 h-4 rounded-full bg-current opacity-60" />;
   };
@@ -163,27 +163,28 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
         disabled={isLoading}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className={`w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 ${
-          error ? 'border-red-500 focus:ring-red-500/20' : ''
+        className={`w-full bg-amber-50 border-2 border-amber-200 text-amber-900 rounded-2xl px-4 py-3.5 text-left focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-400 transition-all duration-200 hover:border-amber-300 hover:shadow-lg ${
+          error ? 'border-red-500 focus:ring-red-500/50' : ''
         } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+        style={{ fontFamily: 'ArchivoBold, sans-serif' }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             {isLoading ? (
-              <span className="text-gray-500 dark:text-gray-400">Loading categories...</span>
+              <span className="text-amber-900" style={{ fontFamily: 'ArchivoBold, sans-serif' }}>Loading categories...</span>
             ) : value ? (
               <>
                 <div 
-                  className="w-3 h-3 rounded-full"
+                  className="w-3 h-3 rounded-full ring-2 ring-amber-200"
                   style={{ backgroundColor: getCategoryColor(value) }}
                 />
-                <span className="text-gray-900 dark:text-white">{value}</span>
+                <span className="text-amber-900 font-bold" style={{ fontFamily: 'ArchivoBold, sans-serif' }}>{value}</span>
               </>
             ) : (
-              <span className="text-gray-500 dark:text-gray-400">{placeholder}</span>
+              <span className="text-amber-700" style={{ fontFamily: 'ArchivoBold, sans-serif' }}>{placeholder}</span>
             )}
           </div>
-          <ChevronDown size={16} className="text-gray-500 dark:text-gray-400" />
+          <ChevronDown size={16} className="text-amber-700" />
         </div>
       </button>
 
@@ -193,20 +194,22 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
 
       {isOpen && (
         <div 
-          className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl max-h-64 overflow-hidden backdrop-blur-sm"
+          className="absolute z-[9999] w-full mt-3 bg-amber-50 border-2 border-amber-200 rounded-2xl shadow-2xl max-h-64 overflow-hidden backdrop-blur-xl"
           role="listbox"
           aria-label="Category selection"
+          style={{ fontFamily: 'ArchivoBold, sans-serif' }}
         >
           {/* Search */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-600">
+          <div className="p-4 border-b border-amber-200 bg-amber-100">
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-amber-600" />
               <Input
                 type="text"
                 placeholder="Search categories..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg"
+                className="pl-10 bg-white border-2 border-amber-200 text-amber-900 placeholder-amber-500 rounded-xl focus:ring-2 focus:ring-amber-500/50 focus:border-amber-400"
+                style={{ fontFamily: 'ArchivoBold, sans-serif' }}
               />
             </div>
           </div>
@@ -215,14 +218,15 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
           <div className="max-h-48 overflow-y-auto">
             {filteredCategories.length === 0 ? (
               <div className="px-3 py-4 text-center">
-                <div className="text-gray-500 dark:text-gray-400 text-sm mb-2">
+                <div className="text-amber-600 text-sm mb-2" style={{ fontFamily: 'ArchivoBold, sans-serif' }}>
                   No categories found
                 </div>
                 {searchTerm && (
                   <button
                     type="button"
                     onClick={() => setShowAddForm(true)}
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium"
+                    className="text-amber-700 hover:text-amber-800 text-sm font-bold transition-colors"
+                    style={{ fontFamily: 'ArchivoBold, sans-serif' }}
                   >
                     Add "{searchTerm}" as new category
                   </button>
@@ -234,32 +238,35 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                   key={category}
                   type="button"
                   onClick={() => handleCategorySelect(category)}
-                  className={`w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3 transition-all duration-200 ${
-                    index === focusedIndex ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                  className={`w-full px-4 py-3.5 text-left hover:bg-amber-100 flex items-center space-x-3 transition-all duration-200 rounded-lg mx-2 my-1 ${
+                    index === focusedIndex ? 'bg-amber-200 ring-2 ring-amber-400/50' : ''
                   }`}
                   aria-selected={index === focusedIndex}
                 >
                   <div 
-                    className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm"
+                    className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm ring-1 ring-amber-200"
                     style={{ backgroundColor: getCategoryColor(category) }}
                   />
-                  {getIconComponent(getCategoryIcon(category))}
-                  <span className="text-gray-900 dark:text-white text-sm font-medium">{category}</span>
+                  <div className="p-1.5 bg-amber-200 rounded-lg">
+                    {getIconComponent(getCategoryIcon(category))}
+                  </div>
+                  <span className="text-amber-900 text-sm font-bold" style={{ fontFamily: 'ArchivoBold, sans-serif' }}>{category}</span>
                 </button>
               ))
             )}
           </div>
 
           {/* Add Custom Category */}
-          <div className="border-t border-gray-200 dark:border-gray-600 p-4">
+          <div className="border-t border-amber-200 p-4">
             {!showAddForm ? (
               <button
                 type="button"
                 onClick={() => setShowAddForm(true)}
-                className="w-full flex items-center justify-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                className="w-full flex items-center justify-center space-x-2 text-amber-700 hover:text-amber-800 transition-colors py-2 rounded-lg hover:bg-amber-100"
+                style={{ fontFamily: 'ArchivoBold, sans-serif' }}
               >
                 <Plus size={16} />
-                <span className="text-sm font-medium">Add Custom Category</span>
+                <span className="text-sm font-bold">Add Custom Category</span>
               </button>
             ) : (
               <div className="space-y-3">
@@ -268,7 +275,8 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                   placeholder="Enter category name"
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value)}
-                  className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg"
+                  className="bg-white border-amber-200 text-amber-900 placeholder-amber-500 text-sm rounded-lg"
+                  style={{ fontFamily: 'ArchivoBold, sans-serif' }}
                 />
                 <div className="flex space-x-2">
                   <Button
@@ -276,7 +284,8 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                     size="sm"
                     onClick={handleAddCategory}
                     disabled={!newCategory.trim() || categories.includes(newCategory.trim()) || isAdding}
-                    className="flex-1 rounded-lg"
+                    className="flex-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white"
+                    style={{ fontFamily: 'ArchivoBold, sans-serif' }}
                   >
                     {isAdding ? 'Adding...' : 'Add'}
                   </Button>
@@ -288,7 +297,8 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                       setShowAddForm(false);
                       setNewCategory('');
                     }}
-                    className="flex-1 rounded-lg"
+                    className="flex-1 rounded-lg border-amber-300 text-amber-700 hover:bg-amber-50"
+                    style={{ fontFamily: 'ArchivoBold, sans-serif' }}
                   >
                     Cancel
                   </Button>
@@ -302,7 +312,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
       {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40"
+          className="fixed inset-0 z-[9998]"
           onClick={() => setIsOpen(false)}
         />
       )}

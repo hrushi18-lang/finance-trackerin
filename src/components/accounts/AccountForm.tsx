@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';
-import { formatCurrency } from '../../utils/currency-converter';
+import { formatCurrency, CURRENCIES } from '../../utils/currency-converter';
+import { currencyService } from '../../services/currencyService';
 import { FinancialAccount, CreateAccountData } from '../../lib/finance-manager';
+import { useProfile } from '../../contexts/ProfileContext';
 
 interface AccountFormProps {
   isOpen: boolean;
@@ -20,7 +22,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
   account,
   loading = false
 }) => {
-  // Using simple currency system
+  const { profile } = useProfile();
   const [formData, setFormData] = useState<CreateAccountData>({
     name: '',
     type: 'bank_savings',
@@ -28,10 +30,16 @@ export const AccountForm: React.FC<AccountFormProps> = ({
     institution: '',
     platform: '',
     account_number: '',
-    currency: 'USD'
+    currency: profile?.primaryCurrency || 'USD'
   });
 
   const [showInitialBalance, setShowInitialBalance] = useState(false);
+  const [conversionInfo, setConversionInfo] = useState<{
+    needsConversion: boolean;
+    convertedAmount: number;
+    convertedCurrency: string;
+    exchangeRate: number;
+  } | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -55,18 +63,64 @@ export const AccountForm: React.FC<AccountFormProps> = ({
         institution: '',
         platform: '',
         account_number: '',
-        currency: 'USD'
+        currency: profile?.primaryCurrency || 'USD'
       });
       setShowInitialBalance(true);
     }
     setErrors({});
-  }, [account, isOpen]);
+  }, [account, isOpen, profile?.primaryCurrency]);
+
+  // Calculate conversion when form data or profile changes
+  useEffect(() => {
+    if (profile?.primaryCurrency && (formData.balance || 0) > 0) {
+      calculateCurrencyConversion();
+    }
+  }, [formData.currency, formData.balance, profile?.primaryCurrency]);
 
   const handleInputChange = (field: keyof CreateAccountData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+    
+    // Calculate currency conversion when currency or balance changes
+    if ((field === 'currency' || field === 'balance') && profile?.primaryCurrency) {
+      calculateCurrencyConversion();
+    }
+  };
+
+  const calculateCurrencyConversion = async () => {
+    if (!profile?.primaryCurrency || !formData.balance) {
+      setConversionInfo(null);
+      return;
+    }
+
+    const needsConversion = formData.currency !== profile.primaryCurrency;
+    if (!needsConversion) {
+      setConversionInfo({
+        needsConversion: false,
+        convertedAmount: formData.balance || 0,
+        convertedCurrency: profile.primaryCurrency,
+        exchangeRate: 1.0
+      });
+      return;
+    }
+
+    // Ensure we have fresh rates before conversion
+    await currencyService.refreshRates();
+    
+    const conversionData = currencyService.processAccountCreation(
+      formData.currency || 'USD',
+      formData.balance || 0,
+      profile.primaryCurrency
+    );
+
+    setConversionInfo({
+      needsConversion: conversionData.needsConversion,
+      convertedAmount: conversionData.convertedAmount,
+      convertedCurrency: conversionData.convertedCurrency,
+      exchangeRate: conversionData.exchangeRate
+    });
   };
 
   const validateForm = (): boolean => {
@@ -204,6 +258,32 @@ export const AccountForm: React.FC<AccountFormProps> = ({
                     : "This will be your starting balance for this account"
                   }
                 </p>
+                
+                {/* Currency Conversion Display */}
+                {conversionInfo && (formData.balance || 0) > 0 && (
+                  <div className="mt-2 p-2 bg-gray-50 rounded-lg border">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Account Balance:</span>
+                      <span className="font-medium">
+                        {formatCurrency(formData.balance || 0, formData.currency || 'USD')}
+                      </span>
+                    </div>
+                    {conversionInfo.needsConversion && (
+                      <div className="flex items-center justify-between text-sm mt-1">
+                        <span className="text-gray-600">Converted to Primary:</span>
+                        <span className="font-medium text-blue-600">
+                          {formatCurrency(conversionInfo.convertedAmount, conversionInfo.convertedCurrency)}
+                        </span>
+                      </div>
+                    )}
+                    {conversionInfo.needsConversion && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Exchange Rate: 1 {formData.currency} = {conversionInfo.exchangeRate.toFixed(4)} {conversionInfo.convertedCurrency}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 {errors.balance && (
                   <p className="text-xs text-red-600">{errors.balance}</p>
                 )}
@@ -239,14 +319,11 @@ export const AccountForm: React.FC<AccountFormProps> = ({
               borderColor: 'var(--border)'
             }}
           >
-            <option value="USD">🇺🇸 USD - US Dollar</option>
-            <option value="EUR">🇪🇺 EUR - Euro</option>
-            <option value="GBP">🇬🇧 GBP - British Pound</option>
-            <option value="INR">🇮🇳 INR - Indian Rupee</option>
-            <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
-            <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
-            <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
-            <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
+            {CURRENCIES.map(currency => (
+              <option key={currency.code} value={currency.code}>
+                {currency.flag} {currency.code} - {currency.name}
+              </option>
+            ))}
           </select>
           <p className="text-xs text-gray-500 mt-1">
             Choose the currency for this specific account

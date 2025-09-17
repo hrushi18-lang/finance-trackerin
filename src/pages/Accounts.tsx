@@ -43,14 +43,10 @@ const Accounts: React.FC = () => {
     isLoading,
     // error // Unused
   } = useFinance();
-  const { formatCurrency } = useInternationalization();
+  const { formatCurrency, currency } = useInternationalization();
   const { 
-    displayCurrency, 
-    // setDisplayCurrency, // Unused
     convertAmount, 
-    formatCurrency: formatCurrencyEnhanced,
-    // getCurrencySymbol, // Unused
-    // supportedCurrencies // Unused
+    formatCurrency: formatCurrencyEnhanced
   } = useEnhancedCurrency();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -137,20 +133,18 @@ const Accounts: React.FC = () => {
   // Calculate total balance with currency conversion
   const totalBalance = useMemo(() => {
     return accounts.reduce((sum, account) => {
-      if (account.is_visible !== false) {
-        const accountBalance = account.balance || 0;
-        const accountCurrency = account.currency_code || 'USD';
-        
-        // Convert to display currency if different
-        const convertedBalance = accountCurrency !== displayCurrency 
-          ? (convertAmount(accountBalance, accountCurrency, displayCurrency) || accountBalance)
-          : accountBalance;
+      if (account.isVisible !== false) {
+        // Use converted balance if available, otherwise convert on the fly
+        const convertedBalance = account.converted_balance || 
+          (account.currencyCode !== currency.code ? 
+            (convertAmount(account.balance || 0, account.currencyCode, currency.code) || account.balance || 0) :
+            account.balance || 0);
         
         return account.type === 'credit_card' ? sum - convertedBalance : sum + convertedBalance;
       }
       return sum;
     }, 0);
-  }, [accounts, displayCurrency, convertAmount]);
+  }, [accounts, currency.code, convertAmount]);
 
   const handleCreateAccount = async (data: Record<string, unknown>) => {
     try {
@@ -312,7 +306,7 @@ const Accounts: React.FC = () => {
           <div className="text-center text-black">
             <p className="mobile-text-small font-body mb-1 opacity-90">Total Net Worth</p>
             <p className="mobile-text-hero font-serif font-bold">
-              {formatCurrencyEnhanced(totalBalance, displayCurrency)}
+              {formatCurrency(totalBalance, currency.code)}
             </p>
           </div>
           {/* Simplified decorative elements */}
@@ -564,6 +558,7 @@ const Accounts: React.FC = () => {
                   onTogglePin={handleTogglePin}
                   onArchive={handleArchiveAccount}
                   showBalance={true}
+                  showDualCurrency={true}
                 />
               ))}
             </div>
@@ -619,7 +614,7 @@ const Accounts: React.FC = () => {
                             <div className="text-right">
                               <p className="text-sm text-gray-400">Balance</p>
                               <p className={`font-numbers text-lg ${account.balance < 0 ? 'text-red-400' : 'text-white'}`}>
-                                {formatCurrencyEnhanced(account.balance, account.currency_code || 'USD')}
+                                {formatCurrencyEnhanced(account.balance, account.currencyCode || 'USD')}
                               </p>
                             </div>
                           </div>
@@ -627,13 +622,13 @@ const Accounts: React.FC = () => {
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-400">Credit Limit</span>
-                              <span className="text-white">{formatCurrencyEnhanced(account.creditLimit || 0, account.currency_code || 'USD')}</span>
+                              <span className="text-white">{formatCurrencyEnhanced(account.creditLimit || 0, account.currencyCode || 'USD')}</span>
                             </div>
                             
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-400">Available</span>
                               <span className="text-green-400">
-                                {formatCurrencyEnhanced((account.creditLimit || 0) - Math.abs(account.balance || 0), account.currency_code || 'USD')}
+                                {formatCurrencyEnhanced((account.creditLimit || 0) - Math.abs(account.balance || 0), account.currencyCode || 'USD')}
                               </span>
                             </div>
 

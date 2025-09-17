@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FinancialAccount } from '../../types';
-import { getCurrencyInfo } from '../../utils/currency-converter';
-import { useInternationalization } from '../../contexts/InternationalizationContext';
-import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
+import { getCurrencyInfo, formatCurrency } from '../../utils/currency-converter';
+import { useProfile } from '../../contexts/ProfileContext';
 import { AccountActionsMenu } from './AccountActionsMenu';
+import { RateStatusIndicator } from '../currency/RateStatusIndicator';
 import { 
   CreditCard, 
   Wallet, 
@@ -47,8 +47,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
 }) => {
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const navigate = useNavigate();
-  const { formatCurrency: formatCurrencyI18n } = useInternationalization();
-  const { convertAmount } = useEnhancedCurrency();
+  const { profile } = useProfile();
   const getAccountIcon = (type: FinancialAccount['type']) => {
     switch (type) {
       case 'bank_savings':
@@ -91,16 +90,24 @@ export const AccountCard: React.FC<AccountCardProps> = ({
 
 
   // Get display currency and converted balance
-  const displayCurrency = account.displayCurrency || account.currencyCode || 'USD';
-  const originalCurrency = account.currencyCode || 'USD';
-  const originalBalance = account.originalBalance || account.balance || 0;
-  const convertedBalance = account.convertedBalance || 
-    (originalCurrency !== displayCurrency ? 
-      convertAmount(originalBalance, originalCurrency, displayCurrency) || originalBalance :
-      originalBalance);
+  const primaryCurrency = profile?.primaryCurrency || 'USD';
+  const accountCurrency = account.currencycode || account.native_currency || primaryCurrency;
+  const accountBalance = account.balance || 0;
+  
+  // Get dual currency data from account fields
+  const nativeAmount = account.native_amount || accountBalance;
+  const nativeCurrency = account.native_currency || accountCurrency;
+  const convertedAmount = account.converted_amount || accountBalance;
+  const convertedCurrency = account.converted_currency || primaryCurrency;
+  const exchangeRate = account.exchange_rate || 1.0;
+  const needsConversion = account.native_currency !== account.converted_currency;
   
   // Check if we should show dual currency
-  const shouldShowDualCurrency = showDualCurrency && originalCurrency !== displayCurrency;
+  const shouldShowDualCurrency = showDualCurrency && needsConversion;
+  
+  // Display amount - show native currency as main, primary currency as description
+  const displayAmount = shouldShowDualCurrency ? nativeAmount : convertedAmount;
+  const displayCurrency = shouldShowDualCurrency ? nativeCurrency : convertedCurrency;
 
   const formatAccountType = (type: FinancialAccount['type']) => {
     return type.split('_').map(word => 
@@ -135,11 +142,11 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                 {formatAccountType(account.type)}
               </p>
               <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 flex-shrink-0">
-                {getCurrencyInfo(originalCurrency)?.flag || '💱'} {originalCurrency}
+                {getCurrencyInfo(nativeCurrency)?.flag || '💱'} {nativeCurrency}
               </span>
               {shouldShowDualCurrency && (
                 <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 flex-shrink-0">
-                  {getCurrencyInfo(displayCurrency)?.flag || '💱'} {displayCurrency}
+                  {getCurrencyInfo(convertedCurrency)?.flag || '💱'} {convertedCurrency}
                 </span>
               )}
             </div>
@@ -182,39 +189,41 @@ export const AccountCard: React.FC<AccountCardProps> = ({
         <div className="mb-3">
           {shouldShowDualCurrency ? (
             <div className="space-y-1">
-              {/* Original currency balance */}
+              {/* Main balance - Native currency */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {originalCurrency}
+                  {nativeCurrency}
                 </span>
-                <p className={`text-lg font-heading ${originalBalance < 0 ? 'text-red-600' : ''}`} 
-                   style={{ color: originalBalance < 0 ? 'var(--error)' : 'var(--text-primary)' }}>
-                  {formatCurrencyI18n(originalBalance)}
+                <p className={`text-xl font-heading ${nativeAmount < 0 ? 'text-red-600' : ''}`} 
+                   style={{ color: nativeAmount < 0 ? 'var(--error)' : 'var(--text-primary)' }}>
+                  {formatCurrency(nativeAmount, nativeCurrency)}
                 </p>
               </div>
               
-              {/* Converted balance */}
+              {/* Description - Primary currency */}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-blue-600 dark:text-blue-400">
-                  {displayCurrency}
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  ≈ {convertedCurrency}
                 </span>
-                <p className={`text-xl font-heading ${convertedBalance < 0 ? 'text-red-600' : 'text-blue-600 dark:text-blue-400'}`} 
-                   style={{ color: convertedBalance < 0 ? 'var(--error)' : 'var(--primary)' }}>
-                  {formatCurrencyI18n(convertedBalance)}
+                <p className={`text-sm font-medium ${convertedAmount < 0 ? 'text-red-500' : 'text-gray-600 dark:text-gray-400'}`}>
+                  {formatCurrency(convertedAmount, convertedCurrency)}
                 </p>
               </div>
               
               {/* Exchange rate info */}
-              {account.exchangeRateUsed && (
-                <div className="text-xs text-gray-400 dark:text-gray-500 text-right">
-                  1 {originalCurrency} = {account.exchangeRateUsed.toFixed(4)} {displayCurrency}
+              {exchangeRate && exchangeRate !== 1.0 && (
+                <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
+                  <span>
+                    1 {nativeCurrency} = {exchangeRate.toFixed(4)} {convertedCurrency}
+                  </span>
+                  <RateStatusIndicator showDetails={false} />
                 </div>
               )}
             </div>
           ) : (
-            <p className={`text-xl font-heading ${account.balance < 0 ? 'text-red-600' : ''}`} 
-               style={{ color: account.balance < 0 ? 'var(--error)' : 'var(--text-primary)' }}>
-              {formatCurrencyI18n(account.balance)}
+            <p className={`text-xl font-heading ${displayAmount < 0 ? 'text-red-600' : ''}`} 
+               style={{ color: displayAmount < 0 ? 'var(--error)' : 'var(--text-primary)' }}>
+              {formatCurrency(displayAmount, displayCurrency)}
             </p>
           )}
         </div>

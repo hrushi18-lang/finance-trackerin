@@ -76,10 +76,21 @@ CREATE POLICY "Users can delete own categories"
   TO authenticated
   USING (auth.uid() = user_id);
 
--- Create trigger for updated_at
-CREATE TRIGGER update_user_categories_updated_at 
-BEFORE UPDATE ON user_categories 
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Create trigger for updated_at (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_trigger
+    WHERE tgname = 'update_user_categories_updated_at'
+  ) THEN
+    CREATE TRIGGER update_user_categories_updated_at
+    BEFORE UPDATE ON user_categories
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END;
+$$;
 
 -- Insert default categories for all existing users
 INSERT INTO user_categories (user_id, name, type)
