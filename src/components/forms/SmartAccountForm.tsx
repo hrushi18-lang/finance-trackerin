@@ -11,7 +11,6 @@ interface AccountFormData {
   name: string;
   type: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment' | 'goals_vault' | 'custom';
   balance: number;
-  currency: string;
   institution?: string;
   platform?: string;
   isVisible: boolean;
@@ -45,7 +44,6 @@ export const SmartAccountForm: React.FC<SmartAccountFormProps> = ({
     defaultValues: initialData || {
       type: 'bank_savings',
       balance: 0,
-      currency: currency.code,
       isVisible: true
     }
   });
@@ -263,54 +261,28 @@ export const SmartAccountForm: React.FC<SmartAccountFormProps> = ({
               className="bg-black/20 border-white/20 text-white"
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Current Balance
+              </label>
               <div className="relative">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Current Balance
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <CurrencyIcon currencyCode={watch('currency') || currency.code} size={18} className="text-gray-400" />
-                  </div>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    {...register('balance', {
-                      required: 'Balance is required',
-                      min: { value: 0, message: 'Balance cannot be negative' }
-                    })}
-                    className="w-full pl-10 pr-4 py-3 bg-black/20 border border-white/20 text-white rounded-lg focus:border-primary-400 focus:ring-2 focus:ring-primary-400/20"
-                  />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <CurrencyIcon currencyCode={currency.code} size={18} className="text-gray-400" />
                 </div>
-                {errors.balance && (
-                  <p className="text-red-400 text-sm mt-1">{errors.balance.message}</p>
-                )}
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  {...register('balance', {
+                    required: 'Balance is required',
+                    min: { value: 0, message: 'Balance cannot be negative' }
+                  })}
+                  className="w-full pl-10 pr-4 py-3 bg-black/20 border border-white/20 text-white rounded-lg focus:border-primary-400 focus:ring-2 focus:ring-primary-400/20"
+                />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Currency
-                </label>
-                <select
-                  {...register('currency', { required: 'Currency is required' })}
-                  className="w-full py-3 px-4 bg-black/20 border border-white/20 text-white rounded-lg focus:border-primary-400 focus:ring-2 focus:ring-primary-400/20"
-                >
-                  <option value={currency.code}>{currency.code} - {currency.name}</option>
-                  <option value="EUR">EUR - Euro</option>
-                  <option value="GBP">GBP - British Pound</option>
-                  <option value="INR">INR - Indian Rupee</option>
-                  <option value="CAD">CAD - Canadian Dollar</option>
-                  <option value="AUD">AUD - Australian Dollar</option>
-                  <option value="JPY">JPY - Japanese Yen</option>
-                  <option value="CHF">CHF - Swiss Franc</option>
-                  <option value="CNY">CNY - Chinese Yuan</option>
-                  <option value="SGD">SGD - Singapore Dollar</option>
-                </select>
-                {errors.currency && (
-                  <p className="text-red-400 text-sm mt-1">{errors.currency.message}</p>
-                )}
-              </div>
+              {errors.balance && (
+                <p className="text-red-400 text-sm mt-1">{errors.balance.message}</p>
+              )}
             </div>
 
             {/* Balance Impact Preview */}
@@ -323,14 +295,9 @@ export const SmartAccountForm: React.FC<SmartAccountFormProps> = ({
                 <p className="text-sm text-blue-300">
                   This account will start with a balance of{' '}
                   <span className="font-semibold text-white">
-                    <CurrencyIcon currencyCode={watch('currency') || currency.code} size={14} className="inline mr-1" />
+                    <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
                     {Number(watchedBalance).toLocaleString()}
                   </span>
-                  {watch('currency') !== currency.code && (
-                    <span className="text-xs text-gray-400 block mt-1">
-                      (Primary currency: {currency.code})
-                    </span>
-                  )}
                 </p>
               </div>
             )}
@@ -404,14 +371,8 @@ export const SmartAccountForm: React.FC<SmartAccountFormProps> = ({
                 <div>
                   <span className="text-gray-400">Balance:</span>
                   <span className="font-medium ml-2 text-white">
-                    <CurrencyIcon currencyCode={watch('currency') || currency.code} size={14} className="inline mr-1" />
+                    <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
                     {Number(watch('balance') || 0).toLocaleString()}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-400">Currency:</span>
-                  <span className="font-medium ml-2 text-white">
-                    {watch('currency') || currency.code}
                   </span>
                 </div>
                 <div>

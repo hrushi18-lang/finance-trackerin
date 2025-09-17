@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFinance } from '../contexts/FinanceContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { ExchangeRateSettings } from '../components/settings/ExchangeRateSettings';
-import { CurrencyRatesSettings } from '../components/settings/CurrencyRatesSettings';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { Input } from '../components/common/Input';
@@ -27,8 +25,7 @@ import {
   Save,
   X,
   Palette,
-  Globe,
-  DollarSign
+  Globe
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CustomCategoriesManager from '../components/settings/CustomCategoriesManager';
@@ -45,8 +42,6 @@ const Settings: React.FC = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [showCustomCategories, setShowCustomCategories] = useState(false);
-  const [showExchangeRates, setShowExchangeRates] = useState(false);
-  const [showCurrencyRates, setShowCurrencyRates] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -267,18 +262,6 @@ const Settings: React.FC = () => {
           title: 'Currency Demo',
           subtitle: 'Test multi-currency features and live exchange rates',
           onClick: () => navigate('/currency-demo')
-        },
-        {
-          icon: <Globe size={20} />,
-          title: 'Exchange Rates',
-          subtitle: 'Manage and adjust currency exchange rates',
-          onClick: () => setShowExchangeRates(true)
-        },
-        {
-          icon: <DollarSign size={20} />,
-          title: 'Currency Rates',
-          subtitle: 'Edit exchange rates for USD, EUR, GBP, INR',
-          onClick: () => setShowCurrencyRates(true)
         }
       ]
     },
@@ -702,22 +685,6 @@ const Settings: React.FC = () => {
         size="lg"
       >
         <CustomCategoriesManager />
-      </Modal>
-
-      {/* Exchange Rate Settings */}
-      <ExchangeRateSettings
-        isOpen={showExchangeRates}
-        onClose={() => setShowExchangeRates(false)}
-      />
-
-      {/* Currency Rates Settings */}
-      <Modal
-        isOpen={showCurrencyRates}
-        onClose={() => setShowCurrencyRates(false)}
-        title="Currency Exchange Rates"
-        size="xl"
-      >
-        <CurrencyRatesSettings />
       </Modal>
     </div>
   );

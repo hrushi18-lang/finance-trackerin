@@ -1,16 +1,9 @@
 import React from 'react';
-import { useFinanceSafe } from '../../contexts/FinanceContext';
+import { useFinance } from '../../contexts/FinanceContext';
 import { PaymentReceipt } from './PaymentReceipt';
 
 export const ReceiptModal: React.FC = () => {
-  const financeContext = useFinanceSafe();
-  
-  // Return null if context is not available yet
-  if (!financeContext) {
-    return null;
-  }
-  
-  const { showReceipt, currentReceipt, hideReceipt } = financeContext;
+  const { showReceipt, currentReceipt, hideReceipt } = useFinance();
 
   if (!showReceipt || !currentReceipt) {
     return null;

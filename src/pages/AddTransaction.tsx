@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Plus, Minus, Target, CreditCard, AlertCircle, Trash2, Link, Unlink, Clock, Calendar, Globe } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Target, CreditCard, AlertCircle, Trash2, Link, Unlink, Clock, Calendar } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Input } from '../components/common/Input';
@@ -7,14 +7,7 @@ import { Button } from '../components/common/Button';
 import { CategorySelector } from '../components/common/CategorySelector';
 import { toNumber } from '../utils/validation';
 import { useFinance } from '../contexts/FinanceContext';
-import { useInternationalization } from '../contexts/InternationalizationContext';
 import { convertCurrency, formatCurrency, needsConversion, getCurrencyInfo } from '../utils/currency-converter';
-import { 
-  convertTransactionCurrency, 
-  generateTransactionDisplayText, 
-  generateStorageData,
-  type CurrencyConversionResult
-} from '../utils/multi-currency-converter';
 
 interface TransactionFormData {
   type: 'income' | 'expense' | 'transfer';
@@ -32,7 +25,6 @@ interface TransactionFormData {
   originalAmount?: number;
   originalCurrency?: string;
   exchangeRateUsed?: number;
-  notes?: string;
 }
 
 interface SplitFormData {
@@ -44,9 +36,8 @@ interface SplitFormData {
 const AddTransaction: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  // Get display currency from user profile
-  const { currency } = useInternationalization();
-  const displayCurrency = currency.code;
+  // Get display currency from user profile (simplified)
+  const displayCurrency = 'USD'; // This should come from user profile
   const { 
     addTransaction, 
     userCategories, 
@@ -67,7 +58,6 @@ const AddTransaction: React.FC = () => {
   const [transactionCurrency, setTransactionCurrency] = useState(displayCurrency);
   const [selectedAccount, setSelectedAccount] = useState<FinancialAccount | null>(null);
   const [showLinkOptions, setShowLinkOptions] = useState(false);
-  const [conversionResult, setConversionResult] = useState<CurrencyConversionResult | null>(null);
   
   // Handle location state for historical and scheduled transactions
   const { accountId, isHistorical, isScheduled } = location.state || {};
@@ -104,46 +94,6 @@ const AddTransaction: React.FC = () => {
   useEffect(() => {
     setValue('type', transactionType);
   }, [transactionType]);
-
-  // Update selected account when accountId changes
-  useEffect(() => {
-    if (watch('accountId')) {
-      const account = accounts.find(acc => acc.id === watch('accountId'));
-      setSelectedAccount(account || null);
-    }
-  }, [watch('accountId'), accounts]);
-
-  // Handle currency conversion when amount, currency, or account changes
-  useEffect(() => {
-    const amount = watch('amount');
-    const accountId = watch('accountId');
-    
-    const performConversion = async () => {
-      if (amount && transactionCurrency && accountId) {
-        const account = accounts.find(acc => acc.id === accountId);
-        if (account) {
-          try {
-            const result = await convertTransactionCurrency(
-              Number(amount) || 0,
-              transactionCurrency,
-              account.currencycode || displayCurrency,
-              displayCurrency
-            );
-            setConversionResult(result);
-          } catch (error) {
-            console.error('Currency conversion error:', error);
-            setConversionResult(null);
-          }
-        } else {
-          setConversionResult(null);
-        }
-      } else {
-        setConversionResult(null);
-      }
-    };
-    
-    performConversion();
-  }, [watch('amount'), transactionCurrency, watch('accountId'), accounts, displayCurrency]);
 
   const type = watch('type');
   const linkedGoalId = watch('linkedGoalId');
@@ -191,73 +141,29 @@ const AddTransaction: React.FC = () => {
       setIsSubmitting(true);
       setError(null);
       
-      // Debug: Log the raw form data
-      console.log('Raw form data received:', data);
-      console.log('Amount type:', typeof data.amount, 'Value:', data.amount);
-      
-      // Ensure amount is a valid number
-      const numericAmount = Number(data.amount);
-      if (isNaN(numericAmount) || numericAmount <= 0) {
-        setError('Please enter a valid amount greater than 0');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Update data with numeric amount
-      data.amount = numericAmount;
-      
       // For historical transactions, don't affect current balance
       const affectsBalance = !isHistorical;
       
-      // Generate multi-currency data if conversion is available
-      let multiCurrencyData = {};
-      if (conversionResult) {
-        const storageData = generateStorageData(conversionResult);
-        multiCurrencyData = {
-          native_amount: storageData.nativeAmount,
-          native_currency: storageData.nativeCurrency,
-          native_symbol: storageData.nativeSymbol,
-          converted_amount: storageData.convertedAmount,
-          converted_currency: storageData.convertedCurrency,
-          converted_symbol: storageData.convertedSymbol,
-          exchange_rate: storageData.exchangeRate,
-          exchange_rate_used: storageData.exchangeRateUsed
-        };
-      }
-
-      // Use converted amount for the transaction with validation
+      // Handle currency conversion if needed
       let finalAmount = data.amount;
+      let originalAmount = data.amount;
+      let originalCurrency = transactionCurrency;
+      let exchangeRateUsed = 1.0;
       
-      if (conversionResult && 
-          conversionResult.convertedAmount !== null && 
-          conversionResult.convertedAmount !== undefined &&
-          !isNaN(conversionResult.convertedAmount) &&
-          conversionResult.convertedAmount > 0) {
-        finalAmount = conversionResult.convertedAmount;
-        console.log('Using converted amount:', finalAmount);
-      } else {
-        console.log('Using original amount (no valid conversion):', data.amount);
-        finalAmount = data.amount;
+      if (transactionCurrency !== displayCurrency) {
+        const convertedAmount = convertCurrency(data.amount, transactionCurrency, displayCurrency);
+        if (convertedAmount === null) {
+          setError('Unable to convert currency. Please try again.');
+          setIsSubmitting(false);
+          return;
+        }
+        
+        finalAmount = convertedAmount;
+        exchangeRateUsed = convertCurrency(1, transactionCurrency, displayCurrency) || 1.0;
+        
+        // Log the conversion
+        console.log(`🔄 Currency conversion: ${formatCurrency(originalAmount, originalCurrency)} → ${formatCurrency(finalAmount, displayCurrency)}`);
       }
-      
-      // Final validation of amount
-      if (!finalAmount || finalAmount <= 0 || isNaN(finalAmount)) {
-        console.error('Invalid final amount:', { 
-          finalAmount, 
-          originalAmount: data.amount, 
-          conversionResult: conversionResult?.convertedAmount 
-        });
-        setError('Invalid transaction amount. Please check the amount and try again.');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      console.log('Final amount validated:', { 
-        originalAmount: data.amount, 
-        conversionResult: conversionResult?.convertedAmount,
-        finalAmount,
-        type: typeof finalAmount
-      });
       
       if (isSplitTransaction) {
         // For split transactions, create individual transactions for each split
@@ -286,7 +192,7 @@ const AddTransaction: React.FC = () => {
             accountId: data.accountId,
             affectsBalance: affectsBalance,
             status: isScheduled ? 'scheduled' as const : 'completed' as const,
-            currencycode: displayCurrency,
+            currencyCode: displayCurrency,
             originalAmount: splitAmount,
             originalCurrency: transactionCurrency,
             exchangeRateUsed: exchangeRateUsed
@@ -344,70 +250,11 @@ const AddTransaction: React.FC = () => {
             accountId: data.accountId,
             affectsBalance: affectsBalance,
             status: isScheduled ? 'scheduled' as const : 'completed' as const,
-            currencycode: displayCurrency,
-            notes: data.notes,
-            ...multiCurrencyData
+            currencyCode: displayCurrency,
+            originalAmount: originalAmount,
+            originalCurrency: originalCurrency,
+            exchangeRateUsed: exchangeRateUsed
           };
-
-          // Validate transaction data before submission
-          const validationErrors = [];
-          
-          // Check each field individually with detailed logging
-          if (!transactionData.type) {
-            validationErrors.push('type');
-            console.error('Missing type:', transactionData.type);
-          }
-          
-          if (!transactionData.amount || transactionData.amount <= 0 || isNaN(transactionData.amount)) {
-            validationErrors.push('amount');
-            console.error('Invalid amount:', { 
-              amount: transactionData.amount, 
-              type: typeof transactionData.amount,
-              isNaN: isNaN(transactionData.amount),
-              isPositive: transactionData.amount > 0
-            });
-          }
-          
-          if (!transactionData.description || transactionData.description.trim() === '') {
-            validationErrors.push('description');
-            console.error('Missing description:', transactionData.description);
-          }
-          
-          if (!transactionData.category || transactionData.category.trim() === '') {
-            validationErrors.push('category');
-            console.error('Missing category:', transactionData.category);
-          }
-          
-          if (!transactionData.accountId || transactionData.accountId.trim() === '') {
-            validationErrors.push('accountId');
-            console.error('Missing accountId:', transactionData.accountId);
-          }
-          
-          if (!transactionData.date || isNaN(transactionData.date.getTime())) {
-            validationErrors.push('date');
-            console.error('Invalid date:', transactionData.date);
-          }
-          
-          if (transactionData.affectsBalance === undefined || transactionData.affectsBalance === null) {
-            validationErrors.push('affectsBalance');
-            console.error('Missing affectsBalance:', transactionData.affectsBalance);
-          }
-          
-          if (!transactionData.status || transactionData.status.trim() === '') {
-            validationErrors.push('status');
-            console.error('Missing status:', transactionData.status);
-          }
-
-          if (validationErrors.length > 0) {
-            console.error('Transaction validation failed:', validationErrors);
-            console.error('Full transaction data:', JSON.stringify(transactionData, null, 2));
-            setError(`Missing required fields: ${validationErrors.join(', ')}`);
-            setIsSubmitting(false);
-            return;
-          }
-
-          // Debug: Log the transaction data before submission
-          console.log('Transaction data being submitted:', transactionData);
 
           // Submit the main transaction
           await addTransaction(transactionData);
@@ -465,14 +312,7 @@ const AddTransaction: React.FC = () => {
       navigate(-1);
     } catch (error: any) {
       console.error('Error submitting transaction:', error);
-      
-      // Enhanced error handling for missing fields
-      if (error.message && error.message.includes('Missing required transaction fields')) {
-        const missingFields = error.message.replace('Missing required transaction fields: ', '').split(', ');
-        setError(`Please fill in all required fields: ${missingFields.join(', ')}`);
-      } else {
-        setError(error.message || 'Failed to save transaction. Please try again.');
-      }
+      setError(error.message || 'Failed to save transaction. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -568,10 +408,7 @@ const AddTransaction: React.FC = () => {
             ].map(({ type, icon: Icon, label, color }) => (
               <button
                 key={type}
-                onClick={() => {
-                  setTransactionType(type as any);
-                  setValue('type', type as any);
-                }}
+                onClick={() => setTransactionType(type as any)}
                 className={`p-4 rounded-xl border transition-all ${
                   transactionType === type
                     ? 'bg-gray-900 border-gray-900 text-white'
@@ -585,71 +422,10 @@ const AddTransaction: React.FC = () => {
           </div>
         </div>
 
-
         {/* Main Transaction Form */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Details</h3>
           
-          {/* Form Completion Status */}
-          <div className="bg-forest-800/20 rounded-lg p-4 mb-6 border border-forest-600/30">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-forest-200 flex items-center">
-                <AlertCircle size={16} className="mr-2" />
-                Form Status
-              </h3>
-              <div className="text-xs text-forest-300">
-                {(() => {
-                  const requiredFields = ['amount', 'description', 'category', 'accountId', 'date'];
-                  if (transactionType === 'transfer') requiredFields.push('transferToAccountId');
-                  
-                  const completedFields = requiredFields.filter(field => {
-                    const value = watch(field);
-                    return value && value.toString().trim() !== '';
-                  });
-                  
-                  return `${completedFields.length}/${requiredFields.length} completed`;
-                })()}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {['amount', 'description', 'category', 'accountId', 'date'].map(field => {
-                const value = watch(field);
-                const isCompleted = value && value.toString().trim() !== '';
-                const isError = errors[field];
-                
-                return (
-                  <div key={field} className={`flex items-center p-2 rounded ${
-                    isError ? 'bg-red-100 text-red-700' : 
-                    isCompleted ? 'bg-green-100 text-green-700' : 
-                    'text-forest-300'
-                  }`}>
-                    <span className={`mr-2 ${isError ? 'text-red-500' : isCompleted ? 'text-green-500' : 'text-red-400'}`}>
-                      {isError ? '❌' : isCompleted ? '✅' : '⭕'}
-                    </span>
-                    <span className="capitalize">{field === 'accountId' ? 'Account' : field}</span>
-                  </div>
-                );
-              })}
-              {transactionType === 'transfer' && (
-                <div className={`flex items-center p-2 rounded ${
-                  errors.transferToAccountId ? 'bg-red-100 text-red-700' : 
-                  watch('transferToAccountId') ? 'bg-green-100 text-green-700' : 
-                  'text-forest-300'
-                }`}>
-                  <span className={`mr-2 ${
-                    errors.transferToAccountId ? 'text-red-500' : 
-                    watch('transferToAccountId') ? 'text-green-500' : 
-                    'text-red-400'
-                  }`}>
-                    {errors.transferToAccountId ? '❌' : watch('transferToAccountId') ? '✅' : '⭕'}
-                  </span>
-                  <span>Transfer To</span>
-                </div>
-              )}
-            </div>
-          </div>
-
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
             {/* Amount - Enhanced */}
             <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-6 border-2 border-blue-200">
@@ -673,15 +449,10 @@ const AddTransaction: React.FC = () => {
                     {getCurrencyInfo(transactionCurrency)?.symbol || '$'}
                   </span>
                   <Input
-                    {...register('amount', { 
-                      required: 'Amount is required',
-                      min: { value: 0.01, message: 'Amount must be greater than 0' },
-                      valueAsNumber: true
-                    })}
                     type="number"
-                    step="0.01"
-                    min="0"
                     placeholder="0.00"
+                    value={typeof watch('amount') === 'number' ? watch('amount') : ''}
+                    onChange={(e) => setValue('amount', parseFloat(e.target.value) || 0)}
                     error={errors.amount?.message}
                     className="flex-1 text-lg"
                     style={{
@@ -708,36 +479,24 @@ const AddTransaction: React.FC = () => {
                   <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
                 </select>
                 
-                {/* Multi-Currency Conversion Display */}
-                {conversionResult && (
-                  <div className="bg-blue-100 border border-blue-200 rounded-lg p-3">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Globe size={16} className="text-blue-600" />
-                      <span className="text-sm font-medium text-blue-800">Currency Conversion</span>
-                    </div>
-                    <div className="text-sm text-blue-700">
-                      {(() => {
-                        const displayText = generateTransactionDisplayText(conversionResult);
-                        return (
-                          <div className="space-y-2">
-                            <div>
-                              <span className="font-medium">Transaction:</span> {displayText.transactionDisplay}
-                            </div>
-                            <div>
-                              <span className="font-medium">Account:</span> {displayText.accountDisplay}
-                            </div>
-                            <div>
-                              <span className="font-medium">Total:</span> {displayText.totalDisplay}
-                            </div>
-                            <div className="text-xs text-blue-600 mt-2">
-                              {displayText.conversionNote}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                )}
+                {/* Smart Conversion Display */}
+                {(() => {
+                  const selectedAccount = accounts.find(acc => acc.id === watch('accountId'));
+                  if (selectedAccount && needsConversion(selectedAccount.currency, transactionCurrency)) {
+                    const convertedAmount = convertCurrency(watch('amount') || 0, transactionCurrency, selectedAccount.currency);
+                    return (
+                      <div className="bg-blue-100 border border-blue-200 rounded-lg p-3">
+                        <p className="text-sm text-blue-800">
+                          <span className="font-medium">Smart Conversion:</span> {formatCurrency(watch('amount') || 0, transactionCurrency)} → {formatCurrency(convertedAmount || 0, selectedAccount.currency)}
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                          This will be converted to {selectedAccount.currency} for your {selectedAccount.name} account
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
               
               {/* Quick Amount Buttons */}
@@ -748,7 +507,7 @@ const AddTransaction: React.FC = () => {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setValue('amount', 100, { shouldValidate: true })}
+                    onClick={() => setValue('amount', 100)}
                     className="text-xs"
                   >
                     ₹100
@@ -757,7 +516,7 @@ const AddTransaction: React.FC = () => {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setValue('amount', 500, { shouldValidate: true })}
+                    onClick={() => setValue('amount', 500)}
                     className="text-xs"
                   >
                     ₹500
@@ -766,7 +525,7 @@ const AddTransaction: React.FC = () => {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setValue('amount', 1000, { shouldValidate: true })}
+                    onClick={() => setValue('amount', 1000)}
                     className="text-xs"
                   >
                     ₹1,000
@@ -775,7 +534,7 @@ const AddTransaction: React.FC = () => {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setValue('amount', 5000, { shouldValidate: true })}
+                    onClick={() => setValue('amount', 5000)}
                     className="text-xs"
                   >
                     ₹5,000
@@ -784,7 +543,7 @@ const AddTransaction: React.FC = () => {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setValue('amount', 10000, { shouldValidate: true })}
+                    onClick={() => setValue('amount', 10000)}
                     className="text-xs"
                   >
                     ₹10,000
@@ -814,24 +573,14 @@ const AddTransaction: React.FC = () => {
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-forest-300 mb-2">
-                Description <span className="text-red-400">*</span>
+                Description
               </label>
               <Input
-                {...register('description', { 
-                  required: 'Description is required',
-                  minLength: {
-                    value: 3,
-                    message: 'Description must be at least 3 characters long'
-                  }
-                })}
+                {...register('description', { required: 'Description is required' })}
                 placeholder="Enter transaction description"
-                className={errors.description ? 'border-red-500' : ''}
               />
               {errors.description && (
-                <p className="text-red-400 text-sm mt-1 flex items-center">
-                  <AlertCircle size={14} className="mr-1" />
-                  {errors.description.message}
-                </p>
+                <p className="text-red-400 text-sm mt-1">{errors.description.message}</p>
               )}
             </div>
 
@@ -839,23 +588,17 @@ const AddTransaction: React.FC = () => {
             {transactionType !== 'transfer' && (
               <div>
                 <label className="block text-sm font-medium text-forest-300 mb-2">
-                  Category <span className="text-red-400">*</span>
+                  Category
                 </label>
                 <CategorySelector
                   key={`category-${watch('type')}`}
                   value={watch('category')}
-                  onChange={(category) => setValue('category', category, { shouldValidate: true })}
+                  onChange={(category) => setValue('category', category)}
                   type="transaction"
                   transactionType={watch('type')}
                   placeholder="Select a category"
                   error={errors.category?.message}
                 />
-                {errors.category && (
-                  <p className="text-red-400 text-sm mt-1 flex items-center">
-                    <AlertCircle size={14} className="mr-1" />
-                    {errors.category.message}
-                  </p>
-                )}
               </div>
             )}
 
@@ -863,13 +606,11 @@ const AddTransaction: React.FC = () => {
             <div className="bg-forest-800/30 rounded-xl p-4 border border-forest-600/20">
               <label className="block text-sm font-medium text-forest-300 mb-3 flex items-center">
                 <CreditCard size={16} className="mr-2" />
-                {transactionType === 'transfer' ? 'From Account' : 'Select Bank Account'} <span className="text-red-400">*</span>
+                {transactionType === 'transfer' ? 'From Account' : 'Select Bank Account'}
               </label>
               <select
                 {...register('accountId', { required: 'Please select an account' })}
-                className={`w-full bg-forest-800/50 border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-forest-500 transition-colors ${
-                  errors.accountId ? 'border-red-500' : 'border-forest-600/30'
-                }`}
+                className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-forest-500 transition-colors"
               >
                 <option value="">Choose your bank account...</option>
                 {accounts.map((account) => (
@@ -897,13 +638,11 @@ const AddTransaction: React.FC = () => {
               <div className="bg-forest-800/30 rounded-xl p-4 border border-forest-600/20">
                 <label className="block text-sm font-medium text-forest-300 mb-3 flex items-center">
                   <ArrowLeft size={16} className="mr-2" />
-                  Transfer To Account <span className="text-red-400">*</span>
+                  Transfer To Account
                 </label>
                 <select
                   {...register('transferToAccountId', { required: 'Please select destination account' })}
-                  className={`w-full bg-forest-800/50 border rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-forest-500 transition-colors ${
-                    errors.transferToAccountId ? 'border-red-500' : 'border-forest-600/30'
-                  }`}
+                  className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-forest-500 transition-colors"
                 >
                   <option value="">Choose destination account...</option>
                   {accounts.map((account) => (
@@ -972,32 +711,15 @@ const AddTransaction: React.FC = () => {
             {/* Date */}
             <div>
               <label className="block text-sm font-medium text-forest-300 mb-2">
-                Date <span className="text-red-400">*</span>
+                Date
               </label>
               <Input
                 {...register('date', { required: 'Date is required' })}
                 type="date"
-                className={errors.date ? 'border-red-500' : ''}
               />
               {errors.date && (
-                <p className="text-red-400 text-sm mt-1 flex items-center">
-                  <AlertCircle size={14} className="mr-1" />
-                  {errors.date.message}
-                </p>
+                <p className="text-red-400 text-sm mt-1">{errors.date.message}</p>
               )}
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-forest-300 mb-2">
-                Notes (Optional)
-              </label>
-              <textarea
-                {...register('notes')}
-                placeholder="Add any additional notes about this transaction..."
-                className="w-full bg-forest-800/50 border border-forest-600/30 rounded-lg px-4 py-3 text-white placeholder-forest-400 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-forest-500 transition-colors resize-none"
-                rows={3}
-              />
             </div>
 
             {/* Link Options */}
@@ -1194,36 +916,6 @@ const AddTransaction: React.FC = () => {
               </div>
             )}
 
-            {/* Validation Summary */}
-            {Object.keys(errors).length > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-red-800 mb-2 flex items-center">
-                  <AlertCircle size={16} className="mr-2" />
-                  Please fix the following errors:
-                </h4>
-                <ul className="text-sm text-red-700 space-y-1">
-                  {errors.amount && (
-                    <li>• Amount: {errors.amount.message}</li>
-                  )}
-                  {errors.description && (
-                    <li>• Description: {errors.description.message}</li>
-                  )}
-                  {errors.category && (
-                    <li>• Category: {errors.category.message}</li>
-                  )}
-                  {errors.accountId && (
-                    <li>• Account: {errors.accountId.message}</li>
-                  )}
-                  {errors.transferToAccountId && (
-                    <li>• Transfer To Account: {errors.transferToAccountId.message}</li>
-                  )}
-                  {errors.date && (
-                    <li>• Date: {errors.date.message}</li>
-                  )}
-                </ul>
-              </div>
-            )}
-
             {/* Submit Button */}
             <div className="flex space-x-4 pt-4">
               <Button
@@ -1237,7 +929,7 @@ const AddTransaction: React.FC = () => {
               <Button
                 type="submit"
                 className="flex-1"
-                disabled={isSubmitting || Object.keys(errors).length > 0}
+                disabled={isSubmitting}
               >
                 {isSubmitting ? 'Saving...' : 'Save Transaction'}
               </Button>
@@ -1252,7 +944,6 @@ const AddTransaction: React.FC = () => {
           </div>
         )}
       </div>
-
     </div>
   );
 };

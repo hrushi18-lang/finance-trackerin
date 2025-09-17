@@ -1,19 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Calendar, Bell, CreditCard, AlertCircle, Clock, Repeat, DollarSign, ToggleLeft, ToggleRight, CheckCircle, Loader2 } from 'lucide-react';
+import { Calendar, Bell, CreditCard, AlertCircle, Clock, Repeat, DollarSign, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { CategorySelector } from '../common/CategorySelector';
-import { Select } from '../common/Select';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { useEnhancedCurrency } from '../../contexts/EnhancedCurrencyContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { CurrencyInput } from '../currency/CurrencyInput';
 import { useFinance } from '../../contexts/FinanceContext';
 import { validateBill, sanitizeFinancialData, toNumber } from '../../utils/validation';
-import { getCurrencyInfo } from '../../utils/currency-converter';
-import { currencyConversionService } from '../../services/currencyConversionService';
-import { Decimal } from 'decimal.js';
 
 interface EnhancedBillFormData {
   title: string;
@@ -46,9 +42,6 @@ interface EnhancedBillFormData {
   status: 'active' | 'paused' | 'completed' | 'cancelled';
   paymentMethod?: string;
   notes?: string;
-  // Currency conversion fields
-  billCurrency: string;
-  primaryCurrency: string;
 }
 
 interface EnhancedBillFormProps {
@@ -73,35 +66,17 @@ const frequencyOptions = [
   { value: 'one_time', label: 'One-time', description: 'Single payment' }
 ];
 
-const currencyOptions = [
-  { value: 'USD', label: 'USD - US Dollar' },
-  { value: 'INR', label: 'INR - Indian Rupee' },
-  { value: 'EUR', label: 'EUR - Euro' },
-  { value: 'GBP', label: 'GBP - British Pound' },
-  { value: 'CAD', label: 'CAD - Canadian Dollar' },
-  { value: 'AUD', label: 'AUD - Australian Dollar' }
-];
-
 export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
   initialData,
   onSubmit,
   onCancel
 }) => {
-  const { primaryCurrency } = useInternationalization();
+  const { currency, formatCurrency: formatCurrencyOld } = useInternationalization();
   const { displayCurrency, formatCurrency, convertAmount } = useEnhancedCurrency();
-  const { accounts, liabilities, executeBillCreation } = useFinance();
+  const { accounts, liabilities } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [billCurrency, setBillCurrency] = useState(initialData?.currencyCode || displayCurrency);
-  
-  // Currency conversion state
-  const [conversionPreview, setConversionPreview] = useState<{
-    primaryAmount: number;
-    primaryCurrency: string;
-    exchangeRate: number;
-    conversionCase: string;
-  } | null>(null);
-  const [conversionError, setConversionError] = useState<string | null>(null);
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<EnhancedBillFormData>({
     defaultValues: initialData || {
@@ -131,78 +106,6 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
   const isEmi = watch('isEmi');
   const linkedLiabilityId = watch('linkedLiabilityId');
 
-  // Generate conversion preview when amount or currency changes
-  useEffect(() => {
-    const watchedAmount = watch('amount');
-    const watchedCurrency = watch('currencyCode');
-    
-    if (watchedAmount && watchedCurrency) {
-      generateConversionPreview(watchedAmount, watchedCurrency);
-    } else {
-      setConversionPreview(null);
-      setConversionError(null);
-    }
-  }, [watch('amount'), watch('currencyCode')]);
-
-  const generateConversionPreview = async (amount: number, currency: string) => {
-    if (!amount || !currency) return;
-
-    try {
-      setConversionError(null);
-      
-      // Create a preview request
-      const previewRequest = {
-        amount: 0, // No initial amount for bill creation
-        currency: currency,
-        accountId: 'preview', // Dummy account for preview
-        operation: 'create' as const,
-        description: 'Preview',
-        billName: 'Preview Bill',
-        billAmount: amount,
-        billCurrency: currency
-      };
-
-      // Use the execution engine to get conversion preview
-      const { CurrencyExecutionEngine } = await import('../../services/currencyExecutionEngine');
-      const engine = new CurrencyExecutionEngine([], primaryCurrency.code);
-      
-      const result = await engine.executeBillCreation(previewRequest);
-      
-      if (result.success) {
-        setConversionPreview({
-          primaryAmount: result.primaryAmount,
-          primaryCurrency: result.primaryCurrency,
-          exchangeRate: result.exchangeRate || 1,
-          conversionCase: result.auditData.conversionCase
-        });
-      } else {
-        setConversionError(result.error || 'Conversion failed');
-      }
-    } catch (error: any) {
-      console.error('Conversion preview error:', error);
-      setConversionError(error.message);
-    }
-  };
-
-  const getConversionCaseDescription = (caseType: string) => {
-    switch (caseType) {
-      case 'all_same':
-        return 'No conversion needed - all currencies match';
-      case 'amount_account_same':
-        return 'Amount matches account currency, converting to primary for net worth';
-      case 'amount_primary_same':
-        return 'Amount matches primary currency, converting to account currency';
-      case 'account_primary_same':
-        return 'Account and primary currencies match, converting amount';
-      case 'all_different':
-        return 'All currencies different - converting to both account and primary';
-      case 'amount_different_others_same':
-        return 'Amount currency different, account and primary match';
-      default:
-        return 'Currency conversion';
-    }
-  };
-
   const handleFormSubmit = async (data: EnhancedBillFormData) => {
     try {
       setIsSubmitting(true);
@@ -217,45 +120,28 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
         'maxAmount'
       ]);
       
-      // Use currency execution engine for bill creation
-      const executionRequest = {
-        amount: 0, // No initial amount for bill creation
-        currency: data.currencyCode,
-        accountId: data.defaultAccountId || 'default',
-        operation: 'create' as const,
-        description: data.description || '',
-        billName: data.title,
-        billAmount: toNumber(sanitizedData.amount),
-        billCurrency: data.currencyCode,
-        category: data.category,
-        dueDate: data.dueDate
-      };
-
-      const result = await executeBillCreation(executionRequest);
-
-      if (result.success) {
-        // Prepare validation data with snake_case fields
-        const validationData = {
-          ...sanitizedData,
-          title: sanitizedData.title,
-          description: sanitizedData.description,
-          amount: result.accountAmount, // Use account currency amount for bill
-          estimated_amount: sanitizedData.estimatedAmount ? toNumber(sanitizedData.estimatedAmount) : undefined,
-          due_date: new Date(data.dueDate),
-          category: sanitizedData.category,
-          bill_type: sanitizedData.billType,
-          frequency: sanitizedData.frequency,
-          custom_frequency_days: sanitizedData.customFrequencyDays ? toNumber(sanitizedData.customFrequencyDays) : undefined,
-          default_account_id: sanitizedData.defaultAccountId,
-          is_income: sanitizedData.isIncome,
-          is_variable_amount: sanitizedData.isVariableAmount,
-          min_amount: sanitizedData.minAmount ? toNumber(sanitizedData.minAmount) : undefined,
-          max_amount: sanitizedData.maxAmount ? toNumber(sanitizedData.maxAmount) : undefined,
-          priority: sanitizedData.priority,
-          status: sanitizedData.status,
-          // Add scoping fields
-          activity_scope: sanitizedData.activityScope,
-          account_ids: sanitizedData.accountIds || [],
+      // Prepare validation data with snake_case fields
+      const validationData = {
+        ...sanitizedData,
+        title: sanitizedData.title,
+        description: sanitizedData.description,
+        amount: toNumber(sanitizedData.amount),
+        estimated_amount: sanitizedData.estimatedAmount ? toNumber(sanitizedData.estimatedAmount) : undefined,
+        due_date: new Date(data.dueDate),
+        category: sanitizedData.category,
+        bill_type: sanitizedData.billType,
+        frequency: sanitizedData.frequency,
+        custom_frequency_days: sanitizedData.customFrequencyDays ? toNumber(sanitizedData.customFrequencyDays) : undefined,
+        default_account_id: sanitizedData.defaultAccountId,
+        is_income: sanitizedData.isIncome,
+        is_variable_amount: sanitizedData.isVariableAmount,
+        min_amount: sanitizedData.minAmount ? toNumber(sanitizedData.minAmount) : undefined,
+        max_amount: sanitizedData.maxAmount ? toNumber(sanitizedData.maxAmount) : undefined,
+        priority: sanitizedData.priority,
+        status: sanitizedData.status,
+        // Add scoping fields
+        activity_scope: sanitizedData.activityScope,
+        account_ids: sanitizedData.accountIds || [],
         target_category: sanitizedData.targetCategory,
         notes: sanitizedData.notes
       };
@@ -279,10 +165,7 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
         targetCategory: validatedData.target_category
       };
       
-        await onSubmit(formattedData);
-      } else {
-        throw new Error(result.error || 'Bill creation failed');
-      }
+      await onSubmit(formattedData);
     } catch (error: any) {
       console.error('Error submitting bill:', error);
       setError(error.message || 'Failed to save bill');
@@ -391,7 +274,7 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
           {...register('currencyCode')}
           className="block w-full rounded-xl border-white/20 bg-black/20 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 py-3 px-4"
         >
-          <option value={displayCurrency}>{displayCurrency} - {getCurrencyInfo(displayCurrency)?.name || 'US Dollar'}</option>
+          <option value="USD">USD - US Dollar</option>
           <option value="EUR">EUR - Euro</option>
           <option value="GBP">GBP - British Pound</option>
           <option value="JPY">JPY - Japanese Yen</option>

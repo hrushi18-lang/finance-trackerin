@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { currencyService } from '../services/currencyService';
 
 // Supported currencies interface
 interface SupportedCurrency {
@@ -230,7 +229,7 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
     }
   };
 
-  // Refresh exchange rates using the enhanced currency service
+  // Refresh exchange rates from multiple APIs
   const refreshRates = async (): Promise<void> => {
     if (!isOnline) {
       setExchangeRates(fallbackRates);
@@ -239,18 +238,74 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
 
     setIsLoading(true);
     try {
-      // Use the enhanced currency service
-      const rateInfo = await currencyService.refreshRates();
-      setExchangeRates(rateInfo.rates);
-      setLastUpdated(rateInfo.lastUpdated);
-      console.log(`✅ Exchange rates updated from ${rateInfo.source}`);
+      let rates: ExchangeRates | null = null;
+      let source: 'api' | 'manual' | 'fallback' = 'fallback';
+      let apiProvider: string | undefined;
+
+      // Try multiple APIs for reliability
+      // Primary API: ExchangeRate-API (free tier: 1500 requests/month)
+      try {
+        const response = await fetch(`https://api.exchangerate-api.com/v4/latest/USD`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+          mode: 'cors',
+          credentials: 'omit'
+        });
+        if (response.ok) {
+          const data = await response.json();
+          rates = data.rates;
+          source = 'api';
+          apiProvider = 'exchangerate-api.com';
+          console.log('✅ Primary API (ExchangeRate-API) successful');
+        }
+      } catch (error) {
+        console.log('❌ Primary API failed, trying backup...', error);
+      }
+
+      // Backup API: Fixer.io (free tier: 1000 requests/month)
+      if (!rates) {
+        try {
+          const response = await fetch(`https://api.fixer.io/latest?base=USD`, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+            },
+            mode: 'cors',
+            credentials: 'omit'
+          });
+          if (response.ok) {
+            const data = await response.json();
+            rates = data.rates;
+            source = 'api';
+            apiProvider = 'fixer.io';
+            console.log('✅ Backup API (Fixer.io) successful');
+          }
+        } catch (error) {
+          console.log('❌ Backup API failed, using fallback rates', error);
+        }
+      }
+
+      // Use fallback rates if all APIs fail
+      if (!rates) {
+        rates = fallbackRates;
+        source = 'fallback';
+        console.log('⚠️ Using fallback exchange rates - external APIs blocked by CSP or network issues');
+      }
+
+      // Ensure USD is always 1.0
+      rates['USD'] = 1.0;
+
+      setExchangeRates(rates);
+      setLastUpdated(new Date());
 
       // Save rates to database for historical tracking
-      await saveRatesToDatabase(rateInfo.rates, rateInfo.source, rateInfo.apiProvider);
+      await saveRatesToDatabase(rates, source, apiProvider);
+
     } catch (error) {
-      console.error('❌ Failed to refresh exchange rates:', error);
+      console.error('Failed to fetch exchange rates:', error);
       setExchangeRates(fallbackRates);
-      setLastUpdated(new Date());
     } finally {
       setIsLoading(false);
     }
@@ -310,32 +365,23 @@ export const EnhancedCurrencyProvider: React.FC<EnhancedCurrencyProviderProps> =
   };
 
   // Get conversion rate between two currencies
-  const getConversionRate = async (fromCurrency: string, toCurrency: string): Promise<number | null> => {
+  const getConversionRate = (fromCurrency: string, toCurrency: string): number | null => {
     if (fromCurrency === toCurrency) return 1.0;
 
-    try {
-      // Use the live exchange rate service for September 2025
-      const { simpleCurrencyService } = await import('../services/simpleCurrencyService');
-      const rate = simpleCurrencyService.getRate(fromCurrency, toCurrency);
-      return rate;
-    } catch (error) {
-      console.error('Failed to get live conversion rate:', error);
-      
-      // Fallback to hardcoded rates
-      const rates = Object.keys(exchangeRates).length > 0 ? exchangeRates : fallbackRates;
-      const fromRate = rates[fromCurrency];
-      const toRate = rates[toCurrency];
-      
-      if (!fromRate || !toRate) return null;
-      
-      // Convert through USD as base currency (fallback)
-      return toRate / fromRate;
-    }
+    const rates = Object.keys(exchangeRates).length > 0 ? exchangeRates : fallbackRates;
+    
+    const fromRate = rates[fromCurrency];
+    const toRate = rates[toCurrency];
+    
+    if (!fromRate || !toRate) return null;
+    
+    // Convert through USD as base currency
+    return toRate / fromRate;
   };
 
   // Convert amount between currencies
-  const convertAmount = async (amount: number, fromCurrency: string, toCurrency: string): Promise<number | null> => {
-    const rate = await getConversionRate(fromCurrency, toCurrency);
+  const convertAmount = (amount: number, fromCurrency: string, toCurrency: string): number | null => {
+    const rate = getConversionRate(fromCurrency, toCurrency);
     if (rate === null) return null;
     
     const convertedAmount = amount * rate;

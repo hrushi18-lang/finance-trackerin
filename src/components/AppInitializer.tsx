@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useProfile } from '../contexts/ProfileContext';
-import { useFinanceSafe } from '../contexts/FinanceContext';
 import { LoadingScreen } from './common/LoadingScreen';
 import { analytics } from '../utils/analytics';
 import { auditLogger } from '../utils/auditLogger';
 import { errorMonitoring } from '../utils/errorMonitoring';
-import { simpleCurrencyService } from '../services/simpleCurrencyService';
 
 interface AppInitializerProps {
   children: React.ReactNode;
@@ -17,15 +14,6 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
-  const { profile, loading: profileLoading } = useProfile();
-  const financeContext = useFinanceSafe();
-  
-  // Return loading screen if finance context is not available yet
-  if (!financeContext) {
-    return <LoadingScreen message="Initializing finance system..." />;
-  }
-  
-  const { accounts, goals, bills, liabilities, userCategories, loading: financeLoading } = financeContext;
   const [isInitialized, setIsInitialized] = useState(false);
   const [initializationError, setInitializationError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
@@ -44,7 +32,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     const initializeApp = async () => {
       try {
         // Mobile-optimized initialization with timeout protection
-        const initPromise = new Promise<void>(async (resolve) => {
+        const initPromise = new Promise<void>((resolve) => {
           if (isAuthenticated && user) {
             // Lightweight initialization for mobile
             const userId = user.id;
@@ -82,16 +70,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
               console.warn('Audit logging failed:', auditError);
             }
 
-            // Initialize simple currency service
-            try {
-              const primaryCurrency = profile?.currency || 'USD';
-              console.log(`🔄 Initializing currency service for ${primaryCurrency}...`);
-              // Simple currency service doesn't need initialization
-              console.log(`✅ Currency service initialized for ${primaryCurrency}`);
-            } catch (rateError) {
-              console.warn('Currency service initialization failed:', rateError);
-            }
-
+            setIsNewUser(false);
             resolve();
           } else {
             // Clear user data when not authenticated
@@ -126,43 +105,6 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     return () => clearTimeout(timeoutId);
   }, [isAuthenticated, user, isInitialized]);
 
-  // Check for new users after data is loaded
-  useEffect(() => {
-    if (!isInitialized || !isAuthenticated || !user) return;
-
-    // Wait for profile and finance data to load
-    if (profileLoading || financeLoading) {
-      return;
-    }
-
-    // Check if user has a profile (primary indicator of setup completion)
-    const hasProfile = !!profile;
-    
-    // Also check if user has existing financial data
-    const hasExistingData = 
-      accounts.length > 0 || 
-      goals.length > 0 || 
-      bills.length > 0 || 
-      liabilities.length > 0 || 
-      userCategories.length > 0;
-
-    // User is new if they don't have a profile OR no financial data
-    const isNew = !hasProfile || !hasExistingData;
-    setIsNewUser(isNew);
-
-    // Track onboarding check
-    analytics.trackEngagement('onboarding_check', {
-      feature: 'onboarding_flow',
-      is_new_user: isNew,
-      has_profile: hasProfile,
-      has_accounts: accounts.length > 0,
-      has_goals: goals.length > 0,
-      has_bills: bills.length > 0,
-      has_liabilities: liabilities.length > 0,
-      has_custom_categories: userCategories.length > 0
-    });
-  }, [isInitialized, isAuthenticated, user, profile, profileLoading, accounts, goals, bills, liabilities, userCategories, financeLoading]);
-
   // Handle routing after initialization
   useEffect(() => {
     if (!isInitialized) return;
@@ -179,20 +121,6 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
         return;
       }
 
-      // If user is new and not already on onboarding, redirect to onboarding
-      if (isNewUser === true && location.pathname !== '/onboarding') {
-        console.log('AppInitializer - Redirecting new user to onboarding');
-        navigate('/onboarding');
-        return;
-      }
-
-      // If user is not new and on onboarding, redirect to home
-      if (isNewUser === false && location.pathname === '/onboarding') {
-        console.log('AppInitializer - Redirecting existing user to home');
-        navigate('/');
-        return;
-      }
-
       // Redirect to home if on root path
       if (location.pathname === '/') {
         navigate('/');
@@ -202,17 +130,14 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
       console.log('AppInitializer - Routing decision:', {
         currentPath: location.pathname,
         isAuthenticated,
-        hasUser: !!user,
-        isNewUser,
-        profileLoading,
-        financeLoading
+        hasUser: !!user
       });
     };
 
     handleRouting();
-  }, [isInitialized, isAuthenticated, user, isNewUser, location.pathname, navigate, profileLoading, financeLoading]);
+  }, [isInitialized, isAuthenticated, user, location.pathname, navigate]);
 
-  if (!isInitialized || (isAuthenticated && user && isNewUser === null)) {
+  if (!isInitialized) {
     return (
       <LoadingScreen 
         message={loadingTimeout ? "Taking longer than expected..." : "Initializing your financial app..."} 

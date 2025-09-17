@@ -282,43 +282,43 @@ export const CreditCardBillProvider: React.FC<CreditCardBillProviderProps> = ({ 
       const billCycle = creditCardBills.find(bill => bill.id === paymentData.billCycleId);
       if (!billCycle) throw new Error('Bill cycle not found');
       
-      // Get account currency for proper conversion
-      const account = accounts.find(acc => acc.id === paymentData.sourceAccountId);
-      const accountCurrency = account?.currencycode || billCycle.currencyCode;
-      const billCurrency = billCycle.currencyCode;
+      // Create transaction
+      const transaction = await addTransaction({
+        type: 'expense',
+        amount: paymentData.paymentAmount,
+        category: 'Credit Card Payment',
+        description: `Credit card payment - ${paymentData.paymentType}`,
+        date: new Date(),
+        accountId: paymentData.sourceAccountId,
+        affectsBalance: true,
+        status: 'completed',
+        currencyCode: billCycle.currencyCode,
+        originalAmount: paymentData.paymentAmount,
+        originalCurrency: billCycle.currencyCode,
+        exchangeRateUsed: 1.0,
+        paymentSource: 'credit_card_payment',
+        sourceEntityId: paymentData.billCycleId,
+        sourceEntityType: 'credit_card_bill',
+        deductFromBalance: true,
+        paymentContext: 'credit_card_payment'
+      } as any);
       
-      // Use the BillLiabilityService for consistent multi-currency handling
-      const { BillLiabilityService } = await import('../services/billLiabilityService');
-      const transactionData = await BillLiabilityService.createCreditCardPaymentTransaction(
-        paymentData.paymentAmount,
-        paymentData.sourceAccountId,
-        accountCurrency,
-        billCurrency,
-        paymentData.billCycleId,
-        paymentData.paymentType,
-        paymentData.notes
-      );
-
-      // Create transaction with multi-currency support
-      const transaction = await addTransaction(transactionData);
-      
-      // Record payment with multi-currency support
+      // Record payment
       const { data, error: paymentError } = await supabase
         .from('credit_card_bill_payments')
         .insert({
           user_id: user.id,
           bill_cycle_id: paymentData.billCycleId,
           transaction_id: transaction.id,
-          payment_amount: transactionData.amount,
+          payment_amount: paymentData.paymentAmount,
           payment_type: paymentData.paymentType,
           payment_method: paymentData.paymentMethod || 'bank_transfer',
           payment_date: paymentData.paymentDate.toISOString().split('T')[0],
           source_account_id: paymentData.sourceAccountId,
-          currency_code: billCurrency,
-          original_amount: transactionData.native_amount,
-          original_currency: transactionData.native_currency,
-          exchange_rate_used: transactionData.exchange_rate,
-          conversion_source: transactionData.conversion_source,
+          currency_code: billCycle.currencyCode,
+          original_amount: paymentData.paymentAmount,
+          original_currency: billCycle.currencyCode,
+          exchange_rate_used: 1.0,
           notes: paymentData.notes
         })
         .select()
@@ -334,15 +334,15 @@ export const CreditCardBillProvider: React.FC<CreditCardBillProviderProps> = ({ 
       
       setCreditCardPayments(prev => [newPayment, ...prev]);
       
-      // Update bill cycle with converted amount
-      const newRemainingBalance = billCycle.remainingBalance - transactionData.amount;
+      // Update bill cycle
+      const newRemainingBalance = billCycle.remainingBalance - paymentData.paymentAmount;
       const newPaymentStatus = newRemainingBalance <= 0 ? 'paid_full' : 
-                              transactionData.amount >= billCycle.minimumDue ? 'paid_minimum' : 'paid_partial';
+                              paymentData.paymentAmount >= billCycle.minimumDue ? 'paid_minimum' : 'paid_partial';
       const newCycleStatus = newRemainingBalance <= 0 ? 'paid_full' : 
-                            transactionData.amount >= billCycle.minimumDue ? 'paid_minimum' : 'partially_paid';
+                            paymentData.paymentAmount >= billCycle.minimumDue ? 'paid_minimum' : 'partially_paid';
       
       await updateCreditCardBill(paymentData.billCycleId, {
-        amountPaid: billCycle.amountPaid + transactionData.amount,
+        amountPaid: billCycle.amountPaid + paymentData.paymentAmount,
         remainingBalance: newRemainingBalance,
         paymentStatus: newPaymentStatus,
         cycleStatus: newCycleStatus

@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Target, FileText, Calendar, CheckCircle, AlertCircle, Loader2, DollarSign } from 'lucide-react';
+import { Target, FileText, Calendar } from 'lucide-react';
 import { validateGoal, sanitizeFinancialData, toNumber } from '../../utils/validation';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { CategorySelector } from '../common/CategorySelector';
-import { Select } from '../common/Select';
 import { Goal } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
+import { formatCurrency, getCurrencyInfo } from '../../utils/currency-converter';
+import { AlertCircle } from 'lucide-react';
 import { useFinance } from '../../contexts/FinanceContext';
-import { currencyConversionService } from '../../services/currencyConversionService';
-import { Decimal } from 'decimal.js';
 
 interface GoalFormData {
   title: string;
@@ -23,13 +22,10 @@ interface GoalFormData {
   accountIds: string[];
   targetCategory?: string;
   currencyCode: string;
-  // Currency conversion fields
-  targetCurrency: string;
-  primaryCurrency: string;
 }
 
 interface GoalFormProps {
-  onSubmit: (data: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  onSubmit: (data: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>; // Changed to Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
   onCancel: () => void;
   initialData?: Partial<GoalFormData>;
 }
@@ -56,17 +52,8 @@ const goalTypes = [
     name: 'Category-Based', 
     description: 'Goals based on spending categories', 
     icon: '📊',
-    examples: ['Spend less than $200 on dining', 'Save $1000 from salary']
+    examples: ['Reduce food spending', 'Save on entertainment']
   }
-];
-
-const currencyOptions = [
-  { value: 'USD', label: 'USD - US Dollar' },
-  { value: 'INR', label: 'INR - Indian Rupee' },
-  { value: 'EUR', label: 'EUR - Euro' },
-  { value: 'GBP', label: 'GBP - British Pound' },
-  { value: 'CAD', label: 'CAD - Canadian Dollar' },
-  { value: 'AUD', label: 'AUD - Australian Dollar' }
 ];
 
 export const GoalForm: React.FC<GoalFormProps> = ({
@@ -74,23 +61,14 @@ export const GoalForm: React.FC<GoalFormProps> = ({
   onCancel,
   initialData
 }) => {
-  const { primaryCurrency } = useInternationalization();
-  const { accounts, userCategories, executeGoalCreation } = useFinance();
+  const { currency } = useInternationalization();
+  const { accounts } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [targetCurrency, setTargetCurrency] = useState(initialData?.targetCurrency || primaryCurrency.code);
+  const [goalCurrency, setGoalCurrency] = useState(initialData?.currencyCode || 'USD');
   const [selectedGoalType, setSelectedGoalType] = useState<'general' | 'account_specific' | 'category_based'>(
     initialData?.activityScope || 'general'
   );
-  
-  // Currency conversion state
-  const [conversionPreview, setConversionPreview] = useState<{
-    primaryAmount: number;
-    primaryCurrency: string;
-    exchangeRate: number;
-    conversionCase: string;
-  } | null>(null);
-  const [conversionError, setConversionError] = useState<string | null>(null);
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<GoalFormData>({
     defaultValues: {
@@ -103,386 +81,438 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       activityScope: initialData?.activityScope || 'general',
       accountIds: initialData?.accountIds || [],
       targetCategory: initialData?.targetCategory || '',
-      currencyCode: initialData?.currencyCode || primaryCurrency.code,
-      targetCurrency: initialData?.targetCurrency || primaryCurrency.code,
-      primaryCurrency: primaryCurrency.code
+      currencyCode: initialData?.currencyCode || 'USD'
     },
   });
-
-  const watchedTargetAmount = watch('targetAmount');
-  const watchedTargetCurrency = watch('targetCurrency');
-
-  // Generate conversion preview when target amount or currency changes
-  useEffect(() => {
-    if (watchedTargetAmount && watchedTargetCurrency) {
-      generateConversionPreview();
-    } else {
-      setConversionPreview(null);
-      setConversionError(null);
-    }
-  }, [watchedTargetAmount, watchedTargetCurrency]);
-
-  const generateConversionPreview = async () => {
-    if (!watchedTargetAmount || !watchedTargetCurrency) return;
-
-    try {
-      setConversionError(null);
-      
-      // Create a preview request
-      const previewRequest = {
-        amount: 0, // No initial amount for goal creation
-        currency: watchedTargetCurrency,
-        accountId: 'preview', // Dummy account for preview
-        operation: 'create' as const,
-        description: 'Preview',
-        goalName: 'Preview Goal',
-        targetAmount: watchedTargetAmount,
-        targetCurrency: watchedTargetCurrency
-      };
-
-      // Use the execution engine to get conversion preview
-      const accountBalances = accounts.map(acc => ({
-        id: acc.id,
-        balance: acc.balance,
-        currency: acc.currencycode,
-        name: acc.name,
-        type: acc.type
-      }));
-
-      const { CurrencyExecutionEngine } = await import('../../services/currencyExecutionEngine');
-      const engine = new CurrencyExecutionEngine(accountBalances, primaryCurrency.code);
-      
-      const result = await engine.executeGoalCreation(previewRequest);
-      
-      if (result.success) {
-        setConversionPreview({
-          primaryAmount: result.primaryAmount,
-          primaryCurrency: result.primaryCurrency,
-          exchangeRate: result.exchangeRate || 1,
-          conversionCase: result.auditData.conversionCase
-        });
-      } else {
-        setConversionError(result.error || 'Conversion failed');
-      }
-    } catch (error: any) {
-      console.error('Conversion preview error:', error);
-      setConversionError(error.message);
-    }
-  };
-
-  const getConversionCaseDescription = (caseType: string) => {
-    switch (caseType) {
-      case 'all_same':
-        return 'No conversion needed - all currencies match';
-      case 'amount_account_same':
-        return 'Amount matches account currency, converting to primary for net worth';
-      case 'amount_primary_same':
-        return 'Amount matches primary currency, converting to account currency';
-      case 'account_primary_same':
-        return 'Account and primary currencies match, converting amount';
-      case 'all_different':
-        return 'All currencies different - converting to both account and primary';
-      case 'amount_different_others_same':
-        return 'Amount currency different, account and primary match';
-      default:
-        return 'Currency conversion';
-    }
-  };
 
   const handleFormSubmit = async (data: GoalFormData) => {
     try {
       setIsSubmitting(true);
       setError(null);
-
-      // Validate the goal data
-      const validationResult = validateGoal({
-        title: data.title,
-        description: data.description,
-        targetAmount: data.targetAmount,
-        currentAmount: data.currentAmount,
-        targetDate: data.targetDate,
-        category: data.category,
-        activityScope: data.activityScope,
-        accountIds: data.accountIds,
-        targetCategory: data.targetCategory,
-        currencyCode: data.currencyCode
-      });
-
-      if (!validationResult.isValid) {
-        setError(validationResult.errors.join(', '));
-        return;
-      }
-
-      // Use currency execution engine for goal creation
-      const executionRequest = {
-        amount: 0, // No initial amount for goal creation
-        currency: data.targetCurrency,
-        accountId: data.accountIds[0] || 'default', // Use first selected account or default
-        operation: 'create' as const,
-        description: data.description,
-        goalName: data.title,
-        targetAmount: data.targetAmount,
-        targetCurrency: data.targetCurrency,
-        category: data.category
+      
+      // Sanitize numeric fields
+      const sanitizedData = sanitizeFinancialData(data, ['targetAmount', 'currentAmount']);
+      
+      // Transform to snake_case for validation
+      const validationData = {
+        title: sanitizedData.title,
+        description: sanitizedData.description,
+        target_amount: toNumber(sanitizedData.targetAmount),
+        current_amount: toNumber(sanitizedData.currentAmount),
+        target_date: new Date(data.targetDate),
+        category: sanitizedData.category,
+        account_id: sanitizedData.accountIds?.[0] || undefined, // Use first selected account or undefined
+        // Add missing fields for validation
+        activity_scope: data.activityScope,
+        account_ids: data.accountIds || [],
+        target_category: data.targetCategory || undefined,
       };
-
-      const result = await executeGoalCreation(executionRequest);
-
-      if (result.success) {
-        // Create goal data with converted amounts
-        const goalData: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'> = {
-          name: data.title,
-          targetAmount: result.accountAmount, // Use account currency amount for goal target
-          currentAmount: data.currentAmount,
-          targetDate: new Date(data.targetDate),
-          category: data.category,
-          priority: 'medium',
-          status: 'active',
-          description: data.description,
-          // Multi-currency data
-          native_amount: result.auditData.originalAmount,
-          native_currency: result.auditData.originalCurrency,
-          converted_amount: result.primaryAmount, // Primary currency for net worth tracking
-          converted_currency: result.primaryCurrency,
-          exchange_rate: result.exchangeRate || 1,
-          conversion_source: result.conversionSource || 'manual'
-        };
-
-        await onSubmit(goalData);
-      } else {
-        throw new Error(result.error || 'Goal creation failed');
-      }
+      
+      // Validate using schema
+      const validatedData = validateGoal(validationData);
+      
+      await onSubmit({
+        // Map validated snake_case data to camelCase for the API
+        title: validatedData.title,
+        description: validatedData.description,
+        targetAmount: validatedData.target_amount,
+        currentAmount: validatedData.current_amount,
+        targetDate: new Date(data.targetDate),
+        category: validatedData.category,
+        accountId: validatedData.account_id,
+        currencyCode: goalCurrency,
+        // Add scoping fields from validated data
+        activityScope: selectedGoalType,
+        accountIds: selectedGoalType === 'account_specific' ? (data.accountIds || []) : [],
+        targetCategory: selectedGoalType === 'category_based' ? data.targetCategory : undefined,
+        goalType: selectedGoalType === 'account_specific' ? 'account_specific' : 
+                 selectedGoalType === 'category_based' ? 'category_based' : 'general_savings',
+        priority: validatedData.priority,
+        status: 'active'
+      });
+      
     } catch (error: any) {
-      console.error('Goal creation error:', error);
-      setError(error.message);
+      console.error('Error submitting goal:', error);
+      setError(error.message || 'Failed to save goal. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-xl p-6 border-2 border-blue-200 dark:border-blue-800">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-          <Target className="mr-2 text-blue-600" />
-          Create Financial Goal
-        </h2>
-        <p className="text-gray-600 dark:text-gray-300">
-          Set a financial goal with multi-currency support. Your goal will be tracked in your primary currency.
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      {/* Tip Section */}
+      <div className="bg-gradient-to-r from-blue-500/20 to-primary-500/20 rounded-xl p-4 border border-blue-500/30">
+        <div className="flex items-start space-x-3">
+          <span className="text-blue-400 mt-0.5">🎯</span>
+          <div>
+            <p className="text-blue-400 font-medium">Goal Setting Tip</p>
+            <p className="text-gray-300 text-sm mt-1">
+              Set realistic goals that motivate you! Start small and celebrate every milestone. 
+              Manual tracking helps you stay connected to your progress.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-error-500/20 border border-error-500/30 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <AlertCircle size={18} className="text-error-400" />
+            <p className="text-error-400 text-sm">{error}</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Header with Info */}
+      <div className="bg-gradient-to-r from-primary-500/20 to-blue-500/20 rounded-xl p-4 mb-6 border border-primary-500/30">
+        <h3 className="text-lg font-semibold text-white mb-2 flex items-center">
+          <Target size={20} className="mr-2 text-primary-400" />
+          {initialData ? 'Edit Financial Goal' : 'New Financial Goal'}
+        </h3>
+        <p className="text-gray-300 text-sm">
+          {initialData 
+            ? 'Update your goal details to stay on track with your financial journey.'
+            : 'Set clear targets for your financial journey. Track your progress and stay motivated!'}
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-        {/* Goal Type Selection */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Goal Type</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {goalTypes.map((type) => (
-              <div
-                key={type.id}
-                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                  selectedGoalType === type.id
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                }`}
-                onClick={() => {
-                  setSelectedGoalType(type.id as any);
-                  setValue('activityScope', type.id as any);
-                }}
-              >
+      {/* Goal Type Selection */}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <h4 className="text-md font-semibold text-white mb-4">Goal Type</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {goalTypes.map((type) => (
+            <button
+              key={type.id}
+              type="button"
+              onClick={() => {
+                setSelectedGoalType(type.id as any);
+                setValue('activityScope', type.id as any);
+              }}
+              className={`p-4 rounded-lg border-2 transition-all ${
+                selectedGoalType === type.id
+                  ? 'border-primary-500 bg-primary-500/20'
+                  : 'border-white/20 hover:border-white/40'
+              }`}
+            >
+              <div className="text-center">
                 <div className="text-2xl mb-2">{type.icon}</div>
-                <h4 className="font-medium text-gray-900 dark:text-white">{type.name}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-300">{type.description}</p>
-                <div className="mt-2">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Examples:</p>
-                  <ul className="text-xs text-gray-600 dark:text-gray-300">
-                    {type.examples.map((example, index) => (
-                      <li key={index}>• {example}</li>
-                    ))}
-                  </ul>
+                <h5 className="font-semibold text-white text-sm mb-1">{type.name}</h5>
+                <p className="text-xs text-gray-400 mb-2">{type.description}</p>
+                <div className="text-xs text-gray-500">
+                  Examples: {type.examples.slice(0, 2).join(', ')}
                 </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <Input
+          label="Goal Title"
+          type="text"
+          icon={<Target size={18} className="text-primary-400" />}
+          {...register('title', { required: 'Goal title is required' })}
+          error={errors.title?.message}
+          className="bg-black/40 border-white/20 text-white"
+          placeholder="e.g., Dream Vacation, New Car"
+        />
+      </div>
+
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <Input
+          label="Description"
+          type="text"
+          icon={<FileText size={18} className="text-blue-400" />}
+          {...register('description', { required: 'Description is required' })}
+          error={errors.description?.message}
+          className="bg-black/40 border-white/20 text-white"
+          placeholder="What are you saving for?"
+        />
+      </div>
+
+      {/* Target Amount - Enhanced */}
+      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
+        <div className="flex items-center space-x-2 mb-4">
+          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+            <span className="text-purple-600 text-lg">🎯</span>
+          </div>
+          <div>
+            <label className="text-lg font-semibold text-gray-800">
+              Target Amount *
+            </label>
+            <p className="text-sm text-gray-600">
+              How much do you want to save?
+            </p>
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2">
+            <span className="text-lg font-semibold text-gray-600">
+              {getCurrencyInfo(goalCurrency)?.symbol || '$'}
+            </span>
+            <Input
+              type="number"
+              placeholder="0.00"
+              value={watch('targetAmount') || ''}
+              onChange={(e) => setValue('targetAmount', parseFloat(e.target.value) || 0)}
+              error={errors.targetAmount?.message}
+              className="flex-1 text-lg"
+            />
+          </div>
+          
+          {/* Currency Selection */}
+          <select
+            value={goalCurrency}
+            onChange={(e) => setGoalCurrency(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="USD">🇺🇸 USD - US Dollar</option>
+            <option value="EUR">🇪🇺 EUR - Euro</option>
+            <option value="GBP">🇬🇧 GBP - British Pound</option>
+            <option value="INR">🇮🇳 INR - Indian Rupee</option>
+            <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
+            <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
+            <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
+            <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
+          </select>
+        </div>
+        
+        {/* Quick Amount Buttons */}
+        <div className="mt-4">
+          <p className="text-sm text-gray-600 mb-2">Quick amounts:</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 10000)}
+              className="text-xs"
+            >
+              ₹10K
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 50000)}
+              className="text-xs"
+            >
+              ₹50K
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 100000)}
+              className="text-xs"
+            >
+              ₹1L
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 500000)}
+              className="text-xs"
+            >
+              ₹5L
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValue('targetAmount', 1000000)}
+              className="text-xs"
+            >
+              ₹10L
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Current Amount - Enhanced */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border-2 border-green-200">
+        <div className="flex items-center space-x-2 mb-4">
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+            <span className="text-green-600 text-lg">💰</span>
+          </div>
+          <div>
+            <label className="text-lg font-semibold text-gray-800">
+              Current Amount
+            </label>
+            <p className="text-sm text-gray-600">
+              How much have you already saved?
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <span className="text-lg font-semibold text-gray-600">
+            {getCurrencyInfo(goalCurrency)?.symbol || '$'}
+          </span>
+          <Input
+            type="number"
+            placeholder="0.00"
+            value={watch('currentAmount') || ''}
+            onChange={(e) => setValue('currentAmount', parseFloat(e.target.value) || 0)}
+            error={errors.currentAmount?.message}
+            className="flex-1 text-lg"
+          />
+        </div>
+        
+        <p className="text-xs text-gray-500 mt-2">
+          Leave as 0 if you're starting fresh
+        </p>
+      </div>
+
+      {/* Conversion preview removed for simplified currency system */}
+
+      {/* Activity Scope Selection */}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <label className="block text-sm font-medium text-gray-300 mb-3">
+          Goal Type
+        </label>
+        <div className="space-y-3">
+          <div className="flex items-center space-x-3">
+            <input
+              type="radio"
+              id="general"
+              value="general"
+              {...register('activityScope')}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
+            />
+            <label htmlFor="general" className="text-sm text-gray-300">
+              <span className="font-medium">General Goal</span>
+              <span className="block text-xs text-gray-400">Not tied to any specific account</span>
+            </label>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <input
+              type="radio"
+              id="account_specific"
+              value="account_specific"
+              {...register('activityScope')}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
+            />
+            <label htmlFor="account_specific" className="text-sm text-gray-300">
+              <span className="font-medium">Account-Specific Goal</span>
+              <span className="block text-xs text-gray-400">Linked to one or more specific accounts</span>
+            </label>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <input
+              type="radio"
+              id="category_based"
+              value="category_based"
+              {...register('activityScope')}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500"
+            />
+            <label htmlFor="category_based" className="text-sm text-gray-300">
+              <span className="font-medium">Category-Based Goal</span>
+              <span className="block text-xs text-gray-400">For a specific spending category</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Category
+        </label>
+        <CategorySelector
+          value={watch('category')}
+          onChange={(category) => setValue('category', category)}
+          type="goal"
+          placeholder="Select a category"
+          error={errors.category?.message}
+        />
+      </div>
+
+      {/* Account Selection - Only show if account_specific is selected */}
+      {selectedGoalType === 'account_specific' && (
+        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+          <label className="block text-sm font-medium text-gray-300 mb-3">
+            Select Accounts (Multiple Selection)
+          </label>
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {(accounts || []).map((account) => (
+              <div key={account.id} className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id={`account-${account.id}`}
+                  value={account.id}
+                  {...register('accountIds')}
+                  className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
+                />
+                <label htmlFor={`account-${account.id}`} className="text-sm text-gray-300 flex-1">
+                  <span className="font-medium">{account.name}</span>
+                  <span className="block text-xs text-gray-400">
+                    {currency.symbol}{account.balance.toLocaleString()} • {account.type}
+                  </span>
+                </label>
               </div>
             ))}
           </div>
+          <p className="text-xs text-gray-400 mt-2">
+            Select one or more accounts to link this goal to. You can change this later.
+          </p>
         </div>
+      )}
 
-        {/* Goal Details */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Goal Details</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Goal Title"
-              type="text"
-              icon={<Target size={18} className="text-blue-500" />}
-              {...register('title', { required: 'Goal title is required' })}
-              error={errors.title?.message}
-              placeholder="e.g., Emergency Fund"
-            />
-            
-            <Input
-              label="Description"
-              type="text"
-              icon={<FileText size={18} className="text-blue-500" />}
-              {...register('description')}
-              error={errors.description?.message}
-              placeholder="Optional description"
-            />
-          </div>
-        </div>
-
-        {/* Target Amount with Currency Conversion */}
-        <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-xl p-6 border-2 border-blue-200 dark:border-blue-800">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Target Amount</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Input
-                label="Target Amount"
-                type="number"
-                step="0.01"
-                min="0"
-                icon={<DollarSign size={18} className="text-blue-500" />}
-                {...register('targetAmount', { 
-                  required: 'Target amount is required',
-                  min: { value: 0.01, message: 'Target amount must be greater than 0' }
-                })}
-                error={errors.targetAmount?.message}
-                className="text-lg font-semibold"
-                placeholder="0.00"
-              />
-            </div>
-            
-            <div>
-              <Select
-                label="Currency"
-                value={targetCurrency}
-                onChange={(value) => {
-                  setTargetCurrency(value);
-                  setValue('targetCurrency', value);
-                }}
-                options={currencyOptions}
-                icon={<DollarSign size={18} className="text-blue-500" />}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Conversion Preview */}
-        {conversionPreview && (
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
-            <div className="flex items-center space-x-2 mb-3">
-              <CheckCircle size={16} className="text-green-600 dark:text-green-400" />
-              <h4 className="font-medium text-green-900 dark:text-green-100">Conversion Preview</h4>
-            </div>
-            
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Your goal target:</span>
-                <span className="font-medium">
-                  {currencyConversionService.formatAmount(new Decimal(watchedTargetAmount), watchedTargetCurrency)}
-                </span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Tracked in primary currency:</span>
-                <span className="font-medium">
-                  {currencyConversionService.formatAmount(new Decimal(conversionPreview.primaryAmount), conversionPreview.primaryCurrency)}
-                </span>
-              </div>
-              
-              {conversionPreview.exchangeRate !== 1 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Exchange rate:</span>
-                  <span className="font-medium">
-                    1 {watchedTargetCurrency} = {conversionPreview.exchangeRate.toFixed(6)} {conversionPreview.primaryCurrency}
-                  </span>
-                </div>
-              )}
-              
-              <div className="pt-2 border-t border-green-200 dark:border-green-700">
-                <p className="text-xs text-green-700 dark:text-green-300">
-                  {getConversionCaseDescription(conversionPreview.conversionCase)}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Conversion Error */}
-        {conversionError && (
-          <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
-            <div className="flex items-center space-x-2">
-              <AlertCircle size={16} className="text-red-600 dark:text-red-400" />
-              <span className="text-sm text-red-700 dark:text-red-300">
-                Conversion failed: {conversionError}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Target Date */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Target Date</h3>
-          
-          <Input
-            label="When do you want to achieve this goal?"
-            type="date"
-            icon={<Calendar size={18} className="text-blue-500" />}
-            {...register('targetDate', { required: 'Target date is required' })}
-            error={errors.targetDate?.message}
-          />
-        </div>
-
-        {/* Category */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Category</h3>
-          
+      {/* Target Category - Only show if category_based is selected */}
+      {selectedGoalType === 'category_based' && (
+        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Target Category
+          </label>
           <CategorySelector
-            categories={goalCategories}
-            selectedCategory={watch('category')}
-            onCategorySelect={(category) => setValue('category', category)}
-            error={errors.category?.message}
+            value={watch('targetCategory')}
+            onChange={(category) => setValue('targetCategory', category)}
+            type="expense"
+            placeholder="Select spending category"
+            error={errors.targetCategory?.message}
           />
+          <p className="text-xs text-gray-400 mt-1">
+            This goal will track spending for the selected category across all accounts.
+          </p>
         </div>
+      )}
 
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
-            <div className="flex items-center space-x-2">
-              <AlertCircle size={16} className="text-red-600 dark:text-red-400" />
-              <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
-            </div>
-          </div>
-        )}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <Input
+          label="Target Date"
+          type="date"
+          icon={<Calendar size={18} className="text-purple-400" />}
+          {...register('targetDate', { required: 'Target date is required' })}
+          error={errors.targetDate?.message}
+          className="bg-black/40 border-white/20 text-white"
+        />
+      </div>
 
-        {/* Submit Button */}
-        <div className="flex justify-end space-x-3 pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          
-          <Button
-            type="submit"
-            disabled={isSubmitting || !conversionPreview || !!conversionError}
-            className="min-w-[120px]"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 size={16} className="animate-spin mr-2" />
-                Creating...
-              </>
-            ) : (
-              'Create Goal'
-            )}
-          </Button>
-        </div>
-      </form>
-    </div>
+      <div className="flex space-x-4 pt-4">
+        <Button
+          type="button" 
+          variant="outline" 
+          onClick={onCancel} 
+          className="flex-1 border-white/20 text-white hover:bg-white/10"
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit" 
+          className="flex-1 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700"
+          loading={isSubmitting}
+        >
+          {initialData ? 'Update Goal' : 'Create Goal'}
+        </Button>
+      </div>
+    </form>
   );
 };

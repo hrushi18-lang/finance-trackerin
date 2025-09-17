@@ -53,7 +53,6 @@ import CurrencySettings from './pages/CurrencySettings';
 import Bills from './pages/Bills';
 import ProfileNew from './pages/ProfileNew';
 import CurrencyDemo from './pages/CurrencyDemo';
-import MultiCurrencyDemo from './pages/MultiCurrencyDemo';
 import FontTest from './pages/FontTest';
 import ContextTest from './pages/ContextTest';
 
@@ -387,15 +386,6 @@ function App() {
                                 element={
                                   <ProtectedRoute>
                                     <CurrencyDemo />
-                                  </ProtectedRoute>
-                                } 
-                              />
-                              
-                              <Route 
-                                path="/multi-currency-demo" 
-                                element={
-                                  <ProtectedRoute>
-                                    <MultiCurrencyDemo />
                                   </ProtectedRoute>
                                 } 
                               />

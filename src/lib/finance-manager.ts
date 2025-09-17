@@ -18,7 +18,7 @@ export type RecurringTransaction = Database['public']['Tables']['recurring_trans
 
 export interface CreateAccountData {
   name: string;
-  type: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment' | 'goals_vault';
+  type: FinancialAccount['type'];
   balance?: number;
   institution?: string;
   platform?: string;
@@ -164,32 +164,20 @@ class FinanceManager {
       await this.updateAccountBalance(transaction.account_id, transaction.amount, transaction.type);
     }
 
-  // If it's a transfer, create the corresponding transaction for the target account
-  if (data.type === 'transfer' && data.transfer_to_account_id) {
-    // First, create the outgoing transaction (expense) for the source account
-    const sourceTransaction = {
-      ...transactionData,
-      type: 'expense' as const,
-      description: `Transfer to ${data.description}`,
-      transfer_to_account_id: data.transfer_to_account_id
-    };
+    // If it's a transfer, create the corresponding transaction for the target account
+    if (data.type === 'transfer' && data.transfer_to_account_id) {
+      const transferTransaction = {
+        ...transactionData,
+        account_id: data.transfer_to_account_id,
+        amount: data.amount,
+        type: 'income' as const,
+        description: `Transfer from ${data.description}`,
+        transfer_to_account_id: data.account_id
+      };
 
-    const sourceTransfer = await offlineStorage.create<Transaction>('transactions', sourceTransaction);
-    await this.updateAccountBalance(sourceTransfer.account_id, sourceTransfer.amount, sourceTransfer.type);
-
-    // Then create the incoming transaction (income) for the target account
-    const transferTransaction = {
-      ...transactionData,
-      account_id: data.transfer_to_account_id,
-      amount: data.amount,
-      type: 'income' as const,
-      description: `Transfer from ${data.description}`,
-      transfer_to_account_id: data.account_id
-    };
-
-    const transfer = await offlineStorage.create<Transaction>('transactions', transferTransaction);
-    await this.updateAccountBalance(transfer.account_id, transfer.amount, transfer.type);
-  }
+      const transfer = await offlineStorage.create<Transaction>('transactions', transferTransaction);
+      await this.updateAccountBalance(transfer.account_id, transfer.amount, transfer.type);
+    }
 
     return transaction;
   }

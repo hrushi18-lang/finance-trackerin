@@ -125,10 +125,7 @@ const FinancialAccountsHub: React.FC = () => {
 
   // Helper functions
   const visibleAccounts = (accounts || []).filter(a => a.isVisible);
-  const totalBalance = visibleAccounts.reduce((sum, account) => {
-    // Use converted amount (primary currency) for total balance
-    return sum + (account.converted_amount || account.balance || 0);
-  }, 0);
+  const totalBalance = visibleAccounts.reduce((sum, account) => sum + account.balance, 0);
 
   const getAccountTransactions = (accountId: string): Transaction[] => {
     return (transactions || [])
@@ -202,7 +199,7 @@ const FinancialAccountsHub: React.FC = () => {
               <p className="text-sm font-body mb-2" style={{ color: 'var(--text-tertiary)' }}>Total Money Available</p>
               <p className="text-2xl font-numbers font-bold">
                 <CurrencyIcon currencyCode={currency.code} size={20} className="inline mr-2" />
-                {formatCurrency(totalBalance)}
+                {totalBalance.toLocaleString()}
               </p>
               <p className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>{visibleAccounts.length} active accounts</p>
             </div>

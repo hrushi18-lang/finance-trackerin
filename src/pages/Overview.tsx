@@ -46,7 +46,6 @@ const Overview: React.FC = () => {
   
   const [showBalances, setShowBalances] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('month');
-  const [isFinancialHealthMinimized, setIsFinancialHealthMinimized] = useState(false);
 
   // Initialize analytics engine
   const analyticsEngine = useMemo(() => {
@@ -99,7 +98,7 @@ const Overview: React.FC = () => {
 
   // Calculate comprehensive financial metrics
   const financialMetrics = useMemo(() => {
-    const totalAssets = accounts.reduce((sum, account) => sum + (account.converted_amount || account.balance || 0), 0);
+    const totalAssets = accounts.reduce((sum, account) => sum + (account.balance || 0), 0);
     const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.remaining_amount || 0), 0);
     const netWorth = totalAssets - totalLiabilities;
     
@@ -254,48 +253,6 @@ const Overview: React.FC = () => {
       </div>
 
       <div className="px-6 space-y-6">
-        {/* Net Worth Overview */}
-        <div className="mb-6">
-          <div 
-            className="p-8 rounded-3xl border-2 border-black"
-            style={{
-              backgroundColor: '#fef7ed', // cream background
-              boxShadow: '8px 8px 16px rgba(0,0,0,0.3), -4px -4px 8px rgba(0,0,0,0.1)'
-            }}
-          >
-            <div className="text-center text-black">
-              <div className="flex items-center justify-center space-x-2 mb-4">
-                <TrendingUp size={20} />
-                <h2 className="text-lg font-heading text-black">Total Net Worth</h2>
-              </div>
-              
-              <div className="mb-6">
-                <div className="text-5xl font-numbers text-black mb-2">
-                  {showBalances ? formatCurrency(financialMetrics.netWorth) : '••••••'}
-                </div>
-                <div className="flex items-center justify-center space-x-1 text-sm text-gray-700">
-                  <span>Assets - Liabilities</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6 text-center">
-                <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-gray-300">
-                  <div className="text-2xl font-numbers text-green-600 mb-1">
-                    {showBalances ? formatCurrency(financialMetrics.totalAssets) : '••••'}
-                  </div>
-                  <div className="text-xs text-gray-600">Total Assets</div>
-                </div>
-                <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-gray-300">
-                  <div className="text-2xl font-numbers text-red-600 mb-1">
-                    {showBalances ? formatCurrency(financialMetrics.totalLiabilities) : '••••'}
-                  </div>
-                  <div className="text-xs text-gray-600">Total Liabilities</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Financial Health Score Widget */}
         <div className="mb-6">
           <div className="card-neumorphic p-6 slide-in-up">
@@ -303,108 +260,88 @@ const Overview: React.FC = () => {
               <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
                 Financial Health Score
               </h2>
-              <div className="flex items-center space-x-3">
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  financialHealth.healthStatus === 'excellent' ? 'bg-green-100 text-green-800' :
-                  financialHealth.healthStatus === 'good' ? 'bg-blue-100 text-blue-800' :
-                  financialHealth.healthStatus === 'fair' ? 'bg-yellow-100 text-yellow-800' :
-                  financialHealth.healthStatus === 'poor' ? 'bg-orange-100 text-orange-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
-                  {financialHealth.healthStatus.toUpperCase()}
-                </div>
-                <button
-                  onClick={() => setIsFinancialHealthMinimized(!isFinancialHealthMinimized)}
-                  className="p-2 rounded-lg transition-all duration-200 hover:bg-gray-100"
-                  style={{ 
-                    backgroundColor: 'var(--background-secondary)',
-                    color: 'var(--text-secondary)'
-                  }}
-                >
-                  {isFinancialHealthMinimized ? (
-                    <ArrowDownRight size={16} />
-                  ) : (
-                    <ArrowUpRight size={16} />
-                  )}
-                </button>
+              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                financialHealth.healthStatus === 'excellent' ? 'bg-green-100 text-green-800' :
+                financialHealth.healthStatus === 'good' ? 'bg-blue-100 text-blue-800' :
+                financialHealth.healthStatus === 'fair' ? 'bg-yellow-100 text-yellow-800' :
+                financialHealth.healthStatus === 'poor' ? 'bg-orange-100 text-orange-800' :
+                'bg-red-100 text-red-800'
+              }`}>
+                {financialHealth.healthStatus.toUpperCase()}
               </div>
             </div>
 
-            {!isFinancialHealthMinimized && (
-              <>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="text-center">
-                    <div className="text-4xl font-numbers mb-2" style={{ color: 'var(--text-primary)' }}>
-                      {financialHealth.overallScore}
-                    </div>
-                    <div className="text-sm text-gray-500">Overall Score</div>
-                  </div>
-                  <div className="flex-1 ml-8">
-                    <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-                      <div
-                        className={`h-3 rounded-full transition-all duration-500 ${
-                          financialHealth.healthStatus === 'excellent' ? 'bg-green-500' :
-                          financialHealth.healthStatus === 'good' ? 'bg-blue-500' :
-                          financialHealth.healthStatus === 'fair' ? 'bg-yellow-500' :
-                          financialHealth.healthStatus === 'poor' ? 'bg-orange-500' :
-                          'bg-red-500'
-                        }`}
-                        style={{ width: `${financialHealth.overallScore}%` }}
-                      ></div>
-                    </div>
-                    <div className="text-xs text-gray-500">0 - 100 Scale</div>
-                  </div>
+            <div className="flex items-center justify-between mb-6">
+              <div className="text-center">
+                <div className="text-4xl font-numbers mb-2" style={{ color: 'var(--text-primary)' }}>
+                  {financialHealth.overallScore}
                 </div>
-
-                {/* Health Components */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                  <div className="text-center p-3 rounded-lg bg-gray-50">
-                    <div className="text-lg font-numbers text-blue-600">{financialHealth.components.liquidity.score.toFixed(0)}</div>
-                    <div className="text-xs text-gray-600">Liquidity</div>
-                    <div className="text-xs text-gray-500">{financialHealth.components.liquidity.ratio.toFixed(1)}x expenses</div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-gray-50">
-                    <div className="text-lg font-numbers text-red-600">{financialHealth.components.debtToIncome.score.toFixed(0)}</div>
-                    <div className="text-xs text-gray-600">Debt-to-Income</div>
-                    <div className="text-xs text-gray-500">{(financialHealth.components.debtToIncome.ratio * 100).toFixed(1)}%</div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-gray-50">
-                    <div className="text-lg font-numbers text-green-600">{financialHealth.components.savingsRate.score.toFixed(0)}</div>
-                    <div className="text-xs text-gray-600">Savings Rate</div>
-                    <div className="text-xs text-gray-500">{financialHealth.components.savingsRate.rate.toFixed(1)}%</div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-gray-50">
-                    <div className="text-lg font-numbers text-purple-600">{financialHealth.components.emergencyFund.score.toFixed(0)}</div>
-                    <div className="text-xs text-gray-600">Emergency Fund</div>
-                    <div className="text-xs text-gray-500">{(financialHealth.components.emergencyFund.coverage * 100).toFixed(0)}%</div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-gray-50">
-                    <div className="text-lg font-numbers text-yellow-600">{financialHealth.components.billPayment.score.toFixed(0)}</div>
-                    <div className="text-xs text-gray-600">Bill Payment</div>
-                    <div className="text-xs text-gray-500">{(financialHealth.components.billPayment.rate * 100).toFixed(0)}%</div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-gray-50">
-                    <div className="text-lg font-numbers text-indigo-600">{financialHealth.components.goalProgress.score.toFixed(0)}</div>
-                    <div className="text-xs text-gray-600">Goal Progress</div>
-                    <div className="text-xs text-gray-500">{(financialHealth.components.goalProgress.progress * 100).toFixed(0)}%</div>
-                  </div>
+                <div className="text-sm text-gray-500">Overall Score</div>
+              </div>
+              <div className="flex-1 ml-8">
+                <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+                  <div
+                    className={`h-3 rounded-full transition-all duration-500 ${
+                      financialHealth.healthStatus === 'excellent' ? 'bg-green-500' :
+                      financialHealth.healthStatus === 'good' ? 'bg-blue-500' :
+                      financialHealth.healthStatus === 'fair' ? 'bg-yellow-500' :
+                      financialHealth.healthStatus === 'poor' ? 'bg-orange-500' :
+                      'bg-red-500'
+                    }`}
+                    style={{ width: `${financialHealth.overallScore}%` }}
+                  ></div>
                 </div>
+                <div className="text-xs text-gray-500">0 - 100 Scale</div>
+              </div>
+            </div>
 
-                {/* Recommendations */}
-                {financialHealth.recommendations.length > 0 && (
-                  <div className="border-t pt-4">
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">Recommendations</h3>
-                    <div className="space-y-2">
-                      {financialHealth.recommendations.slice(0, 3).map((recommendation, index) => (
-                        <div key={index} className="flex items-start space-x-2 text-sm text-gray-600">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-                          <span>{recommendation}</span>
-                        </div>
-                      ))}
+            {/* Health Components */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+              <div className="text-center p-3 rounded-lg bg-gray-50">
+                <div className="text-lg font-numbers text-blue-600">{financialHealth.components.liquidity.score.toFixed(0)}</div>
+                <div className="text-xs text-gray-600">Liquidity</div>
+                <div className="text-xs text-gray-500">{financialHealth.components.liquidity.ratio.toFixed(1)}x expenses</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-gray-50">
+                <div className="text-lg font-numbers text-red-600">{financialHealth.components.debtToIncome.score.toFixed(0)}</div>
+                <div className="text-xs text-gray-600">Debt-to-Income</div>
+                <div className="text-xs text-gray-500">{(financialHealth.components.debtToIncome.ratio * 100).toFixed(1)}%</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-gray-50">
+                <div className="text-lg font-numbers text-green-600">{financialHealth.components.savingsRate.score.toFixed(0)}</div>
+                <div className="text-xs text-gray-600">Savings Rate</div>
+                <div className="text-xs text-gray-500">{financialHealth.components.savingsRate.rate.toFixed(1)}%</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-gray-50">
+                <div className="text-lg font-numbers text-purple-600">{financialHealth.components.emergencyFund.score.toFixed(0)}</div>
+                <div className="text-xs text-gray-600">Emergency Fund</div>
+                <div className="text-xs text-gray-500">{(financialHealth.components.emergencyFund.coverage * 100).toFixed(0)}%</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-gray-50">
+                <div className="text-lg font-numbers text-yellow-600">{financialHealth.components.billPayment.score.toFixed(0)}</div>
+                <div className="text-xs text-gray-600">Bill Payment</div>
+                <div className="text-xs text-gray-500">{(financialHealth.components.billPayment.rate * 100).toFixed(0)}%</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-gray-50">
+                <div className="text-lg font-numbers text-indigo-600">{financialHealth.components.goalProgress.score.toFixed(0)}</div>
+                <div className="text-xs text-gray-600">Goal Progress</div>
+                <div className="text-xs text-gray-500">{(financialHealth.components.goalProgress.progress * 100).toFixed(0)}%</div>
+              </div>
+            </div>
+
+            {/* Recommendations */}
+            {financialHealth.recommendations.length > 0 && (
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Recommendations</h3>
+                <div className="space-y-2">
+                  {financialHealth.recommendations.slice(0, 3).map((recommendation, index) => (
+                    <div key={index} className="flex items-start space-x-2 text-sm text-gray-600">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                      <span>{recommendation}</span>
                     </div>
-                  </div>
-                )}
-              </>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>

@@ -15,7 +15,7 @@ export interface FinancialAccount {
   platform?: string;
   accountNumber?: string;
   isVisible: boolean;
-  currencycode: string;
+  currencyCode: string;
   userId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -29,18 +29,6 @@ export interface FinancialAccount {
   exchange_rate_used?: number; // Database field name
   lastConversionDate?: Date;
   conversionSource?: 'api' | 'manual' | 'fallback';
-  
-  // Enhanced dual currency fields
-  native_amount?: number;
-  native_currency?: string;
-  native_symbol?: string;
-  converted_amount?: number;
-  converted_currency?: string;
-  converted_symbol?: string;
-  exchange_rate?: number;
-  conversion_metadata?: Record<string, any>;
-  rate_source?: 'api' | 'cached' | 'fallback';
-  last_conversion_date?: Date;
   
   // Account Management Features
   isPrimary?: boolean;
@@ -137,7 +125,7 @@ export interface Transaction {
   updatedAt?: Date;
   
   // Currency and payment tracking fields (matching database schema)
-  currencycode?: string;
+  currencyCode?: string;
   original_amount?: number;
   original_currency?: string;
   exchange_rate_used?: number;
@@ -198,7 +186,7 @@ export interface Goal {
   category: string;
   accountId?: string;
   goalType: 'account_specific' | 'category_based' | 'general_savings';
-  currencycode: string;
+  currencyCode: string;
   targetCategory?: string; // For category-based goals
   periodType: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
   customPeriodDays?: number; // For custom periods
@@ -225,10 +213,6 @@ export interface Goal {
   original_current_amount?: number;
   original_currency?: string;
   exchange_rate_used?: number;
-  // Additional currency conversion fields
-  originalCurrency?: string;
-  exchangeRateUsed?: number;
-  originalCurrentAmount?: number;
 }
 
 export interface Liability {
@@ -273,7 +257,7 @@ export interface Bill { // Enhanced Bill interface with all new features
   billType: 'fixed' | 'variable' | 'one_time' | 'liability_linked';
   amount: number;
   estimatedAmount?: number;
-  currencycode: string;
+  currencyCode: string;
   frequency: 'weekly' | 'bi_weekly' | 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'custom' | 'one_time';
   customFrequencyDays?: number;
   dueDate: Date;
@@ -289,7 +273,7 @@ export interface Bill { // Enhanced Bill interface with all new features
   sendDueDateReminder: boolean;
   sendOverdueReminder: boolean;
   // Enhanced fields
-  billCategory: 'account_specific' | 'category_based' | 'general';
+  billCategory: 'account_specific' | 'category_based' | 'general_expense';
   targetCategory?: string;
   isRecurring: boolean;
   paymentMethod?: string;
@@ -503,7 +487,7 @@ export interface Budget {
   activityScope?: 'general' | 'account_specific' | 'category_based';
   accountIds?: string[];
   targetCategory?: string;
-  currencycode?: string;
+  currencyCode?: string;
   startDate?: Date;
   endDate?: Date;
   // Currency tracking fields (matching database schema)

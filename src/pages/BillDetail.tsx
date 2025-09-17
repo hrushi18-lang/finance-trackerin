@@ -33,7 +33,8 @@ const BillDetail: React.FC = () => {
     addTransaction,
     getBillTransactions,
     payBillFlexible,
-    getBillPaymentHistory
+    getBillPaymentHistory,
+    isLoading 
   } = useFinance();
   const { formatCurrency } = useInternationalization();
   
@@ -146,7 +147,7 @@ const BillDetail: React.FC = () => {
                   {bill.title}
                 </h1>
                 <p className="text-sm font-body" style={{ color: 'var(--text-secondary)' }}>
-                  {(bill.billCategory || 'general').replace('_', ' ').toUpperCase()} • {bill.category}
+                  {(bill.billCategory || 'general_expense').replace('_', ' ').toUpperCase()} • {bill.category}
                 </p>
               </div>
             </div>

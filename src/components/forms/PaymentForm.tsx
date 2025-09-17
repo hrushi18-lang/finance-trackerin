@@ -1,25 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { FileText, Calculator, Info, AlertTriangle, Globe } from 'lucide-react';
+import { FileText, Calculator, Info, AlertTriangle } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { Liability, FinancialAccount } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
-import { 
-  convertTransactionCurrency, 
-  generateTransactionDisplayText, 
-  generateStorageData,
-  type CurrencyConversionResult
-} from '../../utils/multi-currency-converter';
-import { getCurrencyInfo } from '../../utils/currency-converter';
 
 interface PaymentFormData {
   amount: number;
   description: string;
   createTransaction: boolean;
   accountId: string;
-  currency: string;
 }
 
 interface PaymentFormProps {
@@ -38,8 +30,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
   } | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [conversionResult, setConversionResult] = useState<CurrencyConversionResult | null>(null);
-  const [selectedAccount, setSelectedAccount] = useState<FinancialAccount | null>(null);
   
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<PaymentFormData>({
     defaultValues: {
@@ -47,117 +37,14 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
       amount: liability?.monthlyPayment || 0,
       createTransaction: true,
       accountId: liability?.defaultPaymentAccountId || accounts?.[0]?.id || '',
-      currency: currency.code,
     },
   });
 
   const watchedAmount = watch('amount');
   const createTransaction = watch('createTransaction');
   const watchedAccountId = watch('accountId');
-  const watchedCurrency = watch('currency');
 
-  // Update selected account when accountId changes
-  useEffect(() => {
-    if (watchedAccountId) {
-      const account = accounts.find(acc => acc.id === watchedAccountId);
-      setSelectedAccount(account || null);
-    }
-  }, [watchedAccountId, accounts]);
-
-  // Handle currency conversion with improved logic
-  useEffect(() => {
-    if (watchedAmount && watchedCurrency && selectedAccount) {
-      const amount = parseFloat(watchedAmount.toString());
-      if (!isNaN(amount) && amount > 0) {
-        const accountCurrency = selectedAccount.currencycode || currency.code;
-        const primaryCurrency = currency.code;
-        
-        console.log(`🔄 PaymentForm Currency Logic:`, {
-          enteredAmount: amount,
-          enteredCurrency: watchedCurrency,
-          accountCurrency: accountCurrency,
-          primaryCurrency: primaryCurrency
-        });
-
-        // Scenario 1: Same currencies (no conversion needed)
-        if (watchedCurrency === accountCurrency) {
-          console.log(`✅ Same currencies - no conversion needed`);
-          setConversionResult({
-            transactionAmount: amount,
-            transactionCurrency: watchedCurrency,
-            transactionSymbol: getCurrencyInfo(watchedCurrency)?.symbol || '$',
-            accountAmount: amount,
-            accountCurrency: accountCurrency,
-            accountSymbol: getCurrencyInfo(accountCurrency)?.symbol || '$',
-            primaryAmount: amount,
-            primaryCurrency: primaryCurrency,
-            primarySymbol: getCurrencyInfo(primaryCurrency)?.symbol || '$',
-            case: 'T=A=P',
-            transactionToAccountRate: 1.0,
-            transactionToPrimaryRate: 1.0,
-            accountToPrimaryRate: 1.0,
-            converted_amount: amount,
-            native_amount: amount,
-            native_currency: watchedCurrency,
-            converted_currency: primaryCurrency,
-            exchange_rate: 1.0,
-            exchange_rate_used: 1.0,
-            conversion_source: 'manual'
-          });
-          return;
-        }
-
-        // Scenario 2: Both match primary currency (no conversion needed)
-        if (watchedCurrency === primaryCurrency && accountCurrency === primaryCurrency) {
-          console.log(`✅ Both currencies match primary - no conversion needed`);
-          setConversionResult({
-            transactionAmount: amount,
-            transactionCurrency: watchedCurrency,
-            transactionSymbol: getCurrencyInfo(watchedCurrency)?.symbol || '$',
-            accountAmount: amount,
-            accountCurrency: accountCurrency,
-            accountSymbol: getCurrencyInfo(accountCurrency)?.symbol || '$',
-            primaryAmount: amount,
-            primaryCurrency: primaryCurrency,
-            primarySymbol: getCurrencyInfo(primaryCurrency)?.symbol || '$',
-            case: 'T=A=P',
-            transactionToAccountRate: 1.0,
-            transactionToPrimaryRate: 1.0,
-            accountToPrimaryRate: 1.0,
-            converted_amount: amount,
-            native_amount: amount,
-            native_currency: watchedCurrency,
-            converted_currency: primaryCurrency,
-            exchange_rate: 1.0,
-            exchange_rate_used: 1.0,
-            conversion_source: 'manual'
-          });
-          return;
-        }
-
-        // Scenario 3: Both different from primary - convert to primary currency
-        console.log(`🔄 Both currencies different from primary - converting to primary currency`);
-        convertTransactionCurrency(
-          amount,
-          watchedCurrency,
-          accountCurrency,
-          primaryCurrency
-        ).then(result => {
-          console.log(`✅ Conversion result:`, result);
-          setConversionResult(result);
-        }).catch(error => {
-          console.error('Currency conversion failed:', error);
-          setConversionResult(null);
-        });
-      } else {
-        setConversionResult(null);
-      }
-    } else {
-      setConversionResult(null);
-    }
-  }, [watchedAmount, watchedCurrency, selectedAccount, currency]);
-
-  // Calculate payment impact with improved currency logic
+  // Calculate payment impact when amount or account changes
   React.useEffect(() => {
     if (liability && watchedAmount && watchedAccountId) {
       const paymentAmount = Number(watchedAmount) || 0;
@@ -166,52 +53,16 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
       const selectedAccount = accounts.find(a => a.id === watchedAccountId);
       
       if (paymentAmount > 0 && selectedAccount && !isNaN(paymentAmount)) {
-        const accountCurrency = selectedAccount.currencycode || currency.code;
-        const primaryCurrency = currency.code;
-        
-        // Determine actual payment amount based on currency logic
-        let actualPaymentAmount = paymentAmount;
-        let conversionNote = '';
-        
-        if (watchedCurrency === accountCurrency) {
-          // Same currencies - no conversion needed
-          actualPaymentAmount = paymentAmount;
-          conversionNote = 'No conversion needed - same currencies';
-          console.log(`💰 Payment Impact: Same currencies - using ${actualPaymentAmount} ${watchedCurrency}`);
-        } else if (watchedCurrency === primaryCurrency && accountCurrency === primaryCurrency) {
-          // Both match primary - no conversion needed
-          actualPaymentAmount = paymentAmount;
-          conversionNote = 'No conversion needed - both primary currency';
-          console.log(`💰 Payment Impact: Both primary currency - using ${actualPaymentAmount} ${watchedCurrency}`);
-        } else if (conversionResult && conversionResult.converted_amount) {
-          // Use live converted amount for deduction
-          actualPaymentAmount = conversionResult.converted_amount;
-          conversionNote = `Converted from ${paymentAmount} ${watchedCurrency} to ${actualPaymentAmount} ${primaryCurrency}`;
-          console.log(`💰 Payment Impact: Using converted amount ${actualPaymentAmount} ${primaryCurrency} (from ${paymentAmount} ${watchedCurrency})`);
-        } else {
-          // Fallback to original amount
-          actualPaymentAmount = paymentAmount;
-          conversionNote = 'Using original amount - conversion pending';
-          console.log(`💰 Payment Impact: Using original amount ${actualPaymentAmount} ${watchedCurrency} (conversion pending)`);
-        }
-        
-        const newBalance = Math.max(0, remainingAmount - actualPaymentAmount);
+        const newBalance = Math.max(0, remainingAmount - paymentAmount);
         const percentagePaid = totalAmount > 0 ? ((totalAmount - newBalance) / totalAmount) * 100 : 0;
-        setPaymentImpact({ 
-          newBalance, 
-          percentagePaid, 
-          accountName: selectedAccount.name,
-          actualAmount: actualPaymentAmount,
-          originalAmount: paymentAmount,
-          conversionNote: conversionNote
-        });
+        setPaymentImpact({ newBalance, percentagePaid, accountName: selectedAccount.name });
       } else {
         setPaymentImpact(null);
       }
     } else {
       setPaymentImpact(null);
     }
-  }, [watchedAmount, watchedAccountId, liability, accounts, conversionResult, watchedCurrency, currency]);
+  }, [watchedAmount, watchedAccountId, liability, accounts]);
 
   const handleFormSubmit = (data: PaymentFormData) => {
     try {
@@ -235,90 +86,10 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
         data.amount = remainingAmount;
       }
       
-      // Generate multi-currency data with improved logic
-      let multiCurrencyData = {};
-      const selectedAccount = accounts.find(a => a.id === data.accountId);
-      const accountCurrency = selectedAccount?.currencycode || currency.code;
-      const primaryCurrency = currency.code;
-      
-      console.log(`💳 Form Submission Currency Logic:`, {
-        enteredAmount: amount,
-        enteredCurrency: data.currency,
-        accountCurrency: accountCurrency,
-        primaryCurrency: primaryCurrency,
-        hasConversionResult: !!conversionResult
-      });
-
-      if (data.currency === accountCurrency) {
-        // Same currencies - no conversion needed
-        multiCurrencyData = {
-          native_amount: amount,
-          native_currency: data.currency,
-          native_symbol: getCurrencyInfo(data.currency)?.symbol || '$',
-          converted_amount: amount,
-          converted_currency: primaryCurrency,
-          converted_symbol: getCurrencyInfo(primaryCurrency)?.symbol || '$',
-          exchange_rate: 1.0,
-          exchange_rate_used: 1.0,
-          conversion_source: 'manual'
-        };
-        console.log(`✅ Same currencies - using direct amounts`);
-      } else if (data.currency === primaryCurrency && accountCurrency === primaryCurrency) {
-        // Both match primary - no conversion needed
-        multiCurrencyData = {
-          native_amount: amount,
-          native_currency: data.currency,
-          native_symbol: getCurrencyInfo(data.currency)?.symbol || '$',
-          converted_amount: amount,
-          converted_currency: primaryCurrency,
-          converted_symbol: getCurrencyInfo(primaryCurrency)?.symbol || '$',
-          exchange_rate: 1.0,
-          exchange_rate_used: 1.0,
-          conversion_source: 'manual'
-        };
-        console.log(`✅ Both primary currency - using direct amounts`);
-      } else if (conversionResult) {
-        // Use conversion result for different currencies
-        const storageData = generateStorageData(conversionResult);
-        multiCurrencyData = {
-          native_amount: storageData.nativeAmount,
-          native_currency: storageData.nativeCurrency,
-          native_symbol: storageData.nativeSymbol,
-          converted_amount: storageData.convertedAmount,
-          converted_currency: storageData.convertedCurrency,
-          converted_symbol: storageData.convertedSymbol,
-          exchange_rate: storageData.exchangeRate,
-          exchange_rate_used: storageData.exchangeRateUsed,
-          conversion_source: storageData.conversionSource || 'api'
-        };
-        console.log(`✅ Using conversion result:`, multiCurrencyData);
-      } else {
-        // Fallback - use original amount
-        multiCurrencyData = {
-          native_amount: amount,
-          native_currency: data.currency,
-          native_symbol: getCurrencyInfo(data.currency)?.symbol || '$',
-          converted_amount: amount,
-          converted_currency: primaryCurrency,
-          converted_symbol: getCurrencyInfo(primaryCurrency)?.symbol || '$',
-          exchange_rate: 1.0,
-          exchange_rate_used: 1.0,
-          conversion_source: 'manual'
-        };
-        console.log(`⚠️ Fallback - using original amounts`);
-      }
-
-      // Use converted amount for actual deduction if available
-      const finalAmount = conversionResult?.converted_amount || amount;
-      console.log(`💰 Final deduction amount: ${finalAmount} ${conversionResult?.converted_currency || primaryCurrency}`);
-
       onSubmit({
-        amount: finalAmount, // Use converted amount for actual deduction
+        amount: Number(amount) || 0,
         description: data.description || `Payment for ${liability?.name}`,
         createTransaction: data.createTransaction,
-        accountId: data.accountId,
-        currency: data.currency,
-        ...multiCurrencyData
       });
     } catch (error: any) {
       console.error('Error processing payment:', error);
@@ -432,53 +203,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
           />
         </div>
 
-        {/* Currency Selection */}
-        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-          <label className="block text-sm font-medium text-gray-300 mb-3">
-            Currency
-          </label>
-          <select
-            {...register('currency', { required: 'Please select a currency' })}
-            className="w-full bg-black/40 border border-white/20 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-          >
-            <option value="USD">USD ($)</option>
-            <option value="EUR">EUR (€)</option>
-            <option value="GBP">GBP (£)</option>
-            <option value="JPY">JPY (¥)</option>
-            <option value="INR">INR (₹)</option>
-            <option value="CAD">CAD (C$)</option>
-            <option value="AUD">AUD (A$)</option>
-            <option value="CHF">CHF (CHF)</option>
-            <option value="CNY">CNY (¥)</option>
-            <option value="SEK">SEK (kr)</option>
-          </select>
-          {errors.currency && (
-            <p className="text-red-400 text-sm mt-1">{errors.currency.message}</p>
-          )}
-        </div>
-
-        {/* Currency Conversion Display */}
-        {conversionResult && (
-          <div className="bg-blue-900/30 border border-blue-500/30 rounded-xl p-4">
-            <div className="flex items-center space-x-2 mb-2">
-              <Globe size={16} className="text-blue-400" />
-              <span className="text-sm font-medium text-blue-300">Currency Conversion</span>
-            </div>
-            <div className="text-sm text-blue-200">
-              {(() => {
-                try {
-                  const display = generateTransactionDisplayText(conversionResult);
-                  return typeof display === 'string' ? display : 
-                    `${display.transactionDisplay} → ${display.accountDisplay} (${display.conversionNote})`;
-                } catch (error) {
-                  console.error('Error generating display text:', error);
-                  return 'Conversion display error';
-                }
-              })()}
-            </div>
-          </div>
-        )}
-
         {/* Account Selection */}
         {createTransaction && (
           <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
@@ -546,24 +270,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
               <div className="flex justify-between">
                 <span className="text-gray-300">Account:</span>
                 <span className="font-medium text-white">{paymentImpact.accountName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-300">Payment Amount:</span>
-                <div className="text-right">
-                  <div className="font-medium text-white">
-                    {formatCurrency(paymentImpact.actualAmount)}
-                  </div>
-                  {paymentImpact.actualAmount !== paymentImpact.originalAmount && (
-                    <div className="text-xs text-gray-400">
-                      (Converted from {formatCurrency(paymentImpact.originalAmount || 0)})
-                    </div>
-                  )}
-                  {paymentImpact.conversionNote && (
-                    <div className="text-xs text-blue-300 mt-1">
-                      {paymentImpact.conversionNote}
-                    </div>
-                  )}
-                </div>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-300">New Balance:</span>
