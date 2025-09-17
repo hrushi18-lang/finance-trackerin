@@ -17,7 +17,7 @@ interface RegionConfig {
   countryCode: string;
   timezone: string;
   dateFormat: string;
-  firstDayOfWeek: 0 | 1 | 6; // 0 = Sunday, 1 = Monday, 6 = Saturday
+  firstDayOfWeek: 0 | 1; // 0 = Sunday, 1 = Monday
   numberFormat: string;
 }
 
@@ -28,7 +28,7 @@ interface InternationalizationContextType {
   setCurrency: (currency: CurrencyConfig) => void;
   setSecondaryCurrency: (currency: CurrencyConfig | null) => void;
   setRegion: (region: RegionConfig) => void;
-  formatCurrency: (amount: number, currencyCode?: string) => string;
+  formatCurrency: (amount: number) => string;
   formatCurrencyWithSecondary: (amount: number) => string;
   formatTransactionAmount: (amount: number, originalCurrency?: string, convertedAmount?: number) => string;
   formatDate: (date: Date, format?: string) => string;
@@ -53,16 +53,63 @@ interface InternationalizationProviderProps {
 }
 
 export const InternationalizationProvider: React.FC<InternationalizationProviderProps> = ({ children }) => {
-  const { } = useTranslation();
+  const { i18n } = useTranslation();
   const { profile } = useProfile();
 
   // Comprehensive currency configurations
   const supportedCurrencies: CurrencyConfig[] = [
-    // Supported 4 currencies only
+    // Major World Currencies
     { code: 'USD', symbol: '$', name: 'US Dollar', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
     { code: 'EUR', symbol: '€', name: 'Euro', decimals: 2, symbolPosition: 'after', thousandsSeparator: '.', decimalSeparator: ',' },
     { code: 'GBP', symbol: '£', name: 'British Pound', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
-    { code: 'INR', symbol: '₹', name: 'Indian Rupee', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' }
+    { code: 'JPY', symbol: '¥', name: 'Japanese Yen', decimals: 0, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'CNY', symbol: '¥', name: 'Chinese Yuan', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'INR', symbol: '₹', name: 'Indian Rupee', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    
+    // Asia Pacific
+    { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'HKD', symbol: 'HK$', name: 'Hong Kong Dollar', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'KRW', symbol: '₩', name: 'South Korean Won', decimals: 0, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'THB', symbol: '฿', name: 'Thai Baht', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'MYR', symbol: 'RM', name: 'Malaysian Ringgit', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'IDR', symbol: 'Rp', name: 'Indonesian Rupiah', decimals: 0, symbolPosition: 'before', thousandsSeparator: '.', decimalSeparator: ',' },
+    { code: 'PHP', symbol: '₱', name: 'Philippine Peso', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'VND', symbol: '₫', name: 'Vietnamese Dong', decimals: 0, symbolPosition: 'after', thousandsSeparator: '.', decimalSeparator: ',' },
+    
+    // Europe
+    { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc', decimals: 2, symbolPosition: 'after', thousandsSeparator: "'", decimalSeparator: '.' },
+    { code: 'SEK', symbol: 'kr', name: 'Swedish Krona', decimals: 2, symbolPosition: 'after', thousandsSeparator: ' ', decimalSeparator: ',' },
+    { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone', decimals: 2, symbolPosition: 'after', thousandsSeparator: ' ', decimalSeparator: ',' },
+    { code: 'DKK', symbol: 'kr', name: 'Danish Krone', decimals: 2, symbolPosition: 'after', thousandsSeparator: '.', decimalSeparator: ',' },
+    { code: 'PLN', symbol: 'zł', name: 'Polish Zloty', decimals: 2, symbolPosition: 'after', thousandsSeparator: ' ', decimalSeparator: ',' },
+    { code: 'CZK', symbol: 'Kč', name: 'Czech Koruna', decimals: 2, symbolPosition: 'after', thousandsSeparator: ' ', decimalSeparator: ',' },
+    { code: 'HUF', symbol: 'Ft', name: 'Hungarian Forint', decimals: 0, symbolPosition: 'after', thousandsSeparator: ' ', decimalSeparator: ',' },
+    { code: 'RUB', symbol: '₽', name: 'Russian Ruble', decimals: 2, symbolPosition: 'after', thousandsSeparator: ' ', decimalSeparator: ',' },
+    
+    // Americas
+    { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', decimals: 2, symbolPosition: 'before', thousandsSeparator: '.', decimalSeparator: ',' },
+    { code: 'MXN', symbol: '$', name: 'Mexican Peso', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'ARS', symbol: '$', name: 'Argentine Peso', decimals: 2, symbolPosition: 'before', thousandsSeparator: '.', decimalSeparator: ',' },
+    { code: 'CLP', symbol: '$', name: 'Chilean Peso', decimals: 0, symbolPosition: 'before', thousandsSeparator: '.', decimalSeparator: ',' },
+    { code: 'COP', symbol: '$', name: 'Colombian Peso', decimals: 0, symbolPosition: 'before', thousandsSeparator: '.', decimalSeparator: ',' },
+    { code: 'PEN', symbol: 'S/', name: 'Peruvian Sol', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    
+    // Middle East & Africa
+    { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'SAR', symbol: '﷼', name: 'Saudi Riyal', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'QAR', symbol: '﷼', name: 'Qatari Riyal', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'ILS', symbol: '₪', name: 'Israeli Shekel', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'TRY', symbol: '₺', name: 'Turkish Lira', decimals: 2, symbolPosition: 'after', thousandsSeparator: '.', decimalSeparator: ',' },
+    { code: 'ZAR', symbol: 'R', name: 'South African Rand', decimals: 2, symbolPosition: 'before', thousandsSeparator: ' ', decimalSeparator: '.' },
+    { code: 'EGP', symbol: '£', name: 'Egyptian Pound', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'NGN', symbol: '₦', name: 'Nigerian Naira', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'KES', symbol: 'KSh', name: 'Kenyan Shilling', decimals: 2, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    
+    // Cryptocurrencies
+    { code: 'BTC', symbol: '₿', name: 'Bitcoin', decimals: 8, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
+    { code: 'ETH', symbol: 'Ξ', name: 'Ethereum', decimals: 6, symbolPosition: 'before', thousandsSeparator: ',', decimalSeparator: '.' },
   ];
 
   // Regional configurations
@@ -214,34 +261,32 @@ export const InternationalizationProvider: React.FC<InternationalizationProvider
   };
 
   // Format currency according to local conventions
-  const formatCurrency = (amount: number, currencyCode?: string): string => {
+  const formatCurrency = (amount: number): string => {
     // Handle invalid amounts
     if (amount === null || amount === undefined || isNaN(amount)) {
-      const targetCurrency = currencyCode ? supportedCurrencies.find(c => c.code === currencyCode) || currency : currency;
-      return `${targetCurrency.symbol}0.00`;
+      return `${currency.symbol}0.00`;
     }
     
-    const targetCurrency = currencyCode ? supportedCurrencies.find(c => c.code === currencyCode) || currency : currency;
     const absAmount = Math.abs(amount);
     const isNegative = amount < 0;
     
     // Format the number according to currency settings
-    let formattedNumber = absAmount.toFixed(targetCurrency.decimals);
+    let formattedNumber = absAmount.toFixed(currency.decimals);
     
     // Apply thousands separator
     const parts = formattedNumber.split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, targetCurrency.thousandsSeparator);
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, currency.thousandsSeparator);
     
-    if (targetCurrency.decimals > 0 && parts[1]) {
-      formattedNumber = parts.join(targetCurrency.decimalSeparator);
+    if (currency.decimals > 0 && parts[1]) {
+      formattedNumber = parts.join(currency.decimalSeparator);
     } else {
       formattedNumber = parts[0];
     }
 
     // Add currency symbol
-    const result = targetCurrency.symbolPosition === 'before' 
-      ? `${targetCurrency.symbol}${formattedNumber}`
-      : `${formattedNumber} ${targetCurrency.symbol}`;
+    const result = currency.symbolPosition === 'before' 
+      ? `${currency.symbol}${formattedNumber}`
+      : `${formattedNumber} ${currency.symbol}`;
 
     return isNegative ? `-${result}` : result;
   };
@@ -253,7 +298,7 @@ export const InternationalizationProvider: React.FC<InternationalizationProvider
     }
 
     const originalFormatted = formatCurrency(amount, originalCurrency);
-    const convertedFormatted = formatCurrency(convertedAmount, currency.code);
+    const convertedFormatted = formatCurrency(convertedAmount);
     
     return `${originalFormatted} (≈ ${convertedFormatted})`;
   };
@@ -267,15 +312,14 @@ export const InternationalizationProvider: React.FC<InternationalizationProvider
     }
 
     // Simple conversion rate (in real app, this would come from an API)
-    // Updated with correct exchange rates (as of 2024)
     const conversionRates: { [key: string]: { [key: string]: number } } = {
-      'USD': { 'EUR': 0.92, 'GBP': 0.79, 'INR': 83.45, 'JPY': 150.0, 'CAD': 1.36, 'AUD': 1.53 },
-      'EUR': { 'USD': 1.09, 'GBP': 0.86, 'INR': 90.5, 'JPY': 163.0, 'CAD': 1.48, 'AUD': 1.66 },
-      'GBP': { 'USD': 1.27, 'EUR': 1.16, 'INR': 105.5, 'JPY': 190.0, 'CAD': 1.72, 'AUD': 1.94 },
-      'INR': { 'USD': 0.012, 'EUR': 0.011, 'GBP': 0.0095, 'JPY': 1.80, 'CAD': 0.016, 'AUD': 0.018 },
-      'JPY': { 'USD': 0.0067, 'EUR': 0.0061, 'GBP': 0.0053, 'INR': 0.56, 'CAD': 0.0091, 'AUD': 0.010 },
-      'CAD': { 'USD': 0.74, 'EUR': 0.68, 'GBP': 0.58, 'INR': 61.5, 'JPY': 110.0, 'AUD': 1.12 },
-      'AUD': { 'USD': 0.65, 'EUR': 0.60, 'GBP': 0.52, 'INR': 54.5, 'JPY': 98.0, 'CAD': 0.89 }
+      'USD': { 'EUR': 0.85, 'GBP': 0.73, 'INR': 83.0, 'JPY': 110.0, 'CAD': 1.25, 'AUD': 1.35 },
+      'EUR': { 'USD': 1.18, 'GBP': 0.86, 'INR': 97.5, 'JPY': 129.0, 'CAD': 1.47, 'AUD': 1.59 },
+      'GBP': { 'USD': 1.37, 'EUR': 1.16, 'INR': 113.5, 'JPY': 150.0, 'CAD': 1.71, 'AUD': 1.85 },
+      'INR': { 'USD': 0.012, 'EUR': 0.010, 'GBP': 0.009, 'JPY': 1.32, 'CAD': 0.015, 'AUD': 0.016 },
+      'JPY': { 'USD': 0.009, 'EUR': 0.008, 'GBP': 0.007, 'INR': 0.76, 'CAD': 0.011, 'AUD': 0.012 },
+      'CAD': { 'USD': 0.80, 'EUR': 0.68, 'GBP': 0.58, 'INR': 66.4, 'JPY': 87.5, 'AUD': 1.08 },
+      'AUD': { 'USD': 0.74, 'EUR': 0.63, 'GBP': 0.54, 'INR': 61.5, 'JPY': 81.0, 'CAD': 0.93 }
     };
 
     const rate = conversionRates[currency.code]?.[secondaryCurrency.code] || 1;
@@ -305,7 +349,9 @@ export const InternationalizationProvider: React.FC<InternationalizationProvider
   };
 
   // Format date according to regional preferences
-  const formatDate = (date: Date, _format?: string): string => {
+  const formatDate = (date: Date, format?: string): string => {
+    const formatToUse = format || region.dateFormat;
+    
     try {
       return new Intl.DateTimeFormat(region.numberFormat, {
         timeZone: region.timezone,

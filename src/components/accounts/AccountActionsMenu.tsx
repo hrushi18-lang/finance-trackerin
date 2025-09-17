@@ -59,145 +59,100 @@ export const AccountActionsMenu: React.FC<AccountActionsMenuProps> = ({
             <MoreVertical className="h-4 w-4" />
           </Button>
           
-          <div className="absolute right-0 top-8 w-64 bg-gray-800 dark:bg-gray-900 rounded-2xl shadow-2xl border-2 border-gray-600 dark:border-gray-700 py-2 z-20 backdrop-blur-sm">
+          <div className="absolute right-0 top-8 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
             {/* Quick Actions */}
-            <div className="px-3 py-2 text-xs font-semibold text-white uppercase tracking-wide font-playfair">
+            <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               Quick Actions
             </div>
             
             <button
               onClick={() => { onEdit(account); onClose(); }}
-              className="w-full px-4 py-3 text-left text-sm text-white hover:bg-blue-500/20 flex items-center space-x-3 rounded-lg mx-2 transition-all duration-200 group"
+              className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
             >
-              <div className="p-1.5 bg-blue-500/30 rounded-lg group-hover:bg-blue-500/50 transition-colors">
-                <Edit className="h-4 w-4 text-blue-300" />
-              </div>
-              <div>
-                <span className="font-medium font-playfair">Edit Account</span>
-                <p className="text-xs text-white">Modify account details</p>
-              </div>
+              <Edit className="h-4 w-4" />
+              <span>Edit Account</span>
             </button>
             
             <button
               onClick={() => { onDuplicate(account); onClose(); }}
-              className="w-full px-4 py-3 text-left text-sm text-white hover:bg-green-500/20 flex items-center space-x-3 rounded-lg mx-2 transition-all duration-200 group"
+              className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
             >
-              <div className="p-1.5 bg-green-500/30 rounded-lg group-hover:bg-green-500/50 transition-colors">
-                <Copy className="h-4 w-4 text-green-300" />
-              </div>
-              <div>
-                <span className="font-medium font-playfair">Duplicate Account</span>
-                <p className="text-xs text-white">Create a copy</p>
-              </div>
+              <Copy className="h-4 w-4" />
+              <span>Duplicate Account</span>
             </button>
             
             <button
               onClick={() => { onTransfer(account); onClose(); }}
-              className="w-full px-4 py-3 text-left text-sm text-white hover:bg-purple-500/20 flex items-center space-x-3 rounded-lg mx-2 transition-all duration-200 group"
+              className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
             >
-              <div className="p-1.5 bg-purple-500/30 rounded-lg group-hover:bg-purple-500/50 transition-colors">
-                <TrendingUp className="h-4 w-4 text-purple-300" />
-              </div>
-              <div>
-                <span className="font-medium font-playfair">Transfer Funds</span>
-                <p className="text-xs text-white">Move money between accounts</p>
-              </div>
+              <TrendingUp className="h-4 w-4" />
+              <span>Transfer Funds</span>
             </button>
 
             {/* Analytics & Insights */}
-            <div className="border-t border-gray-500 dark:border-gray-600 my-1"></div>
-            <div className="px-3 py-2 text-xs font-semibold text-white uppercase tracking-wide font-playfair">
+            <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+            <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               Analytics & Insights
             </div>
             
             <button
               onClick={() => { onViewHistory(account); onClose(); }}
-              className="w-full px-4 py-3 text-left text-sm text-white hover:bg-indigo-500/20 flex items-center space-x-3 rounded-lg mx-2 transition-all duration-200 group"
+              className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
             >
-              <div className="p-1.5 bg-indigo-500/30 rounded-lg group-hover:bg-indigo-500/50 transition-colors">
-                <History className="h-4 w-4 text-indigo-300" />
-              </div>
-              <div>
-                <span className="font-medium font-playfair">Transaction History</span>
-                <p className="text-xs text-white">View all transactions</p>
-              </div>
+              <History className="h-4 w-4" />
+              <span>View Transaction History</span>
             </button>
             
             <button
               onClick={() => { onViewAnalytics(account); onClose(); }}
-              className="w-full px-4 py-3 text-left text-sm text-white hover:bg-orange-500/20 flex items-center space-x-3 rounded-lg mx-2 transition-all duration-200 group"
+              className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
             >
-              <div className="p-1.5 bg-orange-500/30 rounded-lg group-hover:bg-orange-500/50 transition-colors">
-                <TrendingUp className="h-4 w-4 text-orange-300" />
-              </div>
-              <div>
-                <span className="font-medium font-playfair">Spending Analytics</span>
-                <p className="text-xs text-white">View spending breakdown</p>
-              </div>
+              <TrendingUp className="h-4 w-4" />
+              <span>Spending Breakdown</span>
             </button>
 
             {/* Visibility & Organization */}
-            <div className="border-t border-gray-500 dark:border-gray-600 my-1"></div>
-            <div className="px-3 py-2 text-xs font-semibold text-white uppercase tracking-wide font-playfair">
+            <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+            <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               Organization
             </div>
             
             <button
               onClick={() => { onTogglePin(account); onClose(); }}
-              className="w-full px-4 py-3 text-left text-sm text-white hover:bg-yellow-500/20 flex items-center space-x-3 rounded-lg mx-2 transition-all duration-200 group"
+              className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
             >
-              <div className="p-1.5 bg-yellow-500/30 rounded-lg group-hover:bg-yellow-500/50 transition-colors">
-                <Star className="h-4 w-4 text-yellow-300" />
-              </div>
-              <div>
-                <span className="font-medium font-playfair">{account.isPrimary ? 'Unpin from Home' : 'Pin to Home'}</span>
-                <p className="text-xs text-white">{account.isPrimary ? 'Remove from home screen' : 'Add to home screen'}</p>
-              </div>
+              <Star className="h-4 w-4" />
+              <span>{account.isPrimary ? 'Unpin from Home' : 'Pin to Home'}</span>
             </button>
             
             <button
               onClick={() => { onToggleVisibility(account); onClose(); }}
-              className="w-full px-4 py-3 text-left text-sm text-white hover:bg-cyan-500/20 flex items-center space-x-3 rounded-lg mx-2 transition-all duration-200 group"
+              className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
             >
-              <div className="p-1.5 bg-cyan-500/30 rounded-lg group-hover:bg-cyan-500/50 transition-colors">
-                {account.isVisible ? <EyeOff className="h-4 w-4 text-cyan-300" /> : <Eye className="h-4 w-4 text-cyan-300" />}
-              </div>
-              <div>
-                <span className="font-medium font-playfair">{account.isVisible ? 'Hide from Overview' : 'Show in Overview'}</span>
-                <p className="text-xs text-white">{account.isVisible ? 'Hide from financial overview' : 'Show in financial overview'}</p>
-              </div>
+              {account.isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <span>{account.isVisible ? 'Hide from Overview' : 'Show in Overview'}</span>
             </button>
 
             {/* Safety Features */}
-            <div className="border-t border-gray-500 dark:border-gray-600 my-1"></div>
-            <div className="px-3 py-2 text-xs font-semibold text-white uppercase tracking-wide font-playfair">
+            <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+            <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               Account Management
             </div>
             
             <button
               onClick={() => setShowArchiveConfirm(true)}
-              className="w-full px-4 py-3 text-left text-sm text-orange-300 hover:bg-orange-500/20 flex items-center space-x-3 rounded-lg mx-2 transition-all duration-200 group"
+              className="w-full px-3 py-2 text-left text-sm text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 flex items-center space-x-2"
             >
-              <div className="p-1.5 bg-orange-500/30 rounded-lg group-hover:bg-orange-500/50 transition-colors">
-                <Archive className="h-4 w-4 text-orange-300" />
-              </div>
-              <div>
-                <span className="font-medium font-playfair">Archive Account</span>
-                <p className="text-xs text-orange-300">Hide from home screen</p>
-              </div>
+              <Archive className="h-4 w-4" />
+              <span>Archive Account</span>
             </button>
             
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="w-full px-4 py-3 text-left text-sm text-red-300 hover:bg-red-500/20 flex items-center space-x-3 rounded-lg mx-2 transition-all duration-200 group"
+              className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
             >
-              <div className="p-1.5 bg-red-500/30 rounded-lg group-hover:bg-red-500/50 transition-colors">
-                <Trash2 className="h-4 w-4 text-red-300" />
-              </div>
-              <div>
-                <span className="font-medium font-playfair">Delete Account</span>
-                <p className="text-xs text-red-300">Permanently remove</p>
-              </div>
+              <Trash2 className="h-4 w-4" />
+              <span>Delete Account</span>
             </button>
           </div>
         </div>

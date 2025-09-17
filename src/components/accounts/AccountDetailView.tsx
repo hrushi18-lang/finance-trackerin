@@ -5,8 +5,6 @@ import { FinancialAccount, Transaction, Goal } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { Button } from '../common/Button';
-import { TransactionDetailsModal } from '../modals/TransactionDetailsModal';
-import { AccountAnalyticsChart } from '../analytics/AccountAnalyticsChart';
 
 interface AccountDetailViewProps {
   account: FinancialAccount;
@@ -33,9 +31,6 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
 }) => {
   const { formatCurrency, currency } = useInternationalization();
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'analytics'>('overview');
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [showTransactionModal, setShowTransactionModal] = useState(false);
-  const [showAnalyticsChart, setShowAnalyticsChart] = useState(false);
 
   const getAccountIcon = (type: string) => {
     const icons = {
@@ -156,30 +151,10 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
           <div className="mt-6">
             <div className={`${balanceStatus.bgColor} rounded-xl p-4 border border-current`}>
               <p className="text-sm text-forest-300 mb-2 font-body">Current Balance</p>
-              
-              {/* Main Balance - Native Currency */}
               <p className="text-3xl font-numbers font-bold text-white">
-                <CurrencyIcon currencyCode={account.native_currency || currency.code} size={24} className="inline mr-2" />
-                {formatCurrency(account.native_amount || account.balance, account.native_currency || currency.code)}
+                <CurrencyIcon currencyCode={currency.code} size={24} className="inline mr-2" />
+                {formatCurrency(account.balance)}
               </p>
-              
-              {/* Description - Primary Currency if different */}
-              {account.native_currency && account.native_currency !== currency.code && (
-                <div className="mt-2 p-2 bg-forest-800/30 rounded-lg">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-forest-300">≈ {currency.code}:</span>
-                    <span className="text-white font-medium">
-                      {formatCurrency(account.converted_amount || account.balance, currency.code)}
-                    </span>
-                  </div>
-                  {account.exchange_rate && account.exchange_rate !== 1.0 && (
-                    <div className="text-xs text-forest-400 mt-1">
-                      1 {account.native_currency} = {account.exchange_rate.toFixed(4)} {currency.code}
-                    </div>
-                  )}
-                </div>
-              )}
-              
               <div className="flex items-center justify-between mt-2">
                 <span className={`text-sm font-medium ${balanceStatus.color}`}>
                   {balanceStatus.status.charAt(0).toUpperCase() + balanceStatus.status.slice(1)} Balance
@@ -314,14 +289,7 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
             ) : (
               <div className="space-y-3">
                 {recentTransactions.map((transaction) => (
-                  <div 
-                    key={transaction.id} 
-                    className="bg-forest-900/30 backdrop-blur-md rounded-xl p-4 border border-forest-600/20 cursor-pointer hover:bg-forest-800/40 transition-colors"
-                    onClick={() => {
-                      setSelectedTransaction(transaction);
-                      setShowTransactionModal(true);
-                    }}
-                  >
+                  <div key={transaction.id} className="bg-forest-900/30 backdrop-blur-md rounded-xl p-4 border border-forest-600/20">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
@@ -359,82 +327,15 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
         {activeTab === 'analytics' && (
           <div className="space-y-6">
             <div className="bg-forest-900/30 backdrop-blur-md rounded-xl p-6 border border-forest-600/20">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-heading font-semibold text-white">Transaction Analytics</h3>
-                <button
-                  onClick={() => setShowAnalyticsChart(true)}
-                  className="px-4 py-2 bg-forest-600 hover:bg-forest-500 text-white rounded-lg transition-colors flex items-center space-x-2"
-                >
-                  <BarChart3 size={16} />
-                  <span>View Full Chart</span>
-                </button>
-              </div>
-              
-              {/* Mini Analytics Preview */}
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-forest-800/50 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <TrendingUp size={16} className="text-green-400" />
-                      <span className="text-sm text-gray-300">Total Income</span>
-                    </div>
-                    <div className="text-xl font-bold text-white">
-                      {formatCurrency(transactions
-                        .filter(t => t.type === 'income')
-                        .reduce((sum, t) => sum + (t.amount || 0), 0)
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="bg-forest-800/50 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <TrendingDown size={16} className="text-red-400" />
-                      <span className="text-sm text-gray-300">Total Expenses</span>
-                    </div>
-                    <div className="text-xl font-bold text-white">
-                      {formatCurrency(transactions
-                        .filter(t => t.type === 'expense')
-                        .reduce((sum, t) => sum + (t.amount || 0), 0)
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-forest-800/50 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <BarChart3 size={16} className="text-blue-400" />
-                    <span className="text-sm text-gray-300">Transaction Timeline</span>
-                  </div>
-                  <div className="text-sm text-gray-400 mb-3">
-                    Click "View Full Chart" to see detailed income vs expenses over time
-                  </div>
-                  <div className="h-16 bg-forest-700/50 rounded-lg flex items-center justify-center">
-                    <div className="text-gray-500 text-sm">Interactive Chart Preview</div>
-                  </div>
-                </div>
+              <h3 className="text-lg font-heading font-semibold text-white mb-4">Transaction Analytics</h3>
+              <div className="text-center py-8">
+                <BarChart3 size={48} className="mx-auto text-gray-600 mb-4" />
+                <p className="text-gray-400">Analytics coming soon</p>
               </div>
             </div>
           </div>
         )}
       </div>
-
-      {/* Transaction Details Modal */}
-      <TransactionDetailsModal
-        isOpen={showTransactionModal}
-        onClose={() => {
-          setShowTransactionModal(false);
-          setSelectedTransaction(null);
-        }}
-        transaction={selectedTransaction}
-      />
-
-      {/* Analytics Chart Modal */}
-      <AccountAnalyticsChart
-        isOpen={showAnalyticsChart}
-        onClose={() => setShowAnalyticsChart(false)}
-        transactions={transactions}
-        accountName={account.name}
-      />
     </div>
   );
 };

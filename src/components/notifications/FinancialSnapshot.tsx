@@ -28,7 +28,7 @@ const FinancialSnapshot: React.FC = () => {
     // No need to reload here
 
     // Calculate financial metrics
-    const totalAssets = accounts.reduce((sum, account) => sum + (account.converted_amount || account.balance || 0), 0);
+    const totalAssets = accounts.reduce((sum, account) => sum + (account.balance || 0), 0);
     const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.remainingAmount || 0), 0);
     const netWorth = totalAssets - totalLiabilities;
 
