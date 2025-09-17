@@ -48,9 +48,6 @@ import CreateBill from './pages/CreateBill';
 import GoalDetail from './pages/GoalDetail';
 import BillDetail from './pages/BillDetail';
 import Settings from './pages/Settings';
-import HrushiTestPage from './pages/HrushiTestPage';
-import LiveRateTestPage from './pages/LiveRateTestPage';
-import CurrencyTestPage from './pages/CurrencyTestPage';
 import ThemeSettings from './pages/ThemeSettings';
 import CurrencySettings from './pages/CurrencySettings';
 import Bills from './pages/Bills';
@@ -438,31 +435,6 @@ function App() {
                                   </ProtectedRoute>
                                 } 
                               />
-                              
-        <Route
-          path="/hrushi-test"
-          element={
-            <ProtectedRoute>
-              <HrushiTestPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/live-rate-test"
-          element={
-            <ProtectedRoute>
-              <LiveRateTestPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/currency-test"
-          element={
-            <ProtectedRoute>
-              <CurrencyTestPage />
-            </ProtectedRoute>
-          }
-        />
                               
                               {/* Catch all route */}
                               <Route path="*" element={<Navigate to="/" replace />} />
