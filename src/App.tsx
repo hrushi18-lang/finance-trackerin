@@ -59,6 +59,7 @@ import CurrencyDemo from './pages/CurrencyDemo';
 import MultiCurrencyDemo from './pages/MultiCurrencyDemo';
 import FontTest from './pages/FontTest';
 import ContextTest from './pages/ContextTest';
+import ExchangeRateSettings from './pages/settings/ExchangeRateSettings';
 
 // Dynamic imports for heavy components
 const Analytics = React.lazy(() => import('./pages/Analytics'));
@@ -435,6 +436,15 @@ function App() {
                                 element={
                                   <ProtectedRoute>
                                     <CurrencySettings />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/settings/exchange-rates" 
+                                element={
+                                  <ProtectedRoute>
+                                    <ExchangeRateSettings />
                                   </ProtectedRoute>
                                 } 
                               />

@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { ArrowLeft, Plus, Minus, CreditCard, AlertCircle, RefreshCw, ArrowRightLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, CreditCard, AlertCircle, ArrowRight } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { CategorySelector } from '../common/CategorySelector';
 import { useFinance } from '../../contexts/FinanceContext';
-import { useCurrencyConversion } from '../../hooks/useCurrencyConversion';
-import { ConversionResult } from '../../services/currencyConversionService';
-import { getCurrencyInfo } from '../../utils/currency-converter';
+import { unifiedCurrencyService } from '../../services/unifiedCurrencyService';
+import { simpleCurrencyService } from '../../services/simpleCurrencyService';
+import { useProfile } from '../../contexts/ProfileContext';
 
 interface TransactionFormData {
   type: 'income' | 'expense' | 'transfer';
@@ -54,27 +54,21 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
   const { 
     accounts, 
     addTransaction, 
-    userCategories,
-    getUserCurrency 
+    getUserCurrency,
+    user 
   } = useFinance();
   
-  const { 
-    convertCurrency, 
-    formatAmount, 
-    getCurrencySymbol, 
-    getCurrencyPrecision,
-    isLoading: isConverting,
-    error: conversionError 
-  } = useCurrencyConversion();
+  const { profile } = useProfile();
   
   const [transactionType, setTransactionType] = useState<'income' | 'expense' | 'transfer'>(defaultType);
-  const [selectedCurrency, setSelectedCurrency] = useState(getUserCurrency());
   const [selectedAccount, setSelectedAccount] = useState<typeof accounts[0] | null>(null);
-  const [conversionResult, setConversionResult] = useState<ConversionResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [transactionCurrency, setTransactionCurrency] = useState<string>(getUserCurrency());
+  const [conversionPreview, setConversionPreview] = useState<any | null>(null);
+  const [lockedConversion, setLockedConversion] = useState<any | null>(null);
   
-  const primaryCurrency = getUserCurrency();
+  const primaryCurrency = profile?.primaryCurrency || getUserCurrency();
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<TransactionFormData>({
     defaultValues: {
@@ -102,77 +96,81 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
     }
   }, [accountId, accounts]);
   
-  // 6-Case Currency Conversion Logic
-  const performCurrencyConversion = useCallback(async () => {
-    if (!amount || !selectedCurrency || !selectedAccount) {
-      setConversionResult(null);
-      return;
-    }
-
-    const amountValue = Number(amount);
-    if (isNaN(amountValue) || amountValue <= 0) {
-      setConversionResult(null);
-      return;
-    }
-
-    try {
-      console.log(`🔄 EnhancedTransactionForm: Converting ${amountValue} ${selectedCurrency}`, {
-        enteredCurrency: selectedCurrency,
-        accountCurrency: selectedAccount.currencycode,
-        primaryCurrency: primaryCurrency
-      });
-
-      const result = await convertCurrency({
-        amount: amountValue,
-        enteredCurrency: selectedCurrency,
-        accountCurrency: selectedAccount.currencycode,
-        primaryCurrency: primaryCurrency,
-        includeFees: true,
-        feePercentage: 0.0025, // 0.25% fee
-        auditContext: 'transaction_form'
-      });
-
-      console.log(`✅ EnhancedTransactionForm: Conversion result:`, {
-        case: result.conversionCase,
-        entered: `${result.enteredSymbol}${result.enteredAmount.toFixed(getCurrencyPrecision(result.enteredCurrency))}`,
-        account: `${result.accountSymbol}${result.accountAmount.toFixed(getCurrencyPrecision(result.accountCurrency))}`,
-        primary: `${result.primarySymbol}${result.primaryAmount.toFixed(getCurrencyPrecision(result.primaryCurrency))}`,
-        rate: result.exchangeRate.toFixed(6),
-        source: result.conversionSource
-      });
-
-      setConversionResult(result);
-    } catch (error: any) {
-      console.error('❌ EnhancedTransactionForm: Conversion failed:', error);
-      setConversionResult(null);
-    }
-  }, [amount, selectedCurrency, selectedAccount, primaryCurrency, convertCurrency, getCurrencyPrecision]);
-
-  // Perform conversion when dependencies change
+  // ✅ UPDATED: Calculate conversion preview using unified service
   useEffect(() => {
-    performCurrencyConversion();
-  }, [performCurrencyConversion]);
-  
-  // Old conversion logic removed - now handled by new system
+    const calculatePreview = async () => {
+      if (amount && transactionCurrency && selectedAccount && amount > 0) {
+        try {
+          const preview = await unifiedCurrencyService.convert({
+            enteredAmount: Number(amount),
+            enteredCurrency: transactionCurrency,
+            accountId: selectedAccount.id,
+            accountCurrency: selectedAccount.currencycode || primaryCurrency,
+            primaryCurrency: primaryCurrency,
+            operation: 'preview', // Preview mode (no logging)
+            operationType: 'transaction',
+            userId: user?.id
+          });
+          
+          if (preview.success) {
+            setConversionPreview(preview);
+            console.log('💡 Conversion preview:', preview.displayText);
+          } else {
+            setConversionPreview(null);
+            console.error('Preview failed:', preview.error);
+          }
+        } catch (error) {
+          console.error('Preview calculation failed:', error);
+          setConversionPreview(null);
+        }
+      } else {
+        setConversionPreview(null);
+      }
+    };
+    
+    calculatePreview();
+  }, [amount, transactionCurrency, selectedAccount, primaryCurrency, user]);
   
   const handleFormSubmit = async (data: TransactionFormData) => {
-    if (!conversionResult) {
-      setError('Please wait for currency conversion to complete.');
-      return;
-    }
-    
     setIsSubmitting(true);
     setError(null);
     
     try {
-      // CORRECT LOGIC: Use account currency amount for actual deduction
-      const accountAmount = conversionResult.accountAmount.toNumber();
-      const primaryAmount = conversionResult.primaryAmount.toNumber();
+      if (!selectedAccount) {
+        throw new Error('Please select an account');
+      }
       
-      // Create transaction data with correct conversion logic
+      // ✅ UPDATED: Execute conversion with unified service
+      const execution = await unifiedCurrencyService.convert({
+        enteredAmount: Number(data.amount),
+        enteredCurrency: transactionCurrency,
+        accountId: selectedAccount.id,
+        accountCurrency: selectedAccount.currencycode || primaryCurrency,
+        primaryCurrency: primaryCurrency,
+        operation: 'execute', // Execute mode (logs to database)
+        operationType: 'transaction',
+        userId: user?.id,
+        description: data.description,
+        linkedEntityId: linkedGoalId || linkedBillId || linkedLiabilityId,
+        linkedEntityType: linkedGoalId ? 'goal' : linkedBillId ? 'bill' : linkedLiabilityId ? 'liability' : undefined
+      });
+      
+      if (!execution.success) {
+        throw new Error(execution.error || 'Currency conversion failed');
+      }
+      
+      setLockedConversion(execution);
+      
+      console.log('🔒 Executed conversion:', {
+        entered: execution.displayText.entered,
+        account: execution.displayText.account,
+        primary: execution.displayText.primary
+      });
+      
+      // ✅ UPDATED: Pass complete conversion data to addTransaction
       const transactionData = {
         type: data.type,
-        amount: accountAmount, // Use account currency amount for actual deduction
+        amount: execution.accountAmount, // Account currency amount
         description: data.description,
         category: data.category,
         date: new Date(data.date),
@@ -181,38 +179,23 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
         affectsBalance: data.affectsBalance,
         status: 'completed' as const,
         notes: data.notes,
-        // Currency fields
-        currencycode: conversionResult.accountCurrency, // Use account currency for the transaction
-        // Include conversion data for tracking
-        native_amount: conversionResult.enteredAmount.toNumber(), // Original entered amount
-        native_currency: conversionResult.enteredCurrency, // Original entered currency
-        native_symbol: conversionResult.enteredSymbol,
-        converted_amount: primaryAmount, // Converted to primary currency for net worth
-        converted_currency: conversionResult.primaryCurrency, // Primary currency
-        converted_symbol: conversionResult.primarySymbol,
-        exchange_rate: conversionResult.exchangeRate.toNumber(),
-        exchange_rate_used: conversionResult.exchangeRateUsed.toNumber(),
-        conversion_source: conversionResult.conversionSource,
+        currencycode: execution.accountCurrency,
+        // ✅ Pass complete conversion data from unified service
+        ...execution.dbPayload,
         // Linked entities
         goalId: linkedGoalId,
         billId: linkedBillId,
         liabilityId: linkedLiabilityId,
       };
       
-      console.log(`💳 EnhancedTransactionForm: Submitting transaction with conversion:`, {
-        originalAmount: amount,
-        accountAmount: accountAmount,
-        primaryAmount: primaryAmount,
-        accountCurrency: selectedAccount?.currencycode,
-        conversionCase: conversionResult.conversionCase,
-        exchangeRate: conversionResult.exchangeRate.toFixed(6)
-      });
+      console.log(`💳 EnhancedTransactionForm: Submitting with executed conversion`);
       
       await addTransaction(transactionData);
+      
       onClose();
     } catch (err) {
       console.error('Transaction creation error:', err);
-      setError('Failed to create transaction. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to create transaction. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -250,12 +233,50 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
             </button>
           </div>
           
-          {/* Error Message */}
+            {/* Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
               <div className="flex items-center">
                 <AlertCircle className="text-red-400 mr-2" size={20} />
                 <p className="text-red-800">{error}</p>
+              </div>
+            </div>
+          )}
+          
+          {/* ✅ NEW: Conversion Preview */}
+          {conversionPreview && conversionPreview.conversionCase !== 'T=A=P' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <h4 className="text-sm font-semibold text-blue-900 mb-3">💱 Currency Conversion Preview</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-blue-700">You're spending:</span>
+                  <span className="font-semibold text-blue-900">{conversionPreview.displayText.entered}</span>
+                </div>
+                {conversionPreview.enteredCurrency !== conversionPreview.accountCurrency && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-blue-700">Will deduct from account:</span>
+                      <span className="font-semibold text-blue-900">{conversionPreview.displayText.account}</span>
+                    </div>
+                    <div className="text-xs text-blue-600">
+                      Rate: 1 {conversionPreview.enteredCurrency} = {conversionPreview.enteredToAccountRate.toFixed(4)} {conversionPreview.accountCurrency}
+                    </div>
+                  </>
+                )}
+                {conversionPreview.enteredCurrency !== conversionPreview.primaryCurrency && (
+                  <>
+                    <div className="flex justify-between border-t border-blue-200 pt-2 mt-2">
+                      <span className="text-blue-700">Net worth impact:</span>
+                      <span className="font-semibold text-blue-900">{conversionPreview.displayText.primary}</span>
+                    </div>
+                    <div className="text-xs text-blue-600">
+                      Rate: 1 {conversionPreview.enteredCurrency} = {conversionPreview.enteredToPrimaryRate.toFixed(4)} {conversionPreview.primaryCurrency}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="mt-3 text-xs text-blue-600 italic">
+                {conversionPreview.displayText.conversionNote}
               </div>
             </div>
           )}
@@ -289,125 +310,60 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
             
             {/* Amount and Currency */}
             <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-6 border-2 border-blue-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Amount & Currency</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Amount</h3>
               
               <div className="space-y-4">
                 {/* Amount Input */}
-                <div className="flex items-center space-x-2">
-                  <span className="text-2xl font-bold text-gray-800">
-                    {getCurrencySymbol(selectedCurrency)}
-                  </span>
-                  <Input
-                    type="number"
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    value={amount || ''}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0;
-                      setValue('amount', value);
-                    }}
-                    error={errors.amount?.message}
-                    className="flex-1 text-xl font-semibold"
-                    required
-                  />
+                <div className="flex items-center space-x-3">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                      Enter Amount
+                    </label>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      value={amount || ''}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        setValue('amount', value);
+                      }}
+                      error={errors.amount?.message}
+                      className="text-xl font-semibold"
+                      required
+                    />
+                  </div>
+                  
+                  {/* ✅ NEW: Currency Selector */}
+                  <div className="w-32">
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                      Currency
+                    </label>
+                    <select
+                      value={transactionCurrency}
+                      onChange={(e) => setTransactionCurrency(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-semibold"
+                    >
+                      <option value="USD">$ USD</option>
+                      <option value="INR">₹ INR</option>
+                      <option value="EUR">€ EUR</option>
+                      <option value="GBP">£ GBP</option>
+                    </select>
+                  </div>
                 </div>
                 
-                {/* Currency Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Transaction Currency
-                  </label>
-                  <select
-                    value={selectedCurrency}
-                    onChange={(e) => setSelectedCurrency(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="USD">🇺🇸 USD - US Dollar</option>
-                    <option value="EUR">🇪🇺 EUR - Euro</option>
-                    <option value="GBP">🇬🇧 GBP - British Pound</option>
-                    <option value="INR">🇮🇳 INR - Indian Rupee</option>
-                    <option value="JPY">🇯🇵 JPY - Japanese Yen</option>
-                    <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
-                    <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
-                    <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
-                    <option value="CHF">🇨🇭 CHF - Swiss Franc</option>
-                    <option value="SGD">🇸🇬 SGD - Singapore Dollar</option>
-                  </select>
+                {/* Show what user is entering */}
+                <div className="bg-white p-3 rounded-lg border border-blue-200">
+                  <p className="text-sm text-gray-600">You're entering:</p>
+                  <p className="text-2xl font-bold text-blue-900">
+                    {simpleCurrencyService.getCurrencySymbol(transactionCurrency)}{amount || '0.00'} {transactionCurrency}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Currency Conversion Display */}
-            {conversionResult && (
-              <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-                <div className="flex items-center space-x-2 mb-3">
-                  <ArrowRightLeft size={16} className="text-blue-600" />
-                  <span className="font-medium text-blue-800">
-                    Live Currency Conversion
-                  </span>
-                  {isConverting && <Loader2 size={16} className="animate-spin text-blue-600" />}
-                </div>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">You Entered:</span>
-                    <span className="font-medium text-gray-900">
-                      {formatAmount(conversionResult.enteredAmount, conversionResult.enteredCurrency)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Account Will Receive:</span>
-                    <span className="font-medium text-gray-900">
-                      {formatAmount(conversionResult.accountAmount, conversionResult.accountCurrency)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Primary Currency Value:</span>
-                    <span className="font-medium text-gray-900">
-                      {formatAmount(conversionResult.primaryAmount, conversionResult.primaryCurrency)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Exchange Rate:</span>
-                    <span className="font-medium text-gray-900">
-                      1 {conversionResult.enteredCurrency} = {conversionResult.exchangeRate.toFixed(6)} {conversionResult.accountCurrency}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Rate Source:</span>
-                    <span className="font-medium text-gray-900">
-                      {conversionResult.conversionSource}
-                    </span>
-                  </div>
-                  
-                  {conversionResult.conversionFee.gt(0) && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Conversion Fee:</span>
-                      <span className="font-medium text-gray-900">
-                        {formatAmount(conversionResult.conversionFee, conversionResult.primaryCurrency)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
-            {/* Conversion Error Display */}
-            {conversionError && (
-              <div className="bg-red-50 rounded-xl p-4 border border-red-200">
-                <div className="flex items-center space-x-2">
-                  <AlertCircle size={16} className="text-red-600" />
-                  <span className="text-sm text-red-800">
-                    Conversion failed: {conversionError}
-                  </span>
-                </div>
-              </div>
-            )}
             
             {/* Account Selection */}
             <div className="bg-gray-50 rounded-xl p-4">
@@ -425,7 +381,7 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
                 <option value="">Choose your account...</option>
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.name} ({account.type.replace('_', ' ')}) - {formatCurrencyAmount(account.balance, account.currencycode || primaryCurrency, getCurrencyInfo(account.currencycode || primaryCurrency)?.symbol || '$')}
+                    {account.name} ({account.type.replace('_', ' ')}) - {simpleCurrencyService.getCurrencySymbol(account.currencycode || primaryCurrency)}{account.balance.toLocaleString()}
                   </option>
                 ))}
               </select>
@@ -434,67 +390,6 @@ export const EnhancedTransactionForm: React.FC<EnhancedTransactionFormProps> = (
               )}
             </div>
             
-            {/* Currency Conversion Display */}
-            {conversionResult && (
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border-2 border-green-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Currency Conversion</h3>
-                
-                {isConverting ? (
-                  <div className="flex items-center justify-center py-8">
-                    <RefreshCw className="animate-spin text-blue-500 mr-2" size={20} />
-                    <span className="text-gray-600">Converting currencies...</span>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Transaction Display */}
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Transaction Amount</h4>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {formatCurrencyAmount(
-                          conversionResult.transactionAmount,
-                          conversionResult.transactionCurrency,
-                          conversionResult.transactionSymbol
-                        )}
-                      </p>
-                      <p className="text-sm text-gray-600">What you entered</p>
-                    </div>
-                    
-                    {/* Account Display */}
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Account Balance</h4>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {formatCurrencyAmount(
-                          conversionResult.accountAmount,
-                          conversionResult.accountCurrency,
-                          conversionResult.accountSymbol
-                        )}
-                      </p>
-                      <p className="text-sm text-gray-600">Will be added to {selectedAccount?.name}</p>
-                    </div>
-                    
-                    {/* Primary Display */}
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Total Impact</h4>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {formatCurrencyAmount(
-                          conversionResult.primaryAmount,
-                          conversionResult.primaryCurrency,
-                          conversionResult.primarySymbol
-                        )}
-                      </p>
-                      <p className="text-sm text-gray-600">Added to your total balance</p>
-                    </div>
-                    
-                    {/* Conversion Note */}
-                    <div className="bg-blue-100 rounded-lg p-3">
-                      <p className="text-sm text-blue-800">
-                        <strong>Case {conversionResult.case}:</strong> {generateTransactionDisplayText(conversionResult).conversionNote}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
             
             {/* Description */}
             <div>

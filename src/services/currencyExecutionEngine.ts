@@ -149,10 +149,8 @@ export class CurrencyExecutionEngine {
       // Add rate timestamp if conversion was performed
       if (result.exchangeRate && result.conversionSource) {
         try {
-          const rateTimestamp = await liveExchangeRateService.getRateTimestamp(
-            this.primaryCurrency,
-            this.primaryCurrency
-          );
+          // Simple currency service doesn't have timestamp, use current time
+          const rateTimestamp = new Date();
           result.rateTimestamp = rateTimestamp || undefined;
         } catch (error) {
           console.warn('⚠️ Failed to get rate timestamp:', error);
@@ -376,17 +374,17 @@ export class CurrencyExecutionEngine {
   ): string {
     if (amountCurrency === accountCurrency && accountCurrency === primaryCurrency) {
       return 'all_same';
-    } else if (amountCurrency === accountCurrency && accountCurrency !== primaryCurrency) {
-      return 'amount_account_same';
-    } else if (amountCurrency === primaryCurrency && accountCurrency !== primaryCurrency) {
-      return 'amount_primary_same';
-    } else if (accountCurrency === primaryCurrency && amountCurrency !== primaryCurrency) {
-      return 'amount_different_others_same';
-    } else if (amountCurrency !== accountCurrency && accountCurrency === primaryCurrency) {
-      return 'amount_different_others_same';
-    } else {
-      return 'all_different';
     }
+    if (amountCurrency === accountCurrency && accountCurrency !== primaryCurrency) {
+      return 'amount_account_same';
+    }
+    if (amountCurrency === primaryCurrency && accountCurrency !== primaryCurrency) {
+      return 'amount_primary_same';
+    }
+    if (accountCurrency === primaryCurrency && amountCurrency !== accountCurrency) {
+      return 'account_primary_same';
+    }
+    return 'all_different';
   }
 
   /**
@@ -413,7 +411,7 @@ export class CurrencyExecutionEngine {
       return amount;
     }
 
-    const rate = await liveExchangeRateService.getExchangeRate(fromCurrency, this.primaryCurrency, this.primaryCurrency);
+    const rate = simpleCurrencyService.getRate(fromCurrency, this.primaryCurrency);
     return amount.mul(rate);
   }
 

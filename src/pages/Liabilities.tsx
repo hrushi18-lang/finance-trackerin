@@ -8,6 +8,7 @@ import { PaymentForm } from '../components/forms/PaymentForm';
 import { Input } from '../components/common/Input';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
+import { convertCurrencySync } from '../utils/currency-converter';
 import { LiabilityType } from '../lib/liability-behaviors';
 
 const Liabilities: React.FC = () => {
@@ -22,7 +23,6 @@ const Liabilities: React.FC = () => {
     
     if (needsConversion) {
       // Use the main currency converter for consistent rates
-      const { convertCurrencySync } = require('../utils/currency-converter');
       const convertedAmount = convertCurrencySync(liability.remainingAmount, liabilityCurrency, currency.code, 'USD') || liability.remainingAmount;
       
       const liabilityCurrencyInfo = supportedCurrencies.find(c => c.code === liabilityCurrency);

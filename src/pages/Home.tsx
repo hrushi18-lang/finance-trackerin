@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Bell, 
   Settings, 
@@ -22,6 +22,7 @@ import {
   PieChart,
   FileText,
   Wallet,
+  CheckCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
@@ -29,11 +30,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import NotificationCenter from '../components/notifications/NotificationCenter';
-import FinancialSnapshot from '../components/notifications/FinancialSnapshot';
 import { format } from 'date-fns';
-import { currencyService } from '../services/currencyService';
 import { useProfile } from '../contexts/ProfileContext';
 import { TransactionDetailsModal } from '../components/modals/TransactionDetailsModal';
+import { unifiedCurrencyService } from '../services/unifiedCurrencyService';
+import { simpleCurrencyService } from '../services/simpleCurrencyService';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -56,37 +57,46 @@ const Home: React.FC = () => {
   const [hideBalance, setHideBalance] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
-  const [isFinancialSnapshotMinimized, setIsFinancialSnapshotMinimized] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
 
-  // Calculate current balance (sum of all account balances)
+  // ✅ Calculate current balance (sum of all account balances in primary currency)
   const currentBalance = useMemo(() => {
+    const primaryCurrency = profile?.primaryCurrency || currency.code;
+    
     return accounts.reduce((sum, account) => {
-      // Use converted amount (primary currency) for balance calculation
-      const convertedBalance = account.converted_amount || account.balance || 0;
+      const accountCurrency = account.currencycode || primaryCurrency;
+      const accountBalance = account.balance || 0;
+      
+      // Convert to primary currency
+      const rate = simpleCurrencyService.getRate(accountCurrency, primaryCurrency);
+      const convertedBalance = accountBalance * rate;
       
       return account.type === 'credit_card' ? sum - convertedBalance : sum + convertedBalance;
     }, 0);
-  }, [accounts]);
+  }, [accounts, profile?.primaryCurrency, currency.code]);
 
-  // Calculate net worth (assets - liabilities)
+  // ✅ Calculate net worth (assets - liabilities) in primary currency
   const netWorth = useMemo(() => {
     const primaryCurrency = profile?.primaryCurrency || currency.code;
     
     const totalAssets = accounts.reduce((sum, account) => {
-      // Use converted amount (primary currency) for net worth calculation
-      const convertedBalance = account.converted_amount || account.balance || 0;
+      const accountCurrency = account.currencycode || primaryCurrency;
+      const accountBalance = account.balance || 0;
+      
+      // Convert to primary currency
+      const rate = simpleCurrencyService.getRate(accountCurrency, primaryCurrency);
+      const convertedBalance = accountBalance * rate;
       
       return account.type === 'credit_card' ? sum - convertedBalance : sum + convertedBalance;
     }, 0);
     
     const totalLiabilities = liabilities.reduce((sum, liability) => {
       const liabilityAmount = liability.remainingAmount || 0;
-      const liabilityCurrency = liability.currencycode || primaryCurrency;
+      const liabilityCurrency = (liability as any).currencycode || (liability as any).currencyCode || primaryCurrency;
       
       // Convert to primary currency if different
-      const convertedAmount = liabilityCurrency !== primaryCurrency 
-        ? (currencyService.convertAmount(liabilityAmount, liabilityCurrency, primaryCurrency) || liabilityAmount)
-        : liabilityAmount;
+      const rate = simpleCurrencyService.getRate(liabilityCurrency, primaryCurrency);
+      const convertedAmount = liabilityAmount * rate;
       
       return sum + convertedAmount;
     }, 0);
@@ -120,6 +130,18 @@ const Home: React.FC = () => {
       new Date(bill.due_date) <= nextWeek && !bill.is_paid
     ).slice(0, 3);
   }, [bills]);
+
+  // ✅ NEW: Check for welcome message after onboarding
+  useEffect(() => {
+    const shouldShowWelcome = localStorage.getItem('show_welcome_message');
+    if (shouldShowWelcome === 'true') {
+      setShowWelcome(true);
+      localStorage.removeItem('show_welcome_message');
+      
+      // Auto-hide after 5 seconds
+      setTimeout(() => setShowWelcome(false), 5000);
+    }
+  }, []);
 
   // Get active goals
   const activeGoals = useMemo(() => {
@@ -181,6 +203,25 @@ const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen pb-24" style={{ background: 'var(--background)' }}>
+      {/* ✅ NEW: Welcome Message Toast */}
+      {showWelcome && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
+          <div className="bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center space-x-3">
+            <CheckCircle size={24} />
+            <div>
+              <p className="font-semibold">Welcome to FinTrack! 🎉</p>
+              <p className="text-sm opacity-90">Your account is all set up and ready to go!</p>
+            </div>
+            <button 
+              onClick={() => setShowWelcome(false)}
+              className="ml-4 hover:bg-green-600 rounded-full p-1"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="pt-12 pb-6 px-6">
         <div className="flex items-center justify-between">
@@ -220,30 +261,6 @@ const Home: React.FC = () => {
           </h2>
         </div>
 
-        {/* Financial Snapshot */}
-        <div className="relative">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
-              Financial Snapshot
-            </h2>
-            <button
-              onClick={() => setIsFinancialSnapshotMinimized(!isFinancialSnapshotMinimized)}
-              className="p-2 rounded-lg transition-all duration-200 hover:bg-gray-100"
-              style={{ 
-                backgroundColor: 'var(--background-secondary)',
-                color: 'var(--text-secondary)'
-              }}
-            >
-              {isFinancialSnapshotMinimized ? (
-                <ArrowDownRight size={16} />
-              ) : (
-                <ArrowUpRight size={16} />
-              )}
-            </button>
-          </div>
-          {!isFinancialSnapshotMinimized && <FinancialSnapshot />}
-        </div>
-
         {/* Main Financial Overview Card */}
         <div 
           className="p-8 rounded-3xl border-2 border-black"
@@ -272,7 +289,7 @@ const Home: React.FC = () => {
             <div className="grid grid-cols-3 gap-4 text-center">
               <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-gray-300">
                 <div className="text-lg font-numbers text-black">
-                  {hideBalance ? '••••' : formatCurrency(accounts.reduce((sum, acc) => sum + (acc.converted_amount || acc.balance || 0), 0))}
+                  {hideBalance ? '••••' : formatCurrency(currentBalance)}
                 </div>
                 <div className="text-xs text-gray-600">Total Assets</div>
               </div>
@@ -293,7 +310,29 @@ const Home: React.FC = () => {
         </div>
 
         {/* Accounts Section */}
-        {accounts.length > 0 && (
+        {accounts.length === 0 ? (
+          /* ✅ NEW: Empty State for No Accounts */
+          <div className="mb-6">
+            <div className="text-center p-12 bg-gradient-to-br from-blue-50 to-purple-50 rounded-3xl border-2 border-dashed border-blue-300">
+              <div className="w-20 h-20 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+                <Wallet size={32} className="text-blue-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                Create Your First Account
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Add a bank account, wallet, or cash account to start tracking your finances
+              </p>
+              <Button
+                onClick={() => navigate('/accounts')}
+                className="mx-auto px-8 py-3 text-lg"
+              >
+                <Plus size={20} className="mr-2" />
+                Add Account
+              </Button>
+            </div>
+          </div>
+        ) : (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>Accounts</h2>
@@ -340,7 +379,10 @@ const Home: React.FC = () => {
                           {account.name}
                         </h3>
                         <div className="text-sm font-numbers" style={{ color: 'var(--text-primary)' }}>
-                          {hideBalance ? '••••••' : formatCurrency(account.balance || 0)}
+                          {hideBalance ? '••••••' : `${simpleCurrencyService.getCurrencySymbol(account.currencycode || profile?.primaryCurrency || 'INR')}${(account.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                        </div>
+                        <div className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
+                          {account.currencycode || profile?.primaryCurrency || 'INR'}
                         </div>
                       </div>
                     </div>

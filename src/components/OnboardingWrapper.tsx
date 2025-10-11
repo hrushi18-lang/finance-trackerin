@@ -27,19 +27,12 @@ const OnboardingWrapper: React.FC = () => {
         return;
       }
 
-      // Check if user has a profile (primary indicator of setup completion)
+      // ✅ FIXED: Check if user has a profile (definitive indicator of setup completion)
       const hasProfile = !!profile;
       
-      // Also check if user has existing financial data
-      const hasExistingData = 
-        accounts.length > 0 || 
-        goals.length > 0 || 
-        bills.length > 0 || 
-        liabilities.length > 0 || 
-        userCategories.length > 0;
-
-      // User is new if they don't have a profile OR no financial data
-      const isNew = !hasProfile || !hasExistingData;
+      // User is new if they don't have a profile
+      // Profile existence means onboarding was completed
+      const isNew = !hasProfile;
       setIsNewUser(isNew);
 
       // Track onboarding check
@@ -47,15 +40,11 @@ const OnboardingWrapper: React.FC = () => {
         feature: 'onboarding_flow',
         is_new_user: isNew,
         has_profile: hasProfile,
-        has_accounts: accounts.length > 0,
-        has_goals: goals.length > 0,
-        has_bills: bills.length > 0,
-        has_liabilities: liabilities.length > 0,
-        has_custom_categories: userCategories.length > 0
+        has_accounts: accounts.length > 0
       });
 
-      // If user has profile and data, redirect to home
-      if (hasProfile && hasExistingData) {
+      // If user has profile, redirect to home (onboarding completed)
+      if (hasProfile) {
         analytics.trackOnboardingStep('existing_user_redirect', true);
         navigate('/');
         return;
@@ -95,6 +84,9 @@ const OnboardingWrapper: React.FC = () => {
 
         // Mark onboarding as completed
         localStorage.setItem('onboarding_completed', 'true');
+        
+        // ✅ NEW: Set flag to show welcome message
+        localStorage.setItem('show_welcome_message', 'true');
         
         // Navigate to home
         navigate('/');

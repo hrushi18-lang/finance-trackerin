@@ -127,13 +127,9 @@ export const CurrencyRatesSettings: React.FC = () => {
   };
 
   const formatCurrencyPair = (from: string, to: string) => {
-    const symbols: Record<string, string> = {
-      'USD': '$',
-      'INR': '₹',
-      'EUR': '€',
-      'GBP': '£'
-    };
-    return `${symbols[from]}1 ${from} = ${symbols[to]}X ${to}`;
+    const fromSymbol = simpleCurrencyService.getCurrencySymbol(from);
+    const toSymbol = simpleCurrencyService.getCurrencySymbol(to);
+    return `${fromSymbol}1 ${from} = ${toSymbol}X ${to}`;
   };
 
   const getRateDescription = (from: string, to: string) => {

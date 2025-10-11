@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { FileText, Calculator, Info, AlertTriangle, Globe } from 'lucide-react';
+import { FileText, Calculator, Info, AlertTriangle, Globe, ArrowRight } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { Liability, FinancialAccount } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
-import { 
-  convertTransactionCurrency, 
-  generateTransactionDisplayText, 
-  generateStorageData,
-  type CurrencyConversionResult
-} from '../../utils/multi-currency-converter';
-import { getCurrencyInfo } from '../../utils/currency-converter';
+import { unifiedCurrencyService } from '../../services/unifiedCurrencyService';
+import { useProfile } from '../../contexts/ProfileContext';
+import { useFinance } from '../../contexts/FinanceContext';
 
 interface PaymentFormData {
   amount: number;
@@ -31,6 +27,8 @@ interface PaymentFormProps {
 
 export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = [], onSubmit, onCancel }) => {
   const { currency, formatCurrency } = useInternationalization();
+  const { profile } = useProfile();
+  const { user } = useFinance();
   const [paymentImpact, setPaymentImpact] = useState<{
     newBalance: number;
     percentagePaid: number;
@@ -38,8 +36,11 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
   } | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [conversionResult, setConversionResult] = useState<CurrencyConversionResult | null>(null);
+  const [conversionPreview, setConversionPreview] = useState<any | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<FinancialAccount | null>(null);
+  
+  const primaryCurrency = profile?.primaryCurrency || currency.code;
+  const liabilityCurrency = (liability as any)?.currencycode || (liability as any)?.currencyCode || primaryCurrency;
   
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<PaymentFormData>({
     defaultValues: {
@@ -54,7 +55,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
   const watchedAmount = watch('amount');
   const createTransaction = watch('createTransaction');
   const watchedAccountId = watch('accountId');
-  const watchedCurrency = watch('currency');
 
   // Update selected account when accountId changes
   useEffect(() => {
@@ -64,154 +64,73 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
     }
   }, [watchedAccountId, accounts]);
 
-  // Handle currency conversion with improved logic
+  // ✅ Generate conversion preview using unified service
   useEffect(() => {
-    if (watchedAmount && watchedCurrency && selectedAccount) {
+    const generatePreview = async () => {
+      if (watchedAmount && selectedAccount && liability && watchedAmount > 0) {
+        try {
       const amount = parseFloat(watchedAmount.toString());
-      if (!isNaN(amount) && amount > 0) {
-        const accountCurrency = selectedAccount.currencycode || currency.code;
-        const primaryCurrency = currency.code;
-        
-        console.log(`🔄 PaymentForm Currency Logic:`, {
-          enteredAmount: amount,
-          enteredCurrency: watchedCurrency,
-          accountCurrency: accountCurrency,
-          primaryCurrency: primaryCurrency
-        });
-
-        // Scenario 1: Same currencies (no conversion needed)
-        if (watchedCurrency === accountCurrency) {
-          console.log(`✅ Same currencies - no conversion needed`);
-          setConversionResult({
-            transactionAmount: amount,
-            transactionCurrency: watchedCurrency,
-            transactionSymbol: getCurrencyInfo(watchedCurrency)?.symbol || '$',
-            accountAmount: amount,
-            accountCurrency: accountCurrency,
-            accountSymbol: getCurrencyInfo(accountCurrency)?.symbol || '$',
-            primaryAmount: amount,
-            primaryCurrency: primaryCurrency,
-            primarySymbol: getCurrencyInfo(primaryCurrency)?.symbol || '$',
-            case: 'T=A=P',
-            transactionToAccountRate: 1.0,
-            transactionToPrimaryRate: 1.0,
-            accountToPrimaryRate: 1.0,
-            converted_amount: amount,
-            native_amount: amount,
-            native_currency: watchedCurrency,
-            converted_currency: primaryCurrency,
-            exchange_rate: 1.0,
-            exchange_rate_used: 1.0,
-            conversion_source: 'manual'
-          });
+          if (isNaN(amount) || amount <= 0) {
+            setConversionPreview(null);
+            setPaymentImpact(null);
           return;
         }
 
-        // Scenario 2: Both match primary currency (no conversion needed)
-        if (watchedCurrency === primaryCurrency && accountCurrency === primaryCurrency) {
-          console.log(`✅ Both currencies match primary - no conversion needed`);
-          setConversionResult({
-            transactionAmount: amount,
-            transactionCurrency: watchedCurrency,
-            transactionSymbol: getCurrencyInfo(watchedCurrency)?.symbol || '$',
-            accountAmount: amount,
+          const accountCurrency = selectedAccount.currencycode || primaryCurrency;
+          
+          // Use processPayment for liability payment preview
+          const preview = await unifiedCurrencyService.processPayment({
+            paymentType: 'liability_payment',
+            amount: amount,
+            paymentCurrency: accountCurrency, // Payment in account currency
+            accountId: selectedAccount.id,
             accountCurrency: accountCurrency,
-            accountSymbol: getCurrencyInfo(accountCurrency)?.symbol || '$',
-            primaryAmount: amount,
             primaryCurrency: primaryCurrency,
-            primarySymbol: getCurrencyInfo(primaryCurrency)?.symbol || '$',
-            case: 'T=A=P',
-            transactionToAccountRate: 1.0,
-            transactionToPrimaryRate: 1.0,
-            accountToPrimaryRate: 1.0,
-            converted_amount: amount,
-            native_amount: amount,
-            native_currency: watchedCurrency,
-            converted_currency: primaryCurrency,
-            exchange_rate: 1.0,
-            exchange_rate_used: 1.0,
-            conversion_source: 'manual'
+            userId: user?.id || '',
+            targetEntityId: liability.id || '',
+            targetEntityType: 'liability',
+            targetEntityCurrency: liabilityCurrency,
+            targetEntityAmount: liability.remainingAmount || liability.totalAmount,
+            description: `Payment for ${liability.name}`
           });
-          return;
-        }
-
-        // Scenario 3: Both different from primary - convert to primary currency
-        console.log(`🔄 Both currencies different from primary - converting to primary currency`);
-        convertTransactionCurrency(
-          amount,
-          watchedCurrency,
-          accountCurrency,
-          primaryCurrency
-        ).then(result => {
-          console.log(`✅ Conversion result:`, result);
-          setConversionResult(result);
-        }).catch(error => {
-          console.error('Currency conversion failed:', error);
-          setConversionResult(null);
+          
+          if (preview.success) {
+            setConversionPreview(preview);
+            
+            // Calculate payment impact
+            const remainingAmount = liability.remainingAmount || liability.totalAmount;
+            const newBalance = Math.max(0, remainingAmount - preview.entityAddition);
+            const totalAmount = liability.totalAmount;
+            const percentagePaid = totalAmount > 0 ? ((totalAmount - newBalance) / totalAmount) * 100 : 0;
+            
+            setPaymentImpact({
+              newBalance: newBalance,
+              percentagePaid: percentagePaid,
+              accountName: selectedAccount.name
+            });
+            
+            console.log('💡 Liability payment preview:', {
+              deductFromAccount: `${preview.accountCurrency}${preview.accountDeduction}`,
+              reduceLiability: `${preview.entityCurrency}${preview.entityAddition}`,
+              newBalance: newBalance
         });
       } else {
-        setConversionResult(null);
-      }
-    } else {
-      setConversionResult(null);
-    }
-  }, [watchedAmount, watchedCurrency, selectedAccount, currency]);
-
-  // Calculate payment impact with improved currency logic
-  React.useEffect(() => {
-    if (liability && watchedAmount && watchedAccountId) {
-      const paymentAmount = Number(watchedAmount) || 0;
-      const remainingAmount = Number(liability.remainingAmount) || 0;
-      const totalAmount = Number(liability.totalAmount) || 0;
-      const selectedAccount = accounts.find(a => a.id === watchedAccountId);
-      
-      if (paymentAmount > 0 && selectedAccount && !isNaN(paymentAmount)) {
-        const accountCurrency = selectedAccount.currencycode || currency.code;
-        const primaryCurrency = currency.code;
-        
-        // Determine actual payment amount based on currency logic
-        let actualPaymentAmount = paymentAmount;
-        let conversionNote = '';
-        
-        if (watchedCurrency === accountCurrency) {
-          // Same currencies - no conversion needed
-          actualPaymentAmount = paymentAmount;
-          conversionNote = 'No conversion needed - same currencies';
-          console.log(`💰 Payment Impact: Same currencies - using ${actualPaymentAmount} ${watchedCurrency}`);
-        } else if (watchedCurrency === primaryCurrency && accountCurrency === primaryCurrency) {
-          // Both match primary - no conversion needed
-          actualPaymentAmount = paymentAmount;
-          conversionNote = 'No conversion needed - both primary currency';
-          console.log(`💰 Payment Impact: Both primary currency - using ${actualPaymentAmount} ${watchedCurrency}`);
-        } else if (conversionResult && conversionResult.converted_amount) {
-          // Use live converted amount for deduction
-          actualPaymentAmount = conversionResult.converted_amount;
-          conversionNote = `Converted from ${paymentAmount} ${watchedCurrency} to ${actualPaymentAmount} ${primaryCurrency}`;
-          console.log(`💰 Payment Impact: Using converted amount ${actualPaymentAmount} ${primaryCurrency} (from ${paymentAmount} ${watchedCurrency})`);
-        } else {
-          // Fallback to original amount
-          actualPaymentAmount = paymentAmount;
-          conversionNote = 'Using original amount - conversion pending';
-          console.log(`💰 Payment Impact: Using original amount ${actualPaymentAmount} ${watchedCurrency} (conversion pending)`);
-        }
-        
-        const newBalance = Math.max(0, remainingAmount - actualPaymentAmount);
-        const percentagePaid = totalAmount > 0 ? ((totalAmount - newBalance) / totalAmount) * 100 : 0;
-        setPaymentImpact({ 
-          newBalance, 
-          percentagePaid, 
-          accountName: selectedAccount.name,
-          actualAmount: actualPaymentAmount,
-          originalAmount: paymentAmount,
-          conversionNote: conversionNote
-        });
-      } else {
+            setConversionPreview(null);
+            setPaymentImpact(null);
+          }
+        } catch (error: any) {
+          console.error('Conversion preview error:', error);
+          setConversionPreview(null);
         setPaymentImpact(null);
       }
     } else {
+        setConversionPreview(null);
       setPaymentImpact(null);
     }
-  }, [watchedAmount, watchedAccountId, liability, accounts, conversionResult, watchedCurrency, currency]);
+    };
+    
+    generatePreview();
+  }, [watchedAmount, selectedAccount, liability, primaryCurrency, liabilityCurrency, user]);
 
   const handleFormSubmit = (data: PaymentFormData) => {
     try {
@@ -231,406 +150,197 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
           setIsSubmitting(false);
           return;
         }
-        // Adjust amount to remaining balance
         data.amount = remainingAmount;
       }
       
-      // Generate multi-currency data with improved logic
-      let multiCurrencyData = {};
-      const selectedAccount = accounts.find(a => a.id === data.accountId);
-      const accountCurrency = selectedAccount?.currencycode || currency.code;
-      const primaryCurrency = currency.code;
+      // ✅ Pass conversion data with submission
+      const submissionData = {
+        ...data,
+        conversionData: conversionPreview ? {
+          accountDeduction: conversionPreview.accountDeduction,
+          entityAddition: conversionPreview.entityAddition,
+          transactionData: conversionPreview.transactionData
+        } : null
+      };
       
-      console.log(`💳 Form Submission Currency Logic:`, {
-        enteredAmount: amount,
-        enteredCurrency: data.currency,
-        accountCurrency: accountCurrency,
-        primaryCurrency: primaryCurrency,
-        hasConversionResult: !!conversionResult
-      });
-
-      if (data.currency === accountCurrency) {
-        // Same currencies - no conversion needed
-        multiCurrencyData = {
-          native_amount: amount,
-          native_currency: data.currency,
-          native_symbol: getCurrencyInfo(data.currency)?.symbol || '$',
-          converted_amount: amount,
-          converted_currency: primaryCurrency,
-          converted_symbol: getCurrencyInfo(primaryCurrency)?.symbol || '$',
-          exchange_rate: 1.0,
-          exchange_rate_used: 1.0,
-          conversion_source: 'manual'
-        };
-        console.log(`✅ Same currencies - using direct amounts`);
-      } else if (data.currency === primaryCurrency && accountCurrency === primaryCurrency) {
-        // Both match primary - no conversion needed
-        multiCurrencyData = {
-          native_amount: amount,
-          native_currency: data.currency,
-          native_symbol: getCurrencyInfo(data.currency)?.symbol || '$',
-          converted_amount: amount,
-          converted_currency: primaryCurrency,
-          converted_symbol: getCurrencyInfo(primaryCurrency)?.symbol || '$',
-          exchange_rate: 1.0,
-          exchange_rate_used: 1.0,
-          conversion_source: 'manual'
-        };
-        console.log(`✅ Both primary currency - using direct amounts`);
-      } else if (conversionResult) {
-        // Use conversion result for different currencies
-        const storageData = generateStorageData(conversionResult);
-        multiCurrencyData = {
-          native_amount: storageData.nativeAmount,
-          native_currency: storageData.nativeCurrency,
-          native_symbol: storageData.nativeSymbol,
-          converted_amount: storageData.convertedAmount,
-          converted_currency: storageData.convertedCurrency,
-          converted_symbol: storageData.convertedSymbol,
-          exchange_rate: storageData.exchangeRate,
-          exchange_rate_used: storageData.exchangeRateUsed,
-          conversion_source: storageData.conversionSource || 'api'
-        };
-        console.log(`✅ Using conversion result:`, multiCurrencyData);
-      } else {
-        // Fallback - use original amount
-        multiCurrencyData = {
-          native_amount: amount,
-          native_currency: data.currency,
-          native_symbol: getCurrencyInfo(data.currency)?.symbol || '$',
-          converted_amount: amount,
-          converted_currency: primaryCurrency,
-          converted_symbol: getCurrencyInfo(primaryCurrency)?.symbol || '$',
-          exchange_rate: 1.0,
-          exchange_rate_used: 1.0,
-          conversion_source: 'manual'
-        };
-        console.log(`⚠️ Fallback - using original amounts`);
-      }
-
-      // Use converted amount for actual deduction if available
-      const finalAmount = conversionResult?.converted_amount || amount;
-      console.log(`💰 Final deduction amount: ${finalAmount} ${conversionResult?.converted_currency || primaryCurrency}`);
-
-      onSubmit({
-        amount: finalAmount, // Use converted amount for actual deduction
-        description: data.description || `Payment for ${liability?.name}`,
-        createTransaction: data.createTransaction,
-        accountId: data.accountId,
-        currency: data.currency,
-        ...multiCurrencyData
-      });
-    } catch (error: any) {
-      console.error('Error processing payment:', error);
-      setIsSubmitting(false);
+      onSubmit(submissionData as any);
+    } catch (error) {
+      console.error('Payment form submission error:', error);
     } finally {
-      // Don't reset here as parent handles it
+      setIsSubmitting(false);
     }
-  };
-
-  const handleQuickAmount = (amount: number) => {
-    setValue('amount', amount);
   };
 
   if (!liability) return null;
 
-  // Safe access to liability properties with defaults
-  const remainingAmount = Number(liability.remainingAmount) || 0;
-  const monthlyPayment = Number(liability.monthlyPayment) || 0;
-  const totalAmount = Number(liability.totalAmount) || 0;
-
   return (
-    <div className="space-y-6">
-      {/* Header with Info */}
-      <div className="bg-gradient-to-r from-warning-500/20 to-error-500/20 rounded-xl p-4 mb-6 border border-warning-500/30">
-        <h3 className="text-lg font-semibold text-white mb-2 flex items-center">
-          <CurrencyIcon currencyCode={currency.code} size={20} className="mr-2 text-warning-400" />
-          Make a Payment
-        </h3>
-        <p className="text-gray-300 text-sm">
-          Record a payment towards your {liability.type?.replace('_', ' ') || 'liability'} and reduce your debt.
-        </p>
+    <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
+      <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+        <div>
+          <h3 className="text-xl font-bold text-gray-900">Make Payment</h3>
+          <p className="text-sm text-gray-500 mt-1">{liability.name}</p>
+        </div>
+        <button
+          onClick={onCancel}
+          className="text-gray-400 hover:text-gray-600 transition"
+        >
+          ✕
+        </button>
       </div>
 
-      {/* Liability Info */}
-      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <h4 className="font-semibold text-white mb-3">{liability.name || 'Unnamed Liability'}</h4>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="bg-black/20 p-3 rounded-lg">
-            <span className="text-gray-400">Remaining:</span>
-            <span className="font-medium ml-2 text-white">
-              <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
-              {remainingAmount.toLocaleString()}
-            </span>
+      {/* Liability Overview */}
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-gray-600">Total Amount</p>
+            <p className="text-lg font-bold text-gray-900">{formatCurrency(liability.totalAmount)}</p>
           </div>
-          <div className="bg-black/20 p-3 rounded-lg">
-            <span className="text-gray-400">Monthly:</span>
-            <span className="font-medium ml-2 text-white">
-              <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
-              {monthlyPayment.toLocaleString()}
-            </span>
+          <div>
+            <p className="text-sm text-gray-600">Remaining</p>
+            <p className="text-lg font-bold text-red-600">{formatCurrency(liability.remainingAmount || liability.totalAmount)}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">Monthly Payment</p>
+            <p className="text-lg font-bold text-blue-600">{formatCurrency(liability.monthlyPayment)}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">Minimum Payment</p>
+            <p className="text-lg font-bold text-orange-600">{formatCurrency(liability.minimumPayment)}</p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-        {/* Quick Amount Buttons */}
-        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-          <label className="block text-sm font-medium text-gray-300 mb-3">
-            Quick Amounts
+      {/* ✅ Conversion Preview */}
+      {conversionPreview && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-green-900 mb-3">💰 Payment Conversion Preview</h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-green-700">Deduct from account:</span>
+              <span className="font-semibold text-green-900">
+                {conversionPreview.accountCurrency} {conversionPreview.accountDeduction.toFixed(2)}
+              </span>
+            </div>
+            <div className="flex items-center justify-center text-green-600">
+              <ArrowRight size={16} />
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-green-700">Reduce liability by:</span>
+              <span className="font-semibold text-green-900">
+                {conversionPreview.entityCurrency} {conversionPreview.entityAddition.toFixed(2)}
+              </span>
+            </div>
+            {conversionPreview.accountCurrency !== conversionPreview.entityCurrency && (
+              <div className="text-xs text-green-600 mt-2 pt-2 border-t border-green-200">
+                Exchange rate: 1 {conversionPreview.accountCurrency} = {conversionPreview.exchangeRates.paymentToEntity.toFixed(4)} {conversionPreview.entityCurrency}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Payment Impact */}
+      {paymentImpact && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-purple-900 mb-3">📊 Payment Impact</h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-purple-700">New remaining balance:</span>
+              <span className="font-semibold text-purple-900">{formatCurrency(paymentImpact.newBalance)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-purple-700">Total paid:</span>
+              <span className="font-semibold text-purple-900">{paymentImpact.percentagePaid.toFixed(1)}%</span>
+            </div>
+            <div className="w-full bg-purple-200 rounded-full h-2 mt-2">
+              <div
+                className="bg-purple-600 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(paymentImpact.percentagePaid, 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+        {/* Amount */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Payment Amount
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickAmount(monthlyPayment)}
-              className="border-white/20 text-white hover:bg-white/10"
-            >
-              Monthly
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickAmount(monthlyPayment * 2)}
-              className="border-white/20 text-white hover:bg-white/10"
-            >
-              2x Monthly
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickAmount(Math.min(remainingAmount, 1000))}
-              className="border-white/20 text-white hover:bg-white/10"
-            >
-              <CurrencyIcon currencyCode={currency.code} size={12} className="inline mr-1" />
-              1,000
-            </Button>
-          </div>
-        </div>
-
-        {/* Payment Amount */}
-        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
           <Input
-            label="Payment Amount"
             type="number"
             step="0.01"
-            icon={<CurrencyIcon currencyCode={currency.code} className="text-success-400" />}
             {...register('amount', {
               required: 'Payment amount is required',
-              min: { value: 0.01, message: 'Amount must be greater than 0' },
-              max: { 
-                value: remainingAmount, 
-                message: 'Payment cannot exceed remaining balance' 
-              },
+              min: { value: 0.01, message: 'Amount must be greater than 0' }
             })}
+            placeholder="Enter payment amount"
             error={errors.amount?.message}
-            className="bg-black/40 border-white/20 text-white"
-            placeholder={`e.g., ${monthlyPayment}`}
           />
         </div>
 
-        {/* Currency Selection */}
-        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-          <label className="block text-sm font-medium text-gray-300 mb-3">
-            Currency
-          </label>
-          <select
-            {...register('currency', { required: 'Please select a currency' })}
-            className="w-full bg-black/40 border border-white/20 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-          >
-            <option value="USD">USD ($)</option>
-            <option value="EUR">EUR (€)</option>
-            <option value="GBP">GBP (£)</option>
-            <option value="JPY">JPY (¥)</option>
-            <option value="INR">INR (₹)</option>
-            <option value="CAD">CAD (C$)</option>
-            <option value="AUD">AUD (A$)</option>
-            <option value="CHF">CHF (CHF)</option>
-            <option value="CNY">CNY (¥)</option>
-            <option value="SEK">SEK (kr)</option>
-          </select>
-          {errors.currency && (
-            <p className="text-red-400 text-sm mt-1">{errors.currency.message}</p>
-          )}
-        </div>
-
-        {/* Currency Conversion Display */}
-        {conversionResult && (
-          <div className="bg-blue-900/30 border border-blue-500/30 rounded-xl p-4">
-            <div className="flex items-center space-x-2 mb-2">
-              <Globe size={16} className="text-blue-400" />
-              <span className="text-sm font-medium text-blue-300">Currency Conversion</span>
-            </div>
-            <div className="text-sm text-blue-200">
-              {(() => {
-                try {
-                  const display = generateTransactionDisplayText(conversionResult);
-                  return typeof display === 'string' ? display : 
-                    `${display.transactionDisplay} → ${display.accountDisplay} (${display.conversionNote})`;
-                } catch (error) {
-                  console.error('Error generating display text:', error);
-                  return 'Conversion display error';
-                }
-              })()}
-            </div>
-          </div>
-        )}
-
         {/* Account Selection */}
-        {createTransaction && (
-          <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-            <label className="block text-sm font-medium text-gray-300 mb-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
               Pay From Account
             </label>
             <select
-              {...register('accountId', { required: createTransaction ? 'Please select an account' : false })}
-              className="w-full bg-black/40 border border-white/20 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            {...register('accountId', { required: 'Please select an account' })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="">Select an account</option>
+            <option value="">Select account...</option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.name} - {formatCurrency(account.balance)} ({account.type.replace('_', ' ')})
+                {account.name} - {formatCurrency(account.balance)}
                 </option>
               ))}
             </select>
             {errors.accountId && (
-              <p className="text-red-400 text-sm mt-1">{errors.accountId.message}</p>
+            <p className="text-red-500 text-sm mt-1">{errors.accountId.message}</p>
             )}
           </div>
-        )}
-
-        {/* Create Transaction Toggle */}
-        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-white">Create Transaction</label>
-              <p className="text-xs text-gray-400 mt-1">
-                Record this payment as an expense transaction
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                {...register('createTransaction')}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500"></div>
-            </label>
-          </div>
-        </div>
 
         {/* Description */}
-        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Description
+          </label>
           <Input
-            label="Description (Optional)"
-            type="text"
-            icon={<FileText size={18} className="text-blue-400" />}
             {...register('description')}
-            error={errors.description?.message}
-            className="bg-black/40 border-white/20 text-white"
-            placeholder="e.g., Monthly payment"
+            placeholder="Payment description (optional)"
           />
         </div>
 
-        {/* Payment Impact Preview */}
-        {paymentImpact && watchedAmount && !isNaN(Number(watchedAmount)) && Number(watchedAmount) > 0 && (
-          <div className="bg-success-500/20 rounded-lg p-4 border border-success-500/30">
-            <div className="flex items-center text-success-400 mb-2">
-              <Calculator size={16} className="mr-2" />
-              <span className="font-medium">Payment Impact</span>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-300">Account:</span>
-                <span className="font-medium text-white">{paymentImpact.accountName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-300">Payment Amount:</span>
-                <div className="text-right">
-                  <div className="font-medium text-white">
-                    {formatCurrency(paymentImpact.actualAmount)}
-                  </div>
-                  {paymentImpact.actualAmount !== paymentImpact.originalAmount && (
-                    <div className="text-xs text-gray-400">
-                      (Converted from {formatCurrency(paymentImpact.originalAmount || 0)})
-                    </div>
-                  )}
-                  {paymentImpact.conversionNote && (
-                    <div className="text-xs text-blue-300 mt-1">
-                      {paymentImpact.conversionNote}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-300">New Balance:</span>
-                <span className="font-medium text-white">
-                  {formatCurrency(paymentImpact.newBalance || 0)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-300">Paid Off:</span>
-                <span className="font-medium text-success-400">
-                  {(paymentImpact.percentagePaid || 0).toFixed(1)}%
-                </span>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-2 mt-1">
-                <div
-                  className="bg-success-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(paymentImpact.percentagePaid || 0, 100)}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Important Notice */}
-        <div className="bg-blue-500/20 rounded-lg p-4 border border-blue-500/30">
-          <div className="flex items-center text-blue-400 mb-2">
-            <Info size={16} className="mr-2" />
-            <span className="font-medium">Payment Impact</span>
-          </div>
-          <p className="text-sm text-blue-300">
-            {createTransaction 
-              ? "This payment will be recorded as a debt payment expense in your transactions. Your account balance will be reduced by the payment amount."
-              : "This payment will only update the debt balance without creating a transaction. Use this if you've already recorded the payment separately."}
-          </p>
+        {/* Create Transaction Toggle */}
+        <div className="flex items-center">
+              <input 
+                type="checkbox" 
+                {...register('createTransaction')}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+          <label className="ml-2 text-sm text-gray-700">
+            Create transaction record
+            </label>
         </div>
 
-        {/* Warning for large payments */}
-        {Number(watchedAmount) > monthlyPayment * 3 && monthlyPayment > 0 && (
-          <div className="bg-warning-500/20 rounded-lg p-4 border border-warning-500/30">
-            <div className="flex items-start space-x-2">
-              <AlertTriangle size={16} className="text-warning-400 mt-0.5" />
-              <div className="text-sm">
-                <p className="text-warning-400 font-medium">Large Payment</p>
-                <p className="text-warning-300">
-                  This payment is significantly larger than your regular monthly payment. 
-                  Please confirm this is intentional.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex space-x-3 pt-4">
+        {/* Action Buttons */}
+        <div className="flex space-x-3 pt-4 border-t border-gray-200">
           <Button 
             type="button" 
             variant="outline" 
             onClick={onCancel} 
-            className="flex-1 border-white/20 text-white hover:bg-white/10"
+            className="flex-1"
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
           <Button 
             type="submit" 
-            className="flex-1 bg-gradient-to-r from-success-500 to-success-600 hover:from-success-600 hover:to-success-700"
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={isSubmitting || !conversionPreview}
           >
-            Make Payment
+            {isSubmitting ? 'Processing...' : 'Make Payment'}
           </Button>
         </div>
       </form>

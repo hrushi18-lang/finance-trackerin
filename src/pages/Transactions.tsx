@@ -28,9 +28,12 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
+import { useProfile } from '../contexts/ProfileContext';
+import { InlineConversionDisplay } from '../components/common/CurrencyConversionPreview';
 
 const Transactions: React.FC = () => {
   const { transactions, accounts, isLoading, error, goals, bills, liabilities, budgets, userCategories } = useFinance();
+  const { profile } = useProfile();
   const navigate = useNavigate();
   
   const [showTransactionForm, setShowTransactionForm] = useState(false);
@@ -439,10 +442,11 @@ const Transactions: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--background)' }}>
-      {/* Header */}
-      <div className="pt-12 pb-6 px-4">
-        <div className="flex items-center justify-between mb-4">
+    <div className="min-h-screen pb-20 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Modern Header with Glassmorphism */}
+      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-gray-200/50 shadow-sm">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => navigate('/')}
@@ -682,7 +686,13 @@ const Transactions: React.FC = () => {
                           </div>
                           <div className="text-right">
                             <p className={`text-sm font-numbers ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                              {transaction.type === 'income' ? '+' : '-'}${Math.abs(transaction.amount).toFixed(2)}
+                              {transaction.type === 'income' ? '+' : '-'}
+                              <InlineConversionDisplay
+                                nativeAmount={Math.abs((transaction as any).native_amount || transaction.amount)}
+                                nativeCurrency={(transaction as any).native_currency || transaction.currencycode || profile?.primaryCurrency || 'INR'}
+                                convertedAmount={Math.abs((transaction as any).primary_amount || transaction.amount)}
+                                convertedCurrency={(transaction as any).primary_currency || profile?.primaryCurrency || 'INR'}
+                              />
                             </p>
                             <p className="text-xs text-gray-500">
                               {format(transaction.date, 'MMM dd')}

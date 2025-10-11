@@ -1,4 +1,5 @@
 import React from 'react';
+import { simpleCurrencyService } from '../../services/simpleCurrencyService';
 
 interface ProgressBarProps {
   current: number;
@@ -8,6 +9,7 @@ interface ProgressBarProps {
   showValues?: boolean;
   color?: string;
   className?: string;
+  currency?: string; // ✅ Add currency prop to show the true data
 }
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
@@ -17,9 +19,19 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   showPercentage = true,
   showValues = true,
   color,
-  className = ''
+  className = '',
+  currency // ✅ Accept currency prop
 }) => {
   const percentage = Math.min((current / target) * 100, 100);
+  
+  // ✅ Format amounts with currency if provided
+  const formatAmount = (amount: number) => {
+    if (!currency) {
+      return amount.toLocaleString();
+    }
+    const symbol = simpleCurrencyService.getCurrencySymbol(currency);
+    return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
   
   const sizeClasses = {
     sm: 'h-2',
@@ -54,9 +66,16 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           {showValues && (
-            <span className="text-sm font-numbers" style={{ color: 'var(--text-primary)' }}>
-              {current.toLocaleString()} / {target.toLocaleString()}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-numbers" style={{ color: 'var(--text-primary)' }}>
+                {formatAmount(current)} / {formatAmount(target)}
+              </span>
+              {currency && (
+                <span className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
+                  {currency}
+                </span>
+              )}
+            </div>
           )}
         </div>
         

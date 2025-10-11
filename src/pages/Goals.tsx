@@ -638,6 +638,7 @@ const Goals: React.FC = () => {
                     size="md"
                     showPercentage={true}
                     showValues={true}
+                    currency={goal.currencycode} // ✅ Show goal's actual currency
                   />
                 </div>
 

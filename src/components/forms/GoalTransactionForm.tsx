@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { FileText, PiggyBank, AlertTriangle, Plus, Minus, ToggleLeft, ToggleRight, CreditCard } from 'lucide-react';
+import { FileText, PiggyBank, AlertTriangle, Plus, Minus, ToggleLeft, ToggleRight, CreditCard, ArrowRight } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { Goal, FinancialAccount } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
+import { unifiedCurrencyService } from '../../services/unifiedCurrencyService';
+import { useProfile } from '../../contexts/ProfileContext';
+import { useFinance } from '../../contexts/FinanceContext';
 
 interface GoalTransactionFormData {
   amount: number;
@@ -31,10 +34,18 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
   accounts 
 }) => {
   const { currency } = useInternationalization();
+  const { profile } = useProfile();
+  const { user } = useFinance();
   const [transactionType, setTransactionType] = useState<'add' | 'withdraw'>('add');
   const [deductFromBalance, setDeductFromBalance] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [contributionCurrency, setContributionCurrency] = useState(currency.code);
+  const [conversionPreview, setConversionPreview] = useState<any | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<FinancialAccount | null>(null);
+  
+  const primaryCurrency = profile?.primaryCurrency || currency.code;
+  const goalCurrency = (goal as any).currencycode || primaryCurrency;
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<GoalTransactionFormData>({
     defaultValues: {
@@ -49,6 +60,57 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
 
   const watchedAmount = watch('amount');
   const watchedSource = watch('source');
+  const watchedAccountId = watch('targetAccountId');
+
+  // Update selected account
+  useEffect(() => {
+    if (watchedAccountId) {
+      const account = accounts.find(acc => acc.id === watchedAccountId);
+      setSelectedAccount(account || null);
+    }
+  }, [watchedAccountId, accounts]);
+
+  // ✅ UPDATED: Calculate conversion preview using unified service
+  useEffect(() => {
+    const calculatePreview = async () => {
+      if (watchedAmount && contributionCurrency && selectedAccount && watchedAmount > 0 && transactionType === 'add') {
+        try {
+          // Use processPayment for goal contributions
+          const preview = await unifiedCurrencyService.processPayment({
+            paymentType: 'goal_contribution',
+            amount: Number(watchedAmount),
+            paymentCurrency: contributionCurrency,
+            accountId: selectedAccount.id,
+            accountCurrency: selectedAccount.currencycode || primaryCurrency,
+            primaryCurrency: primaryCurrency,
+            userId: user?.id || '',
+            targetEntityId: goal.id,
+            targetEntityType: 'goal',
+            targetEntityCurrency: goalCurrency,
+            targetEntityAmount: goal.currentAmount,
+            description: `Contribution to ${goal.title}`
+          });
+          
+          if (preview.success) {
+            setConversionPreview(preview);
+            console.log('💡 Goal contribution preview:', {
+              deductFromAccount: `${preview.accountCurrency}${preview.accountDeduction}`,
+              addToGoal: `${preview.entityCurrency}${preview.entityAddition}`
+            });
+          } else {
+            setConversionPreview(null);
+            console.error('Preview failed:', preview.error);
+          }
+        } catch (error) {
+          console.error('Preview calculation failed:', error);
+          setConversionPreview(null);
+        }
+      } else {
+        setConversionPreview(null);
+      }
+    };
+    calculatePreview();
+  }, [watchedAmount, contributionCurrency, selectedAccount, primaryCurrency, transactionType, goalCurrency, goal.currentAmount, goal.id, goal.title, user]);
 
   // Update description when transaction type changes
   useEffect(() => {

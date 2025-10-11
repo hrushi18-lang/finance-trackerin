@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, TrendingUp, Globe, Database, AlertCircle, CheckCircle } from 'lucide-react';
-import { liveExchangeRateService } from '../../services/liveExchangeRateService';
+import { simpleCurrencyService } from '../../services/simpleCurrencyService';
 
 interface RateTestResult {
   from: string;
@@ -42,7 +42,7 @@ export const LiveExchangeRateTester: React.FC = () => {
   }, []);
 
   const updateCacheStats = () => {
-    const stats = liveExchangeRateService.getCacheStats();
+    const stats = { size: 0, lastFetch: 'N/A (Simple Service)' };
     setCacheStats(stats);
   };
 
@@ -55,13 +55,14 @@ export const LiveExchangeRateTester: React.FC = () => {
       console.log('🧪 Testing Live Exchange Rates for September 2025...');
       
       // Refresh rates for today
-      await liveExchangeRateService.refreshRatesForToday();
+      // Simple service doesn't need refresh
+      console.log('Simple currency service - no refresh needed');
       
       const results: RateTestResult[] = [];
       
       for (const testCase of testCases) {
         try {
-          const rate = await liveExchangeRateService.getExchangeRate(testCase.from, testCase.to);
+          const rate = simpleCurrencyService.getRate(testCase.from, testCase.to);
           const result = testCase.amount * rate;
           
           const rateResult: RateTestResult = {
@@ -95,18 +96,13 @@ export const LiveExchangeRateTester: React.FC = () => {
   };
 
   const clearCache = () => {
-    liveExchangeRateService.clearCache();
+    // Simple service has no cache; just reset local state
     updateCacheStats();
     setTestResults([]);
   };
 
   const formatCurrency = (amount: number, currency: string): string => {
-    const symbols: Record<string, string> = {
-      'USD': '$', 'EUR': '€', 'GBP': '£', 'INR': '₹', 'JPY': '¥',
-      'CAD': 'C$', 'AUD': 'A$', 'CHF': 'CHF', 'CNY': '¥', 'SGD': 'S$'
-    };
-    
-    const symbol = symbols[currency] || currency;
+    const symbol = simpleCurrencyService.getCurrencySymbol(currency);
     return `${symbol}${amount.toLocaleString()}`;
   };
 

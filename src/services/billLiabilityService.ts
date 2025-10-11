@@ -311,25 +311,11 @@ export class BillLiabilityService {
 
   /**
    * Format currency amount with symbol
+   * Uses SimpleCurrencyService for consistent symbol handling
    */
   static formatCurrencyAmount(amount: number, currency: string): string {
-    const symbols: { [key: string]: string } = {
-      'USD': '$', 'EUR': '€', 'GBP': '£', 'INR': '₹', 'JPY': '¥',
-      'CAD': 'C$', 'AUD': 'A$', 'CHF': 'CHF', 'CNY': '¥', 'SGD': 'S$',
-      'HKD': 'HK$', 'KRW': '₩', 'BRL': 'R$', 'MXN': '$', 'RUB': '₽',
-      'ZAR': 'R', 'NZD': 'NZ$', 'SEK': 'kr', 'NOK': 'kr', 'DKK': 'kr',
-      'PLN': 'zł', 'CZK': 'Kč', 'HUF': 'Ft', 'TRY': '₺', 'ILS': '₪',
-      'AED': 'د.إ', 'SAR': '﷼', 'QAR': '﷼', 'KWD': 'د.ك', 'BHD': '.د.ب',
-      'OMR': '﷼', 'JOD': 'د.ا', 'LBP': 'ل.ل', 'EGP': '£', 'MAD': 'د.م.',
-      'TND': 'د.ت', 'DZD': 'د.ج', 'NGN': '₦', 'KES': 'KSh', 'GHS': '₵',
-      'UGX': 'USh', 'TZS': 'TSh', 'ETB': 'Br', 'MUR': '₨', 'BWP': 'P',
-      'SZL': 'L', 'LSL': 'L', 'NAD': 'N$', 'MWK': 'MK', 'ZMW': 'ZK',
-      'BIF': 'F', 'RWF': 'RF', 'CDF': 'FC', 'AOA': 'Kz', 'MZN': 'MT',
-      'SLL': 'Le', 'LRD': 'L$', 'GMD': 'D', 'GNF': 'FG', 'SLE': 'Le',
-      'STN': 'Db'
-    };
-    
-    const symbol = symbols[currency] || '$';
+    const { simpleCurrencyService } = require('./simpleCurrencyService');
+    const symbol = simpleCurrencyService.getCurrencySymbol(currency);
     return `${symbol}${amount.toFixed(2)}`;
   }
 }

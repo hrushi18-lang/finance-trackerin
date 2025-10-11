@@ -238,6 +238,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [transactionSplits, setTransactionSplits] = useState<TransactionSplit[]>([]);
   const [financialInsights, setFinancialInsights] = useState<FinancialInsight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userPrimaryCurrency, setUserPrimaryCurrency] = useState<string | null>(null);
   
   // Receipt state
   const [showReceipt, setShowReceipt] = useState(false);
@@ -274,6 +275,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       // Load critical data first in parallel for faster initial render
       await Promise.all([
+        loadUserPrimaryCurrency(), // ✅ Load user's primary currency from profile
         loadAccounts(),
         loadTransactions(),
         loadGoals(),
@@ -427,12 +429,54 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const getGoalsVaultAccount = () => accounts.find(a => a.type === 'goals_vault');
 
   // Helper function to get user's selected currency
+  // Load user's primary currency from profile
+  const loadUserPrimaryCurrency = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('primary_currency')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) throw error;
+      
+      if (profileData?.primary_currency) {
+        setUserPrimaryCurrency(profileData.primary_currency);
+        // Also update localStorage for offline access
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('finspire_currency', profileData.primary_currency);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load user primary currency:', error);
+      // Set default
+      setUserPrimaryCurrency('INR');
+    }
+  };
+
   const getUserCurrency = () => {
+    // Priority order:
+    // 1. User's profile primary currency (from state, loaded from database)
+    // 2. localStorage (for backward compatibility)
+    // 3. Default to INR (not hardcoded USD)
+    
+    // Use loaded primary currency from profile
+    if (userPrimaryCurrency) {
+      return userPrimaryCurrency;
+    }
+    
+    // Fallback to localStorage
     if (typeof window !== 'undefined') {
       const savedCurrency = localStorage.getItem('finspire_currency');
-      return savedCurrency || 'USD';
+      if (savedCurrency) {
+        return savedCurrency;
+      }
     }
-    return 'USD';
+    
+    // Default fallback
+    return 'INR';
   };
 
   const createGoalsVaultAccount = async (name: string = 'Goals Vault', currencycode: string = getUserCurrency()) => {
@@ -624,86 +668,60 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const sourceAccount = accounts.find(acc => acc.id === sourceAccountId);
     if (!sourceAccount) throw new Error('Source account not found');
     
-    // Check if source account has sufficient balance
-    if (sourceAccount.balance < amount) {
-      throw new Error(`Insufficient funds. Available: $${sourceAccount.balance.toFixed(2)}, Required: $${amount.toFixed(2)}`);
+    // ✅ FIX: Use unified currency service for goal contribution
+    const { unifiedCurrencyService } = await import('../services/unifiedCurrencyService');
+    const primaryCurrency = getUserCurrency();
+    const goalCurrency = (goal as any).currencycode || primaryCurrency;
+    const accountCurrency = sourceAccount.currencycode || primaryCurrency;
+    
+    const paymentResult = await unifiedCurrencyService.processPayment({
+      paymentType: 'goal_contribution',
+      amount: amount,
+      paymentCurrency: accountCurrency, // User enters amount in account currency
+      accountId: sourceAccountId,
+      accountCurrency: accountCurrency,
+      primaryCurrency: primaryCurrency,
+      userId: user.id,
+      targetEntityId: goalId,
+      targetEntityType: 'goal',
+      targetEntityCurrency: goalCurrency,
+      targetEntityAmount: goal.currentAmount,
+      description: description || `Contribution to ${goal.title}`
+    });
+
+    if (!paymentResult.success) {
+      throw new Error(paymentResult.error || 'Failed to process goal contribution');
+    }
+    
+    // Check if source account has sufficient balance (in account currency)
+    if (sourceAccount.balance < paymentResult.accountDeduction) {
+      throw new Error(`Insufficient funds. Available: ${paymentResult.accountCurrency}${sourceAccount.balance.toFixed(2)}, Required: ${paymentResult.accountCurrency}${paymentResult.accountDeduction.toFixed(2)}`);
     }
 
-    // Update goal current amount
-    const newAmount = Math.min(Number(goal.currentAmount || 0) + Number(amount || 0), Number(goal.targetAmount || 0));
+    // ✅ Update goal current amount in GOAL'S native currency
+    const newAmount = Math.min(
+      Number(goal.currentAmount || 0) + paymentResult.entityAddition,
+      Number(goal.targetAmount || 0)
+    );
     await updateGoal(goalId, { currentAmount: newAmount });
     
     // Send notification for goal progress
     sendGoalProgressUpdate(goal.title, newAmount, goal.targetAmount);
 
-    // Create transaction for goal contribution
-    let transaction;
-    if (goal.accountId) {
-      const vault = getGoalsVaultAccount();
-      if (vault && sourceAccountId !== vault.id) {
-        await transferBetweenAccounts(sourceAccountId, vault.id, amount, `Goal: ${goal.title}`);
-        // Create a transaction record for the contribution
-        transaction = await addTransaction({
-          type: 'expense',
-          amount: amount,
+    // ✅ Create transaction with proper currency conversion data
+    const transaction = await addTransaction({
+      ...paymentResult.transactionData,
           category: 'Savings',
-          description: description || `Contribution to ${goal.title}`,
           date: new Date(),
-          accountId: sourceAccountId,
-          affectsBalance: true,
-          status: 'completed',
-          goalId: goalId
-        });
-      } else {
-        // If transferring to same vault or no vault, create direct transaction
-        transaction = await addTransaction({
-          type: 'expense',
-          amount: amount,
-          category: 'Savings',
-          description: description || `Contribution to ${goal.title}`,
-          date: new Date(),
-          accountId: sourceAccountId,
           affectsBalance: true,
           status: 'completed',
           goalId: goalId,
-          // Currency fields
-          currencycode: getUserCurrency(),
-          originalAmount: amount,
-          originalCurrency: getUserCurrency(),
-          exchangeRateUsed: 1.0,
-          // Payment source tracking
           paymentSource: 'goal_contribution',
           sourceEntityId: goalId,
           sourceEntityType: 'goal',
           deductFromBalance: true,
           paymentContext: 'goal_funding'
         } as any);
-      }
-    } else {
-      // If goal is not linked to vault, create direct transaction
-      transaction = await addTransaction({
-        type: 'expense',
-        amount: amount,
-        category: 'Savings',
-        description: description || `Contribution to ${goal.title}`,
-        date: new Date(),
-        accountId: sourceAccountId,
-        affectsBalance: true,
-        status: 'completed',
-        goalId: goalId,
-        // Currency fields
-        currencycode: getUserCurrency(),
-        originalAmount: amount,
-        originalCurrency: getUserCurrency(),
-        exchangeRateUsed: 1.0,
-        // Payment source tracking
-        paymentSource: 'goal_contribution',
-        sourceEntityId: goalId,
-        sourceEntityType: 'goal',
-        deductFromBalance: true,
-        paymentContext: 'goal_funding'
-      } as any);
-    }
 
     return transaction;
   };
@@ -735,22 +753,39 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const account = accounts.find(a => a.id === accountId);
     if (!account) throw new Error('Account not found');
 
-    const transaction = await addTransaction({
-      type: 'expense',
+    // ✅ FIX: Use unified currency service for bill payment
+    const { unifiedCurrencyService } = await import('../services/unifiedCurrencyService');
+    const primaryCurrency = getUserCurrency();
+    const billCurrency = (bill as any).currencycode || primaryCurrency;
+    const accountCurrency = account.currencycode || primaryCurrency;
+    
+    const paymentResult = await unifiedCurrencyService.processPayment({
+      paymentType: 'bill_payment',
       amount: payAmount,
+      paymentCurrency: billCurrency, // ✅ Payment in bill's native currency
+      accountId: accountId,
+      accountCurrency: accountCurrency,
+      primaryCurrency: primaryCurrency,
+      userId: user.id,
+      targetEntityId: billId,
+      targetEntityType: 'bill',
+      targetEntityCurrency: billCurrency,
+      targetEntityAmount: bill.amount,
+      description: description || `Bill Payment: ${bill.title}`
+    });
+
+    if (!paymentResult.success) {
+      throw new Error(paymentResult.error || 'Failed to process bill payment');
+    }
+
+    // ✅ Create transaction with proper currency conversion data
+    const transaction = await addTransaction({
+      ...paymentResult.transactionData,
       category: bill.category || 'Bills',
-      description: description || `Bill Payment: ${bill.title}`,
       date: new Date(),
-      accountId,
       affectsBalance: true,
       status: 'completed',
       billId: billId,
-      // Currency fields
-      currencycode: getUserCurrency(),
-      originalAmount: payAmount,
-      originalCurrency: getUserCurrency(),
-      exchangeRateUsed: 1.0,
-      // Payment source tracking
       paymentSource: 'bill_payment',
       sourceEntityId: billId,
       sourceEntityType: 'bill',
@@ -807,23 +842,51 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Get account and liability currencies for proper conversion
     const account = accounts.find(acc => acc.id === accountId);
-    const accountCurrency = account?.currencycode || getUserCurrency();
-    const liabilityCurrency = liability.currencyCode || getUserCurrency();
+    if (!account) throw new Error('Account not found');
     
-    // Use the BillLiabilityService for consistent multi-currency handling
-    const transactionData = await BillLiabilityService.createLiabilityPaymentTransaction(
-      Number(amount),
-      accountId,
-      accountCurrency,
-      liabilityCurrency,
-      liability.name,
-      liabilityId,
-      description
-    );
+    const accountCurrency = account.currencycode || getUserCurrency();
+    const liabilityCurrency = (liability as any).currencyCode || (liability as any).currencycode || getUserCurrency();
+    
+    // ✅ FIX: Use unified currency service for liability payment
+    const { unifiedCurrencyService } = await import('../services/unifiedCurrencyService');
+    const primaryCurrency = getUserCurrency();
+    
+    const paymentResult = await unifiedCurrencyService.processPayment({
+      paymentType: 'liability_payment',
+      amount: amount,
+      paymentCurrency: accountCurrency, // ✅ Payment in account currency
+      accountId: accountId,
+      accountCurrency: accountCurrency,
+      primaryCurrency: primaryCurrency,
+      userId: user.id,
+      targetEntityId: liabilityId,
+      targetEntityType: 'liability',
+      targetEntityCurrency: liabilityCurrency,
+      targetEntityAmount: liability.remainingAmount,
+      description: description || `Payment for ${liability.name}`
+    });
 
-    await addTransaction(transactionData as any);
+    if (!paymentResult.success) {
+      throw new Error(paymentResult.error || 'Failed to process liability payment');
+    }
 
-    const newRemaining = Math.max(0, Number(liability.remainingAmount || 0) - Number(amount || 0));
+    // ✅ Create transaction with proper currency conversion data
+    await addTransaction({
+      ...paymentResult.transactionData,
+      category: 'Debt Repayment',
+      date: new Date(),
+      affectsBalance: true,
+      status: 'completed',
+      liabilityId: liabilityId,
+      paymentSource: 'liability_payment',
+      sourceEntityId: liabilityId,
+      sourceEntityType: 'liability',
+      deductFromBalance: true,
+      paymentContext: 'liability_repayment'
+    } as any);
+
+    // ✅ Update liability remaining amount in LIABILITY'S native currency
+    const newRemaining = Math.max(0, Number(liability.remainingAmount || 0) - paymentResult.entityAddition);
     await updateLiability(liabilityId, { remainingAmount: newRemaining, status: newRemaining === 0 ? 'paid_off' : liability.status });
   };
 
@@ -2039,42 +2102,36 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const primaryCurrency = profileData?.primary_currency || 'USD';
     const accountCurrency = accountData.currency || primaryCurrency;
 
-    // Use currency service to process account creation
-    const conversionData = currencyService.processAccountCreation(
-      accountCurrency,
-      accountData.balance || 0,
-      primaryCurrency
-    );
+    // ✅ FIX: Use unified currency service for account creation
+    const { unifiedCurrencyService } = await import('../services/unifiedCurrencyService');
+    const accountCreationResult = await unifiedCurrencyService.createAccount({
+      name: accountData.name,
+      type: accountData.type,
+      balance: accountData.balance || 0,
+      currency: accountCurrency,
+      primaryCurrency: primaryCurrency,
+      userId: user.id,
+      institution: accountData.institution,
+      platform: accountData.platform
+    });
 
+    if (!accountCreationResult.success) {
+      throw new Error(accountCreationResult.error || 'Failed to create account');
+    }
+
+    // ✅ FIX: Store NATIVE balance and currency (not converted)
     const { data, error } = await supabase
       .from('financial_accounts')
       .insert({
         user_id: user.id,
         name: accountData.name,
-        type: accountData.type === 'goals_vault' ? 'investment' : accountData.type, // Map goals_vault to investment
-        balance: conversionData.convertedAmount, // Store converted balance as main balance
+        type: accountData.type === 'goals_vault' ? 'investment' : accountData.type,
+        balance: accountCreationResult.accountData.balance, // ✅ NATIVE balance
+        currencycode: accountCreationResult.accountData.currencycode, // ✅ NATIVE currency
         institution: accountData.institution,
         platform: accountData.platform,
         account_number: accountData.account_number,
-        is_visible: true, // Default to visible
-        currency: accountCurrency, // Store original currency
-        currencycode: accountCurrency, // Legacy field
-        
-        // Dual currency storage - store both native and converted amounts
-        native_amount: conversionData.nativeAmount,
-        native_currency: conversionData.nativeCurrency,
-        native_symbol: conversionData.nativeSymbol,
-        converted_amount: conversionData.convertedAmount,
-        converted_currency: conversionData.convertedCurrency,
-        converted_symbol: conversionData.convertedSymbol,
-        exchange_rate: conversionData.exchangeRate,
-        conversion_metadata: {
-          needs_conversion: conversionData.needsConversion,
-          last_updated: new Date().toISOString(),
-          source: 'account_creation'
-        },
-        rate_source: conversionData.rateSource || 'api',
-        last_conversion_date: new Date()
+        is_visible: true
       })
       .select()
       .single();
@@ -2085,28 +2142,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       id: data.id,
       userId: data.user_id,
       name: data.name,
-      type: data.type === 'investment' && accountData.type === 'goals_vault' ? 'goals_vault' : data.type, // Map back to goals_vault if needed
-      balance: Number(accountData.balance || 0), // Use original balance as the main balance
+      type: data.type === 'investment' && accountData.type === 'goals_vault' ? 'goals_vault' : data.type,
+      balance: accountCreationResult.accountData.balance, // ✅ NATIVE balance
       institution: data.institution,
       platform: data.platform,
       accountNumber: data.account_number,
       isVisible: data.is_visible,
-      currencycode: data.currency, // Use original currency
+      currencycode: accountCreationResult.accountData.currencycode, // ✅ NATIVE currency
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
-      
-      // Store conversion data in metadata for now
-      metadata: {
-        native_balance: conversionData.nativeAmount,
-        native_currency: conversionData.nativeCurrency,
-        native_symbol: conversionData.nativeSymbol,
-        converted_balance: conversionData.convertedAmount,
-        converted_currency: conversionData.convertedCurrency,
-        converted_symbol: conversionData.convertedSymbol,
-        exchange_rate: conversionData.exchangeRate,
-        last_conversion_date: new Date().toISOString(),
-        needs_conversion: conversionData.needsConversion
-      },
       
       // Enhanced fields
       routingNumber: data.routing_number,
@@ -2607,44 +2651,70 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const account = accounts.find(acc => acc.id === transactionData.accountId);
     const accountCurrency = account?.currencycode || primaryCurrency;
     
-    // Extract currency information from transaction data
-    let nativeAmount = (transactionData as any).native_amount || transactionData.amount;
-    let nativeCurrency = (transactionData as any).native_currency || (transactionData as any).currencycode || accountCurrency;
-    let nativeSymbol = (transactionData as any).native_symbol || getCurrencyInfo(nativeCurrency)?.symbol || '$';
+    // ✅ NEW: Use provided conversion data (NO RECALCULATION)
+    // If conversion data is provided, use it directly (from TransactionConversionService)
+    const hasConversionData = !!(transactionData as any).native_amount && 
+                              !!(transactionData as any).converted_amount;
     
-    // Convert to account currency (not primary currency)
-    let convertedAmount = (transactionData as any).converted_amount || transactionData.amount;
-    let convertedCurrency = accountCurrency; // Always convert to account currency
-    let convertedSymbol = getCurrencyInfo(convertedCurrency)?.symbol || '$';
-    let exchangeRate = (transactionData as any).exchange_rate || 1.0;
-    let exchangeRateUsed = (transactionData as any).exchange_rate_used || 1.0;
-    let conversionSource = (transactionData as any).conversion_source || 'manual';
-
-    // If no multi-currency data provided, calculate conversion to account currency
-    if (!(transactionData as any).native_amount && nativeCurrency !== convertedCurrency) {
-      try {
-        console.log(`🔄 Converting to account currency: ${nativeAmount} ${nativeCurrency} → ${convertedCurrency}`);
+    let nativeAmount: number;
+    let nativeCurrency: string;
+    let nativeSymbol: string;
+    let convertedAmount: number;
+    let convertedCurrency: string;
+    let convertedSymbol: string;
+    let exchangeRate: number;
+    let exchangeRateUsed: number;
+    let conversionSource: string;
+    
+    if (hasConversionData) {
+      // ✅ Use provided conversion data (from form with locked rates)
+      console.log('✅ Using provided conversion data (NO RECALCULATION)');
+      nativeAmount = (transactionData as any).native_amount;
+      nativeCurrency = (transactionData as any).native_currency;
+      nativeSymbol = (transactionData as any).native_symbol || getCurrencyInfo(nativeCurrency)?.symbol || '$';
+      convertedAmount = (transactionData as any).converted_amount;
+      convertedCurrency = (transactionData as any).converted_currency || accountCurrency;
+      convertedSymbol = (transactionData as any).converted_symbol || getCurrencyInfo(convertedCurrency)?.symbol || '$';
+      exchangeRate = (transactionData as any).exchange_rate || 1.0;
+      exchangeRateUsed = (transactionData as any).exchange_rate_used || 1.0;
+      conversionSource = (transactionData as any).conversion_source || 'api';
+      
+      console.log('📦 Conversion data:', {
+        native: `${nativeSymbol}${nativeAmount} ${nativeCurrency}`,
+        converted: `${convertedSymbol}${convertedAmount} ${convertedCurrency}`,
+        rate: exchangeRate
+      });
+    } else {
+      // ⚠️ FALLBACK: Calculate conversion (old behavior for backward compatibility)
+      console.warn('⚠️ No conversion data provided, calculating (legacy mode)');
+      nativeAmount = transactionData.amount;
+      nativeCurrency = (transactionData as any).currencycode || accountCurrency;
+      nativeSymbol = getCurrencyInfo(nativeCurrency)?.symbol || '$';
+      convertedCurrency = accountCurrency;
+      convertedSymbol = getCurrencyInfo(convertedCurrency)?.symbol || '$';
+      
+      if (nativeCurrency !== convertedCurrency) {
+        try {
         exchangeRate = simpleCurrencyService.getRate(nativeCurrency, convertedCurrency);
         convertedAmount = nativeAmount * exchangeRate;
         exchangeRateUsed = exchangeRate;
         conversionSource = 'api';
-        console.log(`✅ Account conversion: ${nativeAmount} ${nativeCurrency} = ${convertedAmount.toFixed(2)} ${convertedCurrency} (rate: ${exchangeRate.toFixed(4)})`);
       } catch (error) {
-        console.error('Failed to get exchange rate, using fallback:', error);
-        // Use fallback rates
-        const fallbackRates: { [key: string]: number } = {
-          'USD': 1.0, 'EUR': 0.87, 'GBP': 0.76, 'INR': 88.22, 'JPY': 152.0,
-          'CAD': 1.38, 'AUD': 1.55, 'CHF': 0.89, 'CNY': 7.15, 'SGD': 1.37
-        };
-        exchangeRate = (fallbackRates[convertedCurrency] || 1.0) / (fallbackRates[nativeCurrency] || 1.0);
-        convertedAmount = nativeAmount * exchangeRate;
-        exchangeRateUsed = exchangeRate;
+          console.error('Failed to get exchange rate:', error);
+          exchangeRate = 1.0;
+          convertedAmount = nativeAmount;
+          exchangeRateUsed = 1.0;
         conversionSource = 'fallback';
-        console.log(`⚠️ Fallback conversion: ${nativeAmount} ${nativeCurrency} = ${convertedAmount.toFixed(2)} ${convertedCurrency} (rate: ${exchangeRate.toFixed(4)})`);
+        }
+      } else {
+        convertedAmount = nativeAmount;
+        exchangeRate = 1.0;
+        exchangeRateUsed = 1.0;
+        conversionSource = 'manual';
       }
     }
 
-    // Calculate primary currency amount for reporting
+    // Calculate primary currency amount for reporting (if not already in primary)
     let primaryAmount = convertedAmount;
     let primaryCurrencyCode = primaryCurrency;
     if (convertedCurrency !== primaryCurrencyCode) {
@@ -2692,6 +2762,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ? transactionData.date.toISOString().split('T')[0]
       : new Date(transactionData.date).toISOString().split('T')[0];
 
+    // Validate foreign key references (goal/bill/liability) to avoid FK violations
+    let goalIdForInsert: string | null = null;
+    try {
+      const requestedGoalId = (transactionData as any).goalId as string | undefined;
+      if (requestedGoalId) {
+        const { data: goalRow } = await supabase
+          .from('financial_goals')
+          .select('id')
+          .eq('id', requestedGoalId)
+          .single();
+        goalIdForInsert = goalRow?.id || null; // Fall back to null if not found
+      }
+    } catch {
+      goalIdForInsert = null;
+    }
+
     // Use the safe insert function with correct currency conversion
     const { data, error } = await supabase.rpc('safe_insert_transaction_with_conversion', {
       p_user_id: user.id,
@@ -2706,7 +2792,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       p_reason: transactionData.reason || null,
       p_transfer_to_account_id: transactionData.transferToAccountId || null,
       p_status: transactionData.status || 'completed',
-      p_goal_id: (transactionData as any).goalId || null,
+      p_goal_id: goalIdForInsert,
       p_bill_id: (transactionData as any).billId || null,
       p_liability_id: (transactionData as any).liabilityId || null,
       p_notes: (transactionData as any).notes || null,
@@ -3497,29 +3583,31 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Get currency information
     const goalCurrency = (goalData as any).currencycode || getUserCurrency();
     const primaryCurrency = getUserCurrency();
-    const needsConversion = goalCurrency !== primaryCurrency;
     
-    // Calculate currency conversion if needed
-    let convertedTargetAmount = goalData.targetAmount;
-    let exchangeRate = 1.0;
-    
-    if (needsConversion) {
-      // Import currency conversion function
-      const { convertCurrency } = await import('../utils/currency-converter');
-      exchangeRate = await convertCurrency(1, goalCurrency, primaryCurrency, primaryCurrency) || 1.0;
-      convertedTargetAmount = goalData.targetAmount * exchangeRate;
+    // ✅ FIX: Use unified currency service for goal creation
+    const { unifiedCurrencyService } = await import('../services/unifiedCurrencyService');
+    const goalCreationResult = await unifiedCurrencyService.createEntity({
+      entityType: 'goal',
+      amount: goalData.targetAmount,
+      currency: goalCurrency,
+      primaryCurrency: primaryCurrency,
+      userId: user.id
+    });
+
+    if (!goalCreationResult.success) {
+      throw new Error(goalCreationResult.error || 'Failed to create goal');
     }
 
     try {
-      // Use the safe insert function
+      // ✅ FIX: Store NATIVE target amount (not converted)
       const { data, error } = await supabase.rpc('frontend_add_goal', {
         p_user_id: user.id,
         p_title: goalData.title,
         p_description: goalData.description || '',
-        p_target_amount: convertedTargetAmount,
+        p_target_amount: goalCreationResult.entityData.amount, // ✅ NATIVE amount
         p_target_date: goalData.targetDate.toISOString().split('T')[0],
         p_category: goalData.category,
-        p_currency_code: goalCurrency,
+        p_currency_code: goalCreationResult.entityData.currencycode, // ✅ NATIVE currency
         p_account_id: goalData.accountId || null,
         p_goal_type: goalData.goalType || 'general_savings',
         p_target_category: goalData.targetCategory || null,
@@ -3821,38 +3909,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Get currency information
     const liabilityCurrency = (liabilityData as any).currencycode || getUserCurrency();
     const primaryCurrency = getUserCurrency();
-    const needsConversion = liabilityCurrency !== primaryCurrency;
     
-    // Calculate currency conversion if needed
-    let convertedTotalAmount = liabilityData.totalAmount;
-    let convertedRemainingAmount = liabilityData.remainingAmount;
-    let convertedMonthlyPayment = liabilityData.monthlyPayment;
-    let convertedMinimumPayment = liabilityData.minimumPayment;
-    let exchangeRate = 1.0;
-    
-    if (needsConversion) {
-      try {
-        // Use live exchange rate service
-        exchangeRate = simpleCurrencyService.getRate(liabilityCurrency, primaryCurrency);
-        convertedTotalAmount = liabilityData.totalAmount * exchangeRate;
-        convertedRemainingAmount = liabilityData.remainingAmount * exchangeRate;
-        convertedMonthlyPayment = liabilityData.monthlyPayment * exchangeRate;
-        convertedMinimumPayment = liabilityData.minimumPayment * exchangeRate;
-        console.log(`✅ Live conversion for liability: ${liabilityData.totalAmount} ${liabilityCurrency} = ${convertedTotalAmount.toFixed(2)} ${primaryCurrency} (rate: ${exchangeRate.toFixed(4)})`);
-      } catch (error) {
-        console.error('Failed to get live exchange rate, using fallback:', error);
-        // Fallback to hardcoded rates
-        const fallbackRates: { [key: string]: number } = {
-          'USD': 1.0, 'EUR': 0.87, 'GBP': 0.76, 'INR': 88.22, 'JPY': 152.0,
-          'CAD': 1.38, 'AUD': 1.55, 'CHF': 0.89, 'CNY': 7.15, 'SGD': 1.37
-        };
-        exchangeRate = (fallbackRates[primaryCurrency] || 1.0) / (fallbackRates[liabilityCurrency] || 1.0);
-        convertedTotalAmount = liabilityData.totalAmount * exchangeRate;
-        convertedRemainingAmount = liabilityData.remainingAmount * exchangeRate;
-        convertedMonthlyPayment = liabilityData.monthlyPayment * exchangeRate;
-        convertedMinimumPayment = liabilityData.minimumPayment * exchangeRate;
-        console.log(`⚠️ Fallback conversion for liability: ${liabilityData.totalAmount} ${liabilityCurrency} = ${convertedTotalAmount.toFixed(2)} ${primaryCurrency} (rate: ${exchangeRate.toFixed(4)})`);
+    // ✅ FIX: Use unified currency service for liability creation
+    const { unifiedCurrencyService } = await import('../services/unifiedCurrencyService');
+    const liabilityCreationResult = await unifiedCurrencyService.createEntity({
+      entityType: 'liability',
+      amount: liabilityData.totalAmount,
+      currency: liabilityCurrency,
+      primaryCurrency: primaryCurrency,
+      userId: user.id,
+      additionalAmounts: {
+        remainingAmount: liabilityData.remainingAmount,
+        monthlyPayment: liabilityData.monthlyPayment,
+        minimumPayment: liabilityData.minimumPayment
       }
+    });
+
+    if (!liabilityCreationResult.success) {
+      throw new Error(liabilityCreationResult.error || 'Failed to create liability');
     }
 
     const { data, error } = await supabase
@@ -3864,11 +3938,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         liability_type: liabilityData.liabilityType,
         notes: liabilityData.description,
         liability_status: liabilityData.liabilityStatus || 'new',
-        total_amount: convertedTotalAmount, // Store in primary currency
-        remaining_amount: convertedRemainingAmount, // Store in primary currency
+        total_amount: liabilityCreationResult.entityData.amount, // ✅ NATIVE amount
+        remaining_amount: liabilityCreationResult.entityData.additionalAmounts?.remainingAmount || liabilityCreationResult.entityData.amount, // ✅ NATIVE
         interest_rate: liabilityData.interestRate,
-        monthly_payment: convertedMonthlyPayment, // Store in primary currency
-        minimum_payment: convertedMinimumPayment, // Store in primary currency
+        monthly_payment: liabilityCreationResult.entityData.additionalAmounts?.monthlyPayment || 0, // ✅ NATIVE
+        minimum_payment: liabilityCreationResult.entityData.additionalAmounts?.minimumPayment || 0, // ✅ NATIVE
         payment_day: liabilityData.paymentDay,
         loan_term_months: liabilityData.loanTermMonths,
         remaining_term_months: liabilityData.remainingTermMonths,
@@ -3897,22 +3971,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         last_modified_date: liabilityData.lastModifiedDate?.toISOString(),
         modification_reason: liabilityData.modificationReason,
         type_specific_data: liabilityData.typeSpecificData || {},
-        currency_code: primaryCurrency, // Store primary currency
+        currency_code: liabilityCreationResult.entityData.currencycode, // ✅ NATIVE currency
         activity_scope: liabilityData.activityScope || 'general',
-        priority: liabilityData.priority || 'medium',
-        // Currency tracking fields
-        original_currency: liabilityCurrency, // Store original currency
-        exchange_rate_used: exchangeRate,
-        // Multi-currency fields
-        native_currency: liabilityCurrency,
-        native_amount: liabilityData.totalAmount,
-        native_symbol: getCurrencySymbol(liabilityCurrency),
-        converted_amount: convertedTotalAmount,
-        converted_currency: primaryCurrency,
-        converted_symbol: getCurrencySymbol(primaryCurrency),
-        exchange_rate: exchangeRate,
-        conversion_source: needsConversion ? 'api' : 'manual',
-        last_conversion_date: new Date().toISOString()
+        priority: liabilityData.priority || 'medium'
+        // Remove multi-currency fields - database stores native amounts only
       })
       .select('*');
 
@@ -4473,44 +4535,33 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Get currency information
     const billCurrency = (billData as any).currencycode || getUserCurrency();
     const primaryCurrency = getUserCurrency();
-    const needsConversion = billCurrency !== primaryCurrency;
     
-    // Calculate currency conversion if needed
-    let convertedAmount = billData.amount;
-    let exchangeRate = 1.0;
-    let conversionSource = 'manual';
-    
-    if (needsConversion) {
-      try {
-        // Use live exchange rate service for September 2025
-        exchangeRate = simpleCurrencyService.getRate(billCurrency, primaryCurrency);
-      convertedAmount = billData.amount * exchangeRate;
-        conversionSource = 'api';
-      } catch (error) {
-        console.error('Failed to get live exchange rate, using fallback:', error);
-        // Fallback to hardcoded rates
-        const fallbackRates: { [key: string]: number } = {
-          'USD': 1.0, 'EUR': 0.87, 'GBP': 0.76, 'INR': 88.22, 'JPY': 152.0,
-          'CAD': 1.38, 'AUD': 1.55, 'CHF': 0.89, 'CNY': 7.15, 'SGD': 1.37
-        };
-        exchangeRate = (fallbackRates[primaryCurrency] || 1.0) / (fallbackRates[billCurrency] || 1.0);
-        convertedAmount = billData.amount * exchangeRate;
-        conversionSource = 'fallback';
-      }
+    // ✅ FIX: Use unified currency service for bill creation
+    const { unifiedCurrencyService } = await import('../services/unifiedCurrencyService');
+    const billCreationResult = await unifiedCurrencyService.createEntity({
+      entityType: 'bill',
+      amount: billData.amount,
+      currency: billCurrency,
+      primaryCurrency: primaryCurrency,
+      userId: user.id
+    });
+
+    if (!billCreationResult.success) {
+      throw new Error(billCreationResult.error || 'Failed to create bill');
     }
 
     try {
-      // Use the safe insert function
+      // ✅ FIX: Store NATIVE bill amount (not converted)
       const { data, error } = await supabase.rpc('frontend_add_bill', {
         p_user_id: user.id,
         p_title: billData.title,
         p_category: billData.category,
         p_bill_type: billData.billType || 'fixed',
-        p_amount: convertedAmount,
+        p_amount: billCreationResult.entityData.amount, // ✅ NATIVE amount
         p_frequency: billData.frequency,
         p_due_date: billData.dueDate.toISOString().split('T')[0],
         p_next_due_date: billData.nextDueDate.toISOString().split('T')[0],
-        p_currency_code: billCurrency,
+        p_currency_code: billCreationResult.entityData.currencycode, // ✅ NATIVE currency
         p_default_account_id: billData.defaultAccountId || null,
         p_description: billData.description || null,
         p_estimated_amount: billData.estimatedAmount || null,
@@ -4523,14 +4574,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         p_reminder_days_before: billData.reminderDaysBefore || 3,
         p_send_due_date_reminder: billData.sendDueDateReminder || false,
         p_send_overdue_reminder: billData.sendOverdueReminder || false,
-        // Multi-currency fields
-        p_native_amount: billData.amount,
-        p_native_currency: billCurrency,
-        p_converted_amount: convertedAmount,
-        p_converted_currency: primaryCurrency,
-        p_exchange_rate: exchangeRate,
-        p_conversion_source: conversionSource,
-        p_last_conversion_date: new Date().toISOString()
+        // Remove multi-currency fields - database stores native amounts only
+        p_native_amount: null,
+        p_native_currency: null,
+        p_converted_amount: null,
+        p_converted_currency: null,
+        p_exchange_rate: null,
+        p_conversion_source: null,
+        p_last_conversion_date: null
       });
 
       if (error) {

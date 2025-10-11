@@ -8,8 +8,8 @@ import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';
 import { Select } from '../common/Select';
 import { CurrencyIcon } from '../common/CurrencyIcon';
-import { currencyConversionService } from '../../services/currencyConversionService';
-import { Decimal } from 'decimal.js';
+import { unifiedCurrencyService } from '../../services/unifiedCurrencyService';
+import { useProfile } from '../../contexts/ProfileContext';
 
 export interface BillPaymentFormData {
   amount: number;
@@ -38,21 +38,19 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({
   onSubmit,
   bill
 }) => {
-  const { accounts, executeBillPayment } = useFinance();
-  const { primaryCurrency, formatCurrency } = useInternationalization();
+  const { accounts, user } = useFinance();
+  const { currency, formatCurrency } = useInternationalization();
+  const { profile } = useProfile();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedCurrency, setSelectedCurrency] = useState(bill.currency);
+  const [paymentCurrency, setPaymentCurrency] = useState(bill.currency);
   const [selectedAccount, setSelectedAccount] = useState<typeof accounts[0] | null>(null);
-  const [conversionPreview, setConversionPreview] = useState<{
-    accountAmount: number;
-    accountCurrency: string;
-    primaryAmount: number;
-    primaryCurrency: string;
-    exchangeRate: number;
-    conversionCase: string;
-  } | null>(null);
+  const [conversionPreview, setConversionPreview] = useState<any | null>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState(bill.currency);
   const [conversionError, setConversionError] = useState<string | null>(null);
+  
+  const primaryCurrency = profile?.primaryCurrency || currency.code;
+  const billCurrency = bill.currency || primaryCurrency;
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BillPaymentFormData>({
     defaultValues: {
@@ -82,62 +80,52 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({
     }
   }, [selectedAccount, setValue]);
 
-  // Generate conversion preview
+  // ✅ UPDATED: Generate conversion preview using unified service
   useEffect(() => {
-    if (watchedAmount && selectedCurrency && selectedAccount) {
-      generateConversionPreview();
-    } else {
-      setConversionPreview(null);
-      setConversionError(null);
-    }
-  }, [watchedAmount, selectedCurrency, selectedAccount]);
-
-  const generateConversionPreview = async () => {
-    if (!watchedAmount || !selectedCurrency || !selectedAccount) return;
-
-    try {
-      setConversionError(null);
-      
-      // Create a preview request
-      const previewRequest = {
-        amount: Number(watchedAmount),
-        currency: selectedCurrency,
-        accountId: selectedAccount.id,
-        operation: 'deduct' as const,
-        description: 'Preview'
-      };
-
-      // Use the execution engine to get conversion preview
-      const accountBalances = accounts.map(acc => ({
-        id: acc.id,
-        balance: acc.balance,
-        currency: acc.currencycode,
-        name: acc.name,
-        type: acc.type
-      }));
-
-      const { CurrencyExecutionEngine } = await import('../../services/currencyExecutionEngine');
-      const engine = new CurrencyExecutionEngine(accountBalances, primaryCurrency.code);
-      
-      const result = await engine.execute(previewRequest);
-      
-      if (result.success) {
-        setConversionPreview({
-          accountAmount: result.accountAmount,
-          accountCurrency: result.accountCurrency,
-          primaryAmount: result.primaryAmount,
-          primaryCurrency: result.primaryCurrency,
-          exchangeRate: result.exchangeRate || 1,
-          conversionCase: result.auditData.conversionCase
-        });
+    const generatePreview = async () => {
+      if (watchedAmount && selectedAccount && watchedAmount > 0) {
+        try {
+          setConversionError(null);
+          
+          // Use processPayment for bill payment preview
+          const preview = await unifiedCurrencyService.processPayment({
+            paymentType: 'bill_payment',
+            amount: Number(watchedAmount),
+            paymentCurrency: billCurrency, // Bill's native currency
+            accountId: selectedAccount.id,
+            accountCurrency: selectedAccount.currencycode || primaryCurrency,
+            primaryCurrency: primaryCurrency,
+            userId: user?.id || '',
+            targetEntityId: bill.id,
+            targetEntityType: 'bill',
+            targetEntityCurrency: billCurrency,
+            targetEntityAmount: bill.amount,
+            description: `Payment for ${bill.title}`
+          });
+          
+          if (preview.success) {
+            setConversionPreview(preview);
+            console.log('💡 Bill payment preview:', {
+              deductFromAccount: `${preview.accountCurrency}${preview.accountDeduction}`,
+              billAmount: `${billCurrency}${bill.amount}`
+            });
+          } else {
+            setConversionPreview(null);
+            setConversionError(preview.error || 'Conversion failed');
+          }
+        } catch (error: any) {
+          console.error('Conversion preview error:', error);
+          setConversionPreview(null);
+          setConversionError(error.message);
+        }
       } else {
-        setConversionError(result.error || 'Conversion failed');
+        setConversionPreview(null);
+        setConversionError(null);
       }
-    } catch (error: any) {
-      console.error('Conversion preview error:', error);
-      setConversionError(error.message);
-    }
-  };
+    };
+    
+    generatePreview();
+  }, [watchedAmount, selectedAccount, billCurrency, primaryCurrency, bill.amount, bill.id, bill.title, user]);
 
   const handleFormSubmit = async (data: BillPaymentFormData) => {
     try {

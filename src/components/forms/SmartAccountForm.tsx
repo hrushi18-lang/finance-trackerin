@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Building, Smartphone, Wallet, CreditCard, TrendingUp, Target, Eye, EyeOff, AlertCircle, Info, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Building, Smartphone, Wallet, CreditCard, TrendingUp, Target, Eye, EyeOff, AlertCircle, Info, CheckCircle, ArrowRight, ArrowLeft, Globe } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { FinancialAccount } from '../../types';
+import { unifiedCurrencyService } from '../../services/unifiedCurrencyService';
+import { useProfile } from '../../contexts/ProfileContext';
+import { useFinance } from '../../contexts/FinanceContext';
 
 interface AccountFormData {
   name: string;
   type: 'bank_savings' | 'bank_current' | 'bank_student' | 'digital_wallet' | 'cash' | 'credit_card' | 'investment' | 'goals_vault' | 'custom';
   balance: number;
-  currency: string;
   institution?: string;
   platform?: string;
   isVisible: boolean;
@@ -37,21 +39,61 @@ export const SmartAccountForm: React.FC<SmartAccountFormProps> = ({
   primaryFocus
 }) => {
   const { currency } = useInternationalization();
+  const { profile } = useProfile();
+  const { user } = useFinance();
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [conversionPreview, setConversionPreview] = useState<any | null>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState(currency.code);
+  
+  const primaryCurrency = profile?.primaryCurrency || currency.code;
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<AccountFormData>({
     defaultValues: initialData || {
       type: 'bank_savings',
       balance: 0,
-      currency: currency.code,
       isVisible: true
     }
   });
 
   const selectedType = watch('type');
   const watchedBalance = watch('balance');
+
+  // ✅ Generate conversion preview for account creation
+  useEffect(() => {
+    const generatePreview = async () => {
+      if (watchedBalance && watchedBalance > 0 && selectedCurrency) {
+        try {
+          const preview = await unifiedCurrencyService.createAccount({
+            name: 'Preview',
+            type: selectedType,
+            balance: Number(watchedBalance),
+            currency: selectedCurrency,
+            primaryCurrency: primaryCurrency,
+            userId: user?.id || 'preview'
+          });
+          
+          if (preview.success) {
+            setConversionPreview(preview);
+            console.log('💡 Account creation preview:', {
+              native: `${selectedCurrency}${watchedBalance}`,
+              display: `${primaryCurrency}${preview.displayAmount}`
+            });
+          } else {
+            setConversionPreview(null);
+          }
+        } catch (error) {
+          console.error('Preview failed:', error);
+          setConversionPreview(null);
+        }
+      } else {
+        setConversionPreview(null);
+      }
+    };
+    
+    generatePreview();
+  }, [watchedBalance, selectedCurrency, primaryCurrency, selectedType, user]);
 
   // Progressive form steps
   const steps = [
@@ -266,11 +308,11 @@ export const SmartAccountForm: React.FC<SmartAccountFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="relative">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Current Balance
+                  Current Balance ({currency.code})
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <CurrencyIcon currencyCode={watch('currency') || currency.code} size={18} className="text-gray-400" />
+                    <CurrencyIcon currencyCode={currency.code} size={18} className="text-gray-400" />
                   </div>
                   <input
                     type="number"
@@ -287,31 +329,33 @@ export const SmartAccountForm: React.FC<SmartAccountFormProps> = ({
                   <p className="text-red-400 text-sm mt-1">{errors.balance.message}</p>
                 )}
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Currency
-                </label>
-                <select
-                  {...register('currency', { required: 'Currency is required' })}
-                  className="w-full py-3 px-4 bg-black/20 border border-white/20 text-white rounded-lg focus:border-primary-400 focus:ring-2 focus:ring-primary-400/20"
-                >
-                  <option value={currency.code}>{currency.code} - {currency.name}</option>
-                  <option value="EUR">EUR - Euro</option>
-                  <option value="GBP">GBP - British Pound</option>
-                  <option value="INR">INR - Indian Rupee</option>
-                  <option value="CAD">CAD - Canadian Dollar</option>
-                  <option value="AUD">AUD - Australian Dollar</option>
-                  <option value="JPY">JPY - Japanese Yen</option>
-                  <option value="CHF">CHF - Swiss Franc</option>
-                  <option value="CNY">CNY - Chinese Yuan</option>
-                  <option value="SGD">SGD - Singapore Dollar</option>
-                </select>
-                {errors.currency && (
-                  <p className="text-red-400 text-sm mt-1">{errors.currency.message}</p>
-                )}
-              </div>
             </div>
+
+            {/* ✅ Currency Conversion Preview */}
+            {conversionPreview && conversionPreview.conversionApplied && (
+              <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4 mb-4">
+                <h4 className="text-sm font-semibold text-green-300 mb-2 flex items-center">
+                  <Globe className="mr-2" size={16} />
+                  Currency Conversion
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center text-white">
+                    <span>Account balance:</span>
+                    <span className="font-semibold">{selectedCurrency} {watchedBalance.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-center text-green-300">
+                    <ArrowRight size={16} />
+                  </div>
+                  <div className="flex justify-between items-center text-white">
+                    <span>In your primary currency:</span>
+                    <span className="font-semibold">{primaryCurrency} {conversionPreview.displayAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="text-xs text-green-300 mt-2 pt-2 border-t border-green-500/30">
+                    Rate: 1 {selectedCurrency} = {conversionPreview.exchangeRate.toFixed(4)} {primaryCurrency}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Balance Impact Preview */}
             {watchedBalance && !isNaN(Number(watchedBalance)) && (
@@ -323,14 +367,9 @@ export const SmartAccountForm: React.FC<SmartAccountFormProps> = ({
                 <p className="text-sm text-blue-300">
                   This account will start with a balance of{' '}
                   <span className="font-semibold text-white">
-                    <CurrencyIcon currencyCode={watch('currency') || currency.code} size={14} className="inline mr-1" />
-                    {Number(watchedBalance).toLocaleString()}
+                    <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
+                    {Number(watchedBalance).toLocaleString()} {currency.code}
                   </span>
-                  {watch('currency') !== currency.code && (
-                    <span className="text-xs text-gray-400 block mt-1">
-                      (Primary currency: {currency.code})
-                    </span>
-                  )}
                 </p>
               </div>
             )}
@@ -400,18 +439,12 @@ export const SmartAccountForm: React.FC<SmartAccountFormProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 gap-4 text-sm">
                 <div>
                   <span className="text-gray-400">Balance:</span>
                   <span className="font-medium ml-2 text-white">
-                    <CurrencyIcon currencyCode={watch('currency') || currency.code} size={14} className="inline mr-1" />
-                    {Number(watch('balance') || 0).toLocaleString()}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-400">Currency:</span>
-                  <span className="font-medium ml-2 text-white">
-                    {watch('currency') || currency.code}
+                    <CurrencyIcon currencyCode={currency.code} size={14} className="inline mr-1" />
+                    {Number(watch('balance') || 0).toLocaleString()} {currency.code}
                   </span>
                 </div>
                 <div>

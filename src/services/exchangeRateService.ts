@@ -4,7 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase';
-import { liveExchangeRateService } from './liveExchangeRateService';
+import { simpleCurrencyService } from './simpleCurrencyService';
 
 export interface ExchangeRateData {
   from_currency: string;
@@ -42,16 +42,16 @@ export class ExchangeRateService {
   async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number> {
     if (fromCurrency === toCurrency) return 1.0;
 
-    // Use the live exchange rate service for September 2025
-    return await liveExchangeRateService.getExchangeRate(fromCurrency, toCurrency);
+    // Use the simple currency service
+    return simpleCurrencyService.getRate(fromCurrency, toCurrency);
   }
 
   /**
    * Get all exchange rates for a base currency
    */
   async getAllRates(baseCurrency: string = 'USD'): Promise<Record<string, number>> {
-    // Use the live exchange rate service for September 2025
-    return await liveExchangeRateService.getAllRates(baseCurrency);
+    // Use the simple currency service
+    return simpleCurrencyService.getAllRates(baseCurrency);
   }
 
   /**
@@ -59,21 +59,20 @@ export class ExchangeRateService {
    */
   async refreshAllRates(baseCurrency: string = 'USD'): Promise<RateResponse> {
     try {
-      console.log(`🔄 Refreshing live exchange rates for ${baseCurrency}...`);
+      console.log(`🔄 Refreshing exchange rates for ${baseCurrency}...`);
       
-      // Use the live exchange rate service
-      await liveExchangeRateService.refreshRatesForToday();
-      const rates = await liveExchangeRateService.getAllRates(baseCurrency);
+      // Use the simple currency service
+      const rates = simpleCurrencyService.getAllRates(baseCurrency);
       
       this.lastFetch = new Date();
       return {
         rates: rates,
-        source: 'live_api',
+        source: 'simple',
         lastUpdated: this.lastFetch,
-        apiProvider: 'multiple'
+        apiProvider: 'simple'
       };
     } catch (error) {
-      console.error('Failed to refresh live rates:', error);
+      console.error('Failed to refresh rates:', error);
       return {
         rates: this.getFallbackRates(),
         source: 'fallback',

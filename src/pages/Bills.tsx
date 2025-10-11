@@ -11,6 +11,7 @@ import { BarChart } from '../components/analytics/BarChart';
 import { AnalyticsEngine } from '../utils/analytics-engine';
 import { useFinance } from '../contexts/FinanceContext';
 import { useInternationalization } from '../contexts/InternationalizationContext';
+import { convertCurrencySync } from '../utils/currency-converter';
 import { CurrencyIcon } from '../components/common/CurrencyIcon';
 
 const Bills: React.FC = () => {
@@ -29,7 +30,6 @@ const Bills: React.FC = () => {
     
     if (needsConversion) {
       // Use the main currency converter for consistent rates
-      const { convertCurrencySync } = require('../utils/currency-converter');
       const convertedAmount = convertCurrencySync(bill.amount, billCurrency, currency.code, 'USD') || bill.amount;
       
       const billCurrencyInfo = supportedCurrencies.find(c => c.code === billCurrency);

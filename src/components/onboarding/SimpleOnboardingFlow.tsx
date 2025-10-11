@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, User, Globe, Plus, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, User, Globe, Plus, Eye, EyeOff, Wallet, CheckCircle } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { CurrencySelector } from '../currency/CurrencySelector';
@@ -22,10 +22,11 @@ interface SimpleOnboardingFlowProps {
 }
 
 export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onComplete }) => {
-  const { addUserCategory } = useFinance();
+  const { addUserCategory, addAccount } = useFinance();
   const { setCurrency, setSecondaryCurrency, supportedCurrencies } = useInternationalization();
   const { user } = useAuth();
-  const { updateProfile, createProfile } = useProfile();
+  const { profile, updateProfile, createProfile } = useProfile();
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,7 +45,8 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
       type: 'income' | 'expense';
       icon: string;
       color: string;
-    }>
+    }>,
+    hasCreatedAccount: false // Track if user created first account
   });
 
   const [newCategory, setNewCategory] = useState({
@@ -487,6 +489,76 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
       )
     },
     {
+      id: 'account',
+      title: 'Create Your First Account',
+      description: 'Add a bank account, wallet, or cash account to start tracking',
+      icon: <Wallet size={24} />,
+      component: (
+        <div className="space-y-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <Wallet size={16} className="text-white" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                  Required: At Least One Account
+                </h3>
+                <p className="text-sm text-blue-800">
+                  You need at least one account to track your finances. Don't worry, you can add more accounts later!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {!formData.hasCreatedAccount ? (
+            <div className="bg-white border-2 border-gray-200 rounded-xl p-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Create Your First Account</h4>
+              
+              <SmartAccountForm
+                onSubmit={async (accountData) => {
+                  try {
+                    setIsCreatingAccount(true);
+                    await addAccount({
+                      ...accountData,
+                      currencycode: formData.currency, // Use primary currency
+                      userId: user!.id
+                    });
+                    setFormData(prev => ({ ...prev, hasCreatedAccount: true }));
+                    console.log('✅ First account created successfully');
+                  } catch (error) {
+                    console.error('Failed to create account:', error);
+                    setError(error instanceof Error ? error.message : 'Failed to create account');
+                  } finally {
+                    setIsCreatingAccount(false);
+                  }
+                }}
+                onCancel={() => {
+                  // Allow skip but warn
+                  if (confirm('Are you sure? You need at least one account to use the app.')) {
+                    setFormData(prev => ({ ...prev, hasCreatedAccount: true }));
+                  }
+                }}
+                isSubmitting={isCreatingAccount}
+              />
+            </div>
+          ) : (
+            <div className="text-center p-8 bg-green-50 border border-green-200 rounded-xl">
+              <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-green-900 mb-2">
+                First Account Created! ✅
+              </h3>
+              <p className="text-green-700">
+                You can add more accounts later from the Accounts page.
+              </p>
+            </div>
+          )}
+        </div>
+      )
+    },
+    {
       id: 'complete',
       title: 'You\'re all set!',
       description: 'Your FinTrack account is ready to use',
@@ -540,11 +612,13 @@ export const SimpleOnboardingFlow: React.FC<SimpleOnboardingFlowProps> = ({ onCo
       case 'welcome':
         return true;
       case 'profile':
-        return formData.name.trim() !== '';
+        return formData.name.trim() !== '' && formData.age !== '' && formData.profession.trim() !== '';
       case 'currency':
         return formData.currency !== '';
       case 'categories':
         return true; // Categories are optional
+      case 'account':
+        return formData.hasCreatedAccount; // Must create at least one account
       case 'complete':
         return true;
       default:
