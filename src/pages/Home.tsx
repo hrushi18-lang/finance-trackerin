@@ -323,13 +323,14 @@ const Home: React.FC = () => {
               <p className="text-gray-600 mb-6 max-w-md mx-auto">
                 Add a bank account, wallet, or cash account to start tracking your finances
               </p>
-              <Button
+              <button
                 onClick={() => navigate('/accounts')}
-                className="mx-auto px-8 py-3 text-lg"
+                className="mx-auto px-8 py-3 text-lg rounded-full text-white font-medium transition-all duration-200 hover:scale-105 flex items-center"
+                style={{ backgroundColor: 'var(--primary)' }}
               >
                 <Plus size={20} className="mr-2" />
                 Add Account
-              </Button>
+              </button>
             </div>
           </div>
         ) : (
