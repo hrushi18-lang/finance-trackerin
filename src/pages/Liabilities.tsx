@@ -99,19 +99,27 @@ const Liabilities: React.FC = () => {
       const paymentAmount = Number(paymentData.amount) || 0;
       const currentRemaining = Number(liability.remainingAmount) || 0;
       
+      if (paymentAmount <= 0) {
+        throw new Error('Payment amount must be greater than 0');
+      }
+      
       // Handle overpayment
       const actualPayment = Math.min(paymentAmount, currentRemaining);
       
-      // Create payment transaction if requested
+      // ✅ Use repayLiabilityFromAccount - it handles EVERYTHING:
+      // 1. Currency conversion (liability → account → primary)
+      // 2. Account balance deduction  
+      // 3. Transaction creation with multi-currency data
+      // 4. Liability remaining amount update
       if (paymentData.createTransaction && paymentData.accountId) {
         await repayLiabilityFromAccount(paymentData.accountId, liability.id, actualPayment, paymentData.description);
+      } else if (!paymentData.createTransaction) {
+        // Manual update without transaction (user tracking existing payment)
+        await updateLiability(liability.id, {
+          remainingAmount: Math.max(0, currentRemaining - actualPayment),
+          status: Math.max(0, currentRemaining - actualPayment) === 0 ? 'paid_off' : liability.status
+        });
       }
-      
-      // Update liability remaining amount
-      await updateLiability(liability.id, {
-        remainingAmount: Math.max(0, currentRemaining - actualPayment),
-        status: Math.max(0, currentRemaining - actualPayment) === 0 ? 'paid_off' : liability.status
-      });
       
       setShowPaymentModal(false);
       setSelectedLiability(null);

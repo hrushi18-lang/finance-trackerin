@@ -10,6 +10,7 @@ import { EnhancedCurrencyProvider } from './contexts/EnhancedCurrencyContext';
 import { PersonalizationProvider } from './contexts/PersonalizationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { PaymentProvider } from './contexts/PaymentContext';
+// import { ChatProvider } from './contexts/ChatContext'; // AI feature disabled for now
 import { ToastProvider } from './components/common/Toast';
 import NotificationProvider from './contexts/NotificationContext';
 import { ErrorFallback } from './components/common/ErrorFallback';
@@ -17,6 +18,7 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ReceiptModal } from './components/receipts/ReceiptModal';
 import { BottomNavigation } from './components/layout/BottomNavigation';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+// import { ChatWidget } from './components/chat/ChatWidget'; // AI feature disabled for now
 import OnboardingWrapper from './components/OnboardingWrapper';
 import RouteHandler from './components/RouteHandler';
 import { AppInitializer } from './components/AppInitializer';
@@ -64,6 +66,7 @@ import ExchangeRateSettings from './pages/settings/ExchangeRateSettings';
 // Dynamic imports for heavy components
 const Analytics = React.lazy(() => import('./pages/Analytics'));
 const EnhancedLiabilities = React.lazy(() => import('./pages/EnhancedLiabilities'));
+// const AIAssistant = React.lazy(() => import('./pages/AIAssistant')); // AI feature disabled for now
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -139,13 +142,15 @@ function App() {
                       <EnhancedCurrencyProvider>
                         <PersonalizationProvider>
                           <FinanceProvider>
-                            <PaymentProvider>
-                              <NotificationProvider>
-                                <ReceiptModal />
-                              <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                              <PaymentProvider>
+                                <NotificationProvider>
+                                  <ReceiptModal />
+                                <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                                 <AppInitializer>
                                   <RouteHandler>
                               <div className="min-h-screen" data-app-content style={{ backgroundColor: 'var(--background)' }}>
+                                {/* AI Chat Widget - Disabled for now */}
+                                {/* <ChatWidget /> */}
                                 {/* Font Loading Indicator */}
                                 <FontLoadingIndicator />
                                 
@@ -386,6 +391,19 @@ function App() {
                                 } 
                               />
                               
+                              {/* AI Assistant Route - Disabled for now */}
+                              {/* <Route 
+                                path="/ai-assistant" 
+                                element={
+                                  <ProtectedRoute>
+                                    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div></div>}>
+                                      <AIAssistant />
+                                    </Suspense>
+                                    <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              /> */}
+                              
                               <Route 
                                 path="/currency-demo" 
                                 element={
@@ -483,8 +501,8 @@ function App() {
                                 </AppInitializer>
                               </Router>
                               <ReactQueryDevtools initialIsOpen={false} />
-                              </NotificationProvider>
-                            </PaymentProvider>
+                                </NotificationProvider>
+                              </PaymentProvider>
                           </FinanceProvider>
                         </PersonalizationProvider>
                       </EnhancedCurrencyProvider>

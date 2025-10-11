@@ -30,11 +30,18 @@ import { useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { useProfile } from '../contexts/ProfileContext';
 import { InlineConversionDisplay } from '../components/common/CurrencyConversionPreview';
+import { simpleCurrencyService } from '../services/simpleCurrencyService';
+import { formatTransactionAmount as formatMultiCurrencyTransaction } from '../utils/transactionDisplay';
 
 const Transactions: React.FC = () => {
   const { transactions, accounts, isLoading, error, goals, bills, liabilities, budgets, userCategories } = useFinance();
   const { profile } = useProfile();
   const navigate = useNavigate();
+  
+  // Get dynamic currency symbol based on user's primary currency
+  const primaryCurrency = profile?.primaryCurrency || 'INR';
+  const currencySymbol = simpleCurrencyService.getCurrencySymbol(primaryCurrency);
+  const formatCurrency = (amount: number) => `${currencySymbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -507,6 +514,17 @@ const Transactions: React.FC = () => {
 
           {showAnalytics && (
             <div className="space-y-6">
+              {/* Multi-Currency Info Banner */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center space-x-2">
+                  <DollarSign size={16} className="text-blue-600" />
+                  <p className="text-xs text-blue-800">
+                    <span className="font-semibold">Multi-Currency Transactions:</span> All totals are converted to your primary currency ({primaryCurrency}) for reporting. 
+                    Individual transactions display their original currency.
+                  </p>
+                </div>
+              </div>
+
               {/* Transaction Overview Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-4 rounded-lg bg-green-50 border border-green-200">
@@ -514,14 +532,16 @@ const Transactions: React.FC = () => {
                     <h3 className="text-sm font-medium text-green-800">Total Income</h3>
                     <TrendingUp size={16} className="text-green-600" />
                   </div>
-                  <p className="text-2xl font-numbers text-green-900">${financialMetrics.totalIncome.toFixed(2)}</p>
+                  <p className="text-2xl font-numbers text-green-900">{formatCurrency(financialMetrics.totalIncome)}</p>
+                  <p className="text-xs text-green-600 mt-1">{primaryCurrency}</p>
                 </div>
                 <div className="p-4 rounded-lg bg-red-50 border border-red-200">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-medium text-red-800">Total Expenses</h3>
                     <TrendingDown size={16} className="text-red-600" />
                   </div>
-                  <p className="text-2xl font-numbers text-red-900">${financialMetrics.totalExpenses.toFixed(2)}</p>
+                  <p className="text-2xl font-numbers text-red-900">{formatCurrency(financialMetrics.totalExpenses)}</p>
+                  <p className="text-xs text-red-600 mt-1">{primaryCurrency}</p>
                 </div>
                 <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
                   <div className="flex items-center justify-between mb-2">
@@ -529,8 +549,9 @@ const Transactions: React.FC = () => {
                     <DollarSign size={16} className="text-blue-600" />
                   </div>
                   <p className={`text-2xl font-numbers ${financialMetrics.netIncome >= 0 ? 'text-blue-900' : 'text-red-900'}`}>
-                    ${financialMetrics.netIncome.toFixed(2)}
+                    {formatCurrency(financialMetrics.netIncome)}
                   </p>
+                  <p className="text-xs text-blue-600 mt-1">{primaryCurrency}</p>
                 </div>
                 <div className="p-4 rounded-lg bg-purple-50 border border-purple-200">
                   <div className="flex items-center justify-between mb-2">
@@ -538,15 +559,19 @@ const Transactions: React.FC = () => {
                     <ArrowLeftRight size={16} className="text-purple-600" />
                   </div>
                   <p className="text-2xl font-numbers text-purple-900">{filteredTransactions.length}</p>
+                  <p className="text-xs text-purple-600 mt-1">Total Count</p>
                 </div>
               </div>
 
               {/* Category Breakdown */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
-                    Spending by Category
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-md font-heading" style={{ color: 'var(--text-secondary)' }}>
+                      Spending by Category
+                    </h3>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{primaryCurrency}</span>
+                  </div>
                   {(() => {
                     const categoryData = filteredTransactions
                       .filter(t => t.type === 'expense')
@@ -579,9 +604,12 @@ const Transactions: React.FC = () => {
 
                 {/* Monthly Trends */}
                 <div>
-                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
-                    Monthly Trends
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-md font-heading" style={{ color: 'var(--text-secondary)' }}>
+                      Monthly Trends
+                    </h3>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{primaryCurrency}</span>
+                  </div>
                   {(() => {
                     const monthlyData = filteredTransactions.reduce((acc, t) => {
                       const month = format(new Date(t.date), 'MMM yyyy');
@@ -620,9 +648,12 @@ const Transactions: React.FC = () => {
               {/* Account Breakdown */}
               {showDetailedView && (
                 <div>
-                  <h3 className="text-md font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
-                    Transactions by Account
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-md font-heading" style={{ color: 'var(--text-secondary)' }}>
+                      Transactions by Account
+                    </h3>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">All amounts in {primaryCurrency}</span>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {accounts.map((account) => {
                       const accountTransactions = filteredTransactions.filter(t => 
@@ -646,16 +677,16 @@ const Transactions: React.FC = () => {
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-sm">
                               <span style={{ color: 'var(--text-secondary)' }}>Income</span>
-                              <span className="font-numbers text-green-600">+${accountIncome.toFixed(2)}</span>
+                              <span className="font-numbers text-green-600">+{formatCurrency(accountIncome)}</span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
                               <span style={{ color: 'var(--text-secondary)' }}>Expenses</span>
-                              <span className="font-numbers text-red-600">-${accountExpenses.toFixed(2)}</span>
+                              <span className="font-numbers text-red-600">-{formatCurrency(accountExpenses)}</span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
                               <span style={{ color: 'var(--text-secondary)' }}>Net</span>
                               <span className={`font-numbers ${accountIncome - accountExpenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {accountIncome - accountExpenses >= 0 ? '+' : ''}${(accountIncome - accountExpenses).toFixed(2)}
+                                {accountIncome - accountExpenses >= 0 ? '+' : ''}{formatCurrency(Math.abs(accountIncome - accountExpenses))}
                               </span>
                             </div>
                           </div>
@@ -687,12 +718,11 @@ const Transactions: React.FC = () => {
                           <div className="text-right">
                             <p className={`text-sm font-numbers ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                               {transaction.type === 'income' ? '+' : '-'}
-                              <InlineConversionDisplay
-                                nativeAmount={Math.abs((transaction as any).native_amount || transaction.amount)}
-                                nativeCurrency={(transaction as any).native_currency || transaction.currencycode || profile?.primaryCurrency || 'INR'}
-                                convertedAmount={Math.abs((transaction as any).primary_amount || transaction.amount)}
-                                convertedCurrency={(transaction as any).primary_currency || profile?.primaryCurrency || 'INR'}
-                              />
+                              {formatMultiCurrencyTransaction(
+                                transaction,
+                                profile?.primaryCurrency || primaryCurrency,
+                                { showOriginal: true, showConverted: true, compact: true }
+                              )}
                             </p>
                             <p className="text-xs text-gray-500">
                               {format(transaction.date, 'MMM dd')}
@@ -737,7 +767,7 @@ const Transactions: React.FC = () => {
                 <div className="mb-8">
                   <FinancialHealthCard 
                     metrics={financialHealth} 
-                    formatCurrency={(amount: number) => `$${amount.toFixed(2)}`} 
+                    formatCurrency={formatCurrency} 
                   />
                 </div>
               )}
@@ -748,19 +778,19 @@ const Transactions: React.FC = () => {
                   <TrendAnalysis
                     title="Income Trends"
                     data={trendData.income}
-                    formatCurrency={(amount: number) => `$${amount.toFixed(2)}`}
+                    formatCurrency={formatCurrency}
                     icon={<TrendingUp className="w-5 h-5 text-green-400" />}
                   />
                   <TrendAnalysis
                     title="Expense Trends"
                     data={trendData.expenses}
-                    formatCurrency={(amount: number) => `$${amount.toFixed(2)}`}
+                    formatCurrency={formatCurrency}
                     icon={<TrendingDown className="w-5 h-5 text-red-400" />}
                   />
                   <TrendAnalysis
                     title="Savings Trends"
                     data={trendData.savings}
-                    formatCurrency={(amount: number) => `$${amount.toFixed(2)}`}
+                    formatCurrency={formatCurrency}
                     icon={<Target className="w-5 h-5 text-blue-400" />}
                   />
                 </div>
@@ -772,13 +802,13 @@ const Transactions: React.FC = () => {
                   <PredictiveAnalytics
                     title="Income Forecast"
                     predictions={predictions.income}
-                    formatCurrency={(amount: number) => `$${amount.toFixed(2)}`}
+                    formatCurrency={formatCurrency}
                     icon={<TrendingUp className="w-6 h-6 text-purple-400" />}
                   />
                   <PredictiveAnalytics
                     title="Expense Forecast"
                     predictions={predictions.expenses}
-                    formatCurrency={(amount: number) => `$${amount.toFixed(2)}`}
+                    formatCurrency={formatCurrency}
                     icon={<TrendingDown className="w-6 h-6 text-orange-400" />}
                   />
                 </div>

@@ -33,8 +33,9 @@ import NotificationCenter from '../components/notifications/NotificationCenter';
 import { format } from 'date-fns';
 import { useProfile } from '../contexts/ProfileContext';
 import { TransactionDetailsModal } from '../components/modals/TransactionDetailsModal';
-import { unifiedCurrencyService } from '../services/unifiedCurrencyService';
 import { simpleCurrencyService } from '../services/simpleCurrencyService';
+import { formatTransactionForDisplay } from '../utils/transactionDisplayHelper';
+// import { InsightsDashboard } from '../components/insights/InsightsDashboard'; // AI feature disabled for now
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -481,6 +482,13 @@ const Home: React.FC = () => {
           </div>
         </div>
 
+        {/* AI-Powered Insights - Disabled for now */}
+        {/* {transactions.length > 5 && accounts.length > 0 && (
+          <div className="mb-8">
+            <InsightsDashboard />
+          </div>
+        )} */}
+
         {/* Recent Activity */}
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -524,20 +532,29 @@ const Home: React.FC = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className={`text-lg font-numbers ${
-                          transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {transaction.type === 'income' ? '+' : '-'}
-                          {hideBalance ? '••••' : formatTransactionAmount(
-                            transaction.amount, 
-                            transaction.original_currency, 
-                            transaction.original_currency && transaction.original_currency !== currency.code 
-                              ? transaction.amount * (transaction.exchange_rate_used || 1) 
-                              : transaction.amount
-                          )}
-                        </p>
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${tag.color}`}>
+                      <div className="text-right flex flex-col items-end">
+                        {(() => {
+                          const display = formatTransactionForDisplay(
+                            transaction,
+                            profile?.primaryCurrency || currency.code
+                          );
+                          return (
+                            <>
+                              <p className={`text-lg font-numbers ${
+                                transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {transaction.type === 'income' ? '+' : '-'}
+                                {hideBalance ? '••••' : display.formatted}
+                              </p>
+                              {display.needsConversion && (
+                                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                                  {display.symbol}{Math.abs(transaction.native_amount || transaction.amount).toFixed(0)} {display.originalCurrency}
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()}
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${tag.color} mt-1`}>
                           {tag.text}
                         </span>
                       </div>

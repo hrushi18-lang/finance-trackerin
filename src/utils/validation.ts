@@ -202,11 +202,8 @@ export const budgetSchema = z.object({
     .max(999999999.99, 'Amount too large')
     .refine(validateAmount, 'Invalid amount'),
   period: z.enum(['weekly', 'monthly', 'yearly']).default('monthly'),
-  start_date: z.date(),
-  end_date: z.date(),
-  account_id: z.string().uuid('Invalid account ID').optional(),
-  // Add missing fields for account-specific and category-based budgets
-  activity_scope: z.enum(['general', 'account_specific', 'category_based']).default('general'),
+  // Note: budgets table has NO start_date or end_date columns - periods are calculated
+  activity_scope: z.enum(['general', 'account_specific', 'category_based']).default('general').optional(),
   account_ids: z.array(z.string().uuid('Invalid account ID')).optional(),
   target_category: z.string().optional()
 });

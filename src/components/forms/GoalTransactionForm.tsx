@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { FileText, PiggyBank, AlertTriangle, Plus, Minus, ToggleLeft, ToggleRight, CreditCard, ArrowRight } from 'lucide-react';
+import { FileText, PiggyBank, AlertTriangle, Plus, Minus, ToggleLeft, ToggleRight, CreditCard } from 'lucide-react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { Goal, FinancialAccount } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
-import { unifiedCurrencyService } from '../../services/unifiedCurrencyService';
 import { useProfile } from '../../contexts/ProfileContext';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useUniversalCurrency } from '../../hooks/useUniversalCurrency';
 
 interface GoalTransactionFormData {
   amount: number;
@@ -35,17 +34,18 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
 }) => {
   const { currency } = useInternationalization();
   const { profile } = useProfile();
-  const { user } = useFinance();
+  const { processTransaction } = useUniversalCurrency();
+  
   const [transactionType, setTransactionType] = useState<'add' | 'withdraw'>('add');
   const [deductFromBalance, setDeductFromBalance] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [contributionCurrency, setContributionCurrency] = useState(currency.code);
-  const [conversionPreview, setConversionPreview] = useState<any | null>(null);
-  const [selectedAccount, setSelectedAccount] = useState<FinancialAccount | null>(null);
   
   const primaryCurrency = profile?.primaryCurrency || currency.code;
   const goalCurrency = (goal as any).currencycode || primaryCurrency;
+  
+  const [selectedAccount, setSelectedAccount] = useState<FinancialAccount | null>(null);
+  const [paymentCurrency, setPaymentCurrency] = useState(goalCurrency);
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<GoalTransactionFormData>({
     defaultValues: {
@@ -70,47 +70,55 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
     }
   }, [watchedAccountId, accounts]);
 
-  // ✅ UPDATED: Calculate conversion preview using unified service
+  // ✅ Calculate conversion preview using Universal Currency System
   useEffect(() => {
     const calculatePreview = async () => {
-      if (watchedAmount && contributionCurrency && selectedAccount && watchedAmount > 0 && transactionType === 'add') {
+      if (watchedAmount && selectedAccount && watchedAmount > 0 && transactionType === 'add') {
         try {
-          // Use processPayment for goal contributions
-          const preview = await unifiedCurrencyService.processPayment({
-            paymentType: 'goal_contribution',
+          // Use Universal Currency System for goal contribution
+          const preview = await processTransaction({
             amount: Number(watchedAmount),
-            paymentCurrency: contributionCurrency,
+            currency: paymentCurrency,
+            type: 'expense', // Goal contribution is an expense from account
             accountId: selectedAccount.id,
             accountCurrency: selectedAccount.currencycode || primaryCurrency,
-            primaryCurrency: primaryCurrency,
-            userId: user?.id || '',
-            targetEntityId: goal.id,
-            targetEntityType: 'goal',
-            targetEntityCurrency: goalCurrency,
-            targetEntityAmount: goal.currentAmount,
+            baseCurrency: primaryCurrency,
             description: `Contribution to ${goal.title}`
           });
           
-          if (preview.success) {
-            setConversionPreview(preview);
-            console.log('💡 Goal contribution preview:', {
-              deductFromAccount: `${preview.accountCurrency}${preview.accountDeduction}`,
-              addToGoal: `${preview.entityCurrency}${preview.entityAddition}`
-            });
-          } else {
-            setConversionPreview(null);
-            console.error('Preview failed:', preview.error);
-          }
+          console.log('💡 Goal contribution preview:', {
+            deductFromAccount: preview.accountFormatted,
+            baseDisplay: preview.baseFormatted,
+            balanceChange: preview.accountBalanceChange
+          });
         } catch (error) {
           console.error('Preview calculation failed:', error);
-          setConversionPreview(null);
         }
-      } else {
-        setConversionPreview(null);
+      } else if (watchedAmount && selectedAccount && watchedAmount > 0 && transactionType === 'withdraw') {
+        try {
+          // Use Universal Currency System for goal withdrawal
+          const preview = await processTransaction({
+            amount: Number(watchedAmount),
+            currency: goalCurrency,
+            type: 'income', // Goal withdrawal is income to account
+            accountId: selectedAccount.id,
+            accountCurrency: selectedAccount.currencycode || primaryCurrency,
+            baseCurrency: primaryCurrency,
+            description: `Withdrawal from ${goal.title}`
+          });
+          
+          console.log('💡 Goal withdrawal preview:', {
+            creditToAccount: preview.accountFormatted,
+            baseDisplay: preview.baseFormatted,
+            balanceChange: preview.accountBalanceChange
+          });
+        } catch (error) {
+          console.error('Preview calculation failed:', error);
+        }
       }
     };
     calculatePreview();
-  }, [watchedAmount, contributionCurrency, selectedAccount, primaryCurrency, transactionType, goalCurrency, goal.currentAmount, goal.id, goal.title, user]);
+  }, [watchedAmount, paymentCurrency, selectedAccount, primaryCurrency, transactionType, goalCurrency, goal.title, processTransaction]);
 
   // Update description when transaction type changes
   useEffect(() => {
@@ -510,24 +518,58 @@ export const GoalTransactionForm: React.FC<GoalTransactionFormProps> = ({
           </div>
         </div>
 
-        {/* Amount Input */}
-        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-          <Input
-            label="Amount"
-            type="number"
-            step="any"
-            icon={<CurrencyIcon currencyCode={currency.code} className={transactionType === 'add' ? 'text-success-400' : 'text-warning-400'} />}
-            {...register('amount', {
-              required: 'Amount is required',
-              min: { value: 0.01, message: 'Amount must be greater than 0' },
-              max: transactionType === 'withdraw' 
-                ? { value: effectiveMaxAmount, message: `Cannot exceed available amount (${currency.symbol}${effectiveMaxAmount.toLocaleString()})` }
-                : undefined,
-            })}
-            error={errors.amount?.message}
-            className="bg-black/40 border-white/20 text-white"
-            placeholder={`e.g., 100`}
-          />
+        {/* Amount and Currency Input */}
+        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Input
+                label="Amount"
+                type="number"
+                step="any"
+                icon={<CurrencyIcon currencyCode={paymentCurrency} className={transactionType === 'add' ? 'text-success-400' : 'text-warning-400'} />}
+                {...register('amount', {
+                  required: 'Amount is required',
+                  min: { value: 0.01, message: 'Amount must be greater than 0' },
+                  max: transactionType === 'withdraw' 
+                    ? { value: effectiveMaxAmount, message: `Cannot exceed available amount (${currency.symbol}${effectiveMaxAmount.toLocaleString()})` }
+                    : undefined,
+                })}
+                error={errors.amount?.message}
+                className="bg-black/40 border-white/20 text-white"
+                placeholder={`e.g., 100`}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                {transactionType === 'add' ? 'Contribution Currency' : 'Withdrawal Currency'}
+              </label>
+              <select
+                value={paymentCurrency}
+                onChange={(e) => setPaymentCurrency(e.target.value)}
+                className="w-full bg-black/40 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={goalCurrency}>{goalCurrency} - Goal Currency (Default)</option>
+                <option value={primaryCurrency}>{primaryCurrency} - Your Primary Currency</option>
+                {selectedAccount && selectedAccount.currencycode !== goalCurrency && selectedAccount.currencycode !== primaryCurrency && (
+                  <option value={selectedAccount.currencycode}>{selectedAccount.currencycode} - Account Currency</option>
+                )}
+                <option value="USD">USD - US Dollar</option>
+                <option value="EUR">EUR - Euro</option>
+                <option value="GBP">GBP - British Pound</option>
+                <option value="INR">INR - Indian Rupee</option>
+                <option value="CAD">CAD - Canadian Dollar</option>
+                <option value="AUD">AUD - Australian Dollar</option>
+              </select>
+            </div>
+          </div>
+          
+          <p className="text-xs text-gray-400">
+            {transactionType === 'add' 
+              ? `Contributing ${paymentCurrency === goalCurrency ? 'directly' : 'with conversion'} to your ${goal.title} goal`
+              : `Withdrawing from your ${goal.title} goal`
+            }
+          </p>
         </div>
 
         {/* Description */}

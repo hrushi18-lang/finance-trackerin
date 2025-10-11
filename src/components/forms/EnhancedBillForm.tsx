@@ -87,7 +87,7 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
   onSubmit,
   onCancel
 }) => {
-  const { primaryCurrency } = useInternationalization();
+  const { currency } = useInternationalization();
   const { displayCurrency, formatCurrency, convertAmount } = useEnhancedCurrency();
   const { accounts, liabilities, executeBillCreation } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -164,7 +164,7 @@ export const EnhancedBillForm: React.FC<EnhancedBillFormProps> = ({
 
       // Use the execution engine to get conversion preview
       const { CurrencyExecutionEngine } = await import('../../services/currencyExecutionEngine');
-      const engine = new CurrencyExecutionEngine([], primaryCurrency.code);
+      const engine = new CurrencyExecutionEngine([], currency?.code || 'USD');
       
       const result = await engine.executeBillCreation(previewRequest);
       

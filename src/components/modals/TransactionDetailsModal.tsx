@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, CreditCard, Target, Receipt, Building, Clock, CheckCircle, AlertCircle, TrendingUp, TrendingDown, DollarSign, Tag } from 'lucide-react';
+import { X, Calendar, CreditCard, Target, Receipt, Building, Clock, CheckCircle, AlertCircle, TrendingUp, TrendingDown, DollarSign, Tag, ArrowRightLeft } from 'lucide-react';
 import { Transaction } from '../../types';
 import { useFinanceSafe } from '../../contexts/FinanceContext';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
+import { useProfile } from '../../contexts/ProfileContext';
+import { formatTransactionForDisplay, getDetailedDisplay } from '../../utils/transactionDisplayHelper';
+import { getCurrencySystem } from '../../services/universalCurrencySystem';
 import { format } from 'date-fns';
 
 interface TransactionDetailsModalProps {
@@ -23,11 +26,14 @@ export const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = (
     return null;
   }
   
-  const { accounts, goals, bills, budgets } = financeContext;
+  const { accounts, goals, bills, budgets, liabilities } = financeContext;
   const { formatCurrency } = useInternationalization();
+  const { profile } = useProfile();
   const [budgetProgress, setBudgetProgress] = useState<any>(null);
   const [goalProgress, setGoalProgress] = useState<any>(null);
   const [billStatus, setBillStatus] = useState<any>(null);
+  const [liabilityInfo, setLiabilityInfo] = useState<any>(null);
+  const [transferInfo, setTransferInfo] = useState<any>(null);
 
   useEffect(() => {
     if (transaction && isOpen) {
@@ -91,6 +97,31 @@ export const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = (
           status: isOnTime ? 'paid_on_time' : daysDifference > 0 ? 'paid_late' : 'paid_early'
         });
       }
+    }
+    
+    // Load liability info if transaction is linked to a liability
+    if (transaction.liabilityId) {
+      const liability = liabilities.find(l => l.id === transaction.liabilityId);
+      if (liability) {
+        setLiabilityInfo({
+          liability,
+          paymentAmount: transaction.amount,
+          remainingBefore: (liability.remainingAmount || 0) + transaction.amount,
+          remainingAfter: liability.remainingAmount || 0,
+          progressBefore: (((liability.totalAmount || 0) - ((liability.remainingAmount || 0) + transaction.amount)) / (liability.totalAmount || 0)) * 100,
+          progressAfter: (((liability.totalAmount || 0) - (liability.remainingAmount || 0)) / (liability.totalAmount || 0)) * 100
+        });
+      }
+    }
+    
+    // Load transfer info if transaction is a transfer
+    if (transaction.transfer_to_account_id || transaction.type === 'transfer') {
+      const targetAccount = accounts.find(a => a.id === transaction.transfer_to_account_id);
+      setTransferInfo({
+        fromAccount: account,
+        toAccount: targetAccount,
+        transferAmount: transaction.amount
+      });
     }
   };
 
@@ -178,38 +209,82 @@ export const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = (
 
               <div>
                 <label className="text-sm font-medium text-gray-500">Amount</label>
-                <div className="flex items-center space-x-2">
-                  <DollarSign size={16} className="text-gray-400" />
-                  {/* Main amount - Original currency if different from primary */}
-                  {transaction.originalCurrency && transaction.originalCurrency !== transaction.currencycode ? (
-                    <div className="space-y-1">
-                      <span className={`text-2xl font-bold ${
-                        transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.originalAmount || transaction.amount, transaction.originalCurrency)}
-                      </span>
-                      {/* Description - Primary currency */}
-                      <div className="text-sm text-gray-500">
-                        ≈ {formatCurrency(transaction.amount, transaction.currencycode)}
-                      </div>
-                    </div>
-                  ) : (
-                    <span className={`text-2xl font-bold ${
-                      transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                    </span>
-                  )}
+                <div className="flex flex-col space-y-2">
+                  {(() => {
+                    const primaryCurrency = profile?.primaryCurrency || 'USD';
+                    const display = formatTransactionForDisplay(transaction, primaryCurrency);
+                    const detailed = getDetailedDisplay(transaction, primaryCurrency);
+                    const system = getCurrencySystem();
+                    
+                    return (
+                      <>
+                        {/* Main Display: Symbol of original currency + Amount in primary currency */}
+                        <div className="flex items-center space-x-2">
+                          <DollarSign size={16} className="text-gray-400" />
+                          <span className={`text-3xl font-bold ${
+                            transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {transaction.type === 'income' ? '+' : '-'}
+                            {display.formatted}
+                          </span>
+                        </div>
+                        
+                        {/* Show original amount if conversion happened */}
+                        {display.needsConversion && detailed.note && (
+                          <div className="pl-6 bg-blue-50 rounded-lg p-3 border-l-4 border-blue-400">
+                            <div className="flex items-center space-x-2">
+                              <ArrowRightLeft size={14} className="text-blue-600" />
+                              <span className="text-sm font-medium text-blue-800">
+                                Original: {system.formatCurrency(
+                                  Math.abs(transaction.native_amount || transaction.amount),
+                                  display.originalCurrency
+                                )}
+                              </span>
+                            </div>
+                            <p className="text-xs text-blue-600 mt-1">
+                              Converted to {display.primaryCurrency} for display
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Account</label>
+                <label className="text-sm font-medium text-gray-500">
+                  {transaction.type === 'transfer' ? 'From Account' : 'Account'}
+                </label>
                 <div className="flex items-center space-x-2">
                   <Building size={16} className="text-gray-400" />
                   <span className="text-gray-900">{account?.name || 'Unknown Account'}</span>
+                  {account?.currencycode && (
+                    <span className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">
+                      {account.currencycode}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-500">Type</label>
+                <div className="flex items-center space-x-2">
+                  {transaction.type === 'income' ? (
+                    <TrendingUp size={16} className="text-green-500" />
+                  ) : transaction.type === 'transfer' ? (
+                    <ArrowRightLeft size={16} className="text-blue-500" />
+                  ) : (
+                    <TrendingDown size={16} className="text-red-500" />
+                  )}
+                  <span className="text-gray-900 capitalize font-medium">{transaction.type}</span>
+                  {transaction.payment_source && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                      {transaction.payment_source.replace('_', ' ')}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -233,26 +308,115 @@ export const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = (
             </div>
           </div>
 
-          {/* Currency Information */}
-          {(transaction.originalAmount && transaction.originalCurrency) && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Currency Information</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500">Original Amount</label>
-                  <p className="text-sm font-medium">
-                    {formatCurrency(transaction.originalAmount, transaction.originalCurrency)}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">Exchange Rate</label>
-                  <p className="text-sm font-medium">
-                    1 {transaction.originalCurrency} = {transaction.exchangeRate?.toFixed(4)} USD
-                  </p>
+          {/* ✅ Enhanced Multi-Currency Breakdown */}
+          {(() => {
+            const primaryCurrency = profile?.primaryCurrency || 'USD';
+            const display = formatTransactionForDisplay(transaction, primaryCurrency);
+            const system = getCurrencySystem();
+            
+            if (!display.needsConversion) return null;
+            
+            const nativeAmount = transaction.native_amount || transaction.amount || 0;
+            const convertedAmount = transaction.converted_amount || transaction.amount || 0;
+            const primaryAmount = transaction.primary_amount || convertedAmount;
+            
+            const nativeCurrency = transaction.native_currency || transaction.currency_code || primaryCurrency;
+            const accountCurrency = transaction.converted_currency || transaction.currency_code || primaryCurrency;
+            const exchangeRate = transaction.exchange_rate || 1;
+            
+            return (
+              <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-5 border-2 border-blue-200">
+                <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center">
+                  <ArrowRightLeft size={18} className="text-blue-600 mr-2" />
+                  Multi-Currency Transaction Breakdown
+                </h3>
+                
+                <div className="space-y-3">
+                  {/* Step 1: Original Transaction */}
+                  <div className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-green-500">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        1. What You Paid
+                      </label>
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                        Original
+                      </span>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {system.formatCurrency(Math.abs(nativeAmount), nativeCurrency)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">{nativeCurrency} - Transaction Currency</p>
+                  </div>
+                  
+                  {/* Step 2: Account Deduction (if different) */}
+                  {accountCurrency !== nativeCurrency && (
+                    <div className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-red-500">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                          2. Deducted From Account
+                        </label>
+                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-medium">
+                          Account
+                        </span>
+                      </div>
+                      <p className="text-2xl font-bold text-red-600">
+                        -{system.formatCurrency(Math.abs(convertedAmount), accountCurrency)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {accountCurrency} - Account Currency
+                      </p>
+                      {exchangeRate && exchangeRate !== 1 && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <p className="text-xs text-gray-600 font-mono">
+                            Rate: 1 {nativeCurrency} = {exchangeRate.toFixed(4)} {accountCurrency}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Step 3: Dashboard Display */}
+                  {primaryCurrency !== nativeCurrency && (
+                    <div className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-blue-500">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                          3. Shown on Dashboard
+                        </label>
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
+                          Base
+                        </span>
+                      </div>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {system.formatCurrency(Math.abs(primaryAmount), primaryCurrency)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">{primaryCurrency} - Your Primary Currency</p>
+                    </div>
+                  )}
+                  
+                  {/* Conversion Summary */}
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-3 border border-gray-200">
+                    <p className="text-xs text-gray-600 font-medium mb-2">Conversion Path:</p>
+                    <div className="flex items-center justify-center space-x-2 text-sm">
+                      <span className="font-bold text-green-700">{nativeCurrency}</span>
+                      <span className="text-gray-400">→</span>
+                      {accountCurrency !== nativeCurrency && (
+                        <>
+                          <span className="font-bold text-red-700">{accountCurrency}</span>
+                          <span className="text-gray-400">→</span>
+                        </>
+                      )}
+                      <span className="font-bold text-blue-700">{primaryCurrency}</span>
+                    </div>
+                    {transaction.conversion_source && (
+                      <p className="text-xs text-gray-500 text-center mt-2">
+                        Source: {transaction.conversion_source}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Budget Progress */}
           {budgetProgress && (
@@ -359,53 +523,131 @@ export const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = (
             </div>
           )}
 
-          {/* Bill Status */}
+          {/* Bill Payment Status */}
           {billStatus && (
-            <div className="bg-orange-50 rounded-lg p-4">
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg p-4 border-2 border-orange-200">
               <div className="flex items-center space-x-2 mb-3">
-                <CreditCard size={16} className="text-orange-600" />
-                <h3 className="text-sm font-medium text-orange-800">Bill Payment Status</h3>
+                <Receipt size={18} className="text-orange-600" />
+                <h3 className="text-sm font-bold text-orange-800">Bill Payment</h3>
               </div>
               
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Payment Status</span>
-                  <div className="flex items-center space-x-2">
-                    {getBillStatusIcon()}
-                    <span className={`text-sm font-medium capitalize ${
-                      billStatus.status === 'paid_on_time' ? 'text-green-600' :
-                      billStatus.status === 'paid_early' ? 'text-blue-600' : 'text-red-600'
-                    }`}>
-                      {billStatus.status.replace('_', ' ')}
-                    </span>
+                <div className="bg-white rounded-lg p-3 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-600 font-medium">Payment Status</span>
+                    <div className="flex items-center space-x-2">
+                      {getBillStatusIcon()}
+                      <span className={`text-sm font-bold capitalize ${
+                        billStatus.status === 'paid_on_time' ? 'text-green-600' :
+                        billStatus.status === 'paid_early' ? 'text-blue-600' : 'text-red-600'
+                      }`}>
+                        {billStatus.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-xs mt-3">
+                    <div>
+                      <label className="text-gray-500">Bill: {billStatus.bill.title}</label>
+                      <p className="font-semibold text-gray-900">{formatCurrency(billStatus.bill.amount)}</p>
+                    </div>
+                    <div>
+                      <label className="text-gray-500">Due Date</label>
+                      <p className="font-semibold text-gray-900">
+                        {format(new Date(billStatus.bill.dueDate), 'MMM dd, yyyy')}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {billStatus.daysDifference !== 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <p className={`text-xs font-medium ${
+                        billStatus.daysDifference > 0 ? 'text-red-600' : 'text-green-600'
+                      }`}>
+                        {billStatus.daysDifference > 0 
+                          ? `⚠️ Paid ${billStatus.daysDifference} days late`
+                          : `✅ Paid ${Math.abs(billStatus.daysDifference)} days early`
+                        }
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Liability Payment Info */}
+          {liabilityInfo && (
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200">
+              <div className="flex items-center space-x-2 mb-3">
+                <CreditCard size={18} className="text-purple-600" />
+                <h3 className="text-sm font-bold text-purple-800">Liability Payment</h3>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="bg-white rounded-lg p-3 shadow-sm">
+                  <label className="text-xs text-gray-500 font-medium">Liability: {liabilityInfo.liability.name}</label>
+                  <p className="text-lg font-bold text-purple-900 mb-2">
+                    Payment: {formatCurrency(liabilityInfo.paymentAmount)}
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="text-gray-500">Before Payment</label>
+                      <p className="font-semibold text-gray-900">{formatCurrency(liabilityInfo.remainingBefore)}</p>
+                    </div>
+                    <div>
+                      <label className="text-gray-500">After Payment</label>
+                      <p className="font-semibold text-green-700">{formatCurrency(liabilityInfo.remainingAfter)}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-600">Paid Off</span>
+                      <span className="text-gray-900 font-medium">{liabilityInfo.progressAfter.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(liabilityInfo.progressAfter, 100)}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <label className="text-gray-600">Due Date</label>
-                    <p className="font-medium">
-                      {format(new Date(billStatus.bill.dueDate), 'MMM dd, yyyy')}
-                    </p>
+              </div>
+            </div>
+          )}
+          
+          {/* Transfer Info */}
+          {transferInfo && transferInfo.toAccount && (
+            <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg p-4 border-2 border-teal-200">
+              <div className="flex items-center space-x-2 mb-3">
+                <ArrowRightLeft size={18} className="text-teal-600" />
+                <h3 className="text-sm font-bold text-teal-800">Account Transfer</h3>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="bg-white rounded-lg p-3 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-xs">
+                      <label className="text-gray-500 font-medium">From Account</label>
+                      <p className="font-semibold text-gray-900">{transferInfo.fromAccount?.name || 'Unknown'}</p>
+                    </div>
+                    <ArrowRightLeft size={16} className="text-gray-400" />
+                    <div className="text-xs text-right">
+                      <label className="text-gray-500 font-medium">To Account</label>
+                      <p className="font-semibold text-gray-900">{transferInfo.toAccount.name}</p>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-gray-600">Paid Date</label>
-                    <p className="font-medium">
-                      {format(new Date(transaction.date), 'MMM dd, yyyy')}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-gray-600">Days Difference</label>
-                    <p className={`font-medium ${
-                      billStatus.daysDifference > 0 ? 'text-red-600' : 
-                      billStatus.daysDifference < 0 ? 'text-green-600' : 'text-gray-600'
-                    }`}>
-                      {billStatus.daysDifference > 0 ? '+' : ''}{billStatus.daysDifference} days
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-gray-600">Bill Amount</label>
-                    <p className="font-medium">{formatCurrency(billStatus.bill.amount)}</p>
+                  
+                  <div className="pt-2 border-t border-gray-200">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-600">Transfer Amount</span>
+                      <span className="font-bold text-teal-700">
+                        {formatCurrency(transferInfo.transferAmount)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

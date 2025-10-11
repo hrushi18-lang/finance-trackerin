@@ -48,13 +48,16 @@ const currencyOptions = [
 ];
 
 export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId, onSubmit, onCancel }) => {
-  const { primaryCurrency } = useInternationalization();
+  const { currency } = useInternationalization();
   const { userCategories, accounts, executeBudgetCreation } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Get primary currency code with proper fallback
+  const userPrimaryCurrency = currency?.code || 'USD';
+  
   // Currency conversion state
-  const [budgetCurrency, setBudgetCurrency] = useState(initialData?.currency || primaryCurrency.code);
+  const [budgetCurrency, setBudgetCurrency] = useState(initialData?.currency || userPrimaryCurrency);
   const [conversionPreview, setConversionPreview] = useState<{
     primaryAmount: number;
     primaryCurrency: string;
@@ -70,11 +73,15 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
       period: initialData.period,
       activityScope: (initialData as any).activityScope || 'general',
       accountIds: (initialData as any).accountIds || [],
-      targetCategory: (initialData as any).targetCategory || ''
+      targetCategory: (initialData as any).targetCategory || '',
+      budgetCurrency: initialData.currency || userPrimaryCurrency,
+      primaryCurrency: userPrimaryCurrency
     } : {
       period: 'monthly',
       activityScope: 'general',
-      accountIds: []
+      accountIds: [],
+      budgetCurrency: userPrimaryCurrency,
+      primaryCurrency: userPrimaryCurrency
     },
   });
 
@@ -121,7 +128,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
 
       // Use the execution engine to get conversion preview
       const { CurrencyExecutionEngine } = await import('../../services/currencyExecutionEngine');
-      const engine = new CurrencyExecutionEngine([], primaryCurrency.code);
+      const engine = new CurrencyExecutionEngine([], userPrimaryCurrency);
       
       const result = await engine.executeBudgetCreation(previewRequest);
       
@@ -164,6 +171,29 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
     try {
       setIsSubmitting(true);
       setError(null);
+
+      console.log('Budget form data received:', data);
+      
+      // Validate required fields
+      if (!data.category) {
+        setError('Please select a category');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!data.amount || data.amount <= 0) {
+        setError('Please enter a valid budget amount');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const currency = data.budgetCurrency || budgetCurrency || userPrimaryCurrency;
+
+      if (!currency) {
+        setError('Currency is required');
+        setIsSubmitting(false);
+        return;
+      }
       
       // Sanitize and validate data
       const sanitizedData = sanitizeFinancialData(data, ['amount']);
@@ -171,52 +201,42 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
       // Use currency execution engine for budget creation
       const executionRequest = {
         amount: 0, // No initial amount for budget creation
-        currency: data.budgetCurrency,
+        currency: currency,
         accountId: data.accountIds?.[0] || 'default',
         operation: 'create' as const,
         description: `Budget for ${data.category}`,
         budgetName: `${data.category} Budget`,
         budgetAmount: toNumber(sanitizedData.amount),
-        budgetCurrency: data.budgetCurrency,
+        budgetCurrency: currency,
         budgetPeriod: data.period,
         category: data.category
       };
 
+      console.log('Budget execution request:', executionRequest);
+
       const result = await executeBudgetCreation(executionRequest);
 
       if (result.success) {
-        // Transform to snake_case for validation
-        const validationData = {
-          category: sanitizedData.category,
-          amount: result.accountAmount, // Use account currency amount for budget
-          spent: 0, // New budget starts with 0 spent
-          period: sanitizedData.period,
-          start_date: new Date(), // Start from today
-          end_date: new Date(Date.now() + (sanitizedData.period === 'weekly' ? 7 : sanitizedData.period === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000), // Calculate end date
-          account_id: sanitizedData.accountIds?.[0] || undefined, // Use first selected account
-          // Add missing fields for validation
-          activity_scope: data.activityScope,
-          account_ids: data.accountIds || [],
-          target_category: data.targetCategory || undefined,
-        };
-        
-        const validatedData = validateBudget(validationData);
+        // Database schema check: budgets table has NO start_date/end_date columns
+        // Only: category, amount, spent, period, activity_scope, and multi-currency fields
         
         await onSubmit({
-          // Map validated snake_case data to camelCase for the API
-          category: validatedData.category,
-          amount: validatedData.amount,
-          period: validatedData.period,
-          startDate: validatedData.start_date,
-          endDate: validatedData.end_date,
-          accountId: validatedData.account_id,
-          categoryId: categoryId || '', // Added categoryId
+          category: data.category,
+          amount: result.accountAmount, // Use converted amount from engine
+          period: data.period,
           spent: initialData?.spent || 0,
-          // Add scoping fields from validated data
-          activityScope: validatedData.activity_scope,
-          accountIds: validatedData.account_ids || [],
-          targetCategory: validatedData.target_category,
-          currencyCode: result.primaryCurrency // Use primary currency
+          activityScope: data.activityScope || 'general',
+          accountIds: data.accountIds || [],
+          targetCategory: data.targetCategory,
+          // Multi-currency fields from execution result
+          native_amount: result.auditData.originalAmount,
+          native_currency: result.auditData.originalCurrency,
+          converted_amount: result.primaryAmount,
+          converted_currency: result.primaryCurrency,
+          exchange_rate: result.exchangeRate || 1,
+          conversion_source: result.conversionSource || 'manual',
+          conversion_case: result.auditData.conversionCase,
+          execution_id: result.auditData.executionId
         });
       } else {
         throw new Error(result.error || 'Budget creation failed');
@@ -310,7 +330,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
       </div>
 
       {/* Category Selection */}
-      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20 relative z-20">
         <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center">
           <Tag size={16} className="mr-2 text-yellow-400" />
           Category
@@ -374,21 +394,47 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
         </div>
       )}
 
-      {/* Budget Amount */}
+      {/* Budget Amount and Currency */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
-        <Input
-          label="Budget Amount"
-          type="number"
-          step="0.01"
-          icon={<CurrencyIcon currencyCode={currency.code} className="text-green-400" />}
-          {...register('amount', {
-            required: 'Budget amount is required',
-            min: { value: 0.01, message: 'Amount must be greater than 0' },
-          })}
-          error={errors.amount?.message}
-          className="bg-black/40 border-white/20 text-white"
-          placeholder={`e.g., 500`}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Input
+              label="Budget Amount"
+              type="number"
+              step="0.01"
+              icon={<CurrencyIcon currencyCode={budgetCurrency} className="text-green-400" />}
+              {...register('amount', {
+                required: 'Budget amount is required',
+                min: { value: 0.01, message: 'Amount must be greater than 0' },
+              })}
+              error={errors.amount?.message}
+              className="bg-black/40 border-white/20 text-white"
+              placeholder={`e.g., 500`}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Budget Currency
+            </label>
+            <select
+              value={budgetCurrency}
+              onChange={(e) => {
+                setBudgetCurrency(e.target.value);
+                setValue('budgetCurrency', e.target.value);
+              }}
+              className="w-full bg-black/40 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={userPrimaryCurrency}>{userPrimaryCurrency} - Primary Currency</option>
+              <option value="USD">USD - US Dollar</option>
+              <option value="EUR">EUR - Euro</option>
+              <option value="GBP">GBP - British Pound</option>
+              <option value="INR">INR - Indian Rupee</option>
+              <option value="CAD">CAD - Canadian Dollar</option>
+              <option value="AUD">AUD - Australian Dollar</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Period Selection */}

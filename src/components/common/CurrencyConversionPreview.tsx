@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { ArrowRight, Info } from 'lucide-react';
+import { simpleCurrencyService } from '../../services/simpleCurrencyService';
 
 interface CurrencyConversionPreviewProps {
   enteredAmount: number;
@@ -45,13 +46,16 @@ export const CurrencyConversionPreview: React.FC<CurrencyConversionPreviewProps>
   }
 
   if (variant === 'compact') {
+    const enteredSymbol = simpleCurrencyService.getCurrencySymbol(enteredCurrency);
+    const accountSymbol = accountCurrency ? simpleCurrencyService.getCurrencySymbol(accountCurrency) : '';
+    
     return (
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
         <div className="text-xs text-blue-700">
           <div className="flex items-center justify-between">
-            <span>{enteredCurrency} {enteredAmount.toFixed(2)}</span>
+            <span>{enteredSymbol}{enteredAmount.toFixed(2)} {enteredCurrency}</span>
             <ArrowRight size={12} className="mx-2" />
-            <span>{accountCurrency} {accountAmount?.toFixed(2)}</span>
+            <span>{accountSymbol}{accountAmount?.toFixed(2)} {accountCurrency}</span>
           </div>
           {exchangeRate && exchangeRate !== 1 && (
             <div className="text-blue-600 mt-1">
@@ -64,6 +68,10 @@ export const CurrencyConversionPreview: React.FC<CurrencyConversionPreviewProps>
   }
 
   // Default full display
+  const enteredSymbol = simpleCurrencyService.getCurrencySymbol(enteredCurrency);
+  const accountSymbol = accountCurrency ? simpleCurrencyService.getCurrencySymbol(accountCurrency) : '';
+  const primarySymbol = primaryCurrency ? simpleCurrencyService.getCurrencySymbol(primaryCurrency) : '';
+  
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
       <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
@@ -76,7 +84,7 @@ export const CurrencyConversionPreview: React.FC<CurrencyConversionPreviewProps>
         <div className="bg-white/60 rounded-lg p-3 border border-blue-100">
           <div className="text-xs text-blue-600 mb-1">You're entering:</div>
           <div className="text-lg font-bold text-blue-900">
-            {enteredCurrency} {enteredAmount.toFixed(2)}
+            {enteredSymbol}{enteredAmount.toFixed(2)} <span className="text-sm text-blue-700">{enteredCurrency}</span>
           </div>
         </div>
 
@@ -95,7 +103,7 @@ export const CurrencyConversionPreview: React.FC<CurrencyConversionPreviewProps>
             <div className="bg-white/60 rounded-lg p-3 border border-blue-100">
               <div className="text-xs text-blue-600 mb-1">Will deduct from account:</div>
               <div className="text-lg font-bold text-blue-900">
-                {accountCurrency} {accountAmount.toFixed(2)}
+                {accountSymbol}{accountAmount.toFixed(2)} <span className="text-sm text-blue-700">{accountCurrency}</span>
               </div>
             </div>
             
@@ -117,7 +125,7 @@ export const CurrencyConversionPreview: React.FC<CurrencyConversionPreviewProps>
             <div className="bg-white/60 rounded-lg p-3 border border-blue-100">
               <div className="text-xs text-blue-600 mb-1">Net worth impact:</div>
               <div className="text-lg font-bold text-blue-900">
-                {primaryCurrency} {primaryAmount.toFixed(2)}
+                {primarySymbol}{primaryAmount.toFixed(2)} <span className="text-sm text-blue-700">{primaryCurrency}</span>
               </div>
             </div>
           </>
@@ -135,33 +143,36 @@ export const CurrencyConversionPreview: React.FC<CurrencyConversionPreviewProps>
 };
 
 /**
- * Simple inline conversion display
+ * Simple inline conversion display - Shows transaction amount in native currency
+ * and optionally shows converted amount if different from native
  */
 export const InlineConversionDisplay: React.FC<{
   nativeAmount: number;
   nativeCurrency: string;
-  convertedAmount: number;
-  convertedCurrency: string;
+  convertedAmount?: number;
+  convertedCurrency?: string;
 }> = ({ nativeAmount, nativeCurrency, convertedAmount, convertedCurrency }) => {
-  const nativeInfo = getCurrencyInfo(nativeCurrency);
-  const convertedInfo = getCurrencyInfo(convertedCurrency);
+  const nativeSymbol = simpleCurrencyService.getCurrencySymbol(nativeCurrency);
   
-  const nativeSymbol = nativeInfo?.symbol || nativeCurrency;
-  const convertedSymbol = convertedInfo?.symbol || convertedCurrency;
-  
-  if (nativeCurrency === convertedCurrency) {
+  // If no converted amount provided or same currency, just show native
+  if (!convertedAmount || !convertedCurrency || nativeCurrency === convertedCurrency) {
     return (
       <span className="font-semibold">
-        {nativeSymbol}{nativeAmount.toFixed(2)}
+        {nativeSymbol}{nativeAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </span>
     );
   }
   
+  const convertedSymbol = simpleCurrencyService.getCurrencySymbol(convertedCurrency);
+  
+  // Show both currencies
   return (
     <span>
-      <span className="font-semibold">{nativeSymbol}{nativeAmount.toFixed(2)}</span>
+      <span className="font-semibold">
+        {nativeSymbol}{nativeAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </span>
       <span className="text-sm text-gray-500 ml-2">
-        (≈ {convertedSymbol}{convertedAmount.toFixed(2)})
+        (≈ {convertedSymbol}{convertedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
       </span>
     </span>
   );
@@ -181,8 +192,7 @@ export const CurrencyBadge: React.FC<{
   };
   
   const colorClass = colors[variant];
-  const info = getCurrencyInfo(currency);
-  const symbol = info?.symbol || currency;
+  const symbol = simpleCurrencyService.getCurrencySymbol(currency);
   
   return (
     <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${colorClass}`}>

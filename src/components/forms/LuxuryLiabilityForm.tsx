@@ -10,9 +10,8 @@ import { CurrencyInput } from '../currency/CurrencyInput';
 import { LiabilityType, getLiabilityBehavior } from '../../lib/liability-behaviors';
 import { getCurrencyInfo } from '../../utils/currency-converter';
 import { DualCurrencyDisplay } from '../currency/DualCurrencyDisplay';
-import { convertToAccountAndPrimaryCurrency } from '../../utils/dual-currency-converter';
-import { currencyConversionService } from '../../services/currencyConversionService';
-import { Decimal } from 'decimal.js';
+import { useUniversalCurrency } from '../../hooks/useUniversalCurrency';
+import { useProfile } from '../../contexts/ProfileContext';
 
 interface LuxuryLiabilityFormProps {
   onComplete: (liability: any) => void;
@@ -45,8 +44,11 @@ const currencyOptions = [
 
 export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComplete, onCancel }) => {
   const { addLiability, accounts, executeLiabilityCreation } = useFinance();
-  const { primaryCurrency } = useInternationalization();
-  const { displayCurrency, formatCurrency, convertAmount } = useEnhancedCurrency();
+  const { currency, formatCurrency } = useInternationalization();
+  const { displayCurrency } = useEnhancedCurrency();
+  
+  // Get user's primary currency
+  const getUserCurrency = () => currency?.code || 'USD';
   
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -132,17 +134,28 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
     try {
       setIsSubmitting(true);
       
+      // Validate required fields before submitting
+      if (!formData.name || !formData.name.trim()) {
+        throw new Error('Liability name is required');
+      }
+      if (!formData.totalAmount || parseFloat(formData.totalAmount) <= 0) {
+        throw new Error('Liability amount must be greater than 0');
+      }
+      if (!formData.currencyCode) {
+        throw new Error('Currency is required');
+      }
+      
       // Use currency execution engine for liability creation
       const executionRequest = {
         amount: 0, // No initial amount for liability creation
-        currency: formData.currency,
+        currency: formData.currencyCode,
         accountId: 'default',
         operation: 'create' as const,
-        description: formData.description,
-        liabilityName: formData.name,
+        description: formData.description || '',
+        liabilityName: formData.name.trim(),
         liabilityAmount: parseFloat(formData.totalAmount),
-        liabilityCurrency: formData.currency,
-        liabilityType: formData.liabilityType
+        liabilityCurrency: formData.currencyCode,
+        liabilityType: formData.liabilityType || 'other'
       };
 
       const result = await executeLiabilityCreation(executionRequest);
@@ -150,12 +163,12 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
       if (result.success) {
         const liabilityData = {
           name: formData.name,
-          liabilityType: formData.liabilityType,
+          liabilityType: formData.liabilityType as any,
           description: formData.description,
           liabilityStatus: formData.liabilityStatus,
-          totalAmount: result.accountAmount, // Use account currency amount for liability
+          totalAmount: result.primaryAmount, // Use primary currency amount for tracking
           remainingAmount: formData.liabilityStatus === 'new' 
-            ? result.accountAmount 
+            ? result.primaryAmount 
             : parseFloat(formData.remainingAmount),
           interestRate: parseFloat(formData.interestRate),
           monthlyPayment: parseFloat(formData.monthlyPayment),
@@ -167,26 +180,33 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
           dueDate: undefined,
           nextPaymentDate: undefined,
           linkedAssetId: undefined,
-          status: 'active',
+          status: 'active' as any,
           isActive: true,
           affectsCreditScore: formData.affectsCreditScore,
           isSecured: formData.isSecured,
           providesFunds: formData.providesFunds,
-        autoGenerateBills: formData.autoGenerateBills,
-        billGenerationDay: parseInt(formData.paymentDay),
-        sendReminders: formData.sendReminders,
-        reminderDays: parseInt(formData.reminderDays),
-        paymentStrategy: formData.paymentStrategy,
-        paymentAccounts: formData.selectedAccounts,
-        paymentPercentages: [],
-        modificationCount: 0,
-        typeSpecificData: {},
-        currencyCode: formData.currencyCode,
-        activityScope: 'general' as const,
-        accountIds: formData.selectedAccounts,
-        targetCategory: undefined,
-        priority: formData.priority
-      };
+          autoGenerateBills: formData.autoGenerateBills,
+          billGenerationDay: parseInt(formData.paymentDay),
+          sendReminders: formData.sendReminders,
+          reminderDays: parseInt(formData.reminderDays),
+          paymentStrategy: formData.paymentStrategy as any,
+          paymentAccounts: formData.selectedAccounts,
+          paymentPercentages: [],
+          modificationCount: 0,
+          typeSpecificData: {},
+          currencyCode: formData.currencyCode,
+          activityScope: 'general' as const,
+          accountIds: formData.selectedAccounts,
+          targetCategory: undefined,
+          priority: formData.priority,
+          // ✅ Multi-currency tracking data from execution result
+          native_amount: result.auditData.originalAmount,
+          native_currency: result.auditData.originalCurrency,
+          converted_amount: result.primaryAmount,
+          converted_currency: result.primaryCurrency,
+          exchange_rate: result.exchangeRate || 1,
+          conversion_source: result.conversionSource || 'manual'
+        };
 
         await addLiability(liabilityData);
         onComplete(liabilityData);
@@ -212,9 +232,9 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
         handleDualCurrencyConversion(amount, formData.currencyCode);
       }
     }
-  }, [formData.totalAmount, formData.currencyCode, formData.disbursementAccountId]);
+  }, [formData.totalAmount, formData.currencyCode]);
 
-  // Handle dual currency conversion
+  // Handle dual currency conversion preview
   const handleDualCurrencyConversion = async (amount: number, fromCurrency: string) => {
     if (!amount || amount <= 0) {
       setDualCurrencyData(null);
@@ -223,16 +243,34 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
 
     setIsConverting(true);
     try {
-      const selectedAccount = accounts.find(acc => acc.id === formData.disbursementAccountId);
-      const accountCurrency = selectedAccount?.currencycode || displayCurrency;
+      // Use simple conversion preview (no account needed for creation)
+      const { currencyConversionService } = await import('../../services/currencyConversionService');
+      const userPrimaryCurrency = getUserCurrency();
       
-      const conversion = await convertToAccountAndPrimaryCurrency(
-        amount,
-        fromCurrency,
-        accountCurrency,
-        displayCurrency,
-        { precision: 2, showSymbols: true }
-      );
+      // Get exchange rate
+      let exchangeRate = 1;
+      if (fromCurrency !== userPrimaryCurrency) {
+        const { convertCurrency } = await import('../../utils/currency-converter');
+        exchangeRate = await convertCurrency(1, fromCurrency, userPrimaryCurrency, userPrimaryCurrency) || 1;
+      }
+      
+      const primaryAmount = amount * exchangeRate;
+      
+      // Create preview data structure
+      const conversion = {
+        account: {
+          amount: amount,
+          currency: fromCurrency,
+          formatted: currencyConversionService.formatAmount(new (await import('decimal.js')).Decimal(amount), fromCurrency),
+          exchangeRate: 1
+        },
+        primary: {
+          amount: primaryAmount,
+          currency: userPrimaryCurrency,
+          formatted: currencyConversionService.formatAmount(new (await import('decimal.js')).Decimal(primaryAmount), userPrimaryCurrency),
+          exchangeRate: exchangeRate
+        }
+      };
       
       setDualCurrencyData(conversion);
     } catch (error) {
@@ -563,8 +601,8 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
                   className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">{account.name}</div>
-                  <div className="text-sm text-gray-500">{account.accountType} • {formatCurrency(account.balance)}</div>
+                  <div className="font-medium text-gray-900 dark:text-white">{account.name}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{account.type} • {formatCurrency(account.balance)}</div>
                 </div>
               </label>
             ))}

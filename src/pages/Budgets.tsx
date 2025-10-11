@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PieChart, Calculator, TrendingUp, AlertTriangle, Plus, Edit3, Trash2, AlertCircle, Target, ArrowLeft } from 'lucide-react';
+import { PieChart, Calculator, TrendingUp, AlertTriangle, Plus, Edit3, Trash2, AlertCircle, Target, ArrowLeft, Pause, Play, Square, Archive, CheckCircle } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
 import { BudgetForm } from '../components/forms/BudgetForm';
 import { Button } from '../components/common/Button';
@@ -11,7 +11,7 @@ import { Budget } from '../types';
 
 const Budgets: React.FC = () => {
   const navigate = useNavigate();
-  const { budgets, addBudget, updateBudget, deleteBudget, transactions } = useFinance();
+  const { budgets, addBudget, updateBudget, deleteBudget, pauseBudget, resumeBudget, stopBudget, archiveBudget, completeBudget, transactions } = useFinance();
   const { currency, formatCurrency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
   const [editingBudget, setEditingBudget] = useState<string | null>(null);
@@ -19,6 +19,7 @@ const Budgets: React.FC = () => {
   const [budgetToDelete, setBudgetToDelete] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [viewFilter, setViewFilter] = useState<'active' | 'all' | 'archived'>('active');
 
   const handleAddBudget = async (budget: any) => {
     try {
@@ -96,6 +97,23 @@ const Budgets: React.FC = () => {
     return 'On Track';
   };
 
+  // Filter budgets based on view
+  const filteredBudgets = budgets.filter(budget => {
+    if (viewFilter === 'active') {
+      return budget.is_active !== false && budget.status !== 'archived' && budget.status !== 'stopped';
+    } else if (viewFilter === 'archived') {
+      return budget.status === 'archived' || budget.status === 'stopped' || budget.status === 'completed';
+    }
+    // 'all' - return everything for analytics
+    return true;
+  });
+
+  // Calculate totals for ALL budgets (for analytics)
+  const totalBudgeted = budgets.reduce((sum, b) => sum + (b.amount || 0), 0);
+  const totalSpent = budgets.reduce((sum, b) => sum + (b.spent || 0), 0);
+  const activeBudgetsCount = budgets.filter(b => b.is_active !== false && b.status !== 'archived').length;
+  const archivedBudgetsCount = budgets.filter(b => b.status === 'archived' || b.status === 'stopped').length;
+
   return (
     <div className="min-h-screen pb-20" style={{ background: 'var(--background)' }}>
       {/* Immersive Header */}
@@ -128,10 +146,14 @@ const Budgets: React.FC = () => {
           </div>
           
           {budgets.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
-                <p className="text-2xl font-numbers">{budgets.length}</p>
-                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Active Budgets</p>
+                <p className="text-2xl font-numbers">{activeBudgetsCount}</p>
+                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Active</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-numbers">{archivedBudgetsCount}</p>
+                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Archived</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-numbers">
@@ -162,12 +184,50 @@ const Budgets: React.FC = () => {
           )}
         </div>
 
+        {/* Filter Tabs */}
+        {budgets.length > 0 && (
+          <div className="flex space-x-2 mb-4">
+            <button
+              onClick={() => setViewFilter('active')}
+              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                viewFilter === 'active'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
+              }`}
+            >
+              Active ({activeBudgetsCount})
+            </button>
+            <button
+              onClick={() => setViewFilter('all')}
+              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                viewFilter === 'all'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
+              }`}
+            >
+              All ({budgets.length})
+            </button>
+            <button
+              onClick={() => setViewFilter('archived')}
+              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                viewFilter === 'archived'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
+              }`}
+            >
+              Archived ({archivedBudgetsCount})
+            </button>
+          </div>
+        )}
+
         {/* Budgets List */}
         {budgets.length > 0 && (
           <div className="slide-in-up">
-            <h3 className="text-lg font-heading mb-4">Your Budgets</h3>
+            <h3 className="text-lg font-heading mb-4">
+              {viewFilter === 'active' ? 'Active Budgets' : viewFilter === 'archived' ? 'Archived Budgets' : 'All Budgets'}
+            </h3>
             <div className="space-y-3">
-              {budgets.map((budget) => {
+              {filteredBudgets.map((budget) => {
                 const progress = getBudgetProgress(budget);
                 const statusColor = getBudgetStatusColor(progress.percentage);
                 const statusText = getBudgetStatusText(progress.percentage);
@@ -185,6 +245,45 @@ const Budgets: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center space-x-1">
+                        {/* Status Controls */}
+                        {budget.status === 'active' && (
+                          <button
+                            onClick={() => pauseBudget(budget.id)}
+                            className="p-2 text-yellow-600 hover:text-yellow-700 transition-colors rounded-full hover:bg-yellow-50"
+                            title="Pause Budget"
+                          >
+                            <Pause size={14} />
+                          </button>
+                        )}
+                        {budget.status === 'paused' && (
+                          <button
+                            onClick={() => resumeBudget(budget.id)}
+                            className="p-2 text-green-600 hover:text-green-700 transition-colors rounded-full hover:bg-green-50"
+                            title="Resume Budget"
+                          >
+                            <Play size={14} />
+                          </button>
+                        )}
+                        {(budget.status === 'active' || budget.status === 'paused') && (
+                          <>
+                            <button
+                              onClick={() => stopBudget(budget.id, 'User stopped')}
+                              className="p-2 text-gray-600 hover:text-gray-700 transition-colors rounded-full hover:bg-gray-50"
+                              title="Stop Budget"
+                            >
+                              <Square size={14} />
+                            </button>
+                            <button
+                              onClick={() => archiveBudget(budget.id, 'User archived')}
+                              className="p-2 text-blue-600 hover:text-blue-700 transition-colors rounded-full hover:bg-blue-50"
+                              title="Archive Budget"
+                            >
+                              <Archive size={14} />
+                            </button>
+                          </>
+                        )}
+                        
+                        {/* Edit & Delete */}
                         <button
                           onClick={() => {
                             setEditingBudget(budget.id);
@@ -221,9 +320,23 @@ const Budgets: React.FC = () => {
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
-                        {statusText}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+                          {statusText}
+                        </span>
+                        {/* Budget Lifecycle Status Badge */}
+                        {budget.status && budget.status !== 'active' && (
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            budget.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
+                            budget.status === 'stopped' ? 'bg-gray-100 text-gray-800' :
+                            budget.status === 'archived' ? 'bg-blue-100 text-blue-800' :
+                            budget.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {budget.status.charAt(0).toUpperCase() + budget.status.slice(1)}
+                          </span>
+                        )}
+                      </div>
                       <span className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>
                         {progress.percentage.toFixed(0)}% used
                       </span>

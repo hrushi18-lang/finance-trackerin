@@ -34,8 +34,6 @@ interface GoalFormProps {
   initialData?: Partial<GoalFormData>;
 }
 
-const goalCategories = ['Emergency', 'Travel', 'Education', 'Home', 'Investment', 'Other'];
-
 const goalTypes = [
   { 
     id: 'general', 
@@ -74,11 +72,15 @@ export const GoalForm: React.FC<GoalFormProps> = ({
   onCancel,
   initialData
 }) => {
-  const { primaryCurrency } = useInternationalization();
+  const { currency } = useInternationalization();
   const { accounts, userCategories, executeGoalCreation } = useFinance();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [targetCurrency, setTargetCurrency] = useState(initialData?.targetCurrency || primaryCurrency.code);
+  
+  // Get primary currency code with proper fallback
+  const userPrimaryCurrency = currency?.code || 'USD';
+  
+  const [targetCurrency, setTargetCurrency] = useState(initialData?.targetCurrency || userPrimaryCurrency);
   const [selectedGoalType, setSelectedGoalType] = useState<'general' | 'account_specific' | 'category_based'>(
     initialData?.activityScope || 'general'
   );
@@ -93,19 +95,20 @@ export const GoalForm: React.FC<GoalFormProps> = ({
   const [conversionError, setConversionError] = useState<string | null>(null);
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<GoalFormData>({
+    mode: 'onChange',
     defaultValues: {
-      currentAmount: initialData?.currentAmount || 0,
-      title: initialData?.title || '',
-      description: initialData?.description || '',
-      targetAmount: initialData?.targetAmount || undefined,
-      targetDate: initialData?.targetDate || '',
-      category: initialData?.category || '',
-      activityScope: initialData?.activityScope || 'general',
-      accountIds: initialData?.accountIds || [],
-      targetCategory: initialData?.targetCategory || '',
-      currencyCode: initialData?.currencyCode || primaryCurrency.code,
-      targetCurrency: initialData?.targetCurrency || primaryCurrency.code,
-      primaryCurrency: primaryCurrency.code
+      currentAmount: 0,
+      title: '',
+      description: '',
+      targetAmount: undefined,
+      targetDate: '',
+      category: '',
+      activityScope: 'general',
+      accountIds: [],
+      targetCategory: '',
+      currencyCode: userPrimaryCurrency,
+      targetCurrency: userPrimaryCurrency,
+      primaryCurrency: userPrimaryCurrency
     },
   });
 
@@ -150,7 +153,7 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       }));
 
       const { CurrencyExecutionEngine } = await import('../../services/currencyExecutionEngine');
-      const engine = new CurrencyExecutionEngine(accountBalances, primaryCurrency.code);
+      const engine = new CurrencyExecutionEngine(accountBalances, userPrimaryCurrency);
       
       const result = await engine.executeGoalCreation(previewRequest);
       
@@ -194,22 +197,48 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       setIsSubmitting(true);
       setError(null);
 
-      // Validate the goal data
-      const validationResult = validateGoal({
-        title: data.title,
-        description: data.description,
-        targetAmount: data.targetAmount,
-        currentAmount: data.currentAmount,
-        targetDate: data.targetDate,
-        category: data.category,
-        activityScope: data.activityScope,
-        accountIds: data.accountIds,
-        targetCategory: data.targetCategory,
-        currencyCode: data.currencyCode
-      });
+      console.log('Form data received:', data);
 
-      if (!validationResult.isValid) {
-        setError(validationResult.errors.join(', '));
+      // Check if required fields have values
+      if (!data.targetAmount || data.targetAmount <= 0) {
+        setError('Please enter a valid target amount greater than 0');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!data.targetDate) {
+        setError('Please select a target date');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!data.category) {
+        setError('Please select a category');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Validate the goal data with snake_case field names
+      const validationData = {
+        title: data.title,
+        description: data.description || '',
+        target_amount: Number(data.targetAmount),
+        current_amount: Number(data.currentAmount || 0),
+        target_date: new Date(data.targetDate),
+        category: data.category,
+        activity_scope: data.activityScope || 'general',
+        account_ids: data.accountIds || [],
+        target_category: data.targetCategory || undefined,
+        currency_code: data.currencyCode || data.targetCurrency || userPrimaryCurrency
+      };
+
+      console.log('Validation data:', validationData);
+
+      try {
+        validateGoal(validationData);
+      } catch (validationError: any) {
+        console.error('Validation error:', validationError);
+        setError(validationError.message || 'Validation failed');
         return;
       }
 
@@ -231,14 +260,18 @@ export const GoalForm: React.FC<GoalFormProps> = ({
       if (result.success) {
         // Create goal data with converted amounts
         const goalData: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'> = {
-          name: data.title,
+          title: data.title,  // ✅ Changed from 'name' to 'title'
+          description: data.description || '',
           targetAmount: result.accountAmount, // Use account currency amount for goal target
-          currentAmount: data.currentAmount,
+          currentAmount: data.currentAmount || 0,
           targetDate: new Date(data.targetDate),
           category: data.category,
           priority: 'medium',
           status: 'active',
-          description: data.description,
+          goalType: 'general_savings',
+          currencycode: data.targetCurrency || userPrimaryCurrency,
+          periodType: 'monthly',
+          isRecurring: false,
           // Multi-currency data
           native_amount: result.auditData.originalAmount,
           native_currency: result.auditData.originalCurrency,
@@ -261,43 +294,43 @@ export const GoalForm: React.FC<GoalFormProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-xl p-6 border-2 border-blue-200 dark:border-blue-800">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-          <Target className="mr-2 text-blue-600" />
+    <div className="space-y-4 sm:space-y-6">
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg">
+        <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 flex items-center">
+          <Target className="mr-2 w-5 h-5 sm:w-6 sm:h-6" />
           Create Financial Goal
         </h2>
-        <p className="text-gray-600 dark:text-gray-300">
-          Set a financial goal with multi-currency support. Your goal will be tracked in your primary currency.
+        <p className="text-blue-50 text-sm sm:text-base">
+          Set a financial goal with multi-currency support. Your goal will be tracked in your primary currency ({userPrimaryCurrency}).
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-6">
         {/* Goal Type Selection */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Goal Type</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Goal Type</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {goalTypes.map((type) => (
               <div
                 key={type.id}
-                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                className={`p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 cursor-pointer transition-all ${
                   selectedGoalType === type.id
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow'
                 }`}
                 onClick={() => {
                   setSelectedGoalType(type.id as any);
                   setValue('activityScope', type.id as any);
                 }}
               >
-                <div className="text-2xl mb-2">{type.icon}</div>
-                <h4 className="font-medium text-gray-900 dark:text-white">{type.name}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-300">{type.description}</p>
+                <div className="text-xl sm:text-2xl mb-2">{type.icon}</div>
+                <h4 className="font-medium text-sm sm:text-base text-gray-900 dark:text-white mb-1">{type.name}</h4>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2">{type.description}</p>
                 <div className="mt-2">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Examples:</p>
-                  <ul className="text-xs text-gray-600 dark:text-gray-300">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Examples:</p>
+                  <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-0.5">
                     {type.examples.map((example, index) => (
-                      <li key={index}>• {example}</li>
+                      <li key={index} className="truncate">• {example}</li>
                     ))}
                   </ul>
                 </div>
@@ -307,10 +340,10 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         </div>
 
         {/* Goal Details */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Goal Details</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Goal Details</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Input
               label="Goal Title"
               type="text"
@@ -331,70 +364,91 @@ export const GoalForm: React.FC<GoalFormProps> = ({
           </div>
         </div>
 
-        {/* Target Amount with Currency Conversion */}
-        <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-xl p-6 border-2 border-blue-200 dark:border-blue-800">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Target Amount</h3>
+        {/* Goal Amounts with Currency */}
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl sm:rounded-2xl p-4 sm:p-6 border-2 border-green-200 dark:border-green-800 shadow-sm">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Goal Amounts</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <Input
-                label="Target Amount"
+                label="Target Amount *"
                 type="number"
                 step="0.01"
-                min="0"
-                icon={<DollarSign size={18} className="text-blue-500" />}
+                min="0.01"
+                icon={<DollarSign size={18} className="text-green-600" />}
                 {...register('targetAmount', { 
                   required: 'Target amount is required',
-                  min: { value: 0.01, message: 'Target amount must be greater than 0' }
+                  min: { value: 0.01, message: 'Target amount must be greater than 0' },
+                  valueAsNumber: true
                 })}
                 error={errors.targetAmount?.message}
-                className="text-lg font-semibold"
-                placeholder="0.00"
+                className="text-base sm:text-lg font-semibold"
+                placeholder="e.g., 10000.00"
               />
             </div>
             
             <div>
-              <Select
-                label="Currency"
-                value={targetCurrency}
-                onChange={(value) => {
-                  setTargetCurrency(value);
-                  setValue('targetCurrency', value);
-                }}
-                options={currencyOptions}
-                icon={<DollarSign size={18} className="text-blue-500" />}
+              <Input
+                label="Current Amount"
+                type="number"
+                step="0.01"
+                min="0"
+                icon={<DollarSign size={18} className="text-blue-600" />}
+                {...register('currentAmount', { 
+                  min: { value: 0, message: 'Current amount cannot be negative' },
+                  valueAsNumber: true
+                })}
+                error={errors.currentAmount?.message}
+                className="text-base sm:text-lg"
+                placeholder="0.00"
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Optional: If you've already saved some amount
+              </p>
             </div>
+          </div>
+          
+          <div className="mt-3 sm:mt-4">
+            <Select
+              label="Currency *"
+              value={targetCurrency}
+              onChange={(value) => {
+                setTargetCurrency(value);
+                setValue('targetCurrency', value);
+              }}
+              options={currencyOptions}
+              icon={<DollarSign size={18} className="text-green-600" />}
+            />
           </div>
         </div>
 
         {/* Conversion Preview */}
         {conversionPreview && (
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-green-200 dark:border-green-800 shadow-sm">
             <div className="flex items-center space-x-2 mb-3">
-              <CheckCircle size={16} className="text-green-600 dark:text-green-400" />
-              <h4 className="font-medium text-green-900 dark:text-green-100">Conversion Preview</h4>
+              <CheckCircle size={16} className="text-green-600 dark:text-green-400 flex-shrink-0" />
+              <h4 className="font-medium text-sm sm:text-base text-green-900 dark:text-green-100">Conversion Preview</h4>
             </div>
             
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
+            <div className="space-y-2 text-xs sm:text-sm">
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                 <span className="text-gray-600 dark:text-gray-400">Your goal target:</span>
-                <span className="font-medium">
+                <span className="font-medium text-gray-900 dark:text-white">
                   {currencyConversionService.formatAmount(new Decimal(watchedTargetAmount), watchedTargetCurrency)}
                 </span>
               </div>
               
-              <div className="flex justify-between">
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                 <span className="text-gray-600 dark:text-gray-400">Tracked in primary currency:</span>
-                <span className="font-medium">
+                <span className="font-medium text-gray-900 dark:text-white">
                   {currencyConversionService.formatAmount(new Decimal(conversionPreview.primaryAmount), conversionPreview.primaryCurrency)}
                 </span>
               </div>
               
               {conversionPreview.exchangeRate !== 1 && (
-                <div className="flex justify-between">
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                   <span className="text-gray-600 dark:text-gray-400">Exchange rate:</span>
-                  <span className="font-medium">
+                  <span className="font-medium text-gray-900 dark:text-white">
                     1 {watchedTargetCurrency} = {conversionPreview.exchangeRate.toFixed(6)} {conversionPreview.primaryCurrency}
                   </span>
                 </div>
@@ -411,10 +465,10 @@ export const GoalForm: React.FC<GoalFormProps> = ({
 
         {/* Conversion Error */}
         {conversionError && (
-          <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
+          <div className="bg-red-50 dark:bg-red-900/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-red-200 dark:border-red-800 shadow-sm">
             <div className="flex items-center space-x-2">
-              <AlertCircle size={16} className="text-red-600 dark:text-red-400" />
-              <span className="text-sm text-red-700 dark:text-red-300">
+              <AlertCircle size={16} className="text-red-600 dark:text-red-400 flex-shrink-0" />
+              <span className="text-xs sm:text-sm text-red-700 dark:text-red-300">
                 Conversion failed: {conversionError}
               </span>
             </div>
@@ -422,8 +476,8 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         )}
 
         {/* Target Date */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Target Date</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Target Date</h3>
           
           <Input
             label="When do you want to achieve this goal?"
@@ -435,42 +489,44 @@ export const GoalForm: React.FC<GoalFormProps> = ({
         </div>
 
         {/* Category */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Category</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Category</h3>
           
           <CategorySelector
-            categories={goalCategories}
-            selectedCategory={watch('category')}
-            onCategorySelect={(category) => setValue('category', category)}
+            type="goal"
+            value={watch('category')}
+            onChange={(category) => setValue('category', category)}
+            placeholder="Select a goal category"
             error={errors.category?.message}
           />
         </div>
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
+          <div className="bg-red-50 dark:bg-red-900/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-red-200 dark:border-red-800 shadow-sm">
             <div className="flex items-center space-x-2">
-              <AlertCircle size={16} className="text-red-600 dark:text-red-400" />
-              <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
+              <AlertCircle size={16} className="text-red-600 dark:text-red-400 flex-shrink-0" />
+              <span className="text-xs sm:text-sm text-red-700 dark:text-red-300">{error}</span>
             </div>
           </div>
         )}
 
         {/* Submit Button */}
-        <div className="flex justify-end space-x-3 pt-4">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2 sm:pt-4 sticky bottom-0 sm:static bg-white dark:bg-gray-900 sm:bg-transparent p-4 sm:p-0 -mx-4 sm:mx-0 border-t sm:border-0 border-gray-200 dark:border-gray-700">
           <Button
             type="button"
             variant="outline"
             onClick={onCancel}
             disabled={isSubmitting}
+            className="w-full sm:w-auto"
           >
             Cancel
           </Button>
           
           <Button
             type="submit"
-            disabled={isSubmitting || !conversionPreview || !!conversionError}
-            className="min-w-[120px]"
+            disabled={isSubmitting}
+            className="w-full sm:w-auto sm:min-w-[120px]"
           >
             {isSubmitting ? (
               <>

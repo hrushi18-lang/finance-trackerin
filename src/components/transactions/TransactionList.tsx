@@ -20,6 +20,9 @@ import {
 import { format, isToday, isYesterday, isThisWeek, isThisMonth } from 'date-fns';
 import LuxuryCategoryIcon from '../common/LuxuryCategoryIcon';
 import { TransactionDetailsModal } from '../modals/TransactionDetailsModal';
+import { InlineConversionDisplay } from '../common/CurrencyConversionPreview';
+import { useProfile } from '../../contexts/ProfileContext';
+import { formatTransactionAmount, getTransactionCurrencyDetails } from '../../utils/transactionDisplay';
 
 interface TransactionListProps {
   accountId?: string;
@@ -41,6 +44,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     isLoading, 
     error 
   } = useFinance();
+  const { profile } = useProfile();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -381,7 +385,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                 <div className="text-right">
                   <p className={`font-numbers text-sm font-bold ${getTransactionColor(transaction.type)}`}>
                     {transaction.type === 'income' ? '+' : transaction.type === 'expense' ? '-' : ''}
-                    ${(transaction.amount || 0).toLocaleString()}
+                    {formatTransactionAmount(
+                      transaction, 
+                      profile?.primaryCurrency || 'USD',
+                      { showOriginal: true, showConverted: true, compact: true }
+                    )}
                   </p>
                   <p className="text-xs font-body" style={{ color: 'var(--text-secondary)' }}>
                     {getAccountName(transaction.account_id)}

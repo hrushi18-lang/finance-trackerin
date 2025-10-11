@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { X, DollarSign, CreditCard, FileText, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { DollarSign, CreditCard, FileText, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import { useFinance } from '../../contexts/FinanceContext';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
-import { Modal } from '../common/Modal';
 import { Select } from '../common/Select';
 import { CurrencyIcon } from '../common/CurrencyIcon';
-import { unifiedCurrencyService } from '../../services/unifiedCurrencyService';
 import { useProfile } from '../../contexts/ProfileContext';
+import { useUniversalCurrency } from '../../hooks/useUniversalCurrency';
+import { currencyConversionService } from '../../services/currencyConversionService';
+import { Decimal } from 'decimal.js';
 
 export interface BillPaymentFormData {
   amount: number;
@@ -19,9 +20,6 @@ export interface BillPaymentFormData {
 }
 
 interface BillPaymentFormProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: BillPaymentFormData) => Promise<void>;
   bill: {
     id: string;
     title: string;
@@ -30,17 +28,23 @@ interface BillPaymentFormProps {
     dueDate: string;
     status: string;
   };
+  accounts: any[];
+  onSubmit: (data: BillPaymentFormData) => Promise<void>;
+  onCancel: () => void;
+  isSubmitting?: boolean;
 }
 
 export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({
-  isOpen,
-  onClose,
+  bill,
+  accounts,
   onSubmit,
-  bill
+  onCancel,
+  isSubmitting: externalIsSubmitting
 }) => {
-  const { accounts, user } = useFinance();
-  const { currency, formatCurrency } = useInternationalization();
+  const { user, executeBillPayment } = useFinance();
+  const { currency } = useInternationalization();
   const { profile } = useProfile();
+  const { processTransaction, isProcessing, error: currencyError } = useUniversalCurrency();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentCurrency, setPaymentCurrency] = useState(bill.currency);
@@ -49,7 +53,8 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({
   const [selectedCurrency, setSelectedCurrency] = useState(bill.currency);
   const [conversionError, setConversionError] = useState<string | null>(null);
   
-  const primaryCurrency = profile?.primaryCurrency || currency.code;
+  // Use primary currency from profile or internationalization context
+  const primaryCurrency = profile?.primaryCurrency || currency?.code || 'USD';
   const billCurrency = bill.currency || primaryCurrency;
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BillPaymentFormData>({
@@ -80,39 +85,30 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({
     }
   }, [selectedAccount, setValue]);
 
-  // ✅ UPDATED: Generate conversion preview using unified service
+  // ✅ Generate conversion preview using Universal Currency System
   useEffect(() => {
     const generatePreview = async () => {
       if (watchedAmount && selectedAccount && watchedAmount > 0) {
         try {
           setConversionError(null);
           
-          // Use processPayment for bill payment preview
-          const preview = await unifiedCurrencyService.processPayment({
-            paymentType: 'bill_payment',
+          // Use Universal Currency System for bill payment
+          const preview = await processTransaction({
             amount: Number(watchedAmount),
-            paymentCurrency: billCurrency, // Bill's native currency
+            currency: billCurrency,
+            type: 'expense',
             accountId: selectedAccount.id,
             accountCurrency: selectedAccount.currencycode || primaryCurrency,
-            primaryCurrency: primaryCurrency,
-            userId: user?.id || '',
-            targetEntityId: bill.id,
-            targetEntityType: 'bill',
-            targetEntityCurrency: billCurrency,
-            targetEntityAmount: bill.amount,
-            description: `Payment for ${bill.title}`
+            baseCurrency: primaryCurrency,
+            description: `Bill payment: ${bill.title}`
           });
           
-          if (preview.success) {
-            setConversionPreview(preview);
-            console.log('💡 Bill payment preview:', {
-              deductFromAccount: `${preview.accountCurrency}${preview.accountDeduction}`,
-              billAmount: `${billCurrency}${bill.amount}`
-            });
-          } else {
-            setConversionPreview(null);
-            setConversionError(preview.error || 'Conversion failed');
-          }
+          setConversionPreview(preview);
+          console.log('💡 Bill payment preview:', {
+            deductFromAccount: preview.accountFormatted,
+            baseDisplay: preview.baseFormatted,
+            balanceChange: preview.accountBalanceChange
+          });
         } catch (error: any) {
           console.error('Conversion preview error:', error);
           setConversionPreview(null);
@@ -125,7 +121,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({
     };
     
     generatePreview();
-  }, [watchedAmount, selectedAccount, billCurrency, primaryCurrency, bill.amount, bill.id, bill.title, user]);
+  }, [watchedAmount, selectedAccount, billCurrency, primaryCurrency, bill.title, processTransaction]);
 
   const handleFormSubmit = async (data: BillPaymentFormData) => {
     try {
@@ -150,20 +146,30 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({
         description: data.description
       };
 
-      // Execute bill payment
+      // Execute bill payment using Currency Execution Engine
+      // This handles:
+      // 1. Currency conversion (bill currency → account currency → primary currency)
+      // 2. Account balance update
+      // 3. Transaction creation
+      // 4. Bill status update
       const result = await executeBillPayment(bill.id, executionRequest);
 
       if (result.success) {
         console.log(`✅ Bill payment executed successfully:`, {
           billId: bill.id,
           originalAmount: amount,
+          originalCurrency: executionRequest.currency,
           accountAmount: result.accountAmount,
+          accountCurrency: result.accountCurrency,
           primaryAmount: result.primaryAmount,
-          conversionCase: result.auditData.conversionCase
+          primaryCurrency: result.primaryCurrency,
+          conversionCase: result.auditData.conversionCase,
+          exchangeRate: result.exchangeRate
         });
         
-        await onSubmit(data);
-        onClose();
+        // ✅ Everything is already done by executeBillPayment
+        // No need to call onSubmit - that would create duplicate transaction!
+        onCancel(); // Just close the form
       } else {
         throw new Error(result.error || 'Bill payment failed');
       }
@@ -195,8 +201,7 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Pay Bill: ${bill.title}`} size="lg">
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6 p-6">
         {/* Bill Information */}
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
           <div className="flex items-center justify-between">
@@ -358,18 +363,18 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({
           <Button
             type="button"
             variant="outline"
-            onClick={onClose}
-            disabled={isSubmitting}
+            onClick={onCancel}
+            disabled={isSubmitting || externalIsSubmitting}
           >
             Cancel
           </Button>
           
           <Button
             type="submit"
-            disabled={isSubmitting || !conversionPreview || !!conversionError}
+            disabled={isSubmitting || externalIsSubmitting || !conversionPreview || !!conversionError}
             className="min-w-[120px]"
           >
-            {isSubmitting ? (
+            {(isSubmitting || externalIsSubmitting) ? (
               <>
                 <Loader2 size={16} className="animate-spin mr-2" />
                 Processing...
@@ -380,6 +385,5 @@ export const BillPaymentForm: React.FC<BillPaymentFormProps> = ({
           </Button>
         </div>
       </form>
-    </Modal>
   );
 };

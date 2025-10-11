@@ -136,11 +136,32 @@ export interface Transaction {
   createdAt?: Date;
   updatedAt?: Date;
   
-  // Currency and payment tracking fields (matching database schema)
-  currencycode?: string;
+  // COMPLETE Multi-currency fields (matching database schema)
+  currencycode?: string; // Primary currency (for reporting)
+  
+  // Native (original transaction currency - what user actually paid/received)
+  native_amount?: number;
+  native_currency?: string;
+  native_symbol?: string;
+  
+  // Converted (account currency - for balance deduction)
+  converted_amount?: number;
+  converted_currency?: string;
+  converted_symbol?: string;
+  
+  // Primary (primary currency - for reporting)
+  primary_amount?: number;
+  primary_currency?: string;
+  
+  // Conversion tracking
   original_amount?: number;
   original_currency?: string;
+  exchange_rate?: number;
   exchange_rate_used?: number;
+  conversion_source?: string;
+  conversion_metadata?: Record<string, any>;
+  
+  // Payment tracking
   payment_source?: string;
   source_entity_id?: string;
   source_entity_type?: string;
@@ -498,18 +519,24 @@ export interface Budget {
   spent?: number;
   period: 'weekly' | 'monthly' | 'yearly';
   userId: string;
-  accountId?: string; // Link budgets to specific accounts
   // Scoping fields
   activityScope?: 'general' | 'account_specific' | 'category_based';
   accountIds?: string[];
   targetCategory?: string;
-  currencycode?: string;
-  startDate?: Date;
-  endDate?: Date;
-  // Currency tracking fields (matching database schema)
-  original_amount?: number;
-  original_currency?: string;
-  exchange_rate_used?: number;
+  // Status control fields (NEW)
+  is_active?: boolean;
+  status?: 'active' | 'paused' | 'stopped' | 'archived' | 'completed';
+  archived_at?: Date;
+  stop_reason?: string;
+  // Multi-currency fields (matching database schema)
+  native_amount?: number;
+  native_currency?: string;
+  converted_amount?: number;
+  converted_currency?: string;
+  exchange_rate?: number;
+  conversion_source?: string;
+  conversion_case?: string;
+  execution_id?: string;
   createdAt: Date;
   updatedAt?: Date;
 }

@@ -8,9 +8,8 @@ import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';
 import { Select } from '../common/Select';
 import { CurrencyIcon } from '../common/CurrencyIcon';
-import { simpleCurrencyService } from '../../services/simpleCurrencyService';
-// Removed ManualCurrencyEntry - only 4 currencies supported
-import { Decimal } from 'decimal.js';
+import { useUniversalCurrency } from '../../hooks/useUniversalCurrency';
+import { useProfile } from '../../contexts/ProfileContext';
 
 export interface UniversalPaymentData {
   amount: number;
@@ -48,22 +47,18 @@ export const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   paymentType = 'payment',
   linkedEntity
 }) => {
-  const { accounts, executeCurrencyTransaction, executeBillPayment, executeLiabilityPayment, executeGoalContribution } = useFinance();
-  const { primaryCurrency, formatCurrency } = useInternationalization();
+  const { accounts } = useFinance();
+  const { formatCurrency } = useInternationalization();
+  const { profile } = useProfile();
+  const { processTransaction, isProcessing, formatCurrency: formatAmount } = useUniversalCurrency();
+  
+  const primaryCurrency = profile?.primaryCurrency || 'USD';
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedCurrency, setSelectedCurrency] = useState(defaultValues.currency || primaryCurrency.code);
+  const [selectedCurrency, setSelectedCurrency] = useState(defaultValues.currency || primaryCurrency);
   const [selectedAccount, setSelectedAccount] = useState<typeof accounts[0] | null>(null);
-  const [conversionPreview, setConversionPreview] = useState<{
-    accountAmount: number;
-    accountCurrency: string;
-    primaryAmount: number;
-    primaryCurrency: string;
-    exchangeRate: number;
-    conversionCase: string;
-  } | null>(null);
+  const [conversionPreview, setConversionPreview] = useState<any | null>(null);
   const [conversionError, setConversionError] = useState<string | null>(null);
-  // Removed manual entry state - only 4 currencies supported
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<UniversalPaymentData>({
     defaultValues: {
@@ -115,27 +110,27 @@ export const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     try {
       setConversionError(null);
       
-      // All currencies are supported now (only 4 currencies)
-
-      // Use simple currency service for conversion
-      const conversion = simpleCurrencyService.convertForTransaction(
-        Number(watchedAmount),
-        selectedCurrency,
-        selectedAccount.currencycode,
-        primaryCurrency.code
-      );
+      // ✅ Use Universal Currency System for payment preview
+      const preview = await processTransaction({
+        amount: Number(watchedAmount),
+        currency: selectedCurrency,
+        type: 'expense', // Payment is an expense
+        accountId: selectedAccount.id,
+        accountCurrency: selectedAccount.currencycode || primaryCurrency,
+        baseCurrency: primaryCurrency,
+        description: linkedEntity ? `Payment: ${linkedEntity.name}` : 'Payment'
+      });
       
-      setConversionPreview({
-        accountAmount: conversion.accountAmount,
-        accountCurrency: conversion.accountCurrency,
-        primaryAmount: conversion.primaryAmount,
-        primaryCurrency: conversion.primaryCurrency,
-        exchangeRate: conversion.exchangeRate,
-        conversionCase: 'hardcoded'
+      setConversionPreview(preview);
+      console.log('💡 Payment preview:', {
+        deduct: preview.accountFormatted,
+        display: preview.baseFormatted,
+        conversionPath: preview.conversionPath
       });
     } catch (error: any) {
       console.error('Conversion preview error:', error);
       setConversionError(error.message);
+      setConversionPreview(null);
     }
   };
 
@@ -270,65 +265,59 @@ export const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           </div>
         </div>
 
-        {/* Conversion Preview */}
-        {conversionPreview && (
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+        {/* ✅ Enhanced Conversion Preview with Universal Currency System */}
+        {conversionPreview && !conversionError && (
+          <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800">
             <div className="flex items-center space-x-2 mb-3">
-              <CheckCircle size={16} className="text-green-600 dark:text-green-400" />
-              <h4 className="font-medium text-green-900 dark:text-green-100">Conversion Preview</h4>
+              <CheckCircle size={16} className="text-blue-600 dark:text-blue-400" />
+              <h4 className="font-medium text-blue-900 dark:text-blue-100">Multi-Currency Conversion</h4>
             </div>
             
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">You're paying:</span>
-                <span className="font-medium">
-                  {simpleCurrencyService.formatAmount(watchedAmount, selectedCurrency)}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600 dark:text-gray-400">You pay:</span>
+                <span className="font-numbers font-bold text-lg text-gray-900 dark:text-white">
+                  {conversionPreview.transactionFormatted}
                 </span>
               </div>
               
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">From account:</span>
-                <span className="font-medium">
-                  {simpleCurrencyService.formatAmount(conversionPreview.accountAmount, conversionPreview.accountCurrency)}
+              <div className="h-px bg-blue-200 dark:bg-blue-700"></div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600 dark:text-gray-400">Deducted from account:</span>
+                <span className="font-numbers font-semibold text-red-600 dark:text-red-400">
+                  -{conversionPreview.accountFormatted}
                 </span>
               </div>
               
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Net worth impact:</span>
-                <span className="font-medium">
-                  {simpleCurrencyService.formatAmount(conversionPreview.primaryAmount, conversionPreview.primaryCurrency)}
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600 dark:text-gray-400">Dashboard shows:</span>
+                <span className="font-numbers font-semibold text-blue-600 dark:text-blue-400">
+                  {conversionPreview.baseFormatted}
                 </span>
               </div>
               
-              {conversionPreview.exchangeRate !== 1 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Exchange rate:</span>
-                  <span className="font-medium">
-                    1 {selectedCurrency} = {conversionPreview.exchangeRate.toFixed(4)} {conversionPreview.accountCurrency}
-                  </span>
+              
+              {/* Exchange Rate Info */}
+              {conversionPreview.conversionPath !== 'T=A=B (No conversion)' && (
+                <div className="pt-3 border-t border-blue-200 dark:border-blue-700 space-y-1">
+                  <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                    <span>Exchange Rate:</span>
+                    <span className="font-mono">
+                      1 {conversionPreview.transactionCurrency} = {conversionPreview.rates.transactionToAccount.toFixed(4)} {conversionPreview.accountCurrency}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                    <span>Conversion Path:</span>
+                    <span className="font-medium text-blue-600 dark:text-blue-400">
+                      {conversionPreview.transactionCurrency} → {conversionPreview.accountCurrency} → {conversionPreview.baseCurrency}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500 italic text-center mt-2">
+                    {conversionPreview.conversionPath}
+                  </div>
                 </div>
               )}
-              
-              <div className="pt-2 border-t border-green-200 dark:border-green-700">
-                <p className="text-xs text-green-700 dark:text-green-300">
-                  Rates based on INR: 1 USD = ₹88.20, 1 EUR = ₹103.60, 1 GBP = ₹118.50
-                </p>
-              </div>
-              
-              {conversionPreview.rateTimestamp && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Rate as of:</span>
-                  <span className="font-medium text-xs">
-                    {new Date(conversionPreview.rateTimestamp).toISOString().split('T')[0]} {new Date(conversionPreview.rateTimestamp).toTimeString().split(' ')[0]} UTC
-                  </span>
-                </div>
-              )}
-              
-              <div className="pt-2 border-t border-green-200 dark:border-green-700">
-                <p className="text-xs text-green-700 dark:text-green-300">
-                  {getConversionCaseDescription(conversionPreview.conversionCase)}
-                </p>
-              </div>
             </div>
           </div>
         )}

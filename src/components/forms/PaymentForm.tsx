@@ -6,9 +6,9 @@ import { Button } from '../common/Button';
 import { Liability, FinancialAccount } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
-import { unifiedCurrencyService } from '../../services/unifiedCurrencyService';
 import { useProfile } from '../../contexts/ProfileContext';
-import { useFinance } from '../../contexts/FinanceContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useUniversalCurrency } from '../../hooks/useUniversalCurrency';
 
 interface PaymentFormData {
   amount: number;
@@ -26,9 +26,12 @@ interface PaymentFormProps {
 }
 
 export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = [], onSubmit, onCancel }) => {
+  const { executeLiabilityPayment } = useFinance();
   const { currency, formatCurrency } = useInternationalization();
   const { profile } = useProfile();
-  const { user } = useFinance();
+  const { user } = useAuth();
+  const { processTransaction } = useUniversalCurrency();
+  
   const [paymentImpact, setPaymentImpact] = useState<{
     newBalance: number;
     percentagePaid: number;
@@ -64,108 +67,127 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
     }
   }, [watchedAccountId, accounts]);
 
-  // ✅ Generate conversion preview using unified service
+  // ✅ Generate conversion preview using Universal Currency System
   useEffect(() => {
     const generatePreview = async () => {
       if (watchedAmount && selectedAccount && liability && watchedAmount > 0) {
         try {
-      const amount = parseFloat(watchedAmount.toString());
+          const amount = parseFloat(watchedAmount.toString());
           if (isNaN(amount) || amount <= 0) {
             setConversionPreview(null);
             setPaymentImpact(null);
-          return;
-        }
+            return;
+          }
 
           const accountCurrency = selectedAccount.currencycode || primaryCurrency;
           
-          // Use processPayment for liability payment preview
-          const preview = await unifiedCurrencyService.processPayment({
-            paymentType: 'liability_payment',
+          // Use Universal Currency System for liability payment
+          const preview = await processTransaction({
             amount: amount,
-            paymentCurrency: accountCurrency, // Payment in account currency
+            currency: liabilityCurrency,
+            type: 'expense',
             accountId: selectedAccount.id,
             accountCurrency: accountCurrency,
-            primaryCurrency: primaryCurrency,
-            userId: user?.id || '',
-            targetEntityId: liability.id || '',
-            targetEntityType: 'liability',
-            targetEntityCurrency: liabilityCurrency,
-            targetEntityAmount: liability.remainingAmount || liability.totalAmount,
+            baseCurrency: primaryCurrency,
             description: `Payment for ${liability.name}`
           });
           
-          if (preview.success) {
-            setConversionPreview(preview);
-            
-            // Calculate payment impact
-            const remainingAmount = liability.remainingAmount || liability.totalAmount;
-            const newBalance = Math.max(0, remainingAmount - preview.entityAddition);
-            const totalAmount = liability.totalAmount;
-            const percentagePaid = totalAmount > 0 ? ((totalAmount - newBalance) / totalAmount) * 100 : 0;
-            
-            setPaymentImpact({
-              newBalance: newBalance,
-              percentagePaid: percentagePaid,
-              accountName: selectedAccount.name
-            });
-            
-            console.log('💡 Liability payment preview:', {
-              deductFromAccount: `${preview.accountCurrency}${preview.accountDeduction}`,
-              reduceLiability: `${preview.entityCurrency}${preview.entityAddition}`,
-              newBalance: newBalance
-        });
-      } else {
-            setConversionPreview(null);
-            setPaymentImpact(null);
-          }
+          setConversionPreview(preview);
+          
+          // Calculate payment impact
+          const remainingAmount = liability.remainingAmount || liability.totalAmount;
+          const newBalance = Math.max(0, remainingAmount - amount);
+          const totalAmount = liability.totalAmount;
+          const percentagePaid = totalAmount > 0 ? ((totalAmount - newBalance) / totalAmount) * 100 : 0;
+          
+          setPaymentImpact({
+            newBalance: newBalance,
+            percentagePaid: percentagePaid,
+            accountName: selectedAccount.name
+          });
+          
+          console.log('💡 Liability payment preview:', {
+            deductFromAccount: preview.accountFormatted,
+            reduceLiability: amount,
+            newBalance: newBalance,
+            conversionPath: preview.conversionPath
+          });
         } catch (error: any) {
           console.error('Conversion preview error:', error);
           setConversionPreview(null);
+          setPaymentImpact(null);
+        }
+      } else {
+        setConversionPreview(null);
         setPaymentImpact(null);
       }
-    } else {
-        setConversionPreview(null);
-      setPaymentImpact(null);
-    }
     };
     
     generatePreview();
-  }, [watchedAmount, selectedAccount, liability, primaryCurrency, liabilityCurrency, user]);
+  }, [watchedAmount, selectedAccount, liability, primaryCurrency, liabilityCurrency, processTransaction]);
 
-  const handleFormSubmit = (data: PaymentFormData) => {
+  const handleFormSubmit = async (data: PaymentFormData) => {
+    if (!liability) return;
+    
     try {
       setIsSubmitting(true);
       
       const amount = Number(data.amount) || 0;
-      const remainingAmount = Number(liability?.remainingAmount) || 0;
+      const remainingAmount = Number(liability.remainingAmount) || 0;
       
       if (amount <= 0) {
         throw new Error('Payment amount must be greater than 0');
       }
       
+      if (!data.accountId) {
+        throw new Error('Please select an account');
+      }
+      
       // Handle overpayment with user confirmation
+      let finalAmount = amount;
       if (amount > remainingAmount && remainingAmount > 0) {
         const confirmed = window.confirm(`Payment of ${formatCurrency(amount)} exceeds remaining balance of ${formatCurrency(remainingAmount)}. Adjust to full payoff amount?`);
         if (!confirmed) {
           setIsSubmitting(false);
           return;
         }
-        data.amount = remainingAmount;
+        finalAmount = remainingAmount;
       }
       
-      // ✅ Pass conversion data with submission
-      const submissionData = {
-        ...data,
-        conversionData: conversionPreview ? {
-          accountDeduction: conversionPreview.accountDeduction,
-          entityAddition: conversionPreview.entityAddition,
-          transactionData: conversionPreview.transactionData
-        } : null
+      // Use Currency Execution Engine for liability payment
+      // This handles:
+      // 1. Currency conversion (payment currency → account currency → primary currency)
+      // 2. Account balance deduction
+      // 3. Transaction creation with multi-currency data
+      // 4. Liability remaining amount update
+      const executionRequest = {
+        amount: finalAmount,
+        currency: data.currency || liabilityCurrency,
+        accountId: data.accountId,
+        operation: 'deduct' as const,
+        description: data.description || `Payment for ${liability.name}`
       };
       
-      onSubmit(submissionData as any);
-    } catch (error) {
+      const result = await executeLiabilityPayment(liability.id, executionRequest);
+      
+      if (result.success) {
+        console.log(`✅ Liability payment executed successfully:`, {
+          liabilityId: liability.id,
+          paymentAmount: finalAmount,
+          accountDeduction: result.accountAmount,
+          primaryImpact: result.primaryAmount,
+          conversionCase: result.auditData.conversionCase
+        });
+        
+        // ✅ Everything is already done by executeLiabilityPayment
+        // Just close the form
+        onCancel();
+      } else {
+        throw new Error(result.error || 'Liability payment failed');
+      }
+    } catch (error: any) {
       console.error('Payment form submission error:', error);
+      alert(`Payment failed: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -210,29 +232,49 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
         </div>
       </div>
 
-      {/* ✅ Conversion Preview */}
+      {/* ✅ Enhanced Conversion Preview with Universal Currency System */}
       {conversionPreview && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-green-900 mb-3">💰 Payment Conversion Preview</h4>
-          <div className="space-y-2 text-sm">
+        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200">
+          <div className="flex items-center space-x-2 mb-3">
+            <CheckCircle size={16} className="text-blue-600" />
+            <h4 className="font-medium text-blue-900">Multi-Currency Liability Payment</h4>
+          </div>
+          
+          <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-green-700">Deduct from account:</span>
-              <span className="font-semibold text-green-900">
-                {conversionPreview.accountCurrency} {conversionPreview.accountDeduction.toFixed(2)}
+              <span className="text-xs text-gray-600">You pay:</span>
+              <span className="font-numbers font-bold text-lg text-gray-900">
+                {conversionPreview.transactionFormatted}
               </span>
             </div>
-            <div className="flex items-center justify-center text-green-600">
-              <ArrowRight size={16} />
-            </div>
+            
+            <div className="h-px bg-blue-200"></div>
+            
             <div className="flex justify-between items-center">
-              <span className="text-green-700">Reduce liability by:</span>
-              <span className="font-semibold text-green-900">
-                {conversionPreview.entityCurrency} {conversionPreview.entityAddition.toFixed(2)}
+              <span className="text-xs text-gray-600">Deducted from account:</span>
+              <span className="font-numbers font-semibold text-red-600">
+                -{conversionPreview.accountFormatted}
               </span>
             </div>
-            {conversionPreview.accountCurrency !== conversionPreview.entityCurrency && (
-              <div className="text-xs text-green-600 mt-2 pt-2 border-t border-green-200">
-                Exchange rate: 1 {conversionPreview.accountCurrency} = {conversionPreview.exchangeRates.paymentToEntity.toFixed(4)} {conversionPreview.entityCurrency}
+            
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-600">Dashboard shows:</span>
+              <span className="font-numbers font-semibold text-blue-600">
+                {conversionPreview.baseFormatted}
+              </span>
+            </div>
+            
+            {conversionPreview.conversionPath !== 'T=A=B (No conversion)' && (
+              <div className="pt-2 border-t border-blue-200 space-y-1">
+                <div className="flex justify-between items-center text-xs text-gray-500">
+                  <span>Exchange Rate:</span>
+                  <span className="font-mono">
+                    1 {conversionPreview.transactionCurrency} = {conversionPreview.rates.transactionToAccount.toFixed(4)} {conversionPreview.accountCurrency}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-400 italic text-center">
+                  {conversionPreview.conversionPath}
+                </div>
               </div>
             )}
           </div>
@@ -263,21 +305,43 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
       )}
 
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-        {/* Amount */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Payment Amount
-          </label>
-          <Input
-            type="number"
-            step="0.01"
-            {...register('amount', {
-              required: 'Payment amount is required',
-              min: { value: 0.01, message: 'Amount must be greater than 0' }
-            })}
-            placeholder="Enter payment amount"
-            error={errors.amount?.message}
-          />
+        {/* Amount and Currency Selection */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Payment Amount
+            </label>
+            <Input
+              type="number"
+              step="0.01"
+              {...register('amount', {
+                required: 'Payment amount is required',
+                min: { value: 0.01, message: 'Amount must be greater than 0' }
+              })}
+              placeholder="Enter payment amount"
+              error={errors.amount?.message}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Payment Currency
+            </label>
+            <select
+              {...register('currency')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={liabilityCurrency}>{liabilityCurrency} - Liability Currency (Default)</option>
+              <option value={primaryCurrency}>{primaryCurrency} - Your Primary Currency</option>
+              {selectedAccount && selectedAccount.currencycode !== liabilityCurrency && selectedAccount.currencycode !== primaryCurrency && (
+                <option value={selectedAccount.currencycode}>{selectedAccount.currencycode} - Account Currency</option>
+              )}
+              <option value="USD">USD - US Dollar</option>
+              <option value="EUR">EUR - Euro</option>
+              <option value="GBP">GBP - British Pound</option>
+              <option value="INR">INR - Indian Rupee</option>
+            </select>
+          </div>
         </div>
 
         {/* Account Selection */}
@@ -292,7 +356,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ liability, accounts = 
             <option value="">Select account...</option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                {account.name} - {formatCurrency(account.balance)}
+                {account.name} ({account.currencycode || primaryCurrency}) - {formatCurrency(account.balance)}
                 </option>
               ))}
             </select>

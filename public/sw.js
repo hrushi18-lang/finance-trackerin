@@ -20,9 +20,26 @@ self.addEventListener('install', (event) => {
 
 // Fetch event
 self.addEventListener('fetch', (event) => {
-  // Skip Google Fonts requests to avoid CSP issues
-  if (event.request.url.includes('fonts.googleapis.com') || event.request.url.includes('fonts.gstatic.com')) {
-    return;
+  const url = event.request.url;
+  
+  // Skip external API requests - let them go directly to the network
+  // These should NEVER be cached or intercepted by the service worker
+  const skipUrls = [
+    'fonts.googleapis.com',
+    'fonts.gstatic.com',
+    'openrouter.ai',
+    'api.openai.com',
+    'api.anthropic.com',
+    'generativelanguage.googleapis.com',
+    'supabase.co',
+    'exchangerate-api.com',
+    'api.fixer.io',
+    'api.currencyapi.com'
+  ];
+  
+  // If URL matches any of the skip patterns, don't intercept - let browser handle it
+  if (skipUrls.some(skipUrl => url.includes(skipUrl))) {
+    return; // Let the request pass through to the network
   }
   
   event.respondWith(
@@ -33,13 +50,11 @@ self.addEventListener('fetch', (event) => {
           return response;
         }
         
-        // Only fetch if it's not a Google Fonts request
-        if (!event.request.url.includes('fonts.googleapis.com') && !event.request.url.includes('fonts.gstatic.com')) {
-          return fetch(event.request).catch(() => {
-            // Return a fallback response for failed requests
-            return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
-          });
-        }
+        // Fetch from network
+        return fetch(event.request).catch(() => {
+          // Return a fallback response for failed requests
+          return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+        });
       })
   );
 });

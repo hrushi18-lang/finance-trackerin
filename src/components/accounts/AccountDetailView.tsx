@@ -7,6 +7,9 @@ import { CurrencyIcon } from '../common/CurrencyIcon';
 import { Button } from '../common/Button';
 import { TransactionDetailsModal } from '../modals/TransactionDetailsModal';
 import { AccountAnalyticsChart } from '../analytics/AccountAnalyticsChart';
+import { InlineConversionDisplay } from '../common/CurrencyConversionPreview';
+import { useProfile } from '../../contexts/ProfileContext';
+import { formatTransactionAmount as formatMultiCurrencyTransaction } from '../../utils/transactionDisplay';
 
 interface AccountDetailViewProps {
   account: FinancialAccount;
@@ -32,6 +35,7 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
   onToggleBalances
 }) => {
   const { formatCurrency, currency } = useInternationalization();
+  const { profile } = useProfile();
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'analytics'>('overview');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -342,7 +346,12 @@ export const AccountDetailView: React.FC<AccountDetailViewProps> = ({
                         <p className={`text-sm font-numbers font-bold ${
                           transaction.type === 'income' ? 'text-green-400' : 'text-red-400'
                         }`}>
-                          {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                          {transaction.type === 'income' ? '+' : '-'}
+                          {formatMultiCurrencyTransaction(
+                            transaction,
+                            profile?.primaryCurrency || currency.code,
+                            { showOriginal: true, showConverted: true, compact: true }
+                          )}
                         </p>
                         <p className="text-xs text-forest-400">
                           {format(new Date(transaction.date), 'MMM dd, yyyy')}

@@ -116,6 +116,11 @@ interface FinanceContextType {
   addBudget: (budget: Omit<Budget, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateBudget: (id: string, updates: Partial<Budget>) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
+  pauseBudget: (id: string, reason?: string) => Promise<void>;
+  resumeBudget: (id: string) => Promise<void>;
+  stopBudget: (id: string, reason?: string) => Promise<void>;
+  archiveBudget: (id: string, reason?: string) => Promise<void>;
+  completeBudget: (id: string) => Promise<void>;
   
   addBill: (bill: Omit<Bill, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<Bill>;
   updateBill: (id: string, updates: Partial<Bill>) => Promise<void>;
@@ -677,7 +682,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const paymentResult = await unifiedCurrencyService.processPayment({
       paymentType: 'goal_contribution',
       amount: amount,
-      paymentCurrency: accountCurrency, // User enters amount in account currency
+      paymentCurrency: goalCurrency, // ✅ User enters amount in goal's native currency
       accountId: sourceAccountId,
       accountCurrency: accountCurrency,
       primaryCurrency: primaryCurrency,
@@ -729,20 +734,47 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const withdrawGoalToAccount = async (toAccountId: string, goalId: string, amount: number, description?: string) => {
     if (!user) throw new Error('User not authenticated');
     
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) throw new Error('Goal not found');
+    
+    if (Number(goal.currentAmount || 0) < amount) {
+      throw new Error('Insufficient funds in goal');
+    }
+    
     // Ensure Goals Vault exists before attempting transfer
     await ensureGoalsVaultAccount();
     const vault = getGoalsVaultAccount();
     if (!vault) throw new Error('Goals Vault not available');
 
-    // Move funds from vault to destination
-    await transferBetweenAccounts(vault.id, toAccountId, amount, description || 'Goal Withdrawal');
+    const account = accounts.find(a => a.id === toAccountId);
+    if (!account) throw new Error('Account not found');
+    
+    // ✅ Use Universal Currency System for goal withdrawal
+    const { getCurrencySystem } = await import('../services/universalCurrencySystem');
+    const system = getCurrencySystem();
+    
+    const goalCurrency = (goal as any).currencycode || (goal as any).native_currency || getUserCurrency();
+    const accountCurrency = account.currencycode || getUserCurrency();
+    const primaryCurrency = getUserCurrency();
+    
+    const withdrawalResult = await system.processTransaction({
+      amount: amount,
+      currency: goalCurrency,
+      type: 'transfer',
+      accountId: vault.id,
+      accountCurrency: vault.currencycode || getUserCurrency(),
+      baseCurrency: primaryCurrency,
+      targetAccountId: toAccountId,
+      targetAccountCurrency: accountCurrency,
+      description: description || `Withdrawal from ${goal.title}`
+    });
+
+    // Move funds from vault to destination with conversion
+    await transferBetweenAccounts(vault.id, toAccountId, Math.abs(withdrawalResult.accountBalanceChange), description || 'Goal Withdrawal');
 
     // Update goal allocation downwards
-    const goal = goals.find(g => g.id === goalId);
-    if (goal) {
-      const newAmount = Math.max(0, Number(goal.currentAmount || 0) - Number(amount || 0));
-      await updateGoal(goalId, { currentAmount: newAmount });
-    }
+    const newAmount = Math.max(0, Number(goal.currentAmount || 0) - amount);
+    await updateGoal(goalId, { currentAmount: newAmount });
   };
 
   const payBillFromAccount = async (accountId: string, billId: string, amount?: number, description?: string) => {
@@ -753,44 +785,42 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const account = accounts.find(a => a.id === accountId);
     if (!account) throw new Error('Account not found');
 
-    // ✅ FIX: Use unified currency service for bill payment
-    const { unifiedCurrencyService } = await import('../services/unifiedCurrencyService');
+    // ✅ Use Universal Currency System for bill payment
+    const { getCurrencySystem } = await import('../services/universalCurrencySystem');
+    const system = getCurrencySystem();
     const primaryCurrency = getUserCurrency();
     const billCurrency = (bill as any).currencycode || primaryCurrency;
     const accountCurrency = account.currencycode || primaryCurrency;
     
-    const paymentResult = await unifiedCurrencyService.processPayment({
-      paymentType: 'bill_payment',
+    const paymentResult = await system.processTransaction({
       amount: payAmount,
-      paymentCurrency: billCurrency, // ✅ Payment in bill's native currency
+      currency: billCurrency,
+      type: 'expense',
       accountId: accountId,
       accountCurrency: accountCurrency,
-      primaryCurrency: primaryCurrency,
-      userId: user.id,
-      targetEntityId: billId,
-      targetEntityType: 'bill',
-      targetEntityCurrency: billCurrency,
-      targetEntityAmount: bill.amount,
+      baseCurrency: primaryCurrency,
       description: description || `Bill Payment: ${bill.title}`
     });
 
-    if (!paymentResult.success) {
-      throw new Error(paymentResult.error || 'Failed to process bill payment');
-    }
-
     // ✅ Create transaction with proper currency conversion data
     const transaction = await addTransaction({
-      ...paymentResult.transactionData,
+      type: 'expense',
+      amount: Math.abs(paymentResult.accountBalanceChange),
       category: bill.category || 'Bills',
+      description: paymentResult.summary.primary,
       date: new Date(),
+      accountId: accountId,
       affectsBalance: true,
       status: 'completed',
       billId: billId,
-      paymentSource: 'bill_payment',
-      sourceEntityId: billId,
-      sourceEntityType: 'bill',
-      deductFromBalance: true,
-      paymentContext: 'bill_payment'
+      native_amount: paymentResult.transactionAmount,
+      native_currency: paymentResult.transactionCurrency,
+      converted_amount: paymentResult.accountAmount,
+      converted_currency: paymentResult.accountCurrency,
+      primary_amount: paymentResult.baseAmount,
+      primary_currency: paymentResult.baseCurrency,
+      exchange_rate: paymentResult.rates.transactionToAccount,
+      conversion_source: 'universal_system'
     } as any);
 
     // Update bill schedule and mark as paid
@@ -847,46 +877,44 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const accountCurrency = account.currencycode || getUserCurrency();
     const liabilityCurrency = (liability as any).currencyCode || (liability as any).currencycode || getUserCurrency();
     
-    // ✅ FIX: Use unified currency service for liability payment
-    const { unifiedCurrencyService } = await import('../services/unifiedCurrencyService');
+    // ✅ Use Universal Currency System for liability payment
+    const { getCurrencySystem } = await import('../services/universalCurrencySystem');
+    const system = getCurrencySystem();
     const primaryCurrency = getUserCurrency();
     
-    const paymentResult = await unifiedCurrencyService.processPayment({
-      paymentType: 'liability_payment',
+    const paymentResult = await system.processTransaction({
       amount: amount,
-      paymentCurrency: accountCurrency, // ✅ Payment in account currency
+      currency: liabilityCurrency,
+      type: 'expense',
       accountId: accountId,
       accountCurrency: accountCurrency,
-      primaryCurrency: primaryCurrency,
-      userId: user.id,
-      targetEntityId: liabilityId,
-      targetEntityType: 'liability',
-      targetEntityCurrency: liabilityCurrency,
-      targetEntityAmount: liability.remainingAmount,
+      baseCurrency: primaryCurrency,
       description: description || `Payment for ${liability.name}`
     });
 
-    if (!paymentResult.success) {
-      throw new Error(paymentResult.error || 'Failed to process liability payment');
-    }
-
     // ✅ Create transaction with proper currency conversion data
     await addTransaction({
-      ...paymentResult.transactionData,
+      type: 'expense',
+      amount: Math.abs(paymentResult.accountBalanceChange),
       category: 'Debt Repayment',
+      description: paymentResult.summary.primary,
       date: new Date(),
+      accountId: accountId,
       affectsBalance: true,
       status: 'completed',
       liabilityId: liabilityId,
-      paymentSource: 'liability_payment',
-      sourceEntityId: liabilityId,
-      sourceEntityType: 'liability',
-      deductFromBalance: true,
-      paymentContext: 'liability_repayment'
+      native_amount: paymentResult.transactionAmount,
+      native_currency: paymentResult.transactionCurrency,
+      converted_amount: paymentResult.accountAmount,
+      converted_currency: paymentResult.accountCurrency,
+      primary_amount: paymentResult.baseAmount,
+      primary_currency: paymentResult.baseCurrency,
+      exchange_rate: paymentResult.rates.transactionToAccount,
+      conversion_source: 'universal_system'
     } as any);
 
     // ✅ Update liability remaining amount in LIABILITY'S native currency
-    const newRemaining = Math.max(0, Number(liability.remainingAmount || 0) - paymentResult.entityAddition);
+    const newRemaining = Math.max(0, Number(liability.remainingAmount || 0) - paymentResult.transactionAmount);
     await updateLiability(liabilityId, { remainingAmount: newRemaining, status: newRemaining === 0 ? 'paid_off' : liability.status });
   };
 
@@ -2961,10 +2989,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type: acc.type
       }));
 
+      // Get user's primary currency
+      const userPrimaryCurrency = getUserCurrency();
+      
       // Create new engine instance with current data
       const engine = new (await import('../services/currencyExecutionEngine')).CurrencyExecutionEngine(
         accountBalances,
-        'USD', // Primary currency
+        userPrimaryCurrency, // Use user's actual primary currency
         user?.id || null // User ID for database logging
       );
 
@@ -3067,24 +3098,56 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) throw new Error('User not authenticated');
 
     try {
-      // Execute the currency transaction
-      const result = await executeCurrencyTransaction(request);
+      // Find the liability to get its currency
+      const liability = liabilities.find(l => l.id === liabilityId);
+      if (!liability) throw new Error('Liability not found');
+      
+      const liabilityCurrency = (liability as any).currencyCode || (liability as any).currencycode || getUserCurrency();
+      
+      // Execute the currency transaction with proper conversion
+      // This handles: account deduction, transaction creation, multi-currency tracking
+      const result = await executeCurrencyTransaction({
+        ...request,
+        currency: liabilityCurrency, // Use liability's currency for conversion
+        description: request.description || `Payment for ${liability.name}`
+      });
 
       if (result.success) {
-        // Update liability balance
-        const liability = liabilities.find(l => l.id === liabilityId);
-        if (liability) {
-          const newRemainingAmount = Math.max(0, liability.remainingAmount - result.accountAmount);
-          
-          // Update liability remaining amount in local state
-          
-          // Update local state
-          setLiabilities(prev => prev.map(l => 
-            l.id === liabilityId 
-              ? { ...l, remainingAmount: newRemainingAmount }
-              : l
-          ));
-        }
+        // Calculate new remaining amount in LIABILITY's currency
+        const currentRemaining = Number(liability.remainingAmount) || 0;
+        const paymentInLiabilityCurrency = result.auditData.originalAmount; // This is the amount in liability currency
+        const newRemainingAmount = Math.max(0, currentRemaining - paymentInLiabilityCurrency);
+        
+        // Update liability in database
+        await updateLiability(liabilityId, {
+          remainingAmount: newRemainingAmount,
+          status: newRemainingAmount === 0 ? 'paid_off' : liability.status,
+          lastPaymentDate: new Date()
+        });
+        
+        // Update local state
+        setLiabilities(prev => prev.map(l => 
+          l.id === liabilityId 
+            ? { 
+                ...l, 
+                remainingAmount: newRemainingAmount,
+                status: newRemainingAmount === 0 ? 'paid_off' : l.status,
+                lastPaymentDate: new Date()
+              }
+            : l
+        ));
+
+        console.log(`✅ Liability payment executed successfully:`, {
+          liabilityId,
+          paymentAmount: paymentInLiabilityCurrency,
+          liabilityCurrency,
+          accountDeduction: result.accountAmount,
+          accountCurrency: result.accountCurrency,
+          primaryImpact: result.primaryAmount,
+          primaryCurrency: result.primaryCurrency,
+          newRemaining: newRemainingAmount,
+          status: newRemainingAmount === 0 ? 'paid_off' : 'active'
+        });
       }
 
       return result;
@@ -3095,7 +3158,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         accountAmount: 0,
         accountCurrency: request.currency,
         primaryAmount: 0,
-        primaryCurrency: 'USD',
+        primaryCurrency: getUserCurrency(),
         error: error.message,
         auditData: {
           originalAmount: request.amount,
@@ -3155,33 +3218,61 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) throw new Error('User not authenticated');
 
     try {
-      // Execute the currency transaction
-      const result = await executeCurrencyTransaction(request);
+      // ✅ Use Universal Currency System for budget spending
+      const { getCurrencySystem } = await import('../services/universalCurrencySystem');
+      const system = getCurrencySystem();
+      
+      const budget = budgets.find(b => b.id === budgetId);
+      if (!budget) throw new Error('Budget not found');
+      
+      const budgetCurrency = budget.native_currency || budget.category || getUserCurrency();
+      const primaryCurrency = getUserCurrency();
+      
+      const spendingResult = await system.processTransaction({
+        amount: request.amount,
+        currency: request.currency,
+        type: 'expense',
+        accountId: request.accountId,
+        accountCurrency: request.currency,
+        baseCurrency: primaryCurrency,
+        description: `Budget spending: ${budget.category}`
+      });
+      
+      // Update budget spending in BUDGET'S currency
+      const newSpentAmount = (budget.spent || 0) + spendingResult.baseAmount;
+      
+      // Update budget in database
+      const { error } = await supabase
+        .from('budgets')
+        .update({ 
+          spent: newSpentAmount,
+          converted_amount: newSpentAmount,
+          conversion_source: 'universal_system'
+        })
+        .eq('id', budgetId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setBudgets(prev => prev.map(b => 
+        b.id === budgetId 
+          ? { ...b, spent: newSpentAmount }
+          : b
+      ));
 
-      if (result.success) {
-        // Update budget spending
-        const budget = budgets.find(b => b.id === budgetId);
-        if (budget) {
-          const newSpentAmount = (budget.spent || 0) + result.primaryAmount;
-          
-          // Update budget in database
-          const { error } = await supabase
-            .from('budgets')
-            .update({ spent: newSpentAmount })
-            .eq('id', budgetId);
-          
-          if (error) throw error;
-          
-          // Update local state
-          setBudgets(prev => prev.map(b => 
-            b.id === budgetId 
-              ? { ...b, spent: newSpentAmount }
-              : b
-          ));
+      return {
+        success: true,
+        accountAmount: spendingResult.accountAmount,
+        accountCurrency: spendingResult.accountCurrency,
+        primaryAmount: spendingResult.baseAmount,
+        primaryCurrency: spendingResult.baseCurrency,
+        auditData: {
+          originalAmount: spendingResult.transactionAmount,
+          originalCurrency: spendingResult.transactionCurrency,
+          conversionCase: spendingResult.conversionPath,
+          timestamp: spendingResult.timestamp
         }
-      }
-
-      return result;
+      };
     } catch (error: any) {
       console.error('Budget spending execution failed:', error);
       return {
@@ -3189,7 +3280,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         accountAmount: 0,
         accountCurrency: request.currency,
         primaryAmount: 0,
-        primaryCurrency: 'USD',
+        primaryCurrency: getUserCurrency(),
         error: error.message,
         auditData: {
           originalAmount: request.amount,
@@ -3214,10 +3305,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type: acc.type
       }));
 
+      // Get user's primary currency
+      const userPrimaryCurrency = getUserCurrency();
+      
       // Create new engine instance with current data
       const engine = new (await import('../services/currencyExecutionEngine')).CurrencyExecutionEngine(
         accountBalances,
-        'USD', // Primary currency
+        userPrimaryCurrency, // Use user's actual primary currency
         user?.id || null // User ID for database logging
       );
 
@@ -3284,10 +3378,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type: acc.type
       }));
 
+      // Get user's primary currency
+      const userPrimaryCurrency = getUserCurrency();
+      
       // Create new engine instance with current data
       const engine = new (await import('../services/currencyExecutionEngine')).CurrencyExecutionEngine(
         accountBalances,
-        'USD', // Primary currency
+        userPrimaryCurrency, // Use user's actual primary currency
         user?.id || null // User ID for database logging
       );
 
@@ -3359,10 +3456,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type: acc.type
       }));
 
+      // Get user's primary currency
+      const userPrimaryCurrency = getUserCurrency();
+      
       // Create new engine instance with current data
       const engine = new (await import('../services/currencyExecutionEngine')).CurrencyExecutionEngine(
         accountBalances,
-        'USD', // Primary currency
+        userPrimaryCurrency, // Use user's actual primary currency
         user?.id || null // User ID for database logging
       );
 
@@ -3434,10 +3534,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type: acc.type
       }));
 
+      // Get user's primary currency
+      const userPrimaryCurrency = getUserCurrency();
+
       // Create new engine instance with current data
       const engine = new (await import('../services/currencyExecutionEngine')).CurrencyExecutionEngine(
         accountBalances,
-        'USD', // Primary currency
+        userPrimaryCurrency, // Use user's actual primary currency
         user?.id || null // User ID for database logging
       );
 
@@ -3509,10 +3612,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         type: acc.type
       }));
 
+      // Get user's primary currency
+      const userPrimaryCurrency = getUserCurrency();
+      
       // Create new engine instance with current data
       const engine = new (await import('../services/currencyExecutionEngine')).CurrencyExecutionEngine(
         accountBalances,
-        'USD', // Primary currency
+        userPrimaryCurrency, // Use user's actual primary currency
         user?.id || null // User ID for database logging
       );
 
@@ -4410,6 +4516,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addBudget = async (budgetData: Omit<Budget, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('User not authenticated');
 
+    console.log('addBudget called with:', budgetData);
+
     // Get currency information
     const budgetCurrency = (budgetData as any).currencycode || getUserCurrency();
     const primaryCurrency = getUserCurrency();
@@ -4427,15 +4535,37 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     try {
-      // Use the safe insert function
-      const { data, error } = await supabase.rpc('frontend_add_budget', {
-        p_user_id: user.id,
-        p_category: budgetData.category,
-        p_amount: convertedAmount,
-        p_period: budgetData.period,
-        p_activity_scope: budgetData.activityScope || 'general',
-        p_linked_accounts_count: 0
-      });
+      // Filter out fields that don't exist in budgets table
+      // Database has: category, amount, spent, period, is_active, status, activity_scope
+      // Database does NOT have: startDate, endDate, categoryId, currencyCode (uses snake_case instead)
+      const dbBudgetData = {
+        user_id: user.id,
+        category: budgetData.category,
+        amount: convertedAmount,
+        spent: budgetData.spent || 0,
+        period: budgetData.period,
+        is_active: budgetData.is_active !== false,
+        status: budgetData.status || 'active',
+        activity_scope: budgetData.activityScope || 'general',
+        // Multi-currency fields (snake_case)
+        native_amount: (budgetData as any).native_amount || budgetData.amount,
+        native_currency: (budgetData as any).native_currency || budgetCurrency,
+        converted_amount: (budgetData as any).converted_amount || convertedAmount,
+        converted_currency: (budgetData as any).converted_currency || primaryCurrency,
+        exchange_rate: (budgetData as any).exchange_rate || exchangeRate,
+        conversion_source: (budgetData as any).conversion_source || 'manual',
+        conversion_case: (budgetData as any).conversion_case,
+        execution_id: (budgetData as any).execution_id
+      };
+
+      console.log('Inserting to database:', dbBudgetData);
+
+      // Direct insert with only valid columns
+      const { data, error } = await supabase
+        .from('budgets')
+        .insert([dbBudgetData])
+        .select()
+        .single();
 
       if (error) {
         console.error('Database error creating budget:', error);
@@ -4483,7 +4613,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         category: updates.category,
         amount: updates.amount,
         spent: updates.spent,
-        period: updates.period
+        period: updates.period,
+        is_active: updates.is_active,
+        status: updates.status,
+        archived_at: updates.archived_at,
+        stop_reason: updates.stop_reason
       })
       .eq('id', id)
       .eq('user_id', user.id);
@@ -4502,6 +4636,47 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         sendBudgetWarning(updatedBudget.category || 'Unknown', updatedBudget.spent, updatedBudget.amount);
       }
     }
+  };
+
+  // Budget Status Management
+  const pauseBudget = async (id: string, reason?: string) => {
+    await updateBudget(id, { 
+      is_active: false, 
+      status: 'paused',
+      stop_reason: reason 
+    });
+  };
+
+  const resumeBudget = async (id: string) => {
+    await updateBudget(id, { 
+      is_active: true, 
+      status: 'active',
+      stop_reason: undefined 
+    });
+  };
+
+  const stopBudget = async (id: string, reason?: string) => {
+    await updateBudget(id, { 
+      is_active: false, 
+      status: 'stopped',
+      stop_reason: reason 
+    });
+  };
+
+  const archiveBudget = async (id: string, reason?: string) => {
+    await updateBudget(id, { 
+      is_active: false, 
+      status: 'archived',
+      archived_at: new Date(),
+      stop_reason: reason 
+    });
+  };
+
+  const completeBudget = async (id: string) => {
+    await updateBudget(id, { 
+      is_active: false, 
+      status: 'completed'
+    });
   };
 
   const deleteBudget = async (id: string) => {
@@ -5457,6 +5632,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     addBudget,
     updateBudget,
     deleteBudget,
+    pauseBudget,
+    resumeBudget,
+    stopBudget,
+    archiveBudget,
+    completeBudget,
     addBill,
     updateBill,
     deleteBill,
