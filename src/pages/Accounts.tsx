@@ -644,6 +644,7 @@ const Accounts: React.FC = () => {
               ))}
             </div>
           )}
+                </div>
               </div>
             )}
           </>
