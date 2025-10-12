@@ -3586,11 +3586,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const nativeCurrencyInfo = getCurrencyInfo(result.auditData.originalCurrency);
         const convertedCurrencyInfo = getCurrencyInfo(result.primaryCurrency);
         
+        // Map liability_type to general type (for database constraint)
+        const mapLiabilityTypeToGeneralType = (liabilityType: string): 'loan' | 'credit_card' | 'mortgage' | 'purchase' | 'other' => {
+          if (liabilityType.includes('credit_card')) return 'credit_card';
+          if (liabilityType.includes('home_loan') || liabilityType.includes('mortgage')) return 'mortgage';
+          if (liabilityType.includes('bnpl') || liabilityType.includes('purchase')) return 'purchase';
+          if (liabilityType.includes('loan')) return 'loan';
+          return 'other';
+        };
+        
         // Create liability with converted amounts
         const liabilityData = {
           user_id: user.id,
           name: request.liabilityName!,
-          type: request.liabilityType || 'loan',
+          type: mapLiabilityTypeToGeneralType(request.liabilityType || 'loan'),
           liability_type: request.liabilityType || 'loan',
           total_amount: result.primaryAmount, // Use primary currency amount
           remaining_amount: result.primaryAmount,
