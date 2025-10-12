@@ -3579,6 +3579,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const result = await engine.executeLiabilityCreation(request);
 
       if (result.success) {
+        // Calculate monthly payment if not provided (total amount / 12 months as default)
+        const defaultMonthlyPayment = result.primaryAmount / 12;
+        
+        // Get currency symbols
+        const nativeCurrencyInfo = getCurrencyInfo(result.auditData.originalCurrency);
+        const convertedCurrencyInfo = getCurrencyInfo(result.primaryCurrency);
+        
         // Create liability with converted amounts
         const liabilityData = {
           user_id: user.id,
@@ -3588,19 +3595,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           total_amount: result.primaryAmount, // Use primary currency amount
           remaining_amount: result.primaryAmount,
           interest_rate: 0,
-          monthly_payment: 0,
+          monthly_payment: defaultMonthlyPayment > 0 ? defaultMonthlyPayment : 1, // Must be > 0
+          minimum_payment: defaultMonthlyPayment > 0 ? defaultMonthlyPayment : 1,
+          payment_day: 1,
           start_date: new Date().toISOString().split('T')[0],
           due_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 year from now
           status: 'active',
           is_active: true,
           notes: request.description,
           liability_status: 'new',
-          // Multi-currency data
+          activity_scope: 'general',
+          priority: 'medium',
+          payment_strategy: 'equal',
+          // Multi-currency data (ALL required fields)
           native_amount: result.auditData.originalAmount,
           native_currency: result.auditData.originalCurrency,
+          native_symbol: nativeCurrencyInfo?.symbol || '$',
           converted_amount: result.primaryAmount,
           converted_currency: result.primaryCurrency,
+          converted_symbol: convertedCurrencyInfo?.symbol || '$',
           exchange_rate: result.exchangeRate || 1,
+          exchange_rate_used: result.exchangeRate || 1,
           conversion_source: result.conversionSource || 'manual',
           original_currency: result.auditData.originalCurrency,
           currency_code: result.auditData.originalCurrency
