@@ -475,7 +475,7 @@ Liabilities: ${liabilities.length} total, $${liabilities.reduce((s, l) => s + (l
       const financialSummary = this.generateFinancialSummary(financialContext);
 
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+        model: this.defaultConfig.model!,
         messages: [
           {
             role: 'system',
@@ -492,7 +492,7 @@ Liabilities: ${liabilities.length} total, $${liabilities.reduce((s, l) => s + (l
             content: `Here's the user's financial data:\n\n${financialSummary}\n\nProvide 3-5 specific insights.`
           }
         ],
-        temperature: 0.7,
+        temperature: this.defaultConfig.temperature!,
         max_tokens: 500
       });
 
@@ -544,7 +544,7 @@ ${Object.entries(categoryBreakdown)
 
     try {
       const completion = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: this.defaultConfig.model!,
         messages: [
           {
             role: 'system',
@@ -577,7 +577,7 @@ ${Object.entries(categoryBreakdown)
 
     try {
       const completion = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: this.defaultConfig.model!,
         messages: [
           {
             role: 'system',
@@ -588,7 +588,7 @@ ${Object.entries(categoryBreakdown)
             content: question
           }
         ],
-        temperature: 0.7,
+        temperature: this.defaultConfig.temperature!,
         max_tokens: 150
       });
 
@@ -640,7 +640,7 @@ ${Object.entries(categoryBreakdown)
       const summary = this.generateFinancialSummary(financialContext);
       
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+        model: this.defaultConfig.model!,
         messages: [
           {
             role: 'system',
@@ -651,7 +651,7 @@ ${Object.entries(categoryBreakdown)
             content: summary
           }
         ],
-        temperature: 0.8,
+        temperature: this.defaultConfig.temperature!,
         max_tokens: 300
       });
 
