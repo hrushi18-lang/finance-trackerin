@@ -2,18 +2,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Sparkles, Send, Trash2, Download, TrendingUp, Target, 
   DollarSign, PiggyBank, AlertCircle, Lightbulb, MessageCircle,
-  BarChart3, Calendar, CreditCard
+  BarChart3, Calendar, CreditCard, Menu, X, RefreshCw
 } from 'lucide-react';
 import { useChat } from '../contexts/ChatContext';
 import { useFinance } from '../contexts/FinanceContext';
 import { ChatMessage } from '../components/chat/ChatMessage';
 import { format } from 'date-fns';
+import { Button } from '../components/common/Button';
 
 export default function AIAssistant() {
   const [input, setInput] = useState('');
   const [showInsights, setShowInsights] = useState(true);
   const [insights, setInsights] = useState<string[]>([]);
   const [loadingInsights, setLoadingInsights] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -131,242 +133,255 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
+      {/* Mobile-Optimized Header */}
+      <div className="sticky top-0 z-40 bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 text-white shadow-lg">
+        <div className="px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="bg-white/20 backdrop-blur-lg rounded-2xl p-3">
-                <Sparkles className="w-8 h-8" />
+            <div className="flex items-center space-x-3">
+              <div className="bg-white/20 backdrop-blur-lg rounded-xl p-2.5">
+                <Sparkles className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold mb-1">AI Financial Assistant</h1>
-                <p className="text-blue-100">Your personal finance advisor, powered by AI</p>
+                <h1 className="text-xl font-bold">AI Assistant</h1>
+                <p className="text-xs text-white/80">Powered by Google Gemini</p>
               </div>
             </div>
             
-            <div className="hidden md:flex items-center space-x-6 text-sm">
-              <div className="text-center">
-                <div className="text-2xl font-bold">{stats.accounts}</div>
-                <div className="text-blue-100">Accounts</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">{stats.transactions}</div>
-                <div className="text-blue-100">Transactions</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">{stats.goals}</div>
-                <div className="text-blue-100">Active Goals</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">{stats.budgets}</div>
-                <div className="text-blue-100">Budgets</div>
-              </div>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="p-2 rounded-lg bg-white/20 backdrop-blur-lg hover:bg-white/30 transition-colors"
+            >
+              {showMobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+          
+          {/* Mobile Stats Row */}
+          <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs">
+            <div>
+              <div className="font-bold text-lg">{stats.accounts}</div>
+              <div className="text-white/70">Accounts</div>
+            </div>
+            <div>
+              <div className="font-bold text-lg">{stats.transactions}</div>
+              <div className="text-white/70">Txns</div>
+            </div>
+            <div>
+              <div className="font-bold text-lg">{stats.goals}</div>
+              <div className="text-white/70">Goals</div>
+            </div>
+            <div>
+              <div className="font-bold text-lg">{stats.budgets}</div>
+              <div className="text-white/70">Budgets</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Sidebar - Quick Actions & Insights */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Financial Insights */}
-            {showInsights && (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                <div className="flex items-center justify-between mb-4">
+      {/* Mobile Slide-in Menu */}
+      {showMobileMenu && (
+        <>
+          {/* Overlay */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setShowMobileMenu(false)}
+          />
+          
+          {/* Menu Panel */}
+          <div className="fixed right-0 top-0 bottom-0 w-80 bg-white dark:bg-gray-800 z-50 lg:hidden shadow-2xl transform transition-transform duration-300">
+            <div className="p-4 h-full overflow-y-auto space-y-4">
+              {/* Close Button */}
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Menu</h2>
+                <button
+                  onClick={() => setShowMobileMenu(false)}
+                  className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Insights */}
+              <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-gray-700 dark:to-gray-600 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-2">
                     <Lightbulb className="w-5 h-5 text-yellow-500" />
-                    <h3 className="font-semibold text-gray-900 dark:text-white">
-                      Smart Insights
-                    </h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Smart Insights</h3>
                   </div>
                   <button
                     onClick={loadInsights}
                     disabled={loadingInsights}
-                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"
+                    className="p-1.5 rounded-lg hover:bg-white/50 transition-colors disabled:opacity-50"
                   >
-                    {loadingInsights ? 'Loading...' : 'Refresh'}
+                    <RefreshCw className={`w-4 h-4 ${loadingInsights ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
                 
                 {loadingInsights ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {[1, 2, 3].map(i => (
-                      <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                      <div key={i} className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
                     ))}
                   </div>
                 ) : insights.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {insights.map((insight, index) => (
                       <div
                         key={index}
-                        className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200"
+                        className="p-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-sm text-gray-700 dark:text-gray-200 backdrop-blur"
                       >
                         {insight}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                    No insights available yet. Start chatting to get personalized advice!
+                  <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-3">
+                    Start chatting to get insights!
                   </p>
                 )}
               </div>
-            )}
 
-            {/* Quick Questions */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
-                Quick Questions
-              </h3>
+              {/* Quick Actions */}
               <div className="space-y-2">
-                {quickQuestions.map((q, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      setInput(q.text);
-                      inputRef.current?.focus();
-                    }}
-                    className="w-full text-left px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className={`bg-gradient-to-r ${q.color} p-2 rounded-lg text-white group-hover:scale-110 transition-transform`}>
-                        <q.icon className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-xs text-gray-500 dark:text-gray-400">{q.category}</div>
-                        <div className="text-sm text-gray-900 dark:text-white">{q.text}</div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
-                Chat Actions
-              </h3>
-              <div className="space-y-2">
-                <button
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Actions</h3>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
                   onClick={exportChat}
                   disabled={messages.length === 0}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center space-x-2"
                 >
                   <Download className="w-4 h-4" />
                   <span>Export Chat</span>
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
                   onClick={() => {
-                    if (confirm('Are you sure you want to clear the chat history?')) {
+                    if (confirm('Clear all chat messages?')) {
                       clearChat();
+                      setShowMobileMenu(false);
                     }
                   }}
                   disabled={messages.length === 0}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center space-x-2 text-red-600"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Clear Chat</span>
-                </button>
+                </Button>
               </div>
             </div>
           </div>
+        </>
+      )}
 
-          {/* Main Chat Area */}
-          <div className="lg:col-span-2">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg flex flex-col" style={{ height: 'calc(100vh - 200px)' }}>
-              {/* Chat Header */}
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                    <MessageCircle className="w-6 h-6 text-white" />
+      {/* Main Content */}
+      <div className="px-4 py-4 space-y-4">
+        {/* Quick Questions - Horizontal Scroll */}
+        <div className="overflow-x-auto -mx-4 px-4 pb-2">
+          <div className="flex space-x-3 min-w-max">
+            {quickQuestions.slice(0, 6).map((q, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  setInput(q.text);
+                  inputRef.current?.focus();
+                }}
+                className="flex-shrink-0 px-4 py-2 rounded-full bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all active:scale-95"
+              >
+                <div className="flex items-center space-x-2">
+                  <div className={`bg-gradient-to-r ${q.color} p-1.5 rounded-lg text-white`}>
+                    <q.icon className="w-3.5 h-3.5" />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      Financial Advisor Chat
-                    </h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {messages.length > 0 ? `${messages.length} messages` : 'Start a conversation'}
-                    </p>
-                  </div>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                    {q.category}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Mobile-First Chat Container */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg mx-auto">
+          {/* Messages Container */}
+          <div 
+            className="overflow-y-auto p-4 space-y-4"
+            style={{ height: 'calc(100vh - 340px)', minHeight: '400px' }}
+          >
+            {messages.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+                  <Sparkles className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                  AI Financial Assistant
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-sm mx-auto">
+                  I analyze your finances and provide personalized insights. Ask me anything!
+                </p>
+                <div className="inline-flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full">
+                  <Sparkles className="w-3 h-3" />
+                  <span>Tap a chip above to get started</span>
                 </div>
               </div>
-
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {messages.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Sparkles className="w-10 h-10 text-white" />
+            ) : (
+              <>
+                {messages.map((message) => (
+                  <ChatMessage key={message.id} message={message} />
+                ))}
+                
+                {isTyping && (
+                  <div className="flex items-start space-x-2">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="w-4 h-4 text-white" />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                      Welcome to Your AI Financial Assistant
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                      I can help you understand your finances, create budgets, track goals, 
-                      and provide personalized financial advice based on your data.
-                    </p>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Try asking a question or select from the quick questions on the left
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {messages.map((message) => (
-                      <ChatMessage key={message.id} message={message} />
-                    ))}
-                    
-                    {isTyping && (
-                      <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
-                        <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                          <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                        </div>
-                        <span className="text-sm">AI is analyzing your finances...</span>
+                    <div className="bg-gray-100 dark:bg-gray-700 rounded-2xl px-4 py-3">
+                      <div className="flex space-x-1.5">
+                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                       </div>
-                    )}
-                  </>
+                    </div>
+                  </div>
                 )}
-                <div ref={messagesEndRef} />
-              </div>
+              </>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
 
-              {/* Input */}
-              <div className="p-6 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-end space-x-3">
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Ask me anything about your finances..."
-                    disabled={isLoading}
-                    rows={1}
-                    className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed resize-none"
-                    style={{ minHeight: '48px', maxHeight: '120px' }}
-                  />
-                  <button
-                    onClick={handleSend}
-                    disabled={!input.trim() || isLoading}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                  >
-                    <Send className="w-5 h-5" />
-                    <span className="hidden sm:inline">Send</span>
-                  </button>
-                </div>
-                <div className="flex items-center justify-between mt-3">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Press Enter to send, Shift+Enter for new line
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Powered by OpenAI • Your data is secure
-                  </p>
-                </div>
-              </div>
+          {/* Mobile Input Bar - Fixed at Bottom */}
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+            <div className="flex items-end space-x-2">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Ask about your finances..."
+                disabled={isLoading}
+                rows={1}
+                className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed resize-none text-sm"
+                style={{ minHeight: '44px', maxHeight: '100px' }}
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+                className="flex-shrink-0 w-11 h-11 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-2xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center active:scale-95"
+              >
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+              </button>
             </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+              Powered by Google Gemini • Your data stays private
+            </p>
           </div>
         </div>
       </div>

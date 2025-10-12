@@ -23,6 +23,8 @@ import {
   FileText,
   Wallet,
   CheckCircle,
+  Sparkles,
+  MessageCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFinance } from '../contexts/FinanceContext';
@@ -315,6 +317,30 @@ const Home: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* AI Financial Assistant Button */}
+        <button
+          onClick={() => navigate('/ai-assistant')}
+          className="w-full p-4 rounded-2xl bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 active:scale-98 group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-white/20 backdrop-blur-lg rounded-xl p-2.5 group-hover:scale-110 transition-transform">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div className="text-left">
+                <div className="font-bold text-base flex items-center space-x-2">
+                  <span>AI Financial Assistant</span>
+                  <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">NEW</span>
+                </div>
+                <div className="text-sm text-white/80">
+                  Get personalized insights & advice
+                </div>
+              </div>
+            </div>
+            <MessageCircle className="w-5 h-5 text-white/60 group-hover:text-white transition-colors" />
+          </div>
+        </button>
 
         {/* Accounts Section */}
         {accounts.length === 0 ? (
