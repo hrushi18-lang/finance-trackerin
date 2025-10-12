@@ -41,7 +41,7 @@ const Accounts: React.FC = () => {
     liabilities,
     budgets,
     userCategories,
-    isLoading,
+    loading,
     // error // Unused
   } = useFinance();
   const { formatCurrency, currency } = useInternationalization();
@@ -52,10 +52,10 @@ const Accounts: React.FC = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<Record<string, unknown> | null>(null);
+  const [editingAccount, setEditingAccount] = useState<FinancialAccount | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
-  const [transferFromAccount, setTransferFromAccount] = useState<Record<string, unknown> | null>(null);
+  const [transferFromAccount, setTransferFromAccount] = useState<FinancialAccount | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
@@ -127,7 +127,7 @@ const Accounts: React.FC = () => {
 
     // Filter by visibility
     if (!showHidden) {
-      filtered = filtered.filter(account => account.is_visible !== false);
+      filtered = filtered.filter(account => account.isVisible !== false);
     }
 
     return filtered;
@@ -139,8 +139,8 @@ const Accounts: React.FC = () => {
       if (account.isVisible !== false) {
         // Use converted balance if available, otherwise convert on the fly
         const convertedBalance = account.converted_balance || 
-          (account.currencyCode !== currency.code ? 
-            (convertAmount(account.balance || 0, account.currencyCode, currency.code) || account.balance || 0) :
+          (account.currencycode !== currency.code ? 
+            (convertAmount(account.balance || 0, account.currencycode, currency.code) || account.balance || 0) :
             account.balance || 0);
         
         return account.type === 'credit_card' ? sum - convertedBalance : sum + convertedBalance;
@@ -645,6 +645,8 @@ const Accounts: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+        )}
           </>
         )}
 
