@@ -642,11 +642,9 @@ const Accounts: React.FC = () => {
                           showDualCurrency={true}
                         />
                       ))}
-                    </div>
-                  )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </>
         )}
 
@@ -745,9 +743,7 @@ const Accounts: React.FC = () => {
                 </div>
               )}
             </div>
-              </div>
-            )}
-          </>
+          </div>
         )}
       </div>
 
