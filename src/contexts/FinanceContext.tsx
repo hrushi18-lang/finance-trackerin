@@ -3581,12 +3581,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (result.success) {
         // Create liability with converted amounts
         const liabilityData = {
+          user_id: user.id,
           name: request.liabilityName!,
-          totalAmount: result.primaryAmount, // Use primary currency amount
-          remainingAmount: result.primaryAmount,
+          type: request.liabilityType || 'loan',
           liability_type: request.liabilityType || 'loan',
+          total_amount: result.primaryAmount, // Use primary currency amount
+          remaining_amount: result.primaryAmount,
+          interest_rate: 0,
+          monthly_payment: 0,
+          start_date: new Date().toISOString().split('T')[0],
+          due_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 year from now
           status: 'active',
-          description: request.description,
+          is_active: true,
+          notes: request.description,
+          liability_status: 'new',
           // Multi-currency data
           native_amount: result.auditData.originalAmount,
           native_currency: result.auditData.originalCurrency,
@@ -3594,12 +3602,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           converted_currency: result.primaryCurrency,
           exchange_rate: result.exchangeRate || 1,
           conversion_source: result.conversionSource || 'manual',
-          original_currency: result.auditData.originalCurrency
+          original_currency: result.auditData.originalCurrency,
+          currency_code: result.auditData.originalCurrency
         };
 
-        // Add the liability
+        // Add the liability to correct table
         const { data, error } = await supabase
-          .from('enhanced_liabilities')
+          .from('liabilities')
           .insert([liabilityData])
           .select()
           .single();
