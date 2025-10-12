@@ -3584,8 +3584,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           name: request.liabilityName!,
           totalAmount: result.primaryAmount, // Use primary currency amount
           remainingAmount: result.primaryAmount,
-          currency: result.primaryCurrency,
-          type: request.liabilityType || 'loan',
+          liability_type: request.liabilityType || 'loan',
           status: 'active',
           description: request.description,
           // Multi-currency data
@@ -3594,7 +3593,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           converted_amount: result.primaryAmount,
           converted_currency: result.primaryCurrency,
           exchange_rate: result.exchangeRate || 1,
-          conversion_source: result.conversionSource || 'manual'
+          conversion_source: result.conversionSource || 'manual',
+          original_currency: result.auditData.originalCurrency
         };
 
         // Add the liability
