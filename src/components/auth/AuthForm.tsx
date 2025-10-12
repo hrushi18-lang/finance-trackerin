@@ -50,7 +50,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSucces
             return;
           }
           await register(formData.email, formData.password, formData.name);
-          setLocalSuccess('Account created successfully! Please check your email to verify your account.');
+          setLocalSuccess('Account created successfully!');
+          // Call onSuccess to trigger navigation for signup
+          setTimeout(() => {
+            onSuccess?.();
+          }, 500);
           break;
         
         case 'signin':

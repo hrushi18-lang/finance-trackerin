@@ -22,39 +22,12 @@ const OnboardingWrapper: React.FC = () => {
         return;
       }
 
-      // Wait for profile and finance data to load
-      if (profileLoading || financeLoading) {
-        return;
-      }
-
-      // ✅ FIXED: Check if user has a profile (definitive indicator of setup completion)
-      const hasProfile = !!profile;
-      
-      // User is new if they don't have a profile
-      // Profile existence means onboarding was completed
-      const isNew = !hasProfile;
-      setIsNewUser(isNew);
-
-      // Track onboarding check
-      analytics.trackEngagement('onboarding_check', {
-        feature: 'onboarding_flow',
-        is_new_user: isNew,
-        has_profile: hasProfile,
-        has_accounts: accounts.length > 0
-      });
-
-      // If user has profile, redirect to home (onboarding completed)
-      if (hasProfile) {
-        analytics.trackOnboardingStep('existing_user_redirect', true);
-        navigate('/');
-        return;
-      }
-
-      setIsChecking(false);
+      // Skip onboarding - redirect all users directly to home
+      navigate('/');
     };
 
     checkUserStatus();
-  }, [user, profile, profileLoading, accounts, goals, bills, liabilities, userCategories, financeLoading, navigate]);
+  }, [user, navigate]);
 
   // Show loading while checking user status
   if (isChecking || profileLoading || financeLoading) {

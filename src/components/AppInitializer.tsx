@@ -179,25 +179,8 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
         return;
       }
 
-      // If user is new and not already on onboarding, redirect to onboarding
-      if (isNewUser === true && location.pathname !== '/onboarding') {
-        console.log('AppInitializer - Redirecting new user to onboarding');
-        navigate('/onboarding');
-        return;
-      }
-
-      // If user is not new and on onboarding, redirect to home
-      if (isNewUser === false && location.pathname === '/onboarding') {
-        console.log('AppInitializer - Redirecting existing user to home');
-        navigate('/');
-        return;
-      }
-
-      // Redirect to home if on root path
-      if (location.pathname === '/') {
-        navigate('/');
-        return;
-      }
+      // Skip onboarding - all users go directly to app
+      // No onboarding redirect logic needed
       
       console.log('AppInitializer - Routing decision:', {
         currentPath: location.pathname,
@@ -212,7 +195,7 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     handleRouting();
   }, [isInitialized, isAuthenticated, user, isNewUser, location.pathname, navigate, profileLoading, financeLoading]);
 
-  if (!isInitialized || (isAuthenticated && user && isNewUser === null)) {
+  if (!isInitialized) {
     return (
       <LoadingScreen 
         message={loadingTimeout ? "Taking longer than expected..." : "Initializing your financial app..."} 

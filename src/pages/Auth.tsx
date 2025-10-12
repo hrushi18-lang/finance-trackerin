@@ -19,9 +19,8 @@ const Auth: React.FC = () => {
   }, [navigate]);
 
   const handleSuccess = () => {
-    if (mode === 'signin') {
-      navigate('/');
-    }
+    // Both signin and signup go directly to home
+    navigate('/');
   };
 
   return (
