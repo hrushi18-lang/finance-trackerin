@@ -9,7 +9,8 @@ import {
   Plus,
   Grid3X3,
   Wallet,
-  Activity
+  Activity,
+  Sparkles
 } from 'lucide-react';
 
 export const BottomNavigation: React.FC = () => {
@@ -20,7 +21,7 @@ export const BottomNavigation: React.FC = () => {
   const navItems = [
     { path: '/home', icon: Home, label: 'Home' },
     { path: '/overview', icon: BarChart3, label: 'Overview' },
-    { path: '/activities', icon: Activity, label: 'Activities' },
+    { path: '/ai-assistant', icon: Sparkles, label: 'AI Chat' },
     { path: '/transactions', icon: Calendar, label: 'Transactions' },
     { path: '/accounts', icon: Building2, label: 'Accounts' },
   ];

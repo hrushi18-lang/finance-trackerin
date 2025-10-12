@@ -10,7 +10,7 @@ import { EnhancedCurrencyProvider } from './contexts/EnhancedCurrencyContext';
 import { PersonalizationProvider } from './contexts/PersonalizationContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { PaymentProvider } from './contexts/PaymentContext';
-// import { ChatProvider } from './contexts/ChatContext'; // AI feature disabled for now
+import { ChatProvider } from './contexts/ChatContext';
 import { ToastProvider } from './components/common/Toast';
 import NotificationProvider from './contexts/NotificationContext';
 import { ErrorFallback } from './components/common/ErrorFallback';
@@ -67,7 +67,7 @@ import ExchangeRateSettings from './pages/settings/ExchangeRateSettings';
 // Dynamic imports for heavy components
 const Analytics = React.lazy(() => import('./pages/Analytics'));
 const EnhancedLiabilities = React.lazy(() => import('./pages/EnhancedLiabilities'));
-// const AIAssistant = React.lazy(() => import('./pages/AIAssistant')); // AI feature disabled for now
+const AIAssistant = React.lazy(() => import('./pages/AIAssistant'));
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -144,6 +144,7 @@ function App() {
                         <PersonalizationProvider>
                           <FinanceProvider>
                               <PaymentProvider>
+                                <ChatProvider>
                                 <NotificationProvider>
                                   <ReceiptModal />
                                 <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -401,8 +402,8 @@ function App() {
                                 } 
                               />
                               
-                              {/* AI Assistant Route - Disabled for now */}
-                              {/* <Route 
+                              {/* AI Assistant Route */}
+                              <Route 
                                 path="/ai-assistant" 
                                 element={
                                   <ProtectedRoute>
@@ -412,7 +413,7 @@ function App() {
                                     <BottomNavigation />
                                   </ProtectedRoute>
                                 } 
-                              /> */}
+                              />
                               
                               <Route 
                                 path="/currency-demo" 
@@ -512,6 +513,7 @@ function App() {
                               </Router>
                               <ReactQueryDevtools initialIsOpen={false} />
                                 </NotificationProvider>
+                                </ChatProvider>
                               </PaymentProvider>
                           </FinanceProvider>
                         </PersonalizationProvider>
