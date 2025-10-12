@@ -16,6 +16,8 @@ import { useNavigate } from 'react-router-dom';
 import LuxuryCategoryIcon from '../components/common/LuxuryCategoryIcon';
 // import { CurrencySelector } from '../components/currency/CurrencySelector'; // Unused import
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { FinancialAccount } from '../types';
+import { CreateAccountData } from '../lib/finance-manager';
 
 const Accounts: React.FC = () => {
   const navigate = useNavigate();
@@ -70,7 +72,7 @@ const Accounts: React.FC = () => {
       accounts,
       goals,
       bills,
-      liabilities,
+      liabilities as any, // EnhancedLiability extends Liability
       budgets,
       userCategories
     );
@@ -149,7 +151,7 @@ const Accounts: React.FC = () => {
     }, 0);
   }, [accounts, currency.code, convertAmount]);
 
-  const handleCreateAccount = async (data: Record<string, unknown>) => {
+  const handleCreateAccount = async (data: CreateAccountData) => {
     try {
       await addAccount(data);
       await refreshAccounts(); // Auto-refresh after creating account
@@ -160,7 +162,7 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleUpdateAccount = async (data: Record<string, unknown>) => {
+  const handleUpdateAccount = async (data: Partial<FinancialAccount>) => {
     if (!editingAccount) return;
 
     try {
@@ -172,7 +174,7 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleDeleteAccount = async (account: Record<string, unknown>) => {
+  const handleDeleteAccount = async (account: FinancialAccount) => {
     if (!confirm(`Are you sure you want to delete "${account.name}"? This action cannot be undone.`)) {
       return;
     }
@@ -185,10 +187,10 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleToggleVisibility = async (account: Record<string, unknown>) => {
+  const handleToggleVisibility = async (account: FinancialAccount) => {
     try {
       await updateAccount(account.id, {
-        is_visible: !account.is_visible
+        isVisible: !account.isVisible
       });
     } catch (error) {
       console.error('Error updating account visibility:', error);
@@ -196,7 +198,7 @@ const Accounts: React.FC = () => {
   };
 
   // New handler functions for account actions
-  const handleDuplicateAccount = async (account: Record<string, unknown>) => {
+  const handleDuplicateAccount = async (account: FinancialAccount) => {
     try {
       await duplicateAccount(account.id);
     } catch (error) {
@@ -204,12 +206,12 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleTransfer = (account: Record<string, unknown>) => {
+  const handleTransfer = (account: FinancialAccount) => {
     setTransferFromAccount(account);
     setShowTransferModal(true);
   };
 
-  const handleTransferSubmit = async (transferData: Record<string, unknown>) => {
+  const handleTransferSubmit = async (transferData: { fromAccountId: string; toAccountId: string; amount: number; description: string }) => {
     try {
       await transferBetweenAccounts(
         transferData.fromAccountId,
@@ -223,17 +225,17 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleViewHistory = (account: Record<string, unknown>) => {
+  const handleViewHistory = (account: FinancialAccount) => {
     // Navigate to transaction history filtered by account
     navigate(`/transactions?account=${account.id}`);
   };
 
-  const handleViewAnalytics = (account: Record<string, unknown>) => {
+  const handleViewAnalytics = (account: FinancialAccount) => {
     // Navigate to analytics page filtered by account
     navigate(`/analytics?account=${account.id}`);
   };
 
-  const handleTogglePin = async (account: Record<string, unknown>) => {
+  const handleTogglePin = async (account: FinancialAccount) => {
     try {
       await toggleAccountPin(account.id);
     } catch (error) {
@@ -241,7 +243,7 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleArchiveAccount = async (account: Record<string, unknown>) => {
+  const handleArchiveAccount = async (account: FinancialAccount) => {
     try {
       await archiveAccount(account.id);
     } catch (error) {
@@ -249,11 +251,11 @@ const Accounts: React.FC = () => {
     }
   };
 
-  const handleEditAccount = (account: Record<string, unknown>) => {
+  const handleEditAccount = (account: FinancialAccount) => {
     setEditingAccount(account);
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
         <div className="text-center">
@@ -397,7 +399,7 @@ const Accounts: React.FC = () => {
             <div className="space-y-4">
               {/* Mobile Account Overview Cards */}
               <div className="space-y-3">
-                {accountAnalytics.slice(0, 3).map((analytics) => (
+                {accountAnalytics.slice(0, 3).map((analytics) => analytics && (
                   <div key={analytics.accountId} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
@@ -426,13 +428,13 @@ const Accounts: React.FC = () => {
               </div>
 
               {/* Simplified Category Breakdown for Mobile */}
-              {accountAnalytics.length > 0 && accountAnalytics[0].categoryBreakdown.length > 0 && (
+              {accountAnalytics.length > 0 && accountAnalytics[0] && accountAnalytics[0].categoryBreakdown && accountAnalytics[0].categoryBreakdown.length > 0 && (
                 <div>
                   <h3 className="text-sm font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
                     Top Categories
                   </h3>
                   <div className="space-y-2">
-                    {accountAnalytics[0].categoryBreakdown.slice(0, 5).map((cat, index) => (
+                    {accountAnalytics[0].categoryBreakdown.slice(0, 5).map((cat) => (
                       <div key={cat.category} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
                         <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
                           {cat.category}
@@ -448,7 +450,7 @@ const Accounts: React.FC = () => {
               )}
 
               {/* Mobile-friendly Largest Transactions */}
-              {accountAnalytics.length > 0 && accountAnalytics[0].largestTransactions.length > 0 && (
+              {accountAnalytics.length > 0 && accountAnalytics[0] && accountAnalytics[0].largestTransactions && accountAnalytics[0].largestTransactions.length > 0 && (
                 <div>
                   <h3 className="text-sm font-heading mb-3" style={{ color: 'var(--text-secondary)' }}>
                     Recent Large Transactions
@@ -563,7 +565,7 @@ const Accounts: React.FC = () => {
                         <option value="">Choose an account...</option>
                         {filteredAccounts.map((account) => (
                           <option key={account.id} value={account.id}>
-                            {account.name} - {formatCurrency(account.balance, account.currencyCode || 'USD')}
+                            {account.name} - {formatCurrency(account.balance, account.currencycode || 'USD')}
                           </option>
                         ))}
                       </select>
@@ -642,11 +644,11 @@ const Accounts: React.FC = () => {
                           showDualCurrency={true}
                         />
                       ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+              </div>
+            )}
           </>
         )}
 
@@ -676,8 +678,9 @@ const Accounts: React.FC = () => {
                   {accounts
                     .filter(acc => acc.type === 'credit_card')
                     .map((account) => {
-                      const utilization = account.creditLimit > 0 ? (Math.abs(account.balance) / account.creditLimit) * 100 : 0;
-                      const isOverLimit = account.balance < 0 && Math.abs(account.balance) > account.creditLimit;
+                      const creditLimit = account.creditLimit || 0;
+                      const utilization = creditLimit > 0 ? (Math.abs(account.balance) / creditLimit) * 100 : 0;
+                      const isOverLimit = account.balance < 0 && Math.abs(account.balance) > creditLimit;
                       
                       return (
                         <div 
@@ -697,7 +700,7 @@ const Accounts: React.FC = () => {
                             <div className="text-right">
                               <p className="text-sm text-gray-400">Balance</p>
                               <p className={`font-numbers text-lg ${account.balance < 0 ? 'text-red-400' : 'text-white'}`}>
-                                {formatCurrencyEnhanced(account.balance, account.currencyCode || 'USD')}
+                                {formatCurrencyEnhanced(account.balance, account.currencycode || 'USD')}
                               </p>
                             </div>
                           </div>
@@ -705,13 +708,13 @@ const Accounts: React.FC = () => {
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-400">Credit Limit</span>
-                              <span className="text-white">{formatCurrencyEnhanced(account.creditLimit || 0, account.currencyCode || 'USD')}</span>
+                              <span className="text-white">{formatCurrencyEnhanced(creditLimit, account.currencycode || 'USD')}</span>
                             </div>
                             
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-400">Available</span>
                               <span className="text-green-400">
-                                {formatCurrencyEnhanced((account.creditLimit || 0) - Math.abs(account.balance || 0), account.currencyCode || 'USD')}
+                                {formatCurrencyEnhanced(creditLimit - Math.abs(account.balance || 0), account.currencycode || 'USD')}
                               </span>
                             </div>
 
@@ -757,7 +760,7 @@ const Accounts: React.FC = () => {
           setEditingAccount(null);
         }}
         onSubmit={editingAccount ? handleUpdateAccount : handleCreateAccount}
-        account={editingAccount}
+        account={editingAccount as any}
         loading={false}
       />
 

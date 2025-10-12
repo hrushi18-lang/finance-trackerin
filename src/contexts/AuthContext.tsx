@@ -368,33 +368,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       console.log('User registered successfully:', authData.user.id);
-      setAuthStatus('success');
-
-      // Create profile
+      
+      // Profile will be created automatically by database trigger
+      // Wait a moment for the trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Verify profile was created
       try {
-        console.log('Creating profile for new user:', authData.user.id);
+        console.log('Verifying profile for new user:', authData.user.id);
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .insert([
-            {
-              id: authData.user.id,
-              email: email,
-              name: name,
-            },
-          ])
-          .select();
+          .select('*')
+          .eq('id', authData.user.id)
+          .single();
           
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          setAuthError('Profile creation failed: ' + profileError.message);
-          setAuthStatus('error');
-          throw new Error(`Profile creation failed: ${profileError.message}`);
-        }
-        
-        console.log('Profile created successfully:', profileData);
-        
-        // Set user state
-        if (profileData && profileData.length > 0) {
+        if (profileError || !profileData) {
+          console.error('Profile verification error:', profileError);
+          // Profile wasn't created, this shouldn't happen but we'll handle it gracefully
+          console.warn('Profile not found after registration, it will be created on next login');
+        } else {
+          console.log('Profile verified successfully:', profileData);
+          // Set user state
           setUser({
             id: authData.user.id,
             email,
@@ -403,10 +397,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           });
         }
       } catch (profileError: any) {
-        console.error('Profile creation error:', profileError);
-        setAuthError(profileError.message || 'Failed to create profile');
-        setAuthStatus('error');
+        console.error('Profile verification error:', profileError);
+        // Non-critical error, continue with registration
       }
+      
+      setAuthStatus('success');
       
     } catch (error: any) {
       console.error('Registration error:', error);
