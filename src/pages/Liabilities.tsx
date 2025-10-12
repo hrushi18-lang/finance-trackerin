@@ -56,7 +56,6 @@ const Liabilities: React.FC = () => {
   const [filterType, setFilterType] = useState<LiabilityType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'paid_off' | 'overdue'>('all');
   const [activeTab, setActiveTab] = useState<'overview' | 'list'>('overview');
-  const [selectedLiability, setSelectedLiability] = useState<string>('');
 
   // Enhanced handler functions
 

@@ -220,6 +220,7 @@ const Budgets: React.FC = () => {
                   <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Near Limit</p>
                 </div>
               </div>
+            </>
           ) : (
             <div className="text-center py-6">
               <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: 'var(--background-secondary)' }}>
@@ -237,9 +238,13 @@ const Budgets: React.FC = () => {
               </button>
             </div>
           )}
-        </div>
+            </div>
+          </div>
+        )}
 
-        {/* Filter Tabs */}
+        {activeTab === 'list' && (
+          <div className="space-y-4">
+            {/* Filter Tabs */}
         {budgets.length > 0 && (
           <div className="flex space-x-2 mb-4">
             <button
