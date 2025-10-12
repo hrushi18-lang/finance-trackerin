@@ -131,9 +131,24 @@ const Calendar: React.FC = () => {
       });
     }
 
-    // Add goals with target dates
+    // Add goals with target dates AND creation dates
     if (filters.showGoals) {
       goals.forEach(goal => {
+        // Add goal creation event
+        if (goal.createdAt) {
+          events.push({
+            id: `goal-created-${goal.id}`,
+            type: 'goal',
+            title: `🎯 Created Goal: ${goal.title}`,
+            amount: goal.targetAmount,
+            date: new Date(goal.createdAt),
+            status: 'completed',
+            category: goal.category,
+            description: `Goal created with target of ${formatCurrency(goal.targetAmount)}`
+          });
+        }
+        
+        // Add goal target/due date
         if (goal.targetDate) {
           const targetDate = new Date(goal.targetDate);
           const isOverdue = isAfter(new Date(), targetDate) && goal.currentAmount < goal.targetAmount;
@@ -141,20 +156,35 @@ const Calendar: React.FC = () => {
           events.push({
             id: `goal-${goal.id}`,
             type: 'goal',
-            title: goal.name,
+            title: `🎯 Goal Due: ${goal.title}`,
             amount: goal.targetAmount,
             date: targetDate,
             status: isOverdue ? 'overdue' : 'pending',
             category: goal.category,
-            description: `Target: ${formatCurrency(goal.targetAmount)} | Current: ${formatCurrency(goal.currentAmount)}`
+            description: `Target: ${formatCurrency(goal.targetAmount)} | Current: ${formatCurrency(goal.currentAmount)} | Progress: ${Math.round((goal.currentAmount / goal.targetAmount) * 100)}%`
           });
         }
       });
     }
 
-    // Add bills with due dates
+    // Add bills with creation AND due dates
     if (filters.showBills) {
       bills.forEach(bill => {
+        // Add bill creation event
+        if (bill.createdAt) {
+          events.push({
+            id: `bill-created-${bill.id}`,
+            type: 'bill',
+            title: `📄 Created Bill: ${bill.title}`,
+            amount: bill.amount,
+            date: new Date(bill.createdAt),
+            status: 'completed',
+            category: bill.category,
+            description: `Bill created: ${formatCurrency(bill.amount)} | ${bill.frequency}`
+          });
+        }
+        
+        // Add bill due date
         if (bill.isActive && bill.nextDueDate) {
           const billDate = new Date(bill.nextDueDate);
           const isOverdue = isAfter(new Date(), billDate);
@@ -163,7 +193,7 @@ const Calendar: React.FC = () => {
           events.push({
             id: `bill-${bill.id}`,
             type: 'bill',
-            title: bill.title,
+            title: `💵 Bill Due: ${bill.title}`,
             amount: -bill.amount, // Negative for expenses
             date: billDate,
             status: isPaid ? 'completed' : (isOverdue ? 'overdue' : 'pending'),
@@ -176,9 +206,24 @@ const Calendar: React.FC = () => {
       });
     }
 
-    // Add liability payments
+    // Add liabilities with creation AND payment dates
     if (filters.showLiabilities) {
       liabilities.forEach(liability => {
+        // Add liability creation event
+        if (liability.createdAt) {
+          events.push({
+            id: `liability-created-${liability.id}`,
+            type: 'liability',
+            title: `💳 Created Liability: ${liability.name}`,
+            amount: liability.totalAmount,
+            date: new Date(liability.createdAt),
+            status: 'completed',
+            category: liability.liabilityType || liability.type,
+            description: `Liability created: ${formatCurrency(liability.totalAmount)} | Interest: ${liability.interestRate || 0}%`
+          });
+        }
+        
+        // Add liability payment due date
         if (liability.nextPaymentDate) {
           const paymentDate = new Date(liability.nextPaymentDate);
           const isOverdue = isAfter(new Date(), paymentDate);
@@ -187,12 +232,12 @@ const Calendar: React.FC = () => {
           events.push({
             id: `liability-${liability.id}`,
             type: 'liability',
-            title: liability.name,
-            amount: liability.monthlyPayment,
+            title: `💳 Payment Due: ${liability.name}`,
+            amount: -liability.monthlyPayment,
             date: paymentDate,
             status: isPaid ? 'completed' : (isOverdue ? 'overdue' : 'pending'),
-            category: liability.type,
-            description: `Monthly payment: ${formatCurrency(liability.monthlyPayment)}`,
+            category: liability.liabilityType || liability.type,
+            description: `Monthly payment: ${formatCurrency(liability.monthlyPayment)} | Remaining: ${formatCurrency(liability.remainingAmount)}`,
             isPaid: isPaid,
             paidDate: isPaid ? new Date() : undefined
           });
@@ -891,70 +936,109 @@ const Calendar: React.FC = () => {
                 const EventIcon = getEventIcon(event);
                 const eventColor = getEventColor(event);
                 
+                // Get event type badge
+                const getEventTypeBadge = () => {
+                  switch (event.type) {
+                    case 'transaction':
+                      return <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">Transaction</span>;
+                    case 'goal':
+                      return <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-300 border border-green-500/30">Goal</span>;
+                    case 'bill':
+                      return <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">Bill</span>;
+                    case 'liability':
+                      return <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">Liability</span>;
+                  }
+                };
+                
                 return (
                   <div
                     key={event.id}
-                    className="flex items-center justify-between p-4 bg-black/20 backdrop-blur-md rounded-xl hover:bg-black/30 transition-colors border border-white/10"
+                    className="bg-gradient-to-br from-black/40 to-black/20 backdrop-blur-md rounded-2xl p-4 hover:from-black/50 hover:to-black/30 transition-all border border-white/10 shadow-lg"
                   >
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-lg ${eventColor}`}>
-                        <EventIcon size={16} />
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2.5 rounded-xl ${eventColor} shadow-md`}>
+                          <EventIcon size={18} />
+                        </div>
+                        <div>
+                          {getEventTypeBadge()}
+                          <p className="font-bold text-white mt-1 text-base">
+                            {event.title}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-white">
-                          {event.title}
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          {event.category} {event.accountName && `• ${event.accountName}`}
-                        </p>
-                        {event.description && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            {event.description}
+                      
+                      <div className="text-right">
+                        {event.amount && (
+                          <p className={`font-bold text-lg ${
+                            event.amount > 0
+                              ? 'text-green-400' 
+                              : 'text-red-400'
+                          }`}>
+                            {event.amount > 0 ? '+' : ''}
+                            {formatCurrency(event.amount)}
                           </p>
                         )}
                       </div>
                     </div>
                     
-                    <div className="text-right">
-                      {event.amount && (
-                        <p className={`font-semibold ${
-                          event.type === 'transaction' && event.amount > 0
-                            ? 'text-green-400' 
-                            : 'text-red-400'
-                        }`}>
-                          {event.type === 'transaction' && event.amount > 0 ? '+' : '-'}
-                          {formatCurrency(Math.abs(event.amount))}
-                        </p>
+                    {/* Event Details */}
+                    <div className="space-y-2 mb-3">
+                      {event.category && (
+                        <div className="flex items-center text-sm text-gray-300">
+                          <span className="text-gray-400 mr-2">Category:</span>
+                          <span className="font-medium">{event.category}</span>
+                        </div>
                       )}
-                      <div className="flex items-center space-x-1 mt-1">
+                      {event.accountName && (
+                        <div className="flex items-center text-sm text-gray-300">
+                          <span className="text-gray-400 mr-2">Account:</span>
+                          <span className="font-medium">{event.accountName}</span>
+                        </div>
+                      )}
+                      {event.description && (
+                        <div className="text-sm text-gray-300 bg-black/20 rounded-lg p-2 border border-white/5">
+                          <span className="text-gray-400 text-xs block mb-1">Details:</span>
+                          {event.description}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Status and Actions */}
+                    <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                      <div className="flex items-center space-x-2">
                         {event.status === 'completed' && (
-                          <CheckCircle size={14} className="text-green-400" />
+                          <div className="flex items-center space-x-1 text-green-400">
+                            <CheckCircle size={16} />
+                            <span className="text-sm font-medium">Completed</span>
+                          </div>
                         )}
                         {event.status === 'overdue' && (
-                          <AlertCircle size={14} className="text-red-400" />
+                          <div className="flex items-center space-x-1 text-red-400">
+                            <AlertCircle size={16} />
+                            <span className="text-sm font-medium">Overdue</span>
+                          </div>
                         )}
                         {event.status === 'pending' && (
-                          <Clock size={14} className="text-yellow-400" />
+                          <div className="flex items-center space-x-1 text-yellow-400">
+                            <Clock size={16} />
+                            <span className="text-sm font-medium">Pending</span>
+                          </div>
                         )}
-                        <span className={`text-xs ${
-                          event.status === 'completed' ? 'text-green-400' :
-                          event.status === 'overdue' ? 'text-red-400' :
-                          'text-yellow-400'
-                        }`}>
-                          {event.status}
-                        </span>
+                        {event.isPaid && event.paidDate && (
+                          <span className="text-xs text-green-400 ml-2">
+                            ✓ Paid {format(event.paidDate, 'MMM d')}
+                          </span>
+                        )}
                       </div>
-                      {event.isPaid && event.paidDate && (
-                        <p className="text-xs text-green-400 mt-1">
-                          Paid: {format(event.paidDate, 'MMM d')}
-                        </p>
-                      )}
-                      {(event.type === 'bill' || event.type === 'liability') && event.status !== 'completed' && (
+                      
+                      {/* Action Button */}
+                      {(event.type === 'bill' || event.type === 'liability') && event.status !== 'completed' && !event.isPaid && (
                         <button
                           onClick={() => handleMarkAsPaid(event)}
-                          className="mt-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors"
+                          className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white text-sm rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95"
                         >
-                          Mark as Paid
+                          Mark Paid
                         </button>
                       )}
                     </div>
