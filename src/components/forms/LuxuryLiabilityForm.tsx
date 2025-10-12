@@ -304,93 +304,115 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
 
   const renderStep1 = () => (
     <div className="space-y-6">
-      <div className="text-center mb-8">
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg">
+          <Scale className="w-8 h-8 text-white" />
+        </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose Liability Type</h2>
-        <p className="text-gray-600">Select the type of liability you want to add</p>
+        <p className="text-sm text-gray-600">Select the category that matches your debt</p>
       </div>
       
-      <div className="grid grid-cols-2 gap-4">
-        {liabilityTypes.map((type) => (
-          <button
-            key={type.id}
-            onClick={() => updateFormData('liabilityType', type.id)}
-            className={`p-6 rounded-2xl border-2 transition-all duration-200 ${
-              formData.liabilityType === type.id
-                ? 'border-blue-500 bg-blue-50 shadow-lg scale-105'
-                : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-            }`}
-          >
-            <div className="text-center">
-              <div className={`mx-auto mb-3 ${
-                formData.liabilityType === type.id ? 'text-blue-600' : 'text-gray-600'
-              }`}>
-                {type.icon}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-1">
+        {liabilityTypes.map((type) => {
+          const isSelected = formData.liabilityType === type.id;
+          return (
+            <button
+              key={type.id}
+              onClick={() => updateFormData('liabilityType', type.id)}
+              className={`p-4 rounded-2xl border-2 transition-all duration-300 active:scale-95 ${
+                isSelected
+                  ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-blue-50 shadow-lg'
+                  : 'border-gray-200 bg-white hover:border-purple-300 hover:shadow-md'
+              }`}
+            >
+              <div className="text-center">
+                <div className={`mx-auto mb-2 transition-all duration-300 ${
+                  isSelected ? 'text-purple-600 scale-110' : 'text-gray-600'
+                }`}>
+                  {type.icon}
+                </div>
+                <h3 className={`font-bold text-sm mb-1 ${isSelected ? 'text-purple-700' : 'text-gray-900'}`}>
+                  {type.name}
+                </h3>
+                <p className="text-xs text-gray-500 leading-tight">{type.description}</p>
+                {isSelected && (
+                  <div className="mt-2">
+                    <CheckCircle className="w-5 h-5 mx-auto text-purple-500" />
+                  </div>
+                )}
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1">{type.name}</h3>
-              <p className="text-xs text-gray-500">{type.description}</p>
-            </div>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 
   const renderStep2 = () => (
     <div className="space-y-6">
-      <div className="text-center mb-8">
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg">
+          <FileText className="w-8 h-8 text-white" />
+        </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Basic Information</h2>
-        <p className="text-gray-600">Tell us about your liability</p>
+        <p className="text-sm text-gray-600">Give your liability a name and description</p>
       </div>
       
       <div className="space-y-4">
-        <Input
-          label="Liability Name"
-          placeholder="e.g., Student Loan, Credit Card"
-          value={formData.name}
-          onChange={(e) => updateFormData('name', e.target.value)}
-          className="text-lg"
-        />
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Liability Name *</label>
+          <Input
+            placeholder="e.g., Student Loan, Credit Card"
+            value={formData.name}
+            onChange={(e) => updateFormData('name', e.target.value)}
+            className="text-base border-0 bg-gray-50 focus:bg-white"
+          />
+        </div>
         
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Description (Optional)</label>
           <textarea
-            placeholder="Add any additional details..."
+            placeholder="Add notes about this liability..."
             value={formData.description}
             onChange={(e) => updateFormData('description', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+            className="w-full px-3 py-2 border-0 bg-gray-50 rounded-xl focus:ring-2 focus:ring-purple-500 focus:bg-white resize-none"
             rows={3}
           />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">Is this a new or existing liability?</label>
-          <div className="grid grid-cols-2 gap-4">
+          <label className="block text-sm font-semibold text-gray-700 mb-3">Status</label>
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => updateFormData('liabilityStatus', 'new')}
-              className={`p-4 rounded-xl border-2 transition-all ${
+              className={`p-4 rounded-2xl border-2 transition-all duration-300 active:scale-95 ${
                 formData.liabilityStatus === 'new'
-                  ? 'border-green-500 bg-green-50 text-green-700'
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-green-500 bg-gradient-to-br from-green-50 to-emerald-50 shadow-md'
+                  : 'border-gray-200 bg-white hover:border-green-300 hover:shadow-sm'
               }`}
             >
               <div className="text-center">
-                <div className="text-2xl mb-2">🆕</div>
-                <div className="font-semibold">New</div>
-                <div className="text-sm text-gray-500">Just starting</div>
+                <div className="text-3xl mb-2">🆕</div>
+                <div className={`font-bold text-sm ${formData.liabilityStatus === 'new' ? 'text-green-700' : 'text-gray-700'}`}>
+                  New
+                </div>
+                <div className="text-xs text-gray-500">Just starting</div>
               </div>
             </button>
             <button
               onClick={() => updateFormData('liabilityStatus', 'existing')}
-              className={`p-4 rounded-xl border-2 transition-all ${
+              className={`p-4 rounded-2xl border-2 transition-all duration-300 active:scale-95 ${
                 formData.liabilityStatus === 'existing'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-md'
+                  : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
               }`}
             >
               <div className="text-center">
-                <div className="text-2xl mb-2">📊</div>
-                <div className="font-semibold">Existing</div>
-                <div className="text-sm text-gray-500">Already in progress</div>
+                <div className="text-3xl mb-2">📊</div>
+                <div className={`font-bold text-sm ${formData.liabilityStatus === 'existing' ? 'text-blue-700' : 'text-gray-700'}`}>
+                  Existing
+                </div>
+                <div className="text-xs text-gray-500">In progress</div>
               </div>
             </button>
           </div>
@@ -401,9 +423,12 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
 
   const renderStep3 = () => (
     <div className="space-y-6">
-      <div className="text-center mb-8">
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+          <DollarSign className="w-8 h-8 text-white" />
+        </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Financial Details</h2>
-        <p className="text-gray-600">Enter the financial information</p>
+        <p className="text-sm text-gray-600">Enter amounts and interest rate</p>
       </div>
       
       <div className="space-y-4">
@@ -720,61 +745,83 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fadeIn"
+      className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onCancel();
         }
       }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col animate-slideUp mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <button
-            onClick={currentStep === 1 ? onCancel : handlePrevious}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          >
-            <ArrowLeft size={24} className="text-gray-600" />
-          </button>
-          <h1 className="text-lg font-semibold text-gray-900">Add Liability</h1>
-          <button
-            onClick={onCancel}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          >
-            <span className="text-gray-600 text-xl">×</span>
-          </button>
-        </div>
-
-        {/* Progress Indicator */}
-        <div className="px-6 py-4">
-          {renderStepIndicator()}
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col animate-slideUp mx-4 overflow-hidden">
+        {/* Gradient Header */}
+        <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 text-white p-6">
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={currentStep === 1 ? onCancel : handlePrevious}
+              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-colors active:scale-95"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="text-xl font-bold">Add New Liability</h1>
+            <button
+              onClick={onCancel}
+              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-colors active:scale-95"
+            >
+              <span className="text-xl">×</span>
+            </button>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm text-white/80">
+              <span>Step {currentStep} of {totalSteps}</span>
+              <span>{Math.round((currentStep / totalSteps) * 100)}%</span>
+            </div>
+            <div className="w-full bg-white/20 rounded-full h-2">
+              <div 
+                className="bg-white rounded-full h-2 transition-all duration-500 shadow-lg"
+                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
           {renderCurrentStep()}
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-gray-200 p-6">
+        {/* Footer with Action Buttons */}
+        <div className="bg-white border-t border-gray-200 p-4">
           <div className="flex space-x-3">
             {currentStep < totalSteps ? (
               <Button
                 onClick={handleNext}
                 disabled={!canProceed()}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-lg hover:shadow-xl transition-all active:scale-95 py-3"
+                size="lg"
               >
-                Next
+                Continue
                 <ArrowRight size={20} className="ml-2" />
               </Button>
             ) : (
               <Button
                 onClick={handleSubmit}
                 disabled={!canProceed() || isSubmitting}
-                className="flex-1 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-lg hover:shadow-xl transition-all active:scale-95 py-3"
+                size="lg"
               >
-                {isSubmitting ? 'Creating...' : 'Create Liability'}
-                <Check size={20} className="ml-2" />
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center">
+                    <Loader2 className="animate-spin mr-2" size={20} />
+                    Creating...
+                  </div>
+                ) : (
+                  <>
+                    Create Liability
+                    <Check size={20} className="ml-2" />
+                  </>
+                )}
               </Button>
             )}
           </div>
