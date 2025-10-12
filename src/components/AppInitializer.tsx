@@ -163,6 +163,20 @@ export const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
     });
   }, [isInitialized, isAuthenticated, user, profile, profileLoading, accounts, goals, bills, liabilities, userCategories, financeLoading]);
 
+  // Set a timeout to prevent infinite loading if isNewUser is never determined
+  useEffect(() => {
+    if (!isAuthenticated || !user || !isInitialized) return;
+
+    const timeoutId = setTimeout(() => {
+      if (isNewUser === null) {
+        console.warn('isNewUser determination timeout - defaulting to new user');
+        setIsNewUser(true); // Default to new user to allow onboarding
+      }
+    }, 8000); // 8 second timeout for determining if user is new
+
+    return () => clearTimeout(timeoutId);
+  }, [isAuthenticated, user, isInitialized, isNewUser]);
+
   // Handle routing after initialization
   useEffect(() => {
     if (!isInitialized) return;

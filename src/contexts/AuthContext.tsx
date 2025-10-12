@@ -97,6 +97,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             
           if (profileError) {
             console.error('Error fetching profile:', profileError);
+            console.error('Profile error details:', {
+              code: profileError.code,
+              message: profileError.message,
+              details: profileError.details,
+              hint: profileError.hint
+            });
             setLoading(false);
             return;
           }
@@ -167,6 +173,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('Auth state changed:', event, session);
         
         if (event === 'SIGNED_IN' && session) {
+          console.log('User signed in, fetching profile for:', session.user.id);
           // Get user profile
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
@@ -175,7 +182,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             .maybeSingle(); // Use maybeSingle instead of single
             
           if (profileError) {
-            console.error('Error fetching profile:', profileError);
+            console.error('Error fetching profile on sign in:', profileError);
+            console.error('Profile error details:', {
+              code: profileError.code,
+              message: profileError.message,
+              details: profileError.details,
+              hint: profileError.hint
+            });
             return;
           }
           
