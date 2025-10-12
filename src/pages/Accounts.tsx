@@ -592,58 +592,58 @@ const Accounts: React.FC = () => {
               <div className="space-y-4">
                 {/* Mobile-Optimized Accounts List */}
                 <div className="space-y-3">
-          {filteredAccounts.length === 0 ? (
-            <div
-              className="p-6 rounded-2xl text-center"
-              style={{
-                backgroundColor: 'var(--background-secondary)',
-                boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
-              }}
-            >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: 'var(--background)' }}>
-                <LuxuryCategoryIcon category="Primary Banking" size={20} variant="luxury" />
-              </div>
-              <h3 className="text-base font-heading mb-2" style={{ color: 'var(--text-primary)' }}>
-                {searchTerm ? 'No accounts found' : 'No accounts yet'}
-              </h3>
-              <p className="text-sm font-body mb-4" style={{ color: 'var(--text-secondary)' }}>
-                {searchTerm 
-                  ? 'Try adjusting your search terms'
-                  : 'Add your first financial account to get started'
-                }
-              </p>
-              {!searchTerm && (
-                <Button
-                  variant="primary"
-                  onClick={() => setShowForm(true)}
-                  className="flex items-center space-x-2 mx-auto px-4 py-2"
-                >
-                  <Plus size={14} />
-                  <span className="text-sm">Add Account</span>
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredAccounts.map((account) => (
-                <AccountCard
-                  key={account.id}
-                  account={account}
-                  onEdit={handleEditAccount}
-                  onDelete={handleDeleteAccount}
-                  onDuplicate={handleDuplicateAccount}
-                  onTransfer={handleTransfer}
-                  onViewHistory={handleViewHistory}
-                  onViewAnalytics={handleViewAnalytics}
-                  onToggleVisibility={handleToggleVisibility}
-                  onTogglePin={handleTogglePin}
-                  onArchive={handleArchiveAccount}
-                  showBalance={true}
-                  showDualCurrency={true}
-                />
-              ))}
-            </div>
-          )}
+                  {filteredAccounts.length === 0 ? (
+                    <div
+                      className="p-6 rounded-2xl text-center"
+                      style={{
+                        backgroundColor: 'var(--background-secondary)',
+                        boxShadow: '8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7)'
+                      }}
+                    >
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: 'var(--background)' }}>
+                        <LuxuryCategoryIcon category="Primary Banking" size={20} variant="luxury" />
+                      </div>
+                      <h3 className="text-base font-heading mb-2" style={{ color: 'var(--text-primary)' }}>
+                        {searchTerm ? 'No accounts found' : 'No accounts yet'}
+                      </h3>
+                      <p className="text-sm font-body mb-4" style={{ color: 'var(--text-secondary)' }}>
+                        {searchTerm 
+                          ? 'Try adjusting your search terms'
+                          : 'Add your first financial account to get started'
+                        }
+                      </p>
+                      {!searchTerm && (
+                        <Button
+                          variant="primary"
+                          onClick={() => setShowForm(true)}
+                          className="flex items-center space-x-2 mx-auto px-4 py-2"
+                        >
+                          <Plus size={14} />
+                          <span className="text-sm">Add Account</span>
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredAccounts.map((account) => (
+                        <AccountCard
+                          key={account.id}
+                          account={account}
+                          onEdit={handleEditAccount}
+                          onDelete={handleDeleteAccount}
+                          onDuplicate={handleDuplicateAccount}
+                          onTransfer={handleTransfer}
+                          onViewHistory={handleViewHistory}
+                          onViewAnalytics={handleViewAnalytics}
+                          onToggleVisibility={handleToggleVisibility}
+                          onTogglePin={handleTogglePin}
+                          onArchive={handleArchiveAccount}
+                          showBalance={true}
+                          showDualCurrency={true}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
