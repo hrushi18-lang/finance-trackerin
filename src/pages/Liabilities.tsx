@@ -158,16 +158,29 @@ const Liabilities: React.FC = () => {
   };
 
   // Get liability icon
-  const getLiabilityIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'credit_card': return <CreditCard size={20} className="text-red-600" />;
-      case 'personal_loan': return <Wallet size={20} className="text-blue-600" />;
-      case 'mortgage': return <Home size={20} className="text-green-600" />;
-      case 'auto_loan': return <Car size={20} className="text-purple-600" />;
-      case 'student_loan': return <GraduationCap size={20} className="text-orange-600" />;
-      case 'business_loan': return <Building size={20} className="text-indigo-600" />;
-      default: return <CreditCard size={20} className="text-gray-600" />;
+  const getLiabilityIcon = (type: string | undefined) => {
+    if (!type) return <CreditCard size={20} className="text-gray-600" />;
+    
+    const lowerType = type.toLowerCase();
+    if (lowerType.includes('credit_card') || lowerType.includes('credit')) {
+      return <CreditCard size={20} className="text-red-600" />;
     }
+    if (lowerType.includes('mortgage') || lowerType.includes('home')) {
+      return <Home size={20} className="text-green-600" />;
+    }
+    if (lowerType.includes('auto') || lowerType.includes('car') || lowerType.includes('vehicle')) {
+      return <Car size={20} className="text-purple-600" />;
+    }
+    if (lowerType.includes('student') || lowerType.includes('education')) {
+      return <GraduationCap size={20} className="text-orange-600" />;
+    }
+    if (lowerType.includes('business')) {
+      return <Building size={20} className="text-indigo-600" />;
+    }
+    if (lowerType.includes('loan')) {
+      return <Wallet size={20} className="text-blue-600" />;
+    }
+    return <CreditCard size={20} className="text-gray-600" />;
   };
 
   // Get liability status
