@@ -278,48 +278,7 @@ const Budgets: React.FC = () => {
               Archived ({archivedBudgetsCount})
             </button>
           </div>
-            </div>
-          </div>
         )}
-
-        {activeTab === 'list' && (
-          <div className="space-y-4">
-            {/* Filter Tabs */}
-            {budgets.length > 0 && (
-              <div className="flex space-x-2 mb-4">
-                <button
-                  onClick={() => setViewFilter('active')}
-                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    viewFilter === 'active'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
-                  }`}
-                >
-                  Active ({activeBudgetsCount})
-                </button>
-                <button
-                  onClick={() => setViewFilter('all')}
-                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    viewFilter === 'all'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
-                  }`}
-                >
-                  All ({budgets.length})
-                </button>
-                <button
-                  onClick={() => setViewFilter('archived')}
-                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    viewFilter === 'archived'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
-                  }`}
-                >
-                  Archived ({archivedBudgetsCount})
-                </button>
-              </div>
-            )}
-          <div className="space-y-4">
             {/* Budgets List */}
             {budgets.length > 0 && (
               <div className="slide-in-up">

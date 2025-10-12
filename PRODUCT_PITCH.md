@@ -527,37 +527,11 @@ Personal finance management is **broken**. People juggle multiple apps, miss pay
 
 **Ready to revolutionize personal finance?**
 
-📧 Email: [contact@finance-tracker.app](mailto:contact@finance-tracker.app)  
+📧 Email: [strahathru@gmail.com](strawhathru@gmail.com)  
 🌐 Website: [finance-trackerin.vercel.app](https://finance-trackerin.vercel.app)  
-💼 LinkedIn: [Connect with us](#)  
-🐦 Twitter: [@FinanceTrackerHQ](#)  
+
 
 **Together, let's help millions achieve financial freedom.** 🚀💰
-
----
-
-## Appendix
-
-### A. Product Screenshots
-[Include key screenshots of dashboard, transactions, budgets, goals, analytics]
-
-### B. User Testimonials
-[Include 5-10 beta tester quotes and feedback]
-
-### C. Financial Projections (Detailed)
-[Include 5-year P&L, cash flow, balance sheet projections]
-
-### D. Competitive Analysis (Detailed)
-[Include feature comparison matrix with 10+ competitors]
-
-### E. Technical Architecture
-[Include system architecture diagram, tech stack details, security measures]
-
-### F. Marketing Plan (Detailed)
-[Include month-by-month marketing calendar, channel strategies, budget allocation]
-
----
-
 **End of Pitch Document**
 
 *Personal Finance Tracker - Take Control. Achieve More. Live Better.* 💰✨
