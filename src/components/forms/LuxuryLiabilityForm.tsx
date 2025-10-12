@@ -500,14 +500,14 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
                   <div>
                     <div className="text-xs text-gray-500 mb-1">Account Currency</div>
                     <div className="font-medium text-gray-900">
-                      {dualCurrencyData.account.convertedSymbol}{dualCurrencyData.account.convertedAmount.toFixed(2)}
+                      {dualCurrencyData.account.convertedSymbol}{(dualCurrencyData.account.convertedAmount || 0).toFixed(2)}
                     </div>
                     <div className="text-xs text-gray-500">{dualCurrencyData.account.convertedCurrency}</div>
                   </div>
                   <div className="text-right">
                     <div className="text-xs text-gray-500">Rate</div>
                     <div className="text-sm font-medium text-blue-600">
-                      {dualCurrencyData.account.exchangeRate.toFixed(4)}
+                      {(dualCurrencyData.account.exchangeRate || 1).toFixed(4)}
                     </div>
                   </div>
                 </div>
@@ -517,14 +517,14 @@ export const LuxuryLiabilityForm: React.FC<LuxuryLiabilityFormProps> = ({ onComp
                   <div>
                     <div className="text-xs text-gray-500 mb-1">Primary Currency</div>
                     <div className="font-medium text-gray-900">
-                      {dualCurrencyData.primary.convertedSymbol}{dualCurrencyData.primary.convertedAmount.toFixed(2)}
+                      {dualCurrencyData.primary.convertedSymbol}{(dualCurrencyData.primary.convertedAmount || 0).toFixed(2)}
                     </div>
                     <div className="text-xs text-gray-500">{dualCurrencyData.primary.convertedCurrency}</div>
                   </div>
                   <div className="text-right">
                     <div className="text-xs text-gray-500">Rate</div>
                     <div className="text-sm font-medium text-blue-600">
-                      {dualCurrencyData.primary.exchangeRate.toFixed(4)}
+                      {(dualCurrencyData.primary.exchangeRate || 1).toFixed(4)}
                     </div>
                   </div>
                 </div>
