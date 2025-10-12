@@ -11,7 +11,7 @@ import { Budget } from '../types';
 
 const Budgets: React.FC = () => {
   const navigate = useNavigate();
-  const { budgets, addBudget, updateBudget, deleteBudget, pauseBudget, resumeBudget, stopBudget, archiveBudget, completeBudget, transactions } = useFinance();
+  const { budgets, addBudget, updateBudget, deleteBudget, pauseBudget, resumeBudget, stopBudget, archiveBudget, completeBudget, transactions, refreshBudgets } = useFinance();
   const { currency, formatCurrency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
   const [editingBudget, setEditingBudget] = useState<string | null>(null);
@@ -20,13 +20,17 @@ const Budgets: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewFilter, setViewFilter] = useState<'active' | 'all' | 'archived'>('active');
+  const [activeTab, setActiveTab] = useState<'overview' | 'list'>('overview');
+  const [selectedBudget, setSelectedBudget] = useState<string>('');
 
   const handleAddBudget = async (budget: any) => {
     try {
       setIsSubmitting(true);
       setError(null);
       await addBudget(budget);
+      await refreshBudgets(); // Auto-refresh to show new budget immediately
       setShowModal(false);
+      setEditingBudget(null);
     } catch (error: any) {
       console.error('Error adding budget:', error);
       setError(error.message || 'Failed to add budget. Please try again.');
@@ -42,6 +46,7 @@ const Budgets: React.FC = () => {
 
       if (editingBudget) {
         await updateBudget(editingBudget, budget);
+        await refreshBudgets(); // Auto-refresh to show updated budget immediately
         setEditingBudget(null);
         setShowModal(false);
       }
@@ -65,6 +70,7 @@ const Budgets: React.FC = () => {
       setIsSubmitting(true);
       setError(null);
       await deleteBudget(budgetToDelete);
+      await refreshBudgets(); // Auto-refresh after delete
       setShowDeleteConfirm(false);
       setBudgetToDelete(null);
     } catch (error: any) {
@@ -139,32 +145,81 @@ const Budgets: React.FC = () => {
       </div>
       
       <div className="px-4 space-y-4">
-        {/* Budget Summary */}
-        <div className="card p-4 slide-in-up">
-          <div className="mb-4">
-            <h2 className="text-lg font-heading">Budget Overview</h2>
+        {/* Segmented Bar at Top */}
+        {budgets.length > 0 && (
+          <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
+            {[
+              { key: 'overview', label: 'Overview', icon: PieChart },
+              { key: 'list', label: 'All Budgets', icon: Calculator }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-1 ${
+                  activeTab === tab.key
+                    ? 'text-white transform scale-105'
+                    : 'text-gray-600 hover:text-gray-900 hover:scale-105'
+                }`}
+                style={{
+                  backgroundColor: activeTab === tab.key ? 'var(--primary)' : 'transparent'
+                }}
+              >
+                <tab.icon size={14} />
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </div>
+        )}
+
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
+          <div className="space-y-4">
+            {/* Budget Summary */}
+            <div className="card p-4 slide-in-up">
+              <div className="mb-4">
+                <h2 className="text-lg font-heading">Budget Overview</h2>
+              </div>
           
           {budgets.length > 0 ? (
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-numbers">{activeBudgetsCount}</p>
-                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Active</p>
+            <>
+              {/* Budget Selection Dropdown */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Select Budget to View Details
+                </label>
+                <select
+                  value={selectedBudget || ''}
+                  onChange={(e) => setSelectedBudget(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+                >
+                  <option value="">Choose a budget...</option>
+                  {budgets.map((budget) => (
+                    <option key={budget.id} value={budget.id}>
+                      {budget.name || budget.category} - {formatCurrency(budget.amount)}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-numbers">{archivedBudgetsCount}</p>
-                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Archived</p>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-numbers">{activeBudgetsCount}</p>
+                  <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Active</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-numbers">{archivedBudgetsCount}</p>
+                  <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Archived</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-numbers">
+                    {budgets.filter(b => {
+                      const progress = getBudgetProgress(b);
+                      return progress.percentage >= 80;
+                    }).length}
+                  </p>
+                  <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Near Limit</p>
+                </div>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-numbers">
-                  {budgets.filter(b => {
-                    const progress = getBudgetProgress(b);
-                    return progress.percentage >= 80;
-                  }).length}
-                </p>
-                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Near Limit</p>
-              </div>
-            </div>
           ) : (
             <div className="text-center py-6">
               <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: 'var(--background-secondary)' }}>
@@ -218,14 +273,54 @@ const Budgets: React.FC = () => {
               Archived ({archivedBudgetsCount})
             </button>
           </div>
+            </div>
+          </div>
         )}
 
-        {/* Budgets List */}
-        {budgets.length > 0 && (
-          <div className="slide-in-up">
-            <h3 className="text-lg font-heading mb-4">
-              {viewFilter === 'active' ? 'Active Budgets' : viewFilter === 'archived' ? 'Archived Budgets' : 'All Budgets'}
-            </h3>
+        {activeTab === 'list' && (
+          <div className="space-y-4">
+            {/* Filter Tabs */}
+            {budgets.length > 0 && (
+              <div className="flex space-x-2 mb-4">
+                <button
+                  onClick={() => setViewFilter('active')}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    viewFilter === 'active'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
+                  }`}
+                >
+                  Active ({activeBudgetsCount})
+                </button>
+                <button
+                  onClick={() => setViewFilter('all')}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    viewFilter === 'all'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
+                  }`}
+                >
+                  All ({budgets.length})
+                </button>
+                <button
+                  onClick={() => setViewFilter('archived')}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    viewFilter === 'archived'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
+                  }`}
+                >
+                  Archived ({archivedBudgetsCount})
+                </button>
+              </div>
+            )}
+          <div className="space-y-4">
+            {/* Budgets List */}
+            {budgets.length > 0 && (
+              <div className="slide-in-up">
+                <h3 className="text-lg font-heading mb-4">
+                  {viewFilter === 'active' ? 'Active Budgets' : viewFilter === 'archived' ? 'Archived Budgets' : 'All Budgets'}
+                </h3>
             <div className="space-y-3">
               {filteredBudgets.map((budget) => {
                 const progress = getBudgetProgress(budget);
@@ -345,6 +440,8 @@ const Budgets: React.FC = () => {
                 );
               })}
             </div>
+          </div>
+        )}
           </div>
         )}
 

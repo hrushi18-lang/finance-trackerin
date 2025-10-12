@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Plus, Edit3, Trash2, BarChart3, Calculator, AlertTriangle, CheckCircle, Building, Car, Home, GraduationCap, Wallet, DollarSign, ArrowLeft, Search } from 'lucide-react';
 import { Modal } from '../components/common/Modal';
-import { LuxuryLiabilityForm } from '../components/forms/LuxuryLiabilityForm';
 import { LiabilityModificationForm } from '../components/forms/LiabilityModificationForm';
 import { PaymentForm } from '../components/forms/PaymentForm';
 import { Input } from '../components/common/Input';
@@ -45,7 +44,6 @@ const Liabilities: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showLuxuryForm, setShowLuxuryForm] = useState(false);
   const [showModificationForm, setShowModificationForm] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedLiability, setSelectedLiability] = useState<string | null>(null);
@@ -53,18 +51,14 @@ const Liabilities: React.FC = () => {
   const [editingLiability, setEditingLiability] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [liabilityToDelete, setLiabilityToDelete] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'payments'>('overview');
-  
   // Enhanced features state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<LiabilityType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'paid_off' | 'overdue'>('all');
+  const [activeTab, setActiveTab] = useState<'overview' | 'list'>('overview');
+  const [selectedLiability, setSelectedLiability] = useState<string>('');
 
   // Enhanced handler functions
-  const handleLuxuryFormComplete = () => {
-    setShowLuxuryForm(false);
-    // Liability is already created by the form
-  };
 
   const handleModifyLiability = async (modificationData: any) => {
     if (!selectedLiability) return;
@@ -236,7 +230,7 @@ const Liabilities: React.FC = () => {
             <h1 className="text-2xl font-heading">Liabilities</h1>
           </div>
           <button
-            onClick={() => setShowLuxuryForm(true)}
+            onClick={() => navigate('/liabilities/add')}
             className="btn-primary flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
           >
             <Plus size={20} />
@@ -245,51 +239,6 @@ const Liabilities: React.FC = () => {
         </div>
       </div>
       
-      {/* Enhanced Filters */}
-      <div className="px-4 mb-4">
-        <div className="card p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              placeholder="Search liabilities..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              icon={<Search size={18} className="text-blue-400" />}
-              className="bg-white border-gray-200 text-gray-900"
-            />
-            
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as LiabilityType | 'all')}
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:border-primary-500 focus:ring-primary-500"
-            >
-              <option value="all">All Types</option>
-              <option value="education_loan">Education Loan</option>
-              <option value="student_credit_card">Student Credit Card</option>
-              <option value="family_debt">Family Debt</option>
-              <option value="bnpl">Buy Now Pay Later</option>
-              <option value="personal_loan">Personal Loan</option>
-              <option value="credit_card">Credit Card</option>
-              <option value="auto_loan">Auto Loan</option>
-              <option value="home_loan">Home Loan</option>
-              <option value="gold_loan">Gold Loan</option>
-              <option value="utility_debt">Utility Debt</option>
-              <option value="tax_debt">Tax Debt</option>
-              <option value="international_debt">International Debt</option>
-            </select>
-
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:border-primary-500 focus:ring-primary-500"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="paid_off">Paid Off</option>
-              <option value="overdue">Overdue</option>
-            </select>
-          </div>
-        </div>
-      </div>
       
       <div className="px-4 space-y-4">
         {/* Liability Summary */}
@@ -321,7 +270,7 @@ const Liabilities: React.FC = () => {
                 Add your first liability to start tracking your debt
               </p>
               <button
-                onClick={() => setShowLuxuryForm(true)}
+                onClick={() => navigate('/liabilities/add')}
                 className="btn-primary bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 <Plus size={20} className="mr-2" />
@@ -336,13 +285,12 @@ const Liabilities: React.FC = () => {
           <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
             {[
               { key: 'overview', label: 'Overview', icon: BarChart3 },
-              { key: 'analytics', label: 'Analytics', icon: Calculator },
-              { key: 'payments', label: 'Payments', icon: DollarSign }
+              { key: 'list', label: 'All Debts', icon: CreditCard }
             ].map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
-                className={`flex-1 py-2 px-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-1 ${
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-1 ${
                   activeTab === tab.key
                     ? 'text-white transform scale-105'
                     : 'text-gray-600 hover:text-gray-900 hover:scale-105'
@@ -358,10 +306,105 @@ const Liabilities: React.FC = () => {
           </div>
         )}
 
-        {/* Liabilities List */}
-        {filteredLiabilities.length > 0 && (
-          <div className="slide-in-up">
-            <h3 className="text-lg font-heading mb-4">Your Liabilities</h3>
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Enhanced Filters */}
+            <div className="card p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  placeholder="Search liabilities..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  icon={<Search size={18} className="text-blue-400" />}
+                  className="bg-white border-gray-200 text-gray-900"
+                />
+                
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value as LiabilityType | 'all')}
+                  className="px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:border-primary-500 focus:ring-primary-500"
+                >
+                  <option value="all">All Types</option>
+                  <option value="education_loan">Education Loan</option>
+                  <option value="student_credit_card">Student Credit Card</option>
+                  <option value="family_debt">Family Debt</option>
+                  <option value="bnpl">Buy Now Pay Later</option>
+                  <option value="personal_loan">Personal Loan</option>
+                  <option value="credit_card">Credit Card</option>
+                  <option value="auto_loan">Auto Loan</option>
+                  <option value="home_loan">Home Loan</option>
+                  <option value="gold_loan">Gold Loan</option>
+                  <option value="utility_debt">Utility Debt</option>
+                  <option value="tax_debt">Tax Debt</option>
+                  <option value="international_debt">International Debt</option>
+                </select>
+
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as any)}
+                  className="px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:border-primary-500 focus:ring-primary-500"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="paid_off">Paid Off</option>
+                  <option value="overdue">Overdue</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Debt Overview Card */}
+            <div className="card p-6">
+              <h3 className="text-lg font-heading mb-4 flex items-center">
+                <Calculator size={20} className="mr-2" />
+                Debt Overview
+              </h3>
+
+              {/* Liability Selection Dropdown */}
+              {filteredLiabilities.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Select Liability to View Details
+                  </label>
+                  <select
+                    value={selectedLiability || ''}
+                    onChange={(e) => setSelectedLiability(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+                  >
+                    <option value="">Choose a liability...</option>
+                    {filteredLiabilities.map((liability) => (
+                      <option key={liability.id} value={liability.id}>
+                        {liability.name} - {formatCurrency(liability.remainingAmount)} remaining
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {filteredLiabilities.length}
+                  </div>
+                  <div className="text-sm text-gray-600">Active Debts</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">
+                    {formatCurrency(filteredLiabilities.reduce((sum, liability) => sum + liability.remainingAmount, 0))}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Debt</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'list' && (
+          <div className="space-y-4">
+            {/* Liabilities List */}
+            {filteredLiabilities.length > 0 && (
+              <div className="slide-in-up">
+                <h3 className="text-lg font-heading mb-4">Your Liabilities</h3>
             <div className="space-y-3">
               {filteredLiabilities.map((liability) => {
                 const status = getLiabilityStatus(liability);
@@ -498,6 +541,8 @@ const Liabilities: React.FC = () => {
             </div>
           </div>
         )}
+          </div>
+        )}
 
         {/* Error Display */}
         {error && (
@@ -510,13 +555,6 @@ const Liabilities: React.FC = () => {
         )}
       </div>
 
-      {/* Luxury Liability Form */}
-      {showLuxuryForm && (
-        <LuxuryLiabilityForm
-          onComplete={handleLuxuryFormComplete}
-          onCancel={() => setShowLuxuryForm(false)}
-        />
-      )}
 
       {/* Modification Modal */}
       <Modal

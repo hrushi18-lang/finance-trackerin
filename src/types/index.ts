@@ -285,50 +285,84 @@ export interface Asset {
   updatedAt: Date;
 }
 
+export type BillTypeCategory = 
+  | 'recurring_utilities'    // Rent, Electricity, Water, Gas, Internet, Insurance
+  | 'variable_usage'         // Usage-based utilities, mobile data overages
+  | 'credit_loan'            // Credit card bills, personal/auto/student loans
+  | 'subscription'           // Streaming services, gym memberships
+  | 'one_time_misc';         // Medical bills, repairs, maintenance
+
+export type BillStatus = 'pending' | 'paid' | 'partially_paid' | 'overdue' | 'cancelled';
+export type BillFrequency = 'weekly' | 'bi_weekly' | 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'custom' | 'one_time';
+export type BillPriority = 'low' | 'medium' | 'high' | 'critical';
+
 export interface Bill { // Enhanced Bill interface with all new features
   id: string;
   userId: string;
-  title: string;
-  description?: string;
-  category: string;
+  
+  // 1️⃣ Basic Bill Details
+  title: string;                     // Bill Name
+  description?: string;              // Bill Description/Notes
+  category: string;                  // e.g., Utilities, Rent, Subscription
+  billTypeCategory?: BillTypeCategory; // Type of bill
+  amount: number;                    // Bill Amount
+  currency?: string;                 // Currency code (USD, INR, etc.)
+  currencycode: string;              // Legacy field for compatibility
+  
+  // 2️⃣ Billing Date Information
+  dueDate: Date;                     // Due Date
+  billDate?: Date;                   // Bill Date / Issued Date
+  reminderDate?: Date;               // When to notify user
+  reminderDaysBefore: number;        // Days before due date to remind
+  nextDueDate: Date;                 // For recurring bills
+  lastPaidDate?: Date;               // Last payment date
+  
+  // 3️⃣ Payment Details
+  defaultAccountId?: string;         // Which account will pay
+  paymentMethod?: string;            // Payment method description
+  autoPay: boolean;                  // Auto-pay option
+  accountIds: string[];              // Multiple accounts support
+  
+  // 4️⃣ Recurrence / Subscription
+  isRecurring: boolean;              // Is this recurring?
+  frequency: BillFrequency;          // How often (daily/weekly/monthly/yearly)
+  customFrequencyDays?: number;      // Custom frequency in days
+  endDate?: Date;                    // When recurring stops
+  
+  // 5️⃣ Attachments / Proof
+  attachmentUrls?: string[];         // URLs to uploaded invoices/PDFs/images
+  attachmentNames?: string[];        // Original file names
+  
+  // 6️⃣ Status / Tracking
+  status: BillStatus;                // pending/paid/overdue/etc.
+  paidAmount?: number;               // For partially paid bills
+  notes?: string;                    // Payment confirmation/notes
+  billStage: 'pending' | 'paid' | 'moved' | 'failed' | 'stopped';
+  
+  // Additional Fields
   billType: 'fixed' | 'variable' | 'one_time' | 'liability_linked';
-  amount: number;
   estimatedAmount?: number;
-  currencycode: string;
-  frequency: 'weekly' | 'bi_weekly' | 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'custom' | 'one_time';
-  customFrequencyDays?: number;
-  dueDate: Date;
-  nextDueDate: Date;
-  lastPaidDate?: Date;
-  defaultAccountId?: string;
-  autoPay: boolean;
   linkedLiabilityId?: string;
   isEmi: boolean;
   isActive: boolean;
   isEssential: boolean;
-  reminderDaysBefore: number;
   sendDueDateReminder: boolean;
   sendOverdueReminder: boolean;
+  
   // Enhanced fields
   billCategory: 'account_specific' | 'category_based' | 'general';
   targetCategory?: string;
-  isRecurring: boolean;
-  paymentMethod?: string;
-  notes?: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'active' | 'paused' | 'completed' | 'cancelled';
+  priority: BillPriority;
   activityScope: 'general' | 'account_specific' | 'category_based';
-  accountIds: string[];
+  
   // Income bills support
   isIncome: boolean;
-  // Bill staging support
-  billStage: 'pending' | 'paid' | 'moved' | 'failed' | 'stopped';
-  movedToDate?: Date;
-  stageReason?: string;
+  
   // Variable amount support
   isVariableAmount: boolean;
   minAmount?: number;
   maxAmount?: number;
+  
   // Completion flow support
   completionAction: 'continue' | 'extend' | 'archive' | 'delete';
   completionDate?: Date;
@@ -338,8 +372,12 @@ export interface Bill { // Enhanced Bill interface with all new features
   isArchived: boolean;
   archivedDate?: Date;
   archivedReason?: string;
+  movedToDate?: Date;
+  stageReason?: string;
+  
   // Multi-account support
   linkedAccountsCount: number;
+  
   // Credit Card Bill specific fields
   isCreditCardBill?: boolean;
   creditCardAccountId?: string;
@@ -350,10 +388,12 @@ export interface Bill { // Enhanced Bill interface with all new features
   carryForwardAmount?: number;
   interestCharged?: number;
   feesCharged?: number;
+  
   // Currency tracking fields (matching database schema)
   original_amount?: number;
   original_currency?: string;
   exchange_rate_used?: number;
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -512,22 +552,53 @@ export interface NotificationItem {
   createdAt: Date;
   updatedAt: Date;
 }
+export type BudgetType = 
+  | 'fixed_expense'      // Regular recurring bills (rent, utilities, subscriptions)
+  | 'variable_expense'   // Fluctuating costs (groceries, dining, entertainment)
+  | 'debt_repayment'     // Paying off loans or credit cards
+  | 'savings'            // Emergency fund or general savings
+  | 'goal_oriented'      // Targeted spending for specific goals
+  | 'cash_envelope'      // Cash envelope system
+  | 'income_allocation'  // Percentage-based allocation (50/30/20 rule)
+  | 'zero_based'         // Every dollar allocated
+  | 'rolling'            // Unused budget carries over
+  | 'custom';            // User-defined type
+
+export type BudgetRecurrence = 'once' | 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'yearly';
+
 export interface Budget {
   id: string;
-  category: string;
+  // Basic Details
+  name?: string;                    // Budget name/title
+  description?: string;             // Optional notes
+  category: string;                 // Spending category
+  budgetType?: BudgetType;          // Type of budget
+  
+  // Financial Limits
   amount: number;
   spent?: number;
+  currency?: string;
+  alertThreshold?: number;          // Percentage (e.g., 80 for 80%)
+  alertEnabled?: boolean;
+  
+  // Time Frame
   period: 'weekly' | 'monthly' | 'yearly';
+  recurrence?: BudgetRecurrence;
+  startDate?: string;
+  endDate?: string | null;
+  
+  // User & Status
   userId: string;
-  // Scoping fields
-  activityScope?: 'general' | 'account_specific' | 'category_based';
-  accountIds?: string[];
-  targetCategory?: string;
-  // Status control fields (NEW)
   is_active?: boolean;
   status?: 'active' | 'paused' | 'stopped' | 'archived' | 'completed';
   archived_at?: Date;
   stop_reason?: string;
+  
+  // Scoping fields
+  activityScope?: 'general' | 'account_specific' | 'category_based';
+  accountIds?: string[];
+  targetCategory?: string;
+  
   // Multi-currency fields (matching database schema)
   native_amount?: number;
   native_currency?: string;
@@ -537,6 +608,11 @@ export interface Budget {
   conversion_source?: string;
   conversion_case?: string;
   execution_id?: string;
+  
+  // Rollover settings (for rolling budgets)
+  allowRollover?: boolean;
+  rolledOverAmount?: number;
+  
   createdAt: Date;
   updatedAt?: Date;
 }

@@ -25,6 +25,7 @@ const Accounts: React.FC = () => {
     updateAccount, 
     deleteAccount,
     duplicateAccount,
+    refreshAccounts,
     archiveAccount,
     // restoreAccount, // Unused
     // softDeleteAccount, // Unused
@@ -59,6 +60,8 @@ const Accounts: React.FC = () => {
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
   const [activeTab, setActiveTab] = useState<'accounts' | 'cards'>('accounts');
+  const [viewTab, setViewTab] = useState<'overview' | 'list'>('overview');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
 
   // Initialize analytics engine
   const analyticsEngine = useMemo(() => {
@@ -149,6 +152,7 @@ const Accounts: React.FC = () => {
   const handleCreateAccount = async (data: Record<string, unknown>) => {
     try {
       await addAccount(data);
+      await refreshAccounts(); // Auto-refresh after creating account
       setShowForm(false);
     } catch (error) {
       console.error('Error creating account:', error);
@@ -509,8 +513,85 @@ const Accounts: React.FC = () => {
         {/* Tab Content */}
         {activeTab === 'accounts' && (
           <>
-            {/* Mobile-Optimized Accounts List */}
-            <div className="space-y-3">
+            {/* Segmented Control for Overview/List */}
+            {filteredAccounts.length > 0 && (
+              <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
+                {[
+                  { key: 'overview', label: 'Overview', icon: BarChart3 },
+                  { key: 'list', label: 'All Accounts', icon: Shield }
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setViewTab(tab.key as any)}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-1 ${
+                      viewTab === tab.key
+                        ? 'text-white transform scale-105'
+                        : 'text-gray-600 hover:text-gray-900 hover:scale-105'
+                    }`}
+                    style={{
+                      backgroundColor: viewTab === tab.key ? 'var(--primary)' : 'transparent'
+                    }}
+                  >
+                    <tab.icon size={14} />
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* View Content */}
+            {viewTab === 'overview' && (
+              <div className="space-y-4">
+                {/* Accounts Overview Card */}
+                <div className="card p-6">
+                  <h3 className="text-lg font-heading mb-4 flex items-center">
+                    <Shield size={20} className="mr-2" />
+                    Accounts Overview
+                  </h3>
+
+                  {/* Account Selection Dropdown */}
+                  {filteredAccounts.length > 0 && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                        Select Account to View Details
+                      </label>
+                      <select
+                        value={selectedAccountId || ''}
+                        onChange={(e) => setSelectedAccountId(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+                      >
+                        <option value="">Choose an account...</option>
+                        {filteredAccounts.map((account) => (
+                          <option key={account.id} value={account.id}>
+                            {account.name} - {formatCurrency(account.balance, account.currencyCode || 'USD')}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {filteredAccounts.length}
+                      </div>
+                      <div className="text-sm text-gray-600">Total Accounts</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {formatCurrency(totalBalance, currency.code)}
+                      </div>
+                      <div className="text-sm text-gray-600">Total Balance</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {viewTab === 'list' && (
+              <div className="space-y-4">
+                {/* Mobile-Optimized Accounts List */}
+                <div className="space-y-3">
           {filteredAccounts.length === 0 ? (
             <div
               className="p-6 rounded-2xl text-center"
@@ -662,7 +743,9 @@ const Accounts: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

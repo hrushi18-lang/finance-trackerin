@@ -219,6 +219,15 @@ interface FinanceContextType {
   
   // Currency helper
   getUserCurrency: () => string;
+  
+  // Refresh functions
+  refreshData: () => Promise<void>;
+  refreshBudgets: () => Promise<void>;
+  refreshBills: () => Promise<void>;
+  refreshAccounts: () => Promise<void>;
+  refreshTransactions: () => Promise<void>;
+  refreshGoals: () => Promise<void>;
+  refreshLiabilities: () => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -1666,18 +1675,40 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const mappedBudgets: Budget[] = (data || []).map(budget => ({
       id: budget.id,
       userId: budget.user_id,
+      // Basic Details
+      name: budget.name,
+      description: budget.description,
       category: budget.category,
+      budgetType: budget.budget_type || 'variable_expense',
+      
+      // Financial Limits
       amount: Number(budget.amount) || 0,
       spent: Number(budget.spent) || 0,
+      currency: budget.currency || getUserCurrency(),
+      alertThreshold: budget.alert_threshold || 80,
+      alertEnabled: budget.alert_enabled !== false,
+      
+      // Time Frame
       period: budget.period,
-      // Add scoping fields
-      accountId: budget.account_id,
+      recurrence: budget.recurrence || 'monthly',
+      startDate: budget.start_date || new Date().toISOString().split('T')[0],
+      endDate: budget.end_date || null,
+      
+      // Status & Activity
+      is_active: budget.is_active,
+      status: budget.status,
       activityScope: budget.activity_scope || 'general',
+      accountId: budget.account_id,
       accountIds: budget.account_ids || [],
       targetCategory: budget.target_category,
-      currencycode: budget.currency_code || getUserCurrency(),
-      startDate: budget.start_date ? new Date(budget.start_date) : new Date(),
-      endDate: budget.end_date ? new Date(budget.end_date) : undefined,
+      
+      // Rollover
+      allowRollover: budget.allow_rollover || false,
+      rolledOverAmount: budget.rolled_over_amount || 0,
+      
+      // Legacy field
+      currencycode: budget.currency_code || budget.currency || getUserCurrency(),
+      
       createdAt: new Date(budget.created_at),
       updatedAt: new Date(budget.updated_at)
     }));
@@ -4535,18 +4566,38 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     try {
-      // Filter out fields that don't exist in budgets table
-      // Database has: category, amount, spent, period, is_active, status, activity_scope
-      // Database does NOT have: startDate, endDate, categoryId, currencyCode (uses snake_case instead)
+      // Prepare database insert with all new fields
+      // Database uses snake_case for field names
       const dbBudgetData = {
         user_id: user.id,
+        // Basic Details
+        name: budgetData.name || null,
+        description: budgetData.description || null,
         category: budgetData.category,
+        budget_type: budgetData.budgetType || 'variable_expense',
+        
+        // Financial Limits
         amount: convertedAmount,
         spent: budgetData.spent || 0,
+        currency: budgetData.currency || budgetCurrency,
+        alert_threshold: budgetData.alertThreshold || 80,
+        alert_enabled: budgetData.alertEnabled !== false,
+        
+        // Time Frame
         period: budgetData.period,
+        recurrence: budgetData.recurrence || 'monthly',
+        start_date: budgetData.startDate || new Date().toISOString().split('T')[0],
+        end_date: budgetData.endDate || null,
+        
+        // Status & Activity
         is_active: budgetData.is_active !== false,
         status: budgetData.status || 'active',
         activity_scope: budgetData.activityScope || 'general',
+        
+        // Rollover
+        allow_rollover: budgetData.allowRollover || false,
+        rolled_over_amount: budgetData.rolledOverAmount || 0,
+        
         // Multi-currency fields (snake_case)
         native_amount: (budgetData as any).native_amount || budgetData.amount,
         native_currency: (budgetData as any).native_currency || budgetCurrency,
@@ -4587,13 +4638,36 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const newBudget: Budget = {
         id: createdBudget.id,
         userId: createdBudget.user_id,
+        // Basic Details
+        name: createdBudget.name,
+        description: createdBudget.description,
         category: createdBudget.category,
+        budgetType: createdBudget.budget_type,
+        
+        // Financial Limits
         amount: Number(createdBudget.amount),
         spent: Number(createdBudget.spent || 0),
+        currency: createdBudget.currency,
+        alertThreshold: createdBudget.alert_threshold,
+        alertEnabled: createdBudget.alert_enabled,
+        
+        // Time Frame
         period: createdBudget.period,
+        recurrence: createdBudget.recurrence,
+        startDate: createdBudget.start_date,
+        endDate: createdBudget.end_date,
+        
+        // Status & Activity
+        is_active: createdBudget.is_active,
+        status: createdBudget.status,
+        activityScope: createdBudget.activity_scope || 'general',
+        
+        // Rollover
+        allowRollover: createdBudget.allow_rollover,
+        rolledOverAmount: createdBudget.rolled_over_amount,
+        
         createdAt: new Date(createdBudget.created_at),
-        updatedAt: new Date(createdBudget.updated_at),
-        activityScope: createdBudget.activity_scope || 'general'
+        updatedAt: new Date(createdBudget.updated_at)
       };
 
       setBudgets(prev => [...prev, newBudget]);
@@ -4610,14 +4684,35 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const { error } = await supabase
       .from('budgets')
       .update({
+        // Basic Details
+        name: updates.name,
+        description: updates.description,
         category: updates.category,
+        budget_type: updates.budgetType,
+        
+        // Financial Limits
         amount: updates.amount,
         spent: updates.spent,
+        currency: updates.currency,
+        alert_threshold: updates.alertThreshold,
+        alert_enabled: updates.alertEnabled,
+        
+        // Time Frame
         period: updates.period,
+        recurrence: updates.recurrence,
+        start_date: updates.startDate,
+        end_date: updates.endDate,
+        
+        // Status & Activity
         is_active: updates.is_active,
         status: updates.status,
         archived_at: updates.archived_at,
-        stop_reason: updates.stop_reason
+        stop_reason: updates.stop_reason,
+        activity_scope: updates.activityScope,
+        
+        // Rollover
+        allow_rollover: updates.allowRollover,
+        rolled_over_amount: updates.rolledOverAmount
       })
       .eq('id', id)
       .eq('user_id', user.id);
@@ -5704,7 +5799,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     hideReceipt,
     
     // Currency helper
-    getUserCurrency
+    getUserCurrency,
+    
+    // Refresh functions
+    refreshData: loadAllData,
+    refreshBudgets: loadBudgets,
+    refreshBills: loadBills,
+    refreshAccounts: loadAccounts,
+    refreshTransactions: loadTransactions,
+    refreshGoals: loadGoals,
+    refreshLiabilities: loadLiabilities
   };
 
   return (

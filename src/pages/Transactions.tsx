@@ -34,7 +34,7 @@ import { simpleCurrencyService } from '../services/simpleCurrencyService';
 import { formatTransactionAmount as formatMultiCurrencyTransaction } from '../utils/transactionDisplay';
 
 const Transactions: React.FC = () => {
-  const { transactions, accounts, isLoading, error, goals, bills, liabilities, budgets, userCategories } = useFinance();
+  const { transactions, accounts, goals, bills, liabilities, budgets, userCategories, deleteTransaction } = useFinance();
   const { profile } = useProfile();
   const navigate = useNavigate();
   
@@ -44,6 +44,7 @@ const Transactions: React.FC = () => {
   const formatCurrency = (amount: number) => `${currencySymbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   
   const [showTransactionForm, setShowTransactionForm] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState('');
   const [selectedType, setSelectedType] = useState('');
@@ -1022,6 +1023,20 @@ const Transactions: React.FC = () => {
         onClose={() => setShowTransactionForm(false)}
         transaction={selectedTransaction}
       />
+
+      {/* Floating Action Button for Adding Transactions */}
+      <button
+        onClick={() => setShowTransactionForm(true)}
+        className="fixed bottom-24 right-6 w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 shadow-2xl z-40"
+        style={{ 
+          backgroundColor: 'var(--accent-light)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15)',
+          border: '3px solid rgba(255, 255, 255, 0.2)'
+        }}
+        aria-label="Add Transaction"
+      >
+        <Plus size={28} className="text-white" />
+      </button>
     </div>
   );
 };

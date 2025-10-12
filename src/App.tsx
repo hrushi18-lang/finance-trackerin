@@ -41,6 +41,7 @@ import Activities from './pages/Activities';
 import Calendar from './pages/Calendar';
 import Goals from './pages/Goals';
 import Liabilities from './pages/Liabilities';
+import LiabilityForm from './pages/LiabilityForm';
 import Budgets from './pages/Budgets';
 import Overview from './pages/Overview';
 import Accounts from './pages/Accounts';
@@ -295,6 +296,15 @@ function App() {
                                   <ProtectedRoute>
                                     <Liabilities />
                                     <BottomNavigation />
+                                  </ProtectedRoute>
+                                } 
+                              />
+                              
+                              <Route 
+                                path="/liabilities/add" 
+                                element={
+                                  <ProtectedRoute>
+                                    <LiabilityForm />
                                   </ProtectedRoute>
                                 } 
                               />

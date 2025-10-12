@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Calculator, Tag, Calendar, AlertCircle, CheckCircle, Loader2, DollarSign } from 'lucide-react';
+import { Calculator, Tag, Calendar, AlertCircle, CheckCircle, Loader2, DollarSign, Bell, RefreshCw, Info } from 'lucide-react';
 import { validateBudget, sanitizeFinancialData, toNumber } from '../../utils/validation';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
 import { CategorySelector } from '../common/CategorySelector';
 import { Select } from '../common/Select';
-import { Budget } from '../../types';
+import { Budget, BudgetType, BudgetRecurrence } from '../../types';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { CurrencyIcon } from '../common/CurrencyIcon';
 import { useFinance } from '../../contexts/FinanceContext';
@@ -14,15 +14,32 @@ import { currencyConversionService } from '../../services/currencyConversionServ
 import { Decimal } from 'decimal.js';
 
 interface BudgetFormData {
+  // Basic Details
+  name?: string;
+  description?: string;
   category: string;
+  budgetType: BudgetType;
+  
+  // Financial Limits
   amount: number;
+  budgetCurrency: string;
+  primaryCurrency: string;
+  alertThreshold: number;
+  alertEnabled: boolean;
+  
+  // Time Frame
   period: 'weekly' | 'monthly' | 'yearly';
+  recurrence: BudgetRecurrence;
+  startDate: string;
+  endDate?: string;
+  
+  // Scoping
   activityScope: 'general' | 'account_specific' | 'category_based';
   accountIds: string[];
   targetCategory?: string;
-  // Currency conversion fields
-  budgetCurrency: string;
-  primaryCurrency: string;
+  
+  // Rollover
+  allowRollover: boolean;
 }
 
 interface BudgetFormProps {
@@ -31,6 +48,79 @@ interface BudgetFormProps {
   onSubmit: (data: Omit<Budget, 'id' | 'userId' | 'createdAt' | 'spent'>) => Promise<void>;
   onCancel: () => void;
 }
+
+const budgetTypeOptions = [
+  { 
+    value: 'fixed_expense' as BudgetType, 
+    label: '🏠 Fixed Expense Budget', 
+    description: 'Regular recurring bills (rent, utilities, subscriptions)',
+    icon: '🏠'
+  },
+  { 
+    value: 'variable_expense' as BudgetType, 
+    label: '📊 Variable Expense Budget', 
+    description: 'Fluctuating costs (groceries, dining, entertainment)',
+    icon: '📊'
+  },
+  { 
+    value: 'debt_repayment' as BudgetType, 
+    label: '💳 Debt Repayment Budget', 
+    description: 'Paying off loans or credit cards',
+    icon: '💳'
+  },
+  { 
+    value: 'savings' as BudgetType, 
+    label: '🏦 Savings Budget', 
+    description: 'Emergency fund or general savings',
+    icon: '🏦'
+  },
+  { 
+    value: 'goal_oriented' as BudgetType, 
+    label: '🎯 Goal-Oriented Budget', 
+    description: 'Targeted spending for specific goals',
+    icon: '🎯'
+  },
+  { 
+    value: 'cash_envelope' as BudgetType, 
+    label: '💰 Cash Envelope Budget', 
+    description: 'Divide money into category envelopes',
+    icon: '💰'
+  },
+  { 
+    value: 'income_allocation' as BudgetType, 
+    label: '📈 Income Allocation Budget', 
+    description: 'Percentage-based (e.g., 50/30/20 rule)',
+    icon: '📈'
+  },
+  { 
+    value: 'zero_based' as BudgetType, 
+    label: '🎲 Zero-Based Budget', 
+    description: 'Every dollar is allocated',
+    icon: '🎲'
+  },
+  { 
+    value: 'rolling' as BudgetType, 
+    label: '🔄 Rolling Budget', 
+    description: 'Unused budget carries over',
+    icon: '🔄'
+  },
+  { 
+    value: 'custom' as BudgetType, 
+    label: '⚙️ Custom Budget', 
+    description: 'User-defined budget type',
+    icon: '⚙️'
+  }
+];
+
+const recurrenceOptions = [
+  { value: 'once' as BudgetRecurrence, label: 'One-Time', description: 'Non-recurring budget' },
+  { value: 'daily' as BudgetRecurrence, label: 'Daily', description: 'Resets every day' },
+  { value: 'weekly' as BudgetRecurrence, label: 'Weekly', description: 'Resets every week' },
+  { value: 'bi-weekly' as BudgetRecurrence, label: 'Bi-Weekly', description: 'Every two weeks' },
+  { value: 'monthly' as BudgetRecurrence, label: 'Monthly', description: 'Most common choice' },
+  { value: 'quarterly' as BudgetRecurrence, label: 'Quarterly', description: 'Every 3 months' },
+  { value: 'yearly' as BudgetRecurrence, label: 'Yearly', description: 'Annual planning' }
+];
 
 const periodOptions = [
   { value: 'weekly', label: 'Weekly', description: 'Reset every week' },
@@ -68,24 +158,64 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BudgetFormData>({
     defaultValues: initialData ? {
+      // Basic Details
+      name: initialData.name || '',
+      description: initialData.description || '',
       category: initialData.category,
+      budgetType: initialData.budgetType || 'variable_expense',
+      
+      // Financial Limits
       amount: initialData.amount,
-      period: initialData.period,
-      activityScope: (initialData as any).activityScope || 'general',
-      accountIds: (initialData as any).accountIds || [],
-      targetCategory: (initialData as any).targetCategory || '',
       budgetCurrency: initialData.currency || userPrimaryCurrency,
-      primaryCurrency: userPrimaryCurrency
+      primaryCurrency: userPrimaryCurrency,
+      alertThreshold: initialData.alertThreshold || 80,
+      alertEnabled: initialData.alertEnabled !== false,
+      
+      // Time Frame
+      period: initialData.period,
+      recurrence: initialData.recurrence || 'monthly',
+      startDate: initialData.startDate || new Date().toISOString().split('T')[0],
+      endDate: initialData.endDate || '',
+      
+      // Scoping
+      activityScope: initialData.activityScope || 'general',
+      accountIds: initialData.accountIds || [],
+      targetCategory: initialData.targetCategory || '',
+      
+      // Rollover
+      allowRollover: initialData.allowRollover || false
     } : {
+      // Basic Details
+      name: '',
+      description: '',
+      budgetType: 'variable_expense' as BudgetType,
+      
+      // Financial Limits
+      budgetCurrency: userPrimaryCurrency,
+      primaryCurrency: userPrimaryCurrency,
+      alertThreshold: 80,
+      alertEnabled: true,
+      
+      // Time Frame
       period: 'monthly',
+      recurrence: 'monthly' as BudgetRecurrence,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: '',
+      
+      // Scoping
       activityScope: 'general',
       accountIds: [],
-      budgetCurrency: userPrimaryCurrency,
-      primaryCurrency: userPrimaryCurrency
+      
+      // Rollover
+      allowRollover: false
     },
   });
 
   const selectedPeriod = watch('period');
+  const selectedBudgetType = watch('budgetType');
+  const selectedRecurrence = watch('recurrence');
+  const alertEnabled = watch('alertEnabled');
+  const allowRollover = watch('allowRollover');
   
   // Get expense categories (with fallback to default categories)
   const defaultExpenseCategories = ['Food', 'Transportation', 'Entertainment', 'Shopping', 'Bills', 'Healthcare', 'Other'];
@@ -217,17 +347,35 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
       const result = await executeBudgetCreation(executionRequest);
 
       if (result.success) {
-        // Database schema check: budgets table has NO start_date/end_date columns
-        // Only: category, amount, spent, period, activity_scope, and multi-currency fields
-        
         await onSubmit({
+          // Basic Details
+          name: data.name,
+          description: data.description,
           category: data.category,
+          budgetType: data.budgetType,
+          
+          // Financial Limits
           amount: result.accountAmount, // Use converted amount from engine
-          period: data.period,
           spent: initialData?.spent || 0,
+          currency: data.budgetCurrency,
+          alertThreshold: data.alertThreshold,
+          alertEnabled: data.alertEnabled,
+          
+          // Time Frame
+          period: data.period,
+          recurrence: data.recurrence,
+          startDate: data.startDate,
+          endDate: data.endDate || null,
+          
+          // Scoping
           activityScope: data.activityScope || 'general',
           accountIds: data.accountIds || [],
           targetCategory: data.targetCategory,
+          
+          // Rollover
+          allowRollover: data.allowRollover,
+          rolledOverAmount: 0,
+          
           // Multi-currency fields from execution result
           native_amount: result.auditData.originalAmount,
           native_currency: result.auditData.originalCurrency,
@@ -269,8 +417,75 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
           {initialData ? 'Update Budget' : 'Create New Budget'}
         </h3>
         <p className="text-gray-300 text-sm">
-          Set spending limits for different categories to keep your finances on track.
+          Create comprehensive budgets with spending limits, alerts, and automatic tracking.
         </p>
+      </div>
+
+      {/* Budget Name & Description */}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <h4 className="text-sm font-semibold text-white mb-3 flex items-center">
+          <Tag size={16} className="mr-2 text-blue-400" />
+          Basic Information
+        </h4>
+        <div className="space-y-4">
+          <Input
+            label="Budget Name (Optional)"
+            type="text"
+            {...register('name')}
+            placeholder="e.g., October Grocery Budget"
+            className="bg-black/40 border-white/20 text-white"
+          />
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Description / Notes (Optional)
+            </label>
+            <textarea
+              {...register('description')}
+              placeholder="Add any additional notes about this budget..."
+              rows={3}
+              className="w-full bg-black/40 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Budget Type Selection */}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <h4 className="text-sm font-semibold text-white mb-3 flex items-center">
+          <Info size={16} className="mr-2 text-purple-400" />
+          Budget Type
+        </h4>
+        <p className="text-xs text-gray-400 mb-3">
+          Choose the type that best matches your budgeting goal
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {budgetTypeOptions.map((option) => (
+            <label key={option.value} className="cursor-pointer block">
+              <input
+                type="radio"
+                value={option.value}
+                {...register('budgetType', { required: 'Budget type is required' })}
+                className="sr-only"
+              />
+              <div className={`p-3 rounded-lg border-2 transition-all ${
+                selectedBudgetType === option.value 
+                  ? 'border-primary-500 bg-primary-500/20 shadow-lg shadow-primary-500/20' 
+                  : 'border-white/20 hover:border-white/30 hover:bg-white/5'
+              }`}>
+                <div className="flex items-start space-x-2">
+                  <span className="text-2xl">{option.icon}</span>
+                  <div className="flex-1">
+                    <p className="font-medium text-white text-sm">{option.label.replace(option.icon + ' ', '')}</p>
+                    <p className="text-xs text-gray-400 mt-1">{option.description}</p>
+                  </div>
+                </div>
+              </div>
+            </label>
+          ))}
+        </div>
+        {errors.budgetType && (
+          <p className="text-sm text-error-400 mt-2">{errors.budgetType.message}</p>
+        )}
       </div>
 
       {/* Activity Scope Selection */}
@@ -330,7 +545,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
       </div>
 
       {/* Category Selection */}
-      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20 relative z-20">
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20 relative z-50">
         <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center">
           <Tag size={16} className="mr-2 text-yellow-400" />
           Category
@@ -346,7 +561,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
 
       {/* Account Selection - Only show if account_specific is selected */}
       {watch('activityScope') === 'account_specific' && (
-        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20 relative z-10">
           <label className="block text-sm font-medium text-gray-300 mb-3">
             Select Accounts (Multiple Selection)
           </label>
@@ -377,7 +592,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
 
       {/* Target Category - Only show if category_based is selected */}
       {watch('activityScope') === 'category_based' && (
-        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20 relative z-40">
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Target Category
           </label>
@@ -437,11 +652,45 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
         </div>
       </div>
 
-      {/* Period Selection */}
+      {/* Recurrence Pattern */}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center">
+          <RefreshCw size={16} className="mr-2 text-purple-400" />
+          Recurrence Pattern
+        </label>
+        <p className="text-xs text-gray-400 mb-3">
+          How often should this budget reset?
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {recurrenceOptions.map((option) => (
+            <label key={option.value} className="cursor-pointer block">
+              <input
+                type="radio"
+                value={option.value}
+                {...register('recurrence', { required: 'Recurrence is required' })}
+                className="sr-only"
+              />
+              <div className={`p-3 rounded-lg border-2 transition-colors text-center ${
+                selectedRecurrence === option.value 
+                  ? 'border-primary-500 bg-primary-500/20 text-primary-400' 
+                  : 'border-white/20 hover:border-white/30 text-gray-300'
+              }`}>
+                <p className="font-medium text-sm">{option.label}</p>
+                <p className="text-xs opacity-70 mt-1">{option.description}</p>
+              </div>
+            </label>
+          ))}
+        </div>
+        {errors.recurrence && (
+          <p className="text-sm text-error-400 mt-2">{errors.recurrence.message}</p>
+        )}
+      </div>
+
+      {/* Period Selection (Legacy - for compatibility) */}
       <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
         <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center">
           <Calendar size={16} className="mr-2 text-purple-400" />
-          Budget Period
+          Budget Period (Display)
         </label>
         <div className="space-y-2">
           {periodOptions.map((option) => (
@@ -472,6 +721,116 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
         )}
       </div>
 
+      {/* Date Range */}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center">
+          <Calendar size={16} className="mr-2 text-blue-400" />
+          Budget Date Range
+        </label>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Input
+              label="Start Date"
+              type="date"
+              {...register('startDate', {
+                required: 'Start date is required'
+              })}
+              error={errors.startDate?.message}
+              className="bg-black/40 border-white/20 text-white"
+            />
+          </div>
+          <div>
+            <Input
+              label="End Date (Optional)"
+              type="date"
+              {...register('endDate')}
+              error={errors.endDate?.message}
+              className="bg-black/40 border-white/20 text-white"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 mt-2">
+          The budget will be active from the start date. If an end date is set, the budget will automatically expire after that date.
+        </p>
+      </div>
+
+      {/* Alert Settings */}
+      <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+        <h4 className="text-sm font-semibold text-white mb-3 flex items-center">
+          <Bell size={16} className="mr-2 text-yellow-400" />
+          Alert Settings
+        </h4>
+        <div className="space-y-4">
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="alertEnabled"
+              {...register('alertEnabled')}
+              className="w-5 h-5 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
+            />
+            <label htmlFor="alertEnabled" className="text-sm text-gray-300 flex-1">
+              <span className="font-medium">Enable Budget Alerts</span>
+              <span className="block text-xs text-gray-400 mt-1">
+                Get notified when you're close to your budget limit
+              </span>
+            </label>
+          </div>
+          
+          {alertEnabled && (
+            <div className="pl-8">
+              <Input
+                label="Alert Threshold (%)"
+                type="number"
+                min="1"
+                max="100"
+                step="1"
+                {...register('alertThreshold', {
+                  min: { value: 1, message: 'Minimum 1%' },
+                  max: { value: 100, message: 'Maximum 100%' }
+                })}
+                error={errors.alertThreshold?.message}
+                className="bg-black/40 border-white/20 text-white"
+                placeholder="80"
+              />
+              <p className="text-xs text-gray-400 mt-2">
+                You'll be alerted when you reach {watch('alertThreshold') || 80}% of your budget
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Rollover Settings (for Rolling Budget Type) */}
+      {selectedBudgetType === 'rolling' && (
+        <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl p-4 border border-green-500/30">
+          <h4 className="text-sm font-semibold text-white mb-3 flex items-center">
+            <RefreshCw size={16} className="mr-2 text-green-400" />
+            Rollover Settings
+          </h4>
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="allowRollover"
+              {...register('allowRollover')}
+              className="w-5 h-5 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
+            />
+            <label htmlFor="allowRollover" className="text-sm text-gray-300 flex-1">
+              <span className="font-medium">Allow Budget Rollover</span>
+              <span className="block text-xs text-gray-400 mt-1">
+                Unused budget will carry over to the next period
+              </span>
+            </label>
+          </div>
+          {allowRollover && (
+            <div className="mt-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <p className="text-xs text-green-300">
+                ✨ Any unspent amount at the end of the period will be added to next period's budget automatically.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Info Box */}
       <div className="bg-blue-500/20 rounded-lg p-4 border border-blue-500/30">
         <div className="flex items-center text-blue-400 mb-2">
@@ -479,8 +838,8 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ initialData, categoryId,
           <span className="font-medium">Smart Budgeting</span>
         </div>
         <p className="text-sm text-blue-300">
-          Every time you manually track an expense in this category, we'll update your budget automatically. 
-          This helps you see exactly how much you have left to spend!
+          Every time you track an expense in this category, we'll update your budget automatically. 
+          Track your spending in real-time and get alerts when you're approaching your limit!
         </p>
       </div>
 

@@ -20,7 +20,7 @@ import { AnalyticsEngine } from '../utils/analytics-engine';
 const Goals: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { goals, addGoal, updateGoal, deleteGoal, addTransaction, accounts, transactions, fundGoalFromAccount, contributeToGoal, withdrawGoalToAccount, handleGoalCompletion, bills, liabilities, budgets, userCategories } = useFinance();
+  const { goals, addGoal, updateGoal, deleteGoal, addTransaction, accounts, transactions, fundGoalFromAccount, contributeToGoal, withdrawGoalToAccount, handleGoalCompletion, bills, liabilities, budgets, userCategories, refreshGoals } = useFinance();
   const { formatCurrency } = useInternationalization();
   const [showModal, setShowModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -31,7 +31,8 @@ const Goals: React.FC = () => {
   const [goalToDelete, setGoalToDelete] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'upcoming'>('active');
+  const [activeTab, setActiveTab] = useState<'overview' | 'list'>('overview');
+  const [selectedGoal, setSelectedGoal] = useState<string>('');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [completedGoal, setCompletedGoal] = useState<Goal | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -149,6 +150,7 @@ const Goals: React.FC = () => {
       const sanitizedGoal = sanitizeFinancialData(goal, ['targetAmount', 'currentAmount']);
       
       await addGoal(sanitizedGoal);
+      await refreshGoals(); // Auto-refresh to show new goal immediately
       setShowModal(false);
       
       // Invalidate related queries
@@ -353,72 +355,122 @@ const Goals: React.FC = () => {
       </div>
       
       <div className="px-4 space-y-4">
-        {/* Goal Statistics */}
-        <div className="card-neumorphic p-4 slide-in-up">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center">
-              <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Total Goals</p>
-              <p className="text-2xl font-numbers">{goalStats.totalGoals}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Active</p>
-              <p className="text-2xl font-numbers">{goalStats.activeGoals}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Completed</p>
-              <p className="text-2xl font-numbers">{goalStats.completedGoals}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Progress</p>
-              <p className="text-2xl font-numbers">{Math.round(goalStats.overallProgress)}%</p>
-            </div>
-          </div>
-          
-          {/* Overall Progress Bar */}
-          <div className="mt-4">
-            <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--text-tertiary)' }}>
-              <span>Overall Progress</span>
-              <span>{formatCurrency(goalStats.totalCurrentAmount)} / {formatCurrency(goalStats.totalTargetAmount)}</span>
-            </div>
-            <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--border-light)' }}>
-              <div 
-                className="h-2 rounded-full transition-all duration-300"
-                style={{ 
-                  width: `${Math.min(goalStats.overallProgress, 100)}%`,
-                  backgroundColor: 'var(--primary)'
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Goal Analytics Section */}
-        <div className="card-neumorphic p-4 slide-in-up">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
-              Goal Analytics
-            </h2>
-            <div className="flex items-center space-x-2">
-              <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="px-3 py-1 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
-              >
-                <option value="thisMonth">This Month</option>
-                <option value="lastMonth">Last Month</option>
-                <option value="last3Months">Last 3 Months</option>
-              </select>
+        {/* Tab Navigation */}
+        {goals.length > 0 && (
+          <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
+            {[
+              { key: 'overview', label: 'Overview', icon: BarChart3 },
+              { key: 'list', label: 'All Goals', icon: Target }
+            ].map((tab) => (
               <button
-                onClick={() => setShowAnalytics(!showAnalytics)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-1 ${
+                  activeTab === tab.key
+                    ? 'text-white transform scale-105'
+                    : 'text-gray-600 hover:text-gray-900 hover:scale-105'
+                }`}
+                style={{
+                  backgroundColor: activeTab === tab.key ? 'var(--primary)' : 'transparent'
+                }}
               >
-                <BarChart3 size={16} className={showAnalytics ? 'text-blue-600' : 'text-gray-600'} />
+                <tab.icon size={14} />
+                <span>{tab.label}</span>
               </button>
-            </div>
+            ))}
           </div>
+        )}
 
-          {showAnalytics && (
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
+          <div className="space-y-4">
+            {/* Goal Statistics */}
+            <div className="card-neumorphic p-4 slide-in-up">
+              {/* Goal Selection Dropdown */}
+              {goals.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Select Goal to View Details
+                  </label>
+                  <select
+                    value={selectedGoal || ''}
+                    onChange={(e) => setSelectedGoal(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+                  >
+                    <option value="">Choose a goal...</option>
+                    {goals.map((goal) => (
+                      <option key={goal.id} value={goal.id}>
+                        {goal.title} - {formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Total Goals</p>
+                  <p className="text-2xl font-numbers">{goalStats.totalGoals}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Active</p>
+                  <p className="text-2xl font-numbers">{goalStats.activeGoals}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Completed</p>
+                  <p className="text-2xl font-numbers">{goalStats.completedGoals}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Progress</p>
+                  <p className="text-2xl font-numbers">{Math.round(goalStats.overallProgress)}%</p>
+                </div>
+              </div>
+              
+              {/* Overall Progress Bar */}
+              <div className="mt-4">
+                <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--text-tertiary)' }}>
+                  <span>Overall Progress</span>
+                  <span>{formatCurrency(goalStats.totalCurrentAmount)} / {formatCurrency(goalStats.totalTargetAmount)}</span>
+                </div>
+                <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--border-light)' }}>
+                  <div 
+                    className="h-2 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${Math.min(goalStats.overallProgress, 100)}%`,
+                      backgroundColor: 'var(--primary)'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Goal Analytics Section */}
+            <div className="card-neumorphic p-4 slide-in-up">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
+                  Goal Analytics
+                </h2>
+                <div className="flex items-center space-x-2">
+                  <select
+                    value={selectedPeriod}
+                    onChange={(e) => setSelectedPeriod(e.target.value)}
+                    className="px-3 py-1 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+                  >
+                    <option value="thisMonth">This Month</option>
+                    <option value="lastMonth">Last Month</option>
+                    <option value="last3Months">Last 3 Months</option>
+                  </select>
+                  <button
+                    onClick={() => setShowAnalytics(!showAnalytics)}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+                  >
+                    <BarChart3 size={16} className={showAnalytics ? 'text-blue-600' : 'text-gray-600'} />
+                  </button>
+                </div>
+              </div>
+
+              {showAnalytics && (
             <div className="space-y-6">
               {/* Goal Progress Overview */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -536,35 +588,15 @@ const Goals: React.FC = () => {
               </div>
             </div>
           )}
-        </div>
+            </div>
+          </div>
+        )}
 
-        {/* Tab Navigation */}
-        <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
-          {Object.entries({
-            active: { label: 'Active', count: categorizedGoals.active.length },
-            upcoming: { label: 'Upcoming', count: categorizedGoals.upcoming.length },
-            completed: { label: 'Completed', count: categorizedGoals.completed.length }
-          }).map(([key, { label, count }]) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key as any)}
-              className={`flex-1 py-2 px-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === key
-                  ? 'text-white transform scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:scale-105'
-              }`}
-              style={{
-                backgroundColor: activeTab === key ? 'var(--primary)' : 'transparent'
-              }}
-            >
-              {label} ({count})
-            </button>
-          ))}
-        </div>
-
-        {/* Goals List */}
-        <div className="space-y-3">
-          {categorizedGoals[activeTab].map((goal) => {
+        {activeTab === 'list' && (
+          <div className="space-y-4">
+            {/* Goals List */}
+            <div className="space-y-3">
+              {goals.map((goal) => {
             const progress = calculatePercentage(goal.currentAmount, goal.targetAmount);
             const status = getGoalStatus(goal);
             const daysUntilTarget = differenceInDays(new Date(goal.targetDate), new Date());
@@ -716,7 +748,9 @@ const Goals: React.FC = () => {
               </div>
             );
           })}
-        </div>
+            </div>
+          </div>
+        )}
 
         {/* Recent Goal Transactions */}
         {recentGoalTransactions.length > 0 && (

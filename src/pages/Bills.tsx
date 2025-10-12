@@ -58,7 +58,8 @@ const Bills: React.FC = () => {
   const [selectedBill, setSelectedBill] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'current' | 'upcoming' | 'overdue' | 'paid' | 'all'>('current');
+  const [activeTab, setActiveTab] = useState<'overview' | 'list'>('overview');
+  const [selectedBillId, setSelectedBillId] = useState<string>('');
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
 
@@ -348,34 +349,84 @@ const Bills: React.FC = () => {
         </div>
       </div>
 
-      {/* Bill Analytics Section */}
-      <div className="px-4 mb-6">
-        <div className="card-neumorphic p-4 slide-in-up">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
-              Bill Analytics
-            </h2>
-            <div className="flex items-center space-x-2">
-              <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="px-3 py-1 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
-              >
-                <option value="thisMonth">This Month</option>
-                <option value="lastMonth">Last Month</option>
-                <option value="last3Months">Last 3 Months</option>
-              </select>
+      <div className="px-4 space-y-4">
+        {/* Tab Navigation */}
+        {bills && bills.length > 0 && (
+          <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
+            {[
+              { key: 'overview', label: 'Overview', icon: BarChart3 },
+              { key: 'list', label: 'All Bills', icon: Calendar }
+            ].map((tab) => (
               <button
-                onClick={() => setShowAnalytics(!showAnalytics)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-1 ${
+                  activeTab === tab.key
+                    ? 'text-white transform scale-105'
+                    : 'text-gray-600 hover:text-gray-900 hover:scale-105'
+                }`}
+                style={{
+                  backgroundColor: activeTab === tab.key ? 'var(--primary)' : 'transparent'
+                }}
               >
-                <BarChart3 size={16} className={showAnalytics ? 'text-blue-600' : 'text-gray-600'} />
+                <tab.icon size={14} />
+                <span>{tab.label}</span>
               </button>
-            </div>
+            ))}
           </div>
+        )}
 
-          {showAnalytics && (
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
+          <div className="space-y-4">
+            {/* Bill Analytics Section */}
+            <div className="card-neumorphic p-4 slide-in-up">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-heading" style={{ color: 'var(--text-primary)' }}>
+                  Bill Analytics
+                </h2>
+                <div className="flex items-center space-x-2">
+                  <select
+                    value={selectedPeriod}
+                    onChange={(e) => setSelectedPeriod(e.target.value)}
+                    className="px-3 py-1 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+                  >
+                    <option value="thisMonth">This Month</option>
+                    <option value="lastMonth">Last Month</option>
+                    <option value="last3Months">Last 3 Months</option>
+                  </select>
+                  <button
+                    onClick={() => setShowAnalytics(!showAnalytics)}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+                  >
+                    <BarChart3 size={16} className={showAnalytics ? 'text-blue-600' : 'text-gray-600'} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Bill Selection Dropdown */}
+              {bills.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Select Bill to View Details
+                  </label>
+                  <select
+                    value={selectedBillId || ''}
+                    onChange={(e) => setSelectedBillId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-sm border border-gray-300 bg-white text-gray-900"
+                  >
+                    <option value="">Choose a bill...</option>
+                    {bills.map((bill) => (
+                      <option key={bill.id} value={bill.id}>
+                        {bill.title || bill.description} - {formatCurrency(bill.amount)} - Due {format(new Date(bill.nextDueDate), 'MMM dd')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {showAnalytics && (
             <div className="space-y-6">
               {/* Bill Overview Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -520,80 +571,18 @@ const Bills: React.FC = () => {
               )}
             </div>
           )}
-        </div>
-      </div>
-      
-      <div className="px-4 space-y-4">
-        {/* Bill Summary */}
-        <div className="card p-4 slide-in-up">
-          <div className="mb-4">
-            <h2 className="text-lg font-heading">Bill Overview</h2>
-          </div>
-          
-          {bills && bills.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-numbers">{billStats.activeBills}</p>
-                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Active Bills</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-numbers" style={{ color: 'var(--error)' }}>{billStats.overdueBills}</p>
-                <p className="text-sm font-body" style={{ color: 'var(--text-tertiary)' }}>Overdue</p>
-              </div>
             </div>
-          ) : (
-            <div className="text-center py-6">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ backgroundColor: 'var(--background-secondary)' }}>
-                <Bell size={20} className="text-gray-400" />
-              </div>
-              <h3 className="text-lg font-heading mb-2">No Bills Yet</h3>
-              <p className="text-sm font-body mb-4">
-                Add your first bill to start tracking payments
-              </p>
-              <button
-                onClick={() => setShowModal(true)}
-                className="btn-primary"
-              >
-                Add Bill
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Tab Navigation */}
-        {bills && bills.length > 0 && (
-          <div className="flex space-x-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--background-secondary)' }}>
-            {[
-              { key: 'current', label: 'Current (3 days)', count: categorizedBills.current.length },
-              { key: 'upcoming', label: 'Upcoming (15 days)', count: categorizedBills.upcoming.length },
-              { key: 'overdue', label: 'Overdue', count: categorizedBills.overdue.length },
-              { key: 'paid', label: 'Paid', count: categorizedBills.paid.length },
-              { key: 'all', label: 'All', count: categorizedBills.all.length }
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key as any)}
-                className={`flex-1 py-2 px-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  activeTab === tab.key
-                    ? 'text-white transform scale-105'
-                    : 'text-gray-600 hover:text-gray-900 hover:scale-105'
-                }`}
-                style={{
-                  backgroundColor: activeTab === tab.key ? 'var(--primary)' : 'transparent'
-                }}
-              >
-                {tab.label} ({tab.count})
-              </button>
-            ))}
           </div>
         )}
 
-        {/* Bills List */}
-        {bills && bills.length > 0 && (
-          <div className="slide-in-up">
-            <h3 className="text-lg font-heading mb-4">Your Bills</h3>
+        {activeTab === 'list' && (
+          <div className="space-y-4">
+            {/* Bills List */}
+            {bills && bills.length > 0 && (
+              <div className="slide-in-up">
+                <h3 className="text-lg font-heading mb-4">Your Bills</h3>
             <div className="space-y-3">
-              {categorizedBills[activeTab].map((bill) => {
+              {bills.map((bill) => {
                 const status = getBillStatus(bill);
                 const daysUntilDue = differenceInDays(new Date(bill.nextDueDate), new Date());
                 
@@ -822,6 +811,8 @@ const Bills: React.FC = () => {
                 );
               })}
             </div>
+          </div>
+        )}
           </div>
         )}
 

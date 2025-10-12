@@ -75,21 +75,6 @@ export const BottomNavigation: React.FC = () => {
               </button>
             );
           })}
-          
-          {/* Central Floating Add Button */}
-          <div className="absolute left-1/2 transform -translate-x-1/2 -top-6">
-            <button
-              onClick={() => navigate('/add-transaction')}
-              className="w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
-              style={{ 
-                backgroundColor: 'var(--accent-light)',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15)',
-                border: '3px solid rgba(255, 255, 255, 0.2)'
-              }}
-            >
-              <Plus size={28} className="text-white" />
-            </button>
-          </div>
         </div>
       </div>
     </div>

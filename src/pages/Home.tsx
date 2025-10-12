@@ -35,6 +35,8 @@ import { useProfile } from '../contexts/ProfileContext';
 import { TransactionDetailsModal } from '../components/modals/TransactionDetailsModal';
 import { simpleCurrencyService } from '../services/simpleCurrencyService';
 import { formatTransactionForDisplay } from '../utils/transactionDisplayHelper';
+import { AnalyticsWidget } from '../components/analytics/AnalyticsWidget';
+import { QuickFilters } from '../components/common/QuickFilters';
 // import { InsightsDashboard } from '../components/insights/InsightsDashboard'; // AI feature disabled for now
 
 const Home: React.FC = () => {
@@ -224,47 +226,51 @@ const Home: React.FC = () => {
       )}
       
       {/* Header */}
-      <div className="pt-12 pb-6 px-6">
-        <div className="flex items-center justify-between">
+      <div className="pt-8 sm:pt-12 pb-4 sm:pb-6 px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-heading" style={{ color: 'var(--text-primary)' }}>Fin.</h1>
+            <h1 className="text-2xl sm:text-3xl font-heading" style={{ color: 'var(--text-primary)' }}>Fin.</h1>
           </div>
           
-          <div className="flex items-center space-x-3">
-            <div style={{ position: 'relative' }}>
-              <NotificationCenter />
-            </div>
-            <button 
-              onClick={() => navigate('/settings')}
-              className="p-2 rounded-full transition-all duration-200 hover:scale-110"
-              style={{ backgroundColor: 'var(--background-secondary)' }}
-            >
-              <Settings size={18} style={{ color: 'var(--text-secondary)' }} />
-            </button>
-            <button 
-              onClick={() => navigate('/profile')}
-              className="p-1 rounded-full transition-all duration-200 hover:scale-110"
-              style={{ backgroundColor: 'var(--background-secondary)' }}
-            >
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <User size={16} style={{ color: 'var(--text-secondary)' }} />
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap w-full sm:w-auto justify-between sm:justify-end">
+            <QuickFilters showAccountFilter={false} showCurrencyInfo={true} />
+            
+            <div className="flex items-center gap-2">
+              <div style={{ position: 'relative' }}>
+                <NotificationCenter />
               </div>
-            </button>
+              <button 
+                onClick={() => navigate('/settings')}
+                className="p-2 rounded-full transition-all duration-200 hover:scale-110"
+                style={{ backgroundColor: 'var(--background-secondary)' }}
+              >
+                <Settings size={18} style={{ color: 'var(--text-secondary)' }} />
+              </button>
+              <button 
+                onClick={() => navigate('/profile')}
+                className="p-1 rounded-full transition-all duration-200 hover:scale-110"
+                style={{ backgroundColor: 'var(--background-secondary)' }}
+              >
+                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                  <User size={16} style={{ color: 'var(--text-secondary)' }} />
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="px-6 space-y-6">
+      <div className="px-4 sm:px-6 space-y-4 sm:space-y-6">
         {/* Greeting */}
         <div>
-          <h2 className="text-2xl font-heading" style={{ color: 'var(--text-primary)' }}>
+          <h2 className="text-xl sm:text-2xl font-heading" style={{ color: 'var(--text-primary)' }}>
             Hello, {user?.name || 'Hrushi'} 👋
           </h2>
         </div>
 
         {/* Main Financial Overview Card */}
         <div 
-          className="p-8 rounded-3xl border-2 border-black"
+          className="p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl border-2 border-black"
           style={{
             backgroundColor: '#fef7ed', // cream background
             boxShadow: '8px 8px 16px rgba(0,0,0,0.3), -4px -4px 8px rgba(0,0,0,0.1)'
@@ -278,7 +284,7 @@ const Home: React.FC = () => {
             
             {/* Current Balance - Single Focus */}
             <div className="mb-6">
-              <div className="text-5xl font-numbers text-black mb-2">
+              <div className="text-3xl sm:text-4xl lg:text-5xl font-numbers text-black mb-2 break-words px-2">
                 {hideBalance ? '••••••' : formatCurrency(currentBalance)}
               </div>
               <div className="flex items-center justify-center space-x-1 text-sm text-gray-700">
@@ -287,24 +293,24 @@ const Home: React.FC = () => {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-gray-300">
-                <div className="text-lg font-numbers text-black">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-2 sm:p-3 border border-gray-300">
+                <div className="text-xs sm:text-sm font-numbers text-black break-words">
                   {hideBalance ? '••••' : formatCurrency(currentBalance)}
                 </div>
-                <div className="text-xs text-gray-600">Total Assets</div>
+                <div className="text-[10px] sm:text-xs text-gray-600 mt-1">Assets</div>
               </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-gray-300">
-                <div className="text-lg font-numbers text-black">
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-2 sm:p-3 border border-gray-300">
+                <div className="text-xs sm:text-sm font-numbers text-black break-words">
                   {hideBalance ? '••••' : formatCurrency(liabilities.reduce((sum, liab) => sum + (liab.remainingAmount || 0), 0))}
                 </div>
-                <div className="text-xs text-gray-600">Total Liabilities</div>
+                <div className="text-[10px] sm:text-xs text-gray-600 mt-1">Liabilities</div>
               </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-gray-300">
-                <div className="text-lg font-numbers text-black">
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-2 sm:p-3 border border-gray-300">
+                <div className="text-xs sm:text-sm font-numbers text-black">
                   {goals.length}
                 </div>
-                <div className="text-xs text-gray-600">Active Goals</div>
+                <div className="text-[10px] sm:text-xs text-gray-600 mt-1">Goals</div>
               </div>
             </div>
           </div>
@@ -380,10 +386,10 @@ const Home: React.FC = () => {
                         <h3 className="text-xs font-medium truncate mb-1" style={{ color: 'var(--text-primary)' }}>
                           {account.name}
                         </h3>
-                        <div className="text-sm font-numbers" style={{ color: 'var(--text-primary)' }}>
-                          {hideBalance ? '••••••' : `${simpleCurrencyService.getCurrencySymbol(account.currencycode || profile?.primaryCurrency || 'INR')}${(account.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                        <div className="text-xs font-numbers break-all" style={{ color: 'var(--text-primary)' }}>
+                          {hideBalance ? '••••••' : `${simpleCurrencyService.getCurrencySymbol(account.currencycode || profile?.primaryCurrency || 'INR')}${(account.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
                         </div>
-                        <div className="text-xs font-body" style={{ color: 'var(--text-tertiary)' }}>
+                        <div className="text-[10px] font-body" style={{ color: 'var(--text-tertiary)' }}>
                           {account.currencycode || profile?.primaryCurrency || 'INR'}
                         </div>
                       </div>
@@ -480,6 +486,11 @@ const Home: React.FC = () => {
               {activeGoals.length > 0 ? `${activeGoals.length} active` : 'No goals set'}
             </p>
           </div>
+        </div>
+
+        {/* Analytics Widget */}
+        <div className="mb-8 flex justify-center">
+          <AnalyticsWidget />
         </div>
 
         {/* AI-Powered Insights - Disabled for now */}
