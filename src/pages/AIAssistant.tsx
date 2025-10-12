@@ -144,7 +144,7 @@ export default function AIAssistant() {
               </div>
               <div>
                 <h1 className="text-xl font-bold">AI Assistant</h1>
-                <p className="text-xs text-white/80">Powered by Google Gemini</p>
+                <p className="text-xs text-white/80">Powered by GPT-OSS-20B</p>
               </div>
             </div>
             
@@ -380,7 +380,7 @@ export default function AIAssistant() {
               </button>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-              Powered by Google Gemini • Your data stays private
+              Powered by GPT-OSS-20B • Your data stays private
             </p>
           </div>
         </div>

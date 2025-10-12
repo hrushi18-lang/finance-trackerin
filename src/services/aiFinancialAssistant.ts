@@ -6,14 +6,21 @@ import { financialDataAnalyzer } from '../utils/financialDataAnalyzer';
 // Initialize OpenAI SDK with OpenRouter
 // OpenRouter is compatible with OpenAI SDK but provides access to multiple models
 const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENROUTER_API_KEY,
+  apiKey: import.meta.env.VITE_OPENROUTER_API_KEY || '',
   baseURL: 'https://openrouter.ai/api/v1',
-  dangerouslyAllowBrowser: true, // Note: In production, use a backend proxy
+  dangerouslyAllowBrowser: true, // For mobile app - API calls from client
   defaultHeaders: {
-    'HTTP-Referer': window.location.origin, // Optional: for rankings
-    'X-Title': 'Finance Tracker AI Assistant', // Optional: show in rankings
+    'HTTP-Referer': window.location.origin,
+    'X-Title': 'FinTrack - Personal Finance Manager',
   }
 });
+
+// Verify API key is configured
+if (!import.meta.env.VITE_OPENROUTER_API_KEY) {
+  console.error('⚠️ VITE_OPENROUTER_API_KEY not found in environment variables');
+  console.log('Please add your OpenRouter API key to .env file');
+  console.log('Get your free key at: https://openrouter.ai/keys');
+}
 
 export interface ChatMessage {
   id: string;
@@ -49,8 +56,8 @@ export interface ChatConfig {
 
 class AIFinancialAssistantService {
   private defaultConfig: ChatConfig = {
-    // Using Google Gemini - more reliable and free tier available
-    model: 'google/gemini-flash-1.5-8b', // Fast, reliable, and free!
+    // Using GPT-OSS-20B - free tier from OpenRouter
+    model: 'openai/gpt-oss-20b:free', // Free and powerful!
     temperature: 0.7,
     maxTokens: 1000,
     includeFinancialData: true
@@ -393,6 +400,15 @@ Liabilities: ${liabilities.length} total, $${liabilities.reduce((s, l) => s + (l
     config?: Partial<ChatConfig>
   ): Promise<ChatMessage> {
     try {
+      // Check if API key is configured
+      if (!import.meta.env.VITE_OPENROUTER_API_KEY) {
+        throw new Error(
+          '🔑 OpenRouter API key not configured.\n\n' +
+          'Please add VITE_OPENROUTER_API_KEY to your .env file.\n' +
+          'Get your free key at: https://openrouter.ai/keys'
+        );
+      }
+
       const finalConfig = { ...this.defaultConfig, ...config };
       
       // Generate COMPACT financial summary to reduce tokens

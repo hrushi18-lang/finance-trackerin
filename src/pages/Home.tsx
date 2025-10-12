@@ -331,10 +331,10 @@ const Home: React.FC = () => {
               <div className="text-left">
                 <div className="font-bold text-base flex items-center space-x-2">
                   <span>AI Financial Assistant</span>
-                  <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">NEW</span>
+                  <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">FREE</span>
                 </div>
                 <div className="text-sm text-white/80">
-                  Get personalized insights & advice
+                  Powered by GPT-OSS • Instant insights
                 </div>
               </div>
             </div>
