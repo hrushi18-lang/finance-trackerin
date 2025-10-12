@@ -4,6 +4,7 @@ import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { CurrencySelector } from '../currency/CurrencySelector';
 import { CategorySelector } from '../common/CategorySelector';
+import { SmartAccountForm } from '../forms/SmartAccountForm';
 import { useFinance } from '../../contexts/FinanceContext';
 import { useInternationalization } from '../../contexts/InternationalizationContext';
 import { useAuth } from '../../contexts/AuthContext';

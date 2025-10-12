@@ -19,8 +19,13 @@ const Auth: React.FC = () => {
   }, [navigate]);
 
   const handleSuccess = () => {
-    // Both signin and signup go directly to home
-    navigate('/');
+    if (mode === 'signup') {
+      // New users go to onboarding to set up currency and profile
+      navigate('/onboarding');
+    } else {
+      // Existing users go directly to home
+      navigate('/');
+    }
   };
 
   return (

@@ -22,12 +22,38 @@ const OnboardingWrapper: React.FC = () => {
         return;
       }
 
-      // Skip onboarding - redirect all users directly to home
-      navigate('/');
+      // Wait for profile and finance data to load
+      if (profileLoading || financeLoading) {
+        return;
+      }
+
+      // Check if user has completed onboarding
+      const hasProfile = !!profile;
+      
+      // User is new if they don't have a profile
+      const isNew = !hasProfile;
+      setIsNewUser(isNew);
+
+      // Track onboarding check
+      analytics.trackEngagement('onboarding_check', {
+        feature: 'onboarding_flow',
+        is_new_user: isNew,
+        has_profile: hasProfile,
+        has_accounts: accounts.length > 0
+      });
+
+      // If user has profile, redirect to home (onboarding completed)
+      if (hasProfile) {
+        analytics.trackOnboardingStep('existing_user_redirect', true);
+        navigate('/');
+        return;
+      }
+
+      setIsChecking(false);
     };
 
     checkUserStatus();
-  }, [user, navigate]);
+  }, [user, profile, profileLoading, accounts, goals, bills, liabilities, userCategories, financeLoading, navigate]);
 
   // Show loading while checking user status
   if (isChecking || profileLoading || financeLoading) {
