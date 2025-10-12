@@ -260,7 +260,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
-            .eq('user_id', data.user.id)
+            .eq('id', data.user.id)
             .maybeSingle(); // Use maybeSingle instead of single
           
         if (profileError) {
