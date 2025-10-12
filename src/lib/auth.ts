@@ -267,8 +267,11 @@ class AuthManager {
 
   async resetPassword(email: string) {
     try {
+      // Use environment variable for site URL if available, otherwise fallback to window.location.origin
+      const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+        redirectTo: `${siteUrl}/reset-password`
       });
 
       if (error) {
@@ -289,10 +292,14 @@ class AuthManager {
     this.updateAuthState({ loading: true, error: null });
 
     try {
+      // Use environment variable for site URL if available, otherwise fallback to window.location.origin
+      const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
+      console.log('OAuth redirect URL:', siteUrl);
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}`,
+          redirectTo: siteUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

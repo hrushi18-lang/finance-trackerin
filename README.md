@@ -19,6 +19,7 @@ A comprehensive, feature-rich personal finance tracking application built with R
   - [Multi-Currency Support](#multi-currency-support)
   - [Notifications](#notifications)
 - [Getting Started](#getting-started)
+- [Deployment](#deployment)
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
 
@@ -670,6 +671,52 @@ npm run dev
 6. **Open your browser**
    - Navigate to `http://localhost:5173`
    - Create an account and start tracking!
+
+---
+
+## 🚀 Deployment
+
+### Deploying to Vercel or Netlify
+
+This app can be easily deployed to Vercel or Netlify. However, you need to configure OAuth redirects properly to avoid authentication issues.
+
+**⚠️ Important:** After deploying, if you're redirected to `localhost` after signing in, follow the [Deployment Guide](DEPLOYMENT_GUIDE.md) to fix this issue.
+
+### Quick Deployment Checklist
+
+1. **Set Environment Variables** in your hosting platform:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_SITE_URL=https://your-app.vercel.app
+   ```
+
+2. **Configure Supabase Auth Settings**:
+   - Go to Supabase Dashboard → Authentication → URL Configuration
+   - Add your production URL to **Redirect URLs**
+   - Set your production URL as the **Site URL**
+
+3. **Redeploy** your application
+
+📖 For detailed instructions, see the [Complete Deployment Guide](DEPLOYMENT_GUIDE.md)
+
+### Deploy to Vercel (Recommended)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+
+1. Click the button above
+2. Connect your GitHub repository
+3. Add environment variables
+4. Deploy!
+
+### Deploy to Netlify
+
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start)
+
+1. Click the button above
+2. Connect your GitHub repository
+3. Add environment variables
+4. Deploy!
 
 ---
 
